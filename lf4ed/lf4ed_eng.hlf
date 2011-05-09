@@ -1,0 +1,338 @@
+.Language=English,English
+.PluginContents=LuaFAR for Editor
+.Options CtrlColorChar=\
+
+@Contents
+$ #LuaFAR for Editor (version 2.8) - Help Contents -#
+ LuaFAR for Editor is a collection of utilities that implement various
+actions controlling the work of FAR's Editor. The utilities are written in Lua
+programming language.
+
+ The following utilities are included:
+     ~Sort Lines~@SortLines@
+     ~Reformat Block~@Wrap@
+     ~Block Sum~@BlockSum@
+     ~Lua Expression~@LuaExpression@
+     ~Lua Script~@LuaScript@
+     ~Script Parameters~@ScriptParams@
+ More utilities can be added by the user: see the manual.
+
+ Technical topics:
+     ~Plugin's Configuration Dialog~@PluginConfig@
+     ~Reload User File~@ReloadUserFile@
+
+@LuaExpression
+$ #Lua Expression#
+ #Features:#
+   *  Calculates Lua expressions.
+   *  Works either on the selected text, or on the current line
+      if no text is selected.
+   *  Any valid Lua expression, including function calls.
+   *  The expression result can be:
+          - edited in a message box
+          - inserted into the editor
+          - copied to the clipboard
+   *  All functions from the Lua #math# library are available as
+      globals, e.g. 'sqrt' can be used instead of 'math.sqrt'.
+
+ #Example:#
+   If the expression on the following 2 lines is:
+           (75 - 10) / 13 + 2^5 + sqrt(100)
+           + log10(100)
+   the result of the operation should be 49.
+
+ ~Contents~@Contents@
+
+@LuaScript
+$ #Lua Script#
+   Gets selected text and runs it as a Lua script.
+If no text is selected, runs the whole editor buffer.
+The script can be invoked with ~parameters~@ScriptParams@.
+
+   #Example 1:#
+       far.Message"Hello, World!"
+
+   #Example 2:#
+       local function factorial(n)
+         local r=1; for k=2,n do r=r*k end; return r
+       end
+       far.Message(factorial(6))
+
+ ~Contents~@Contents@
+
+@ScriptParams
+$ #Script Parameters#
+   This dialog allows to specify up to 4 parameters that will be stored and
+passed to ~Lua Script~@LuaScript@ when it is invoked.
+
+   Every parameter is a Lua expression. This means in particular that strings
+must be enclosed in quotes, as it's usual in Lua. An empty parameter line is
+equivalent to nil.
+
+   The parameters are syntax-checked but their evaluation is delayed until
+the script is actually invoked. Therefore, e.g. expression 47+ would
+immediately raise error, while expression 47+nil would be accepted but raise
+error when the script is invoked.
+
+   Parameters are evaluated and passed to the script only if
+#Pass parameters to the script# checkbox is checked.
+
+   The #Run# command stores the parameters and runs the script.
+ 
+   The #Store# command stores the parameters for future script invocations.
+ 
+ ~Contents~@Contents@
+
+@BlockSum
+$ #Block Sum#
+ Calculates sum of numbers on several lines (one number per line).
+
+   *  Works on selected blocks of text.
+
+   *  For each line (or selected part of it), takes the first non-
+      space character sequence and converts it to a number. The
+      number can be followed by a character matching the regular
+      expression #[\s,;:]#. If some line cannot be meaningfully
+      converted, it is ignored.
+
+   *  The result of the calculation can be configured to be:
+          - inserted into the editor
+          - copied to the clipboard
+
+ #Example#
+
+ Let's assume we have the following text in the editor:
+
+        25.30  expense Jan 1
+       156.75  expense Jan 2
+         5.00  expense Jan 3
+        71.30  expense Jan 4
+
+ Select either the whole lines or just the column containing numbers
+ to be summed up, then execute "Block Sum" operation.
+
+ ~Contents~@Contents@
+
+@Wrap
+$ #Reformat Block#
+ This function can perform two operations:
+    a) reformat selected block, or current line.
+    b) prefix lines in selected block, or current line.
+ If both actions are selected, they are executed in the shown above order.
+
+ #Reformat Block#
+
+ First, the selected lines are joined into one line.
+ Then that line is split according to the values in #Start column#
+ and #End column# boxes. Right text border is justified if the
+ corresponding checkbox is checked.
+
+ #Prefix Lines#
+
+ Lines are prefixed according to a command appearing in the #Command#
+ edit box. A command consists of a command letter followed by a colon
+ followed by one or more comma-separated parameters.
+
+ There are 3 command types available:
+     #S#:<number of spaces>[:]
+     #L#:<literal string>[:]
+     #N#:<starting number/letter>,<reserved width>,<literal string>[:]
+
+ An optional trailing colon will not appear in the resulting text.
+ Its purpose - to make the prefix visible when it has trailing
+ spaces. (Put an extra colon if there *should* be a trailing colon).
+
+ Examples of commands:
+     #S:4#       insert 4 spaces:  #"    "#
+     #L:> :#     insert string:    #"> "#
+     #N:3,2,) :# insert numbering: #" 3) "#
+               (auto-incremented on following lines).
+
+ ~Contents~@Contents@
+
+@SortLines
+$ #Sort Lines#
+^\1FDescription\-
+
+ The plugin sorts lines in the selected block according to up to 3 sorting
+criteria at a time.
+
+ #Expressions#
+
+    User specifies what kind of sorting is needed by means of
+    expressions. An expression takes an editor line as its input and
+    results in a value meaning the "weight" of this line to be used
+    in comparison with other lines. When two lines are compared, the
+    line having lesser "weight" will be placed above the other one,
+    unless the corresponding #Reverse# checkbox is checked.
+
+    Expressions must be valid Lua language expressions resulting
+    in either a number or a string. However, to use the most common
+    sorting operations, no knowledge of Lua is required (see examples
+    below). When results are strings, they are compared either case-
+    sensitively or case-insensitively, according to the state of
+    #Case sensit.# checkbox.
+
+    User types in expressions in one or more of the #Expr.# fields
+    of the dialog. Each of these 3 fields can be enabled or disabled;
+    when multiple fields are used, upper fields have higher sorting
+    priority.
+
+ #Variables and functions#
+
+    Expressions can use the following convenience variables
+    and functions:
+       #a#     : text of a line participating in sorting
+       #i#     : number of a line (1 = the upper selected line)
+       #I#     : total number of lines in selection (a constant)
+       #C(n)#  : the n-th column of #a#
+       #L(s)#  : convert arbitrary string s to lower case
+       #N(s)#  : convert arbitrary string s to number
+       #LC(n)# : convert n-th column of #a# to lower case;
+               same as L(C(n))
+       #NC(n)# : convert n-th column of #a# to number; same as N(C(n))
+
+    More variables and functions can be added by the user (see
+    #Load File# section below).
+
+ #Vertical blocks#
+
+    If a block of text was selected by using Alt key ("vertical"
+    blocks), then the expressions in fields #Expr.1# - #Expr.3# will
+    operate on selected parts of lines rather than on whole lines.
+    What is sorted, however, depends on the state of the
+    #Only selected# checkbox. If it is checked then only selected
+    parts of lines will be sorted, otherwise - whole lines.
+
+ #Column Pattern#
+
+    "Column" is part of Editor line defined by a Lua regex pattern in
+    the #Column Pattern# field. By default, a column is a sequence of
+    non-space characters. Press the #Default# button to restore the
+    default pattern. To change the definition of column, familiarize
+    yourself with Lua regular expressions.
+
+ #Load File#
+
+    Sometimes, lines have complex structure and sorting must be
+    done in accordance to some complex rules. This plugin handles
+    such cases by allowing to add functions from Lua scripts on the
+    disk. Such function parses the structure in question and
+    returns a number or a string representing the "weight" of the
+    input data to be used in sorting.
+
+    Type in the full pathname of the needed script in the #Load File#
+    dialog field. This script will be run before the sorting begins.
+    Global functions provided by the script can be used in the #Expr.#
+    fields of the dialog.
+
+^\1FSimple Examples (no knowledge of Lua is required)\-
+
+ #Example 1:#   a          [ ] Reverse
+    Sort lines alphabetically, case insensitive.
+
+ #Example 2:#   a          [x] Reverse
+    Sort lines alphabetically, case insensitive, in reverse order.
+
+ #Example 3:#   a          [x] Case sensit.
+    Sort lines alphabetically, case sensitive.
+
+ #Example 4:#   C(2)
+    Sort lines according to alphabetical order in the 2-nd column.
+
+ #Example 5:#   N(a)
+    Sort lines (containing one number per line) numerically.
+
+ #Example 6:#   NC(3)
+    Sort lines according to numerical order in the 3-rd column.
+
+ #Example 7:#   C(2)      [ ] Reverse
+              NC(1)     [x] Reverse
+              C(4)      [x] Reverse   [x] Case sensit.
+    Sort lines according to:
+       (a) alphabetical order in the 2-nd column - highest priority;
+       (b) reverse numerical order in the 1-st column - lower
+           priority;
+       (c) reverse alphabetical order in the 4-th column; case
+           sensitive - lowest priority;
+
+ #Example 8:#   NC(2) * NC(3)
+    Sort lines according to product of numbers of 2-nd and 3-rd
+    columns.
+
+^\1FAdvanced Examples (knowledge of Lua is required)\-
+
+ #Example 9:#   a:sub(10,20)
+    Sort lines according to alphabetical order in the substring
+    [10,20].
+
+ #Example 10:#  a:match"{.-}" or ""
+    Sort lines according to alphabetical order within the 1-st {}.
+
+ #Example 11:#  a:len()
+    Sort lines according to their lengths.
+
+ #Example 12:#  a:reverse()
+    Sort lines in the alphabetical order of their reversed values.
+
+ #Example 13:#  math.max(NC(1), NC(2), NC(3))
+    Sort lines according to the maximum number in their first three
+    columns.
+
+ #Example 14:#  -i
+    Inverse order of lines in the selection.
+
+ #Example 15:#  i%2==0 and i-1 or i+1
+    Swap lines in every pair of lines in the selection.
+
+ #Example 16:#  i%2==1 and i-I or i
+    First place all lines with odd line numbers, then all lines with even ones.
+
+ ~Contents~@Contents@
+
+@PluginConfig
+$ #Plugin's Configuration Dialog#
+ #[x] Always reload default script#
+
+    Default script (or "main" script) is a file that contains Lua handlers of
+the exported plugin functions. This script is run when FAR calls SetStartupInfo,
+making the handlers available to the plugin.
+    With this option checked, the default script will be additionally run
+every time FAR calls OpenPlugin and OpenFilePlugin functions. This is handy
+when the default script needs to be debugged.
+
+ #[x] Always reload on 'require'#
+
+    When Lua code 'require's some library first time, it is loaded from the
+disk. Subsequent 'require's of the same library return it from the memory.
+With this option checked, libraries are always loaded from the disk (this may
+be needed when debugging a library).
+
+ #[x] Use 'strict' mode#
+
+    With this option turned on, the plugin does not allow access to
+"undeclared" global variables.
+
+ #[x] Use searchable menu#
+
+    The main plugin menu becomes "searchable". When the menu is on the screen,
+type a character sequence, and the menu will react by displaying only items
+containing that sequence. Lua regular expressions are partially supported in
+the typed sequences.
+
+ #[x] Return to Main menu#
+
+    When a utility that was activated via the main menu finishes its execution,
+the main menu is displayed again.
+
+ ~Contents~@Contents@
+
+@ReloadUserFile
+$ #Reload User File#
+    If the file #_usermenu.lua# exists in the plugin directory, it will be run.
+This may be needed if _usermenu.lua or one of the files containing event
+handlers were edited by the user.
+
+    For details on file _usermenu.lua and event handlers, see the manual.
+
+ ~Contents~@Contents@

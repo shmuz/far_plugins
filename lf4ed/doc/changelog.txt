@@ -1,0 +1,280 @@
+------------------------------------------------------------------
+  Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
+------------------------------------------------------------------
+
+2011-02-02, v2.8.0
+  PLUGIN:
+      [+] Got a SysId (0x10000) for calling from macros. The call syntax is
+          the same as for command line calls (but the prefix is not needed).
+          New switch -a for asynchronous calls.
+      [+] Function MakeResident: parameter can be a table. That makes
+          possible to require() files containing event handlers.
+  Sort Lines:
+      [+] a GUID added to the dialog.
+  Reformat Block:
+      [+] a GUID added to the dialog.
+
+2010-12-24, v2.7.1
+      [!] The build of 2.7.0 was broken due to an error in Makefile.
+
+2010-12-23, v2.7.0
+  PLUGIN:
+      [+] 64-bit build added (works with 64-bit LuaFAR).
+      [*] Plugin keeps its data in "%APPDATA%\LuaFAR for Editor" directory
+          (was: in the plugin directory).
+
+2010-11-26, v2.6.0
+  PLUGIN:
+      [*] Lua modules used by the plugin do not set global variables.
+          Use the value returned by `require`.
+  Sort Lines:
+      [*] A single "undo" in Editor undoes the entire operation.
+  Reformat Block:
+      [*] A single "undo" in Editor undoes the entire operation.
+  Block Sum:
+      [*] The dialog moved from the configuration to the utility.
+      [+] The result can be edited in the dialog.
+      [*] Items immediately followed by [,;:] are considered valid.
+  Lua Expression:
+      [*] The dialog moved from the configuration to the utility.
+      [+] The result can be edited in the dialog.
+      [+] If there's no selection, the current line is processed.
+
+2010-10-14, v2.5.0
+  PLUGIN:
+      [!] Error when calling "Block Sum" or "Lua Expression" settings dialogs.
+      [!] Utilities could interfere with each other via parameters table.
+  Lua Script:
+      [+] Parameters can be passed to the script. Parameters dialog added.
+
+2010-08-30, v2.4.0
+  PLUGIN:
+      [+] AddToMenu: parameter "where" can include letter "d" (for "dialog").
+      [*] AddToMenu, AddCommand: unlimited number of additional arguments.
+      [*] Installed scripts get their parameters in a table (was: 2 parameters).
+          The table may also include fields "From" and "hDlg".
+      [!] Fix "Reload user file" with default plugin settings.
+
+2010-07-25, v2.3.0
+  PLUGIN:
+      [*] 'Reload User File' operation resets `package.loaded', in order to
+          behave as close as possible to the initial loading.
+      [+] new callback ("resident") function ExitScript.
+      [+] function AddToMenu supports localization.
+
+2010-06-25, v2.2.0
+  PLUGIN:
+      [*] LuaFAR 2.3 required.
+      [+] Localization of the configuration dialog.
+      [+] Utility for localization of script packets.
+  Sort Lines:
+      [!] Fixed shortcut keys in the dialogs.
+      [!] Sorting made stable.
+  Block Sum:
+      [*] Made compatible with LuaFAR 2.3.
+
+2010-04-24, v2.1.0
+  PLUGIN:
+      [!] Fixes to work with Unicode file names and paths (LuaFAR 2.2 required).
+  Sort Lines:
+      [+] Added constant `I' (number of lines in selection). Help files updated.
+
+2010-02-25, v2.0.1
+  PLUGIN:
+      [+] Added function unicode.utf8.cfind (see the manual).
+  Sort Lines:
+      [+] Added variable `i' (number of selected line). Help files updated.
+
+2010-02-20, v2.0.0
+  PLUGIN:
+      [*] First Unicode version.
+      [*] Requires LuaFAR version 2.0.0.
+      [*] s:find() accesses unicode.utf8.find(s), the same goes for all
+          string function names. To access the standard string library,
+          write string.find(s), etc.
+  Sort Lines:
+      [*] "Case sensitive" checkboxes added. Help files updated.
+
+2010-02-04, v0.12.1
+  PLUGIN:
+      [!] LuaFAR version check was done after the exported functions were
+          already connected (that is, too late).
+      [*] Requires LuaFAR version 1.1.
+
+2010-01-16, v0.12.0
+  PLUGIN:
+      [!] When errors occured in a utility called from Editor via shortcut,
+          the shortcut was reported to Far as needing further processing.
+      [!] Broken stack traceback in error messages (since version 0.11.0).
+      [!] Error message window: could not jump to an already open editor
+          from the panels.
+      [*] Command line syntax changed: see the manual.
+  Lua Script:
+      [*] When running on the whole Editor buffer, ignore the 1-st line
+          if it starts with a # character.
+
+2010-01-03, v0.11.0
+  PLUGIN:
+      [+] Plugin can be called from the command line, via `lfe' prefix.
+          A new function `AddCommand' was added.
+      [!] lf4ed:config: changes to the "ReturnToMainMenu" option did not work.
+      [!] lf4ed:config: changes were not reverted in case of error.
+
+2009-12-02, v0.10.0
+  PLUGIN:
+      [!] `far2.history' module was raising error given an empty history file.
+      [*] `far2.history' module renamed to `history'.
+      [*] configuration changes done by a user script are reverted by the
+          plugin after the script exits.
+      [*] lf4ed.config: always returns configuration existed prior to the call.
+      [!] far.OnError: eliminate jumps to embedded scripts.
+      [!] far.OnError: jump to incorrect line in another file, when there
+          was selection in the current file (the bug existed since v. 0.9.0).
+      [*] Main Menu, Config. Menu: removed separators after the built-in items.
+          (They can be added via files _usermenu.lua).
+      [*] The plugin's DLL, as supplied, now embeds scripts and modules in
+          source code form (not compiled). That allows to work with LuaJIT.
+
+2009-11-02, v0.9.1
+  PLUGIN:
+      [!] configuration changes were not saved in the history file
+          (the bug existed since version 0.8.0).
+
+2009-11-01, v0.9.0
+  PLUGIN:
+      [*] all utilities added by AddToMenu calls within a single usermenu file
+          share a common environment that does not change until the next
+          "Reload User File" operation (or until FAR termination);
+      [+] plugin checks LuaFAR version;
+      [*] error handler (far.OnError) improved;
+      [*] plugin (as it is supplied) does not embed LuaFAR library;
+
+2009-10-02, v0.8.0
+  PLUGIN:
+      [*] signature and functionality of AddToMenu function changed;
+          [*] removed "global functions requirement" for user scripts;
+          [+] become possible to add items to Configuration Menu;
+          [+] menu separators can be added;
+      [+] added function AddUserFile (callable from _usermenu.lua);
+      [+] added function AutoInstall (callable from _usermenu.lua);
+      [*] '<plugin_path>/scripts/?.lua' is added to package.path;
+      [+] added function lf4ed.config: get/set plugin settings from script;
+      [+] added function lf4ed.version: get plugin version;
+      [+] built-in Lua modules (dialog, history, searchmenu) used in plugin
+          are documented; user scripts can now "officially" use them;
+      [*] "embedded" versions of the plugin contain LuaFAR 0.8.0;
+      [!] unneeded "require 'strict'" removed from far2/sortlines.lua;
+      [-] lf4ed_emb.dll is not supplied any more;
+
+2009-09-01, v0.7.4
+  PLUGIN:
+      [!] function far.OnError can be reliably replaced from _usermenu.lua
+      [*] plugin built on base LuaFAR 0.7.3
+
+2009-08-28, v0.7.3
+  PLUGIN:
+      [*] plugin built on base LuaFAR 0.7.2
+
+2009-06-18, v0.7.2
+  PLUGIN:
+      [*] plugin built on base LuaFAR 0.7.1
+
+2009-02-14, v0.7.1
+  Reformat Block:
+      [!] error loading and saving start and end column data
+
+2009-02-13, v0.7
+  PLUGIN:
+      [*] plugin built on base LuaFAR 0.7
+
+2009-01-14, v0.6
+  PLUGIN:
+      [*] plugin built on base LuaFAR 0.6
+
+2008-12-31, v0.5.2
+  PLUGIN:
+      [!] improvements in jumping to error lines
+      [*] _usermenu.lua (and event handler files) are run in 2 cases only:
+             a) on plugin start-up
+             b) on configuration menu command "Reload User File"
+      [*] _usermenu.lua: input arguments are deprecated
+      [+] configuration menu command "Reload User File"
+      [+] user is able to install event handlers, by means
+          of calling new function MakeResident in _usermenu.lua
+
+2008-12-27, v0.5.1
+  PLUGIN:
+      [!] did not work if file _usermenu.lua was missing
+      [!] option "always reload on require" was not independent from option
+          "always reload default script"
+      [!] several problems related to jumping to error lines
+      [*] plugin built on base LuaFAR 0.5.1
+
+2008-12-22, v0.5
+  PLUGIN:
+      [+] configuration dialog "Plugin Settings"
+      [+] work from viewer and panels
+      [+] file farkeys.lua
+      [*] _usermenu.lua: AddToMenu API changed
+      [*] added <plugin directory>\?.lua to initial value of package.path
+      [*] env. variable LUAFAR_INIT is processed on start up (was: LUA_INIT)
+      [*] plugin menus can be made "searchable" (thanks to maxdrfl)
+      [*] indicator of memory used by the Lua State on the error message boxes
+      [*] buttons on error message boxes for jumping to error lines
+      [*] plugin built on base LuaFAR 0.5
+
+2008-12-13, v0.4
+  Reformat Block:
+      [+] Russian interface translation
+  Block Sum:
+      [!] editor window not redrawn after hotkey-initiated execution
+  Lua Expression:
+      [!] editor window not redrawn after hotkey-initiated execution
+  PLUGIN:
+      [!] hot keys: multiple executions after a single key press
+      [!] hot keys: did not work when they were part of a macro
+      [*] _usermenu.lua: is passed 2 arguments (event type and editor ID)
+      [*] plugin built on base LuaFAR 0.4
+
+2008-12-06, v0.3d
+  PLUGIN:
+      [!] hot keys: worked only after the menu was called
+      [!] hot keys: triple combinations didn't work
+      [+] hot keys: can be assigned without adding items to the menu
+      [+] hot keys: can be assigned to the built-in utilities
+      [*] _usermenu.lua: is (almost) not restricted by its scope
+      [*] _usermenu.lua: is run when either of 4 different events occurs,
+          and is passed an argument (event type)
+
+2008-12-04, v0.3c
+  PLUGIN:
+      [!] incorrect processing of editor input
+
+2008-12-04, v0.3b
+  PLUGIN:
+      [+] hot keys can be assigned to user utilities
+      [+] can work with external Lua DLL
+      [*] plugin built on base LuaFAR 0.3
+
+2008-11-26, v0.3
+  Sort Lines:
+      [!] handling different types of EOLs.
+      [!] sorting "only selected" in vertical blocks.
+  Block Sum:
+      [*] the dialog moved to Configuration Menu.
+  Lua Expression:
+      [*] the dialog moved to Configuration Menu.
+      [*] a semicolon is appended to result when inserting into the editor.
+  Lua Script:
+      [*] works either on selection or on the whole editor buffer.
+  PLUGIN:
+      [+] adding utilities by the user.
+      [+] configuration menu added
+
+2008-11-06, v0.2.1
+  Sort Lines:
+      [!] sorting "only selected" in vertical blocks.
+
+2008-11-05, v0.2
+  PLUGIN:
+      [+] first public release.
