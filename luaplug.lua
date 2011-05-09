@@ -1,12 +1,10 @@
 -------------------------------------------------------------------------------
 -- LuaFAR for Editor: main script
 -------------------------------------------------------------------------------
-
-local PluginVersion = "2.8.0"
-local ReqLuafarVer = "2.8"
+local MinLuafarVersion = { 3, 0 }
 
 -- CONFIGURATION : keep it at the file top !!
-local DefaultCfg = {
+local DefaultConfig = {
   -- Default script will be recompiled and run every time OpenPlugin/OpenFilePlugin
   -- are called: set true for debugging, false for normal use;
   ReloadDefaultScript = false,
@@ -18,26 +16,26 @@ local DefaultCfg = {
   -- After executing utility from main menu, return to the menu again
   ReturnToMainMenu    = false,
 
-  UseSearchMenu       = false,
   UseStrict           = false, -- Use require 'strict'
 }
 
 -- UPVALUES : keep them above all function definitions !!
-local Utils = far.Require "far2.utils"
-local M     = far.Require "lf4ed_message"
-local F = far.GetFlags()
+local Utils = require "far2.utils"
+local M     = require "lf4ed_message"
+local LibHistory = require "far2.history"
+local F = far.Flags
 local FirstRun = not _Plugin
-local band, bor, bnot = bit.band, bit.bor, bit.bnot
+local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
 lf4ed = lf4ed or {}
 
-local _Cfg, _History, _ModuleDir
+local CurrentConfig, _History, _ModuleDir
 
 local function ErrMsg(msg, buttons, flags)
   return far.Message(msg, "Error", buttons, flags or "w")
 end
 
 local function ScriptErrMsg(msg)
-  (type(far.OnError)=="function" and far.OnError or ErrMsg)(msg)
+  (type(export.OnError)=="function" and export.OnError or ErrMsg)(msg)
 end
 
 local function ShallowCopy (src)
@@ -45,22 +43,20 @@ local function ShallowCopy (src)
   return trg
 end
 
-local RequireWithReload, ResetPackageLoaded do
-  local bypass_reload = { string=1,table=1,os=1,coroutine=1,math=1,io=1,debug=1,
-                          _G=1,package=1,far=1,bit=1,unicode=1,uio=1 }
+local InternalLibs = { string=1,table=1,os=1,coroutine=1,math=1,io=1,debug=1,
+                       _G=1,package=1,far=1,bit64=1,unicode=1,win=1 }
 
-  RequireWithReload = function(name)
-    if name and not bypass_reload[name] then
-      package.loaded[name] = nil
-    end
-    return _Plugin.OriginalRequire(name)
+local function RequireWithReload (name)
+  if name and not InternalLibs[name] then
+    package.loaded[name] = nil
   end
+  return _Plugin.OriginalRequire(name)
+end
 
-  ResetPackageLoaded = function()
-    for name in pairs(package.loaded) do
-      if not bypass_reload[name] then
-        package.loaded[name] = nil
-      end
+local function ResetPackageLoaded()
+  for name in pairs(package.loaded) do
+    if not InternalLibs[name] then
+      package.loaded[name] = nil
     end
   end
 end
@@ -84,18 +80,18 @@ end
 function lf4ed.config (newcfg)
   assert(not newcfg or (type(newcfg) == "table"))
   local t = {}
-  for k in pairs(DefaultCfg) do t[k] = _Cfg[k] end
+  for k in pairs(DefaultConfig) do t[k] = CurrentConfig[k] end
   if newcfg then
     for k,v in pairs(newcfg) do
-      if DefaultCfg[k] ~= nil then _Cfg[k] = v end
+      if DefaultConfig[k] ~= nil then CurrentConfig[k] = v end
     end
-    OnConfigChange(_Cfg)
+    OnConfigChange(CurrentConfig)
   end
   return t
 end
 
 function lf4ed.version()
-  return PluginVersion
+  return table.concat(export.GetGlobalInfo().Version, ".")
 end
 
 local function ConvertUserHotkey(str)
@@ -108,19 +104,6 @@ local function ConvertUserHotkey(str)
     end
   end
   return d
-end
-
-local function RunFile (filespec, aArg)
-  for file in filespec:gmatch("[^|]+") do
-    if file:find("^%<") then
-      local ok, func = pcall(require, file) -- embedded file
-      if ok then return func(aArg) end
-    else
-      local func = loadfile(_ModuleDir .. file) -- disk file
-      if func then return func(aArg) end
-    end
-  end
-  error ('could not load file from filespec: "' .. filespec .. '"')
 end
 
 local function RunUserFunc (aArgTable, aItem, ...)
@@ -153,33 +136,33 @@ end
 
 local function fWrap (aArg)
   aArg[1] = _History:field("WrapDialog")
-  return RunFile("<wrap|wrap.lua", aArg)
+  return Utils.RunFile("<wrap|wrap.lua", aArg)
 end
 
 local function fBlockSum (aArg)
   aArg[1], aArg[2] = "BlockSum", _History:field("BlockSum")
-  return RunFile("<expression|expression.lua", aArg)
+  return Utils.RunFile("<expression|expression.lua", aArg)
 end
 
 local function fExpr (aArg)
   aArg[1], aArg[2] = "LuaExpr", _History:field("LuaExpression")
-  return RunFile("<expression|expression.lua", aArg)
+  return Utils.RunFile("<expression|expression.lua", aArg)
 end
 
 local function fScript (aArg)
   aArg[1], aArg[2] = "LuaScript", _History:field("LuaScript")
-  return RunFile("<expression|expression.lua", aArg)
+  return Utils.RunFile("<expression|expression.lua", aArg)
 end
 
 local function fScriptParams (aArg)
   aArg[1], aArg[2] = "ScriptParams", _History:field("LuaScript")
-  return RunFile("<expression|expression.lua", aArg)
+  return Utils.RunFile("<expression|expression.lua", aArg)
 end
 
 local function fPluginConfig (aArg)
-  aArg[1] = _Cfg
-  if RunFile("<config|config.lua", aArg) then
-    OnConfigChange(_Cfg)
+  aArg[1] = CurrentConfig
+  if Utils.RunFile("<config|config.lua", aArg) then
+    OnConfigChange(CurrentConfig)
     return true
   end
 end
@@ -201,7 +184,7 @@ local EditorMenuItems = {
 --      contain spaces; enclosing double quotes are stripped from the argument.
 --   b) sequence containing non-space, non-unescaped-double-quote characters.
 -- * Arguments of both kinds can contain escaped double quotes;
--- * Backslashes escape only double quotes; non-escaped double qoutes either
+-- * Backslashes escape only double quotes; non-escaped double quotes either
 --   start or end an argument.
 local function SplitCommandLine (str)
   local out = {}
@@ -328,18 +311,16 @@ local function MakeAddUserFile (aEnv, aItems)
     filename = _ModuleDir .. filename
     if uDepth == 1 then
       -- if top-level _usermenu.lua doesn't exist, it isn't error
-      local info = far.GetFileInfo(filename)
-      if not info or info.FileAttributes:find("d") then return end
+      local attr = win.GetFileAttr(filename)
+      if not attr or attr:find("d") then return end
     end
     ---------------------------------------------------------------------------
-    local chunk, err = loadfile(filename)
-    if not chunk then error(err, 3) end
+    local chunk = assert(loadfile(filename))
     ---------------------------------------------------------------------------
     uStack[uDepth] = setmetatable({}, uMeta)
     aEnv.AddToMenu = MakeAddToMenu(aItems, uStack[uDepth])
     aEnv.AddCommand = MakeAddCommand(aItems, uStack[uDepth])
-    local ok, err = pcall(setfenv(chunk, aEnv))
-    if not ok then error(err, 3) end
+    setfenv(chunk, aEnv)()
     uDepth = uDepth - 1
   end
   return AddUserFile
@@ -413,21 +394,15 @@ local function RunMenuItem(aArg, aItem, aRestoreConfig)
     return RunUserFunc(argCopy, aItem)
   end
   local ok, result = xpcall(wrapfunc, traceback3)
-  local result2 = _Cfg.ReturnToMainMenu
+  local result2 = CurrentConfig.ReturnToMainMenu
   if restoreConfig then lf4ed.config(restoreConfig) end
   if not ok then ScriptErrMsg(result) end
   return ok, result, result2
 end
 
-local function SetSearchMenu (properties)
-  local searchmenu = _Cfg.UseSearchMenu and require "far2.searchmenu"
-  properties.Flags.FMENU_AUTOHIGHLIGHT = not searchmenu
-  return searchmenu or far.Menu
-end
-
 local function Configure (aArg)
   local properties, items = {
-    Flags = {FMENU_WRAPMODE=1}, Title = M.MPluginNameCfg,
+    Flags = {FMENU_WRAPMODE=1, FMENU_AUTOHIGHLIGHT=1}, Title = M.MPluginNameCfg,
     HelpTopic = "Contents",
   }, {
     { text=M.MPluginSettings, action=fPluginConfig },
@@ -435,8 +410,7 @@ local function Configure (aArg)
   }
   for _,v in ipairs(_Plugin.UserItems.config) do items[#items+1]=v end
   while true do
-    local menu = SetSearchMenu(properties)
-    local item, pos = menu(properties, items)
+    local item, pos = far.Menu(properties, items)
     if not item then return end
     local ok, result = RunMenuItem(aArg, item, false)
     if not ok then return end
@@ -446,7 +420,7 @@ local function Configure (aArg)
   end
 end
 
-local function far_Configure (ItemNumber)
+local function export_Configure (Guid)
   Configure({From="config"})
   return true
 end
@@ -469,7 +443,7 @@ end
 
 local function MakeMainMenu(aFrom)
   local properties = {
-    Flags = {FMENU_WRAPMODE=1}, Title = M.MPluginName,
+    Flags = {FMENU_WRAPMODE=1, FMENU_AUTOHIGHLIGHT=1}, Title = M.MPluginName,
     HelpTopic = "Contents", Bottom = "alt+sh+f9", }
   --------
   local items = {}
@@ -545,7 +519,7 @@ local function ProcessCommand (source, sFrom)
     elseif param ~= "" then
       if opt=="r" then
         if pass2 then
-          local f = assert(loadfile(param))
+          local f = assert(loadfile(Utils.CorrectPath(param)))
           setfenv(f, env)(unpack(args, i+1))
         end
         break
@@ -571,7 +545,7 @@ local function ProcessCommand (source, sFrom)
   end
 end
 
-local function far_OpenPlugin (aFrom, aItem)
+local function export_Open (aFrom, aGuid, aItem) -- TODO
 
   -- Called from macro
   if band(aFrom, bnot(F.OPEN_FROM_MASK)) ~= 0 then
@@ -614,8 +588,7 @@ local function far_OpenPlugin (aFrom, aItem)
   local properties, items, keys = MakeMainMenu(sFrom)
   properties.SelectIndex = history.position
   while true do
-    local menu = SetSearchMenu(properties)
-    local item, pos = menu(properties, items, keys)
+    local item, pos = far.Menu(properties, items, keys)
     if not item then break end
     history.position = pos
     local arg = { From = sFrom }
@@ -632,7 +605,10 @@ local function far_OpenPlugin (aFrom, aItem)
   end
 end
 
-local function far_GetPluginInfo()
+local PluginMenuGuid1   = win.Uuid("e7218df9-e556-4801-8715-f14e2348fcce")
+local PluginConfigGuid1 = win.Uuid("0411deb2-73d0-49a6-95c0-3e24150edd44")
+
+local function export_GetPluginInfo()
   local flags = bor(F.PF_EDITOR, F.PF_DISABLEPANELS)
   local useritems = _Plugin.UserItems
   if useritems then
@@ -641,15 +617,16 @@ local function far_GetPluginInfo()
     if #useritems.dialog > 0 then flags = bor(flags, F.PF_DIALOG) end
   end
   return {
-    Flags = flags,
-    PluginMenuStrings = { M.MPluginName },
-    PluginConfigStrings = { M.MPluginName },
     CommandPrefix = "lfe",
-    SysId = 0x10000,
+    Flags = flags,
+    PluginConfigGuids   = PluginConfigGuid1.."",
+    PluginConfigStrings = { M.MPluginName },
+    PluginMenuGuids   = PluginMenuGuid1.."",
+    PluginMenuStrings = { M.MPluginName },
   }
 end
 
-local function far_ExitFAR()
+local function export_ExitFAR()
   RunExitScriptHandlers()
   _History:save()
 end
@@ -668,7 +645,7 @@ local function KeyComb (Rec)
   return f
 end
 
-local function far_ProcessEditorInput (Rec)
+local function export_ProcessEditorInput (Rec)
   local EventType = Rec.EventType
   if (EventType==F.FARMACRO_KEY_EVENT) or (EventType==F.KEY_EVENT) then
     local item = _Plugin.HotKeyTable[KeyComb(Rec)]
@@ -685,47 +662,47 @@ local function far_ProcessEditorInput (Rec)
   end
 end
 
-local function far_ProcessEditorEvent (Event, Param)
+local function export_ProcessEditorEvent (Event, Param)
   for _,f in ipairs(_Plugin.EditorEventHandlers) do
     f(Event, Param)
   end
 end
 
-local function far_ProcessViewerEvent (Event, Param)
+local function export_ProcessViewerEvent (Event, Param)
   for _,f in ipairs(_Plugin.ViewerEventHandlers) do
     f(Event, Param)
   end
 end
 
 local function SetExportFunctions()
-  far.Configure          = far_Configure
-  far.ExitFAR            = far_ExitFAR
-  far.GetPluginInfo      = far_GetPluginInfo
-  far.OpenPlugin         = far_OpenPlugin
-  far.ProcessEditorEvent = far_ProcessEditorEvent
-  far.ProcessEditorInput = far_ProcessEditorInput
-  far.ProcessViewerEvent = far_ProcessViewerEvent
+  export.Configure          = export_Configure
+  export.ExitFAR            = export_ExitFAR
+  export.GetPluginInfo      = export_GetPluginInfo
+  export.Open               = export_Open
+  export.ProcessEditorEvent = export_ProcessEditorEvent
+  export.ProcessEditorInput = export_ProcessEditorInput
+  export.ProcessViewerEvent = export_ProcessViewerEvent
 end
 
 local function InitUpvalues (_Plugin)
-  _ModuleDir = _Plugin.ModuleDir
-  _History = _Plugin.History
-  _Cfg = _History:field("PluginSettings")
-  setmetatable(_Cfg, { __index=DefaultCfg })
+  _ModuleDir, _History = _Plugin.ModuleDir, _Plugin.History
+  CurrentConfig = _History:field("PluginSettings")
+  setmetatable(CurrentConfig, { __index=DefaultConfig })
+  OnConfigChange(CurrentConfig)
 end
 
 local function main()
   if FirstRun then
-    _Plugin = Utils.InitPlugin("LuaFAR for Editor")
-    if not Utils.CheckLuafarVersion(ReqLuafarVer, M.MPluginName) then
+    _Plugin = Utils.InitPlugin()
+    if not Utils.CheckLuafarVersion(MinLuafarVersion, M.MPluginName) then
       return
     end
     _Plugin.PackagePath = package.path:gsub(";", ";".._Plugin.ModuleDir.."scripts\\?.lua;", 1)
     _Plugin.OriginalRequire = require
+    _Plugin.History = LibHistory.newsettings(nil, "alldata")
   end
 
   InitUpvalues(_Plugin)
-  OnConfigChange(_Cfg)
   SetExportFunctions()
 
   if FirstRun then

@@ -27,14 +27,6 @@ local linit = [[
 <$declarations>
 
 static const luaL_Reg lualibs[] = {
-  {"", luaopen_base},
-  {LUA_LOADLIBNAME, luaopen_package},
-  {LUA_TABLIBNAME, luaopen_table},
-  {LUA_IOLIBNAME, luaopen_io},
-  {LUA_OSLIBNAME, luaopen_os},
-  {LUA_STRLIBNAME, luaopen_string},
-  {LUA_MATHLIBNAME, luaopen_math},
-  {LUA_DBLIBNAME, luaopen_debug},
 <$binmodules>
 <$modules>
 <$scripts>
@@ -86,14 +78,15 @@ local function addfiles(aLuafiles, target, method, luac)
   local strip = (method == "-strip") and require "lstrip51"
   for i, f in ipairs(aLuafiles) do
     local s
+    local fullname = f.path .."\\".. f.name
     if method == "-plain" then
-      local fp = assert(io.open(f.path .. f.name))
+      local fp = assert(io.open(fullname))
       s = fp:read("*all")
       fp:close()
     elseif strip then
-      s = assert(strip("fsk", f.path .. f.name))
+      s = assert(strip("fsk", fullname))
     else
-      assert(0 == os.execute((luac or "luac") .. " -o luac.out -s " .. f.path .. f.name))
+      assert(0 == os.execute((luac or "luac") .. " -o luac.out -s " .. fullname))
       local fp = assert(io.open("luac.out", "rb"))
       s = fp:read("*all")
       fp:close()
@@ -140,13 +133,28 @@ local function create_linit (aLuafiles, aBinlibs)
   end
 end
 
-local function generate(config, target, method, luac)
-  assert(target, "syntax: generate.lua <config> <target> [-plain|-strip]")
-  local luafiles, binlibs = dofile(config)
-  assert(type(luafiles) == "table")
-  assert(type(luafiles.bootindex) == "number")
-  binlibs = binlibs or {}
-  assert(type(binlibs) == "table")
+local function generate (target, method, luac, bootscript, ...)
+  assert(bootscript, "syntax: generate.lua <target> <method> <luac> <bootscript> [files]")
+  local args = {...}
+  local function decode(arg, tbl)
+    tbl.path, tbl.name = arg:match("(.+)%*(.+)")
+    if tbl.path == nil then error("bad argument: "..arg) end
+    return tbl
+  end
+  local luafiles = { bootindex=1, decode(bootscript, {script=true}) }
+  local binlibs = {}
+  local stage
+  for _, arg in ipairs(args) do
+    if     arg == "-s" then stage = "scripts"
+    elseif arg == "-m" then stage = "modules"
+    elseif arg == "-b" then stage = "binaries"
+    elseif stage == "scripts"  then table.insert(luafiles, decode(arg, {script=true}))
+    elseif stage == "modules"  then table.insert(luafiles, decode(arg, {module=true}))
+    elseif stage == "binaries" then table.insert(binlibs, arg)
+    else error ("type of parameter not specified")
+    end
+  end
+
   local fp = assert(io.open(target, "w"))
   --------------------------------------------------------------
   fp:write("/* This is a generated file. */\n\n")

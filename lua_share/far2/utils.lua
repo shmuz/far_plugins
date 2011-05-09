@@ -1,20 +1,30 @@
 -- utils.lua --
 
-local history = require "history"
 local Package = {}
-local F = far.GetFlags()
+local F = far.Flags
 local PluginDir = far.PluginStartupInfo().ModuleName:match(".*\\")
 
 function Package.CheckLuafarVersion (reqVersion, msgTitle)
   local v1, v2 = far.LuafarVersion(true)
-  local r1, r2 = reqVersion:match("^(%d+)%.(%d+)")
-  r1, r2 = tonumber(r1), tonumber(r2)
+  local r1, r2 = reqVersion[1], reqVersion[2]
   if (v1 > r1) or (v1 == r1 and v2 >= r2) then return true end
   far.Message(
     ("LuaFAR %s or newer is required\n(loaded version is %s)")
     :format(reqVersion, far.LuafarVersion()),
     msgTitle, ";Ok", "w")
   return false
+end
+
+function Package.CorrectPath (path)
+  if not path:find("^[a-zA-Z]:") then
+    local pDir = far.CtrlGetPanelDir(nil, 1)
+    if path:find("^[\\/]") then
+      path = pDir:sub(1,2) .. path
+    else
+      path = pDir:gsub("[^\\]$", "%1\\") .. path
+    end
+  end
+  return path
 end
 
 local function OnError (msg)
@@ -45,13 +55,13 @@ local function OnError (msg)
     function(line)
       line = line:gsub("^\t", ""):gsub("(.-)%:(%d+)%:(%s*)",
         function(file, numline, space)
-          if #jumps < 9 then
+          if #jumps < 10 then
             local file2 = file:sub(1,3) ~= "..." and file or repair(file:sub(4))
             if file2 then
               local name = file2:match('^%[string "(.*)"%]$')
               if not name or name=="all text" or name=="selection" then
                 jumps[#jumps+1] = { file=file2, line=tonumber(numline) }
-                buttons = buttons .. ";[J&" .. (#jumps) .. "]"
+                buttons = buttons .. ";&" .. (#jumps)
                 return ("\16[J%d]:%s:%s:%s"):format(#jumps, file, numline, space)
               end
             end
@@ -95,9 +105,23 @@ local function OnError (msg)
       line = line + startsel
     end
     local offs = math.floor(eInfo.WindowSizeY / 2)
-    far.EditorSetPosition(line-1, 0, 0, line>offs and line-offs or 0)
+    far.EditorSetPosition(nil, line-1, 0, 0, line>offs and line-offs or 0)
     far.EditorRedraw()
   end
+end
+
+function Package.RunFile (filespec, ...)
+  for name in filespec:gmatch("[^|]+") do
+    if name:find("^%<") then -- embedded file
+      if package.preload[name] then -- prevent unnecessary disk search with non-embed plugin
+        return require(name)(...)
+      end
+    else -- disk file
+      local func = loadfile(PluginDir .. name)
+      if func then return func(...) end
+    end
+  end
+  error('could not load file from filespec: "' .. filespec .. '"')
 end
 
 -- Add function unicode.utf8.cfind:
@@ -115,22 +139,15 @@ local function AddCfindFunction()
   end
 end
 
-function Package.InitPlugin (workDir)
-  _require, _loadfile, _io = require, loadfile, io
-  require, loadfile, io = far.Require, far.LoadFile, uio
-  package._loadlib, package.loadlib = package.loadlib, far.LoadLib
+function Package.InitPlugin()
   getmetatable("").__index = unicode.utf8
   AddCfindFunction()
 
-  far.OnError = OnError
+  export.OnError = OnError
 
   local plugin = {}
   plugin.ModuleDir = PluginDir
-  plugin.WorkDir = assert(os.getenv("APPDATA")) .."\\".. workDir
-  assert(far.CreateDir(plugin.WorkDir, true))
-  plugin.History = history.new(plugin.WorkDir.."\\plugin.data")
   return plugin
 end
 
 return Package
-

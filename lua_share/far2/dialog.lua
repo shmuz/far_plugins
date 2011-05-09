@@ -1,7 +1,7 @@
 -- Dialog module
 
 local Package = {}
-local F = far.GetFlags()
+local F = far.Flags
 local SendDlgMessage = far.SendDlgMessage
 
 --------------------------------------------------------------------------------
@@ -16,14 +16,14 @@ local function CheckItemType(item, ...)
   end
   return false
 end
+Package.CheckItemType = CheckItemType
 
 
 -- Bind dialog item names (see struct FarDialogItem) to their indexes.
 local item_map = {
-  Type=1, X1=2, Y1=3, X2=4, Y2=5, Focus=6,
-  Selected=7, History=7, Mask=7, ListItems=7, ListPos=7, VBuf=7,
-  Flags=8, DefaultButton=9,
-  Data=10, Ptr=10,
+  Type=1, X1=2, Y1=3, X2=4, Y2=5,
+  Selected=6, ListItems=6, VBuf=6,
+  History=7, Mask=8, Flags=9, Data=10, MaxLength=11, UserData=12
 }
 
 
@@ -39,17 +39,21 @@ local item_meta = {
                end,
 }
 
+function item_map:GetCheckState (hDlg)
+  return SendDlgMessage(hDlg,"DM_GETCHECK",self.id,0)
+end
+
 function item_map:GetCheck (hDlg)
-  return (F.BSTATE_CHECKED==SendDlgMessage(hDlg,"DM_GETCHECK",self.id,0))
+  return (1 == self:GetCheckState(hDlg))
 end
 
 function item_map:SaveCheck (hDlg, tData)
-  tData[self.name] = self:GetCheck(hDlg)
+  local v = self:GetCheckState(hDlg)
+  tData[self.name] = (v > 1) and v or (v == 1)
 end
 
 function item_map:SetCheck (hDlg, check)
-  SendDlgMessage(hDlg, "DM_SETCHECK", self.id,
-    check and F.BSTATE_CHECKED or F.BSTATE_UNCHECKED)
+  SendDlgMessage(hDlg, "DM_SETCHECK", self.id, tonumber(check) or (check and 1) or 0)
 end
 
 function item_map:Enable (hDlg, enbl)
@@ -110,17 +114,15 @@ end
 function Package.LoadData (aDialog, aData)
   for _,item in ipairs(aDialog) do
     if not (item._noautoload or item._noauto) then
+      local v = aData[item.name]
       if CheckItemType(item, "DI_CHECKBOX", "DI_RADIOBUTTON") then
-        if aData[item.name] == nil then --> nil==no data; false==valid data
-          item[7] = item[7] or 0
-        else
-          item[7] = aData[item.name] and 1 or 0
-        end
+        item[6] = v==nil and (item[6] or 0) or v==false and 0 or tonumber(v) or 1
       elseif CheckItemType(item, "DI_EDIT", "DI_FIXEDIT") then
-        item[10] = aData[item.name] or item[10] or ""
+        item[10] = v or item[10] or ""
       elseif CheckItemType(item, "DI_LISTBOX", "DI_COMBOBOX") then
-        local SelectIndex = aData[item.name] and aData[item.name].SelectIndex
-        if SelectIndex then item[7].SelectIndex = SelectIndex end
+        if v and v.SelectIndex then
+          item[6].SelectIndex = v.SelectIndex
+        end
       end
     end
   end
@@ -130,12 +132,13 @@ function Package.SaveData (aDialog, aData)
   for _,item in ipairs(aDialog) do
     if not (item._noautosave or item._noauto) then
       if CheckItemType(item, "DI_CHECKBOX", "DI_RADIOBUTTON") then
-        aData[item.name] = (item[7] ~= 0)
+        local v = item[6]
+        aData[item.name] = (v > 1) and v or (v == 1)
       elseif CheckItemType(item, "DI_EDIT", "DI_FIXEDIT") then
         aData[item.name] = item[10]
       elseif CheckItemType(item, "DI_LISTBOX", "DI_COMBOBOX") then
         aData[item.name] = aData[item.name] or {}
-        aData[item.name].SelectIndex = item[7].SelectIndex
+        aData[item.name].SelectIndex = item[6].SelectIndex
       end
     end
   end
@@ -170,4 +173,4 @@ return Package
 
 -- Adding item example:
 -- dlg = dialog.NewDialog()
--- dlg.cbxCase = { "DI_CHECKBOX", 10, 4, 0, 0, 0, 0, 0, 0, "&Case sensitive" }
+-- dlg.cbxCase = { "DI_CHECKBOX",  10,4,0,0,  0,"","",0,"&Case sensitive" }

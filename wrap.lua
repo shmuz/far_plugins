@@ -5,7 +5,7 @@
 local far2_dialog = require "far2.dialog"
 
 local M = require "lf4ed_message"
-local F = far.GetFlags()
+local F = far.Flags
 local insert, concat = table.insert, table.concat
 
 
@@ -13,7 +13,7 @@ local insert, concat = table.insert, table.concat
 local function EditorBlock (start_line)
   start_line = start_line or far.EditorGetInfo().BlockStartLine
   return function()
-    local lineInfo = far.EditorGetString (start_line, 1)
+    local lineInfo = far.EditorGetString (nil, start_line, 1)
     if lineInfo and lineInfo.SelStart >= 0 and lineInfo.SelEnd ~= 0 then
       start_line = start_line + 1
       return lineInfo
@@ -28,7 +28,7 @@ end
 
 
 local function EditorSelectCurLine (editInfo)
-  return far.EditorSelect ("BTYPE_STREAM", editInfo.CurLine, 0, -1, 1)
+  return far.EditorSelect (nil, "BTYPE_STREAM", editInfo.CurLine, 0, -1, 1)
 end
 
 
@@ -175,11 +175,11 @@ local function Wrap (aColumn1, aColumn2, aPrefix, aJustify, aFactor)
 
   -- Put reformatted lines into the editor
   local Pos = { CurLine = editInfo.BlockStartLine, CurPos = 0 }
-  far.EditorSetPosition (Pos)
+  far.EditorSetPosition (nil, Pos)
   for i = #lines_out, 1, -1 do
     far.EditorInsertString()
-    far.EditorSetPosition (Pos)
-    far.EditorSetString(-1, lines_out[i])
+    far.EditorSetPosition (nil, Pos)
+    far.EditorSetString(nil, -1, lines_out[i])
   end
 end
 
@@ -199,34 +199,33 @@ local function PrefixBlock (aPrefix)
   end
 
   for line in EditorBlock (editInfo.BlockStartLine) do
-    far.EditorSetString(-1, aPrefix() .. line.StringText)
+    far.EditorSetString(nil, -1, aPrefix() .. line.StringText)
   end
 
-  far.EditorSetPosition (editInfo)
-  if bNotSelected then far.EditorSelect("BTYPE_NONE") end
+  far.EditorSetPosition (nil, editInfo)
+  if bNotSelected then far.EditorSelect(nil, "BTYPE_NONE") end
 end
 
 
--- {6d5c7ec2-8c2f-413c-81e6-0cc8ffc0799a}
-local dialogGuid = "\194\126\092\109\047\140\060\065\129\230\012\200\255\192\121\154"
+local dialogGuid = win.Uuid("6d5c7ec2-8c2f-413c-81e6-0cc8ffc0799a")
 
 local function ExecuteWrapDialog (aData)
   local HIST_PREFIX = "LuaFAR\\Reformat\\Prefix"
   local D = far2_dialog.NewDialog()
-  D._           = {"DI_DOUBLEBOX",3,1,72,10,0, 0, 0, 0, M.MReformatBlock}
-  D.cbxReformat = {"DI_CHECKBOX", 5,2,0,0,  0, 1, 0, 0, M.MReformatBlock2}
-  D.labStart    = {"DI_TEXT",     9,3,0,0,  0, 0, 0, 0, M.MStartColumn}
-  D.edtColumn1  = {"DI_FIXEDIT", 22,3,25,4, 0, 0, 0, 0, "1"}
-  D.labEnd      = {"DI_TEXT",    29,3,0,0,  0, 0, 0, 0, M.MEndColumn}
-  D.edtColumn2  = {"DI_FIXEDIT", 41,3,44,4, 0, 0, 0, 0, "70"}
-  D.cbxJustify  = {"DI_CHECKBOX", 9,4,0,0,  0, 0, 0, 0, M.MJustifyBorder}
-  D.sep         = {"DI_TEXT",     5,5,0,0,  0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, 0, ""}
-  D.cbxPrefix   = {"DI_CHECKBOX", 5,6,0,0,  0, 0, 0, 0, M.MPrefixLines}
-  D.edtPrefix   = {"DI_EDIT",    17,7,70,6, 0, HIST_PREFIX, "DIF_HISTORY", 0, "S:4"}
-  D.labCommand  = {"DI_TEXT",     9,7,0,0,  0, 0, 0, 0, M.MCommand}
-  D.sep         = {"DI_TEXT",     5,8,0,0,  0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, 0, ""}
-  D.btnOk       = {"DI_BUTTON",   0,9,0,0,  0, 0, "DIF_CENTERGROUP", 1, M.MOk}
-  D.btnCancel   = {"DI_BUTTON",   0,9,0,0,  0, 0, "DIF_CENTERGROUP", 0, M.MCancel}
+  D._           = {"DI_DOUBLEBOX",3,1,72,10,   0, 0, 0, 0, M.MReformatBlock}
+  D.cbxReformat = {"DI_CHECKBOX", 5,2, 0, 0,   0, 0, 0, 0, M.MReformatBlock2}
+  D.labStart    = {"DI_TEXT",     9,3, 0, 0,   0, 0, 0, 0, M.MStartColumn}
+  D.edtColumn1  = {"DI_FIXEDIT", 22,3,25, 4,   0, 0, 0, 0, "1"}
+  D.labEnd      = {"DI_TEXT",    29,3, 0, 0,   0, 0, 0, 0, M.MEndColumn}
+  D.edtColumn2  = {"DI_FIXEDIT", 41,3,44, 4,   0, 0, 0, 0, "70"}
+  D.cbxJustify  = {"DI_CHECKBOX", 9,4, 0, 0,   0, 0, 0, 0, M.MJustifyBorder}
+  D.sep         = {"DI_TEXT",     5,5, 0, 0,   0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
+  D.cbxPrefix   = {"DI_CHECKBOX", 5,6, 0, 0,   0, 0, 0, 0, M.MPrefixLines}
+  D.edtPrefix   = {"DI_EDIT",    17,7,70, 6,   0, HIST_PREFIX, 0, "DIF_HISTORY", "S:4"}
+  D.labCommand  = {"DI_TEXT",     9,7, 0, 0,   0, 0, 0, 0, M.MCommand}
+  D.sep         = {"DI_TEXT",     5,8, 0, 0,   0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
+  D.btnOk       = {"DI_BUTTON",   0,9, 0, 0,   0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
+  D.btnCancel   = {"DI_BUTTON",   0,9, 0, 0,   0, 0, 0, "DIF_CENTERGROUP", M.MCancel}
   ----------------------------------------------------------------------------
   -- Handlers of dialog events --
   local function Check (hDlg, c1, ...)
@@ -242,13 +241,11 @@ local function ExecuteWrapDialog (aData)
       if param1 == D.cbxReformat.id then Check (hDlg, D.cbxReformat, D.labStart, D.edtColumn1, D.labEnd, D.edtColumn2, D.cbxJustify)
       elseif param1 == D.cbxPrefix.id then Check (hDlg, D.cbxPrefix, D.edtPrefix, D.labCommand)
       end
-    elseif msg == F.DN_GETDIALOGINFO then
-      return dialogGuid
     end
   end
   ----------------------------------------------------------------------------
   far2_dialog.LoadData(D, aData)
-  local ret = far.Dialog (-1,-1,76,12,"Wrap",D,0,DlgProc)
+  local ret = far.Dialog (dialogGuid,-1,-1,76,12,"Wrap",D,0,DlgProc)
   if ret == D.btnOk.id then
     far2_dialog.SaveData(D, aData)
     return true
@@ -266,14 +263,14 @@ local function WrapWithDialog (aData)
     assert(offs1 >= 1, "start column is less than 1")
     assert(offs2 >= offs1, "end column is less than start column")
 
-    far.EditorUndoRedo("EUR_BEGIN")
+    far.EditorUndoRedo(nil, "EUR_BEGIN")
     Wrap (offs1, offs2, prefix, aData.cbxJustify, 2.0)
-    far.EditorUndoRedo("EUR_END")
+    far.EditorUndoRedo(nil, "EUR_END")
 
   elseif prefix ~= "" then
-    far.EditorUndoRedo("EUR_BEGIN")
+    far.EditorUndoRedo(nil, "EUR_BEGIN")
     PrefixBlock(prefix)
-    far.EditorUndoRedo("EUR_END")
+    far.EditorUndoRedo(nil, "EUR_END")
   end
 end
 

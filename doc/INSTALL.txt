@@ -12,19 +12,19 @@ Prerequisites for building
 
 Make targets
 -------------
-LuaFAR for Editor can be built in one of the following ways:
-   *  as an embedded version (default) :  make (or "make embed")
-   *  as a set of Lua files            :  make noembed
+LuaFAR for Editor can be built in either of two ways:
+   *  as a set of Lua files (default)  :  make (or "make noembed")
+   *  as an embedded version           :  make embed
 
 What the target names mean:
-
-   embed    :  Lua scripts and modules are merged into the plugin DLL.
-               DLL name: lf4ed.dll.
 
    noembed  :  The generic LuaFAR plugin DLL is used.
                Lua scripts and modules should be copied into appropriate
                locations on the disk.
                DLL name: luaplug.dll.
+
+   embed    :  Lua scripts and modules are merged into the plugin DLL.
+               DLL name: lf4ed.dll.
 
 
 Steps required to build

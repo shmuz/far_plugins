@@ -11,18 +11,50 @@ PATH_LUAFAR = ..\..\..\luafar_unicode
 include $(PATH_LUAFAR)\config.mak
 #------------------------------------ END OF USER'S SETTINGS -----------------
 
+PATH_SHARE  = ..\lua_share
+PATH_PLUGIN = ..
+
+bootscript = $(PATH_PLUGIN)*luaplug.lua
+
+scripts = \
+  $(PATH_PLUGIN)*_globalinfo.lua \
+  $(PATH_PLUGIN)*config.lua      \
+  $(PATH_PLUGIN)*expression.lua  \
+  $(PATH_PLUGIN)*wrap.lua
+
+modules = \
+  $(PATH_PLUGIN)*sortdialog.lua     \
+  $(PATH_PLUGIN)*sortlines.lua      \
+  $(PATH_SHARE)*serial.lua          \
+  $(PATH_SHARE)*strict.lua          \
+  $(PATH_SHARE)*far2\history.lua    \
+  $(PATH_SHARE)*far2\dialog.lua     \
+  $(PATH_SHARE)*far2\utils.lua      \
+  $(PATH_SHARE)*far2\searchmenu.lua \
+  $(PATH_SHARE)*far2\makelang.lua
+
+comma:= ,
+empty:=
+space:= $(empty) $(empty)
+
+scripts2 = [[-s]],$(addsuffix ]],$(addprefix [[,$(scripts)))
+modules2 = [[-m]],$(addsuffix ]],$(addprefix [[,$(modules)))
+
+bootscript3 = [[$(bootscript)]]
+scripts3    = $(subst $(space),$(comma),$(scripts2))
+modules3    = $(subst $(space),$(comma),$(modules2))
+
+bootscript4 = $(subst *,\,$(bootscript))
+scripts4    = $(subst *,\,$(scripts))
+modules4    = $(subst *,\,$(modules))
+
 LUAC        = $(LUADLLPATH)\luac.exe
-PATH_AUXIL  = $(PATH_LUAFAR)\auxil
 PATH_LUAFARSRC = $(PATH_LUAFAR)\src
-PATH_PLUGIN = ..\lf4ed
-PATH_SCRIPT = ..\script
-SCRIPTS     = luaplug.lua config.lua expression.lua wrap.lua
-GEN_METHOD  =
-MAKE_LANG   = $(LUAEXE) -epackage.path='../lua_share/?.lua' lf4ed_lang.lua
+GEN_METHOD  = -strip
+MAKE_LANG   = $(LUAEXE) -epackage.path='$(PATH_SHARE)/?.lua' lf4ed_lang.lua
 
 CC          = gcc
 INC         = -I$(INC_LUA) -I$(INC_FAR)
-CONFIG      = lf4ed.cfg
 
 ifeq ($(ARCH),-m64)
   TRG1      = luaplug-x64.dll
@@ -34,7 +66,7 @@ else
   RESTARGET = -F pe-i386
 endif
 
-CFLAGS      = -O2 -Wall $(INC) $(ARCH) -D_export=
+CFLAGS      = -O2 -Wall $(INC) $(ARCH)
 CFLAGS1     = $(CFLAGS) -DBUILD_STATIC $(EXPORTS)
 CFLAGS2     = $(CFLAGS1) -DFUNC_OPENLIBS=luafar_openlibs
 
@@ -47,29 +79,26 @@ LIBS2       = $(LIBS1) $(LUADLLPATH)\$(LUADLLNAME).dll
 MYLDFLAGS   = -Wl,--kill-at -shared -s $(ARCH)
 
 EXPORTS = \
-  -DEXPORT_CONFIGUREW           \
-  -DEXPORT_EXITFARW             \
-  -DEXPORT_OPENPLUGINW          \
-  -DEXPORT_PROCESSEDITOREVENTW  \
-  -DEXPORT_PROCESSEDITORINPUTW  \
-  -DEXPORT_PROCESSVIEWEREVENTW  \
-  -DEXPORT_PROCESSSYNCHROEVENTW
+  -DEXPORT_CONFIGURE           \
+  -DEXPORT_EXITFAR             \
+  -DEXPORT_OPEN                \
+  -DEXPORT_PROCESSEDITOREVENT  \
+  -DEXPORT_PROCESSEDITORINPUT  \
+  -DEXPORT_PROCESSVIEWEREVENT
 
 %.o : %.rc
 	windres $< -o $@ $(RESTARGET)
 #-----------------------------------------------------------------------------
 
-embed: $(TRG2)
-	copy /y $< $(PATH_PLUGIN)
-	$(MAKE) auxilfiles
-	cd $(PATH_PLUGIN) && $(MAKE_LANG)
-
 noembed: $(TRG1)
-	$(MAKE) cleanplug
-	copy /y $< $(PATH_PLUGIN)
-	copy /y $(PATH_SCRIPT)\*.lua $(PATH_PLUGIN)
-	$(MAKE) auxilfiles
-	cd $(PATH_PLUGIN) && $(MAKE_LANG)
+#	copy /y $< $(PATH_PLUGIN)
+#	$(MAKE) auxilfiles
+#	cd $(PATH_PLUGIN) && $(MAKE_LANG)
+
+embed: $(TRG2)
+#	copy /y $< $(PATH_PLUGIN)
+#	$(MAKE) auxilfiles
+#	cd $(PATH_PLUGIN) && $(MAKE_LANG)
 
 $(TRG1): $(OBJ1) $(LIBS1)
 	$(CC) -o $@ $^ $(MYLDFLAGS)
@@ -77,11 +106,11 @@ $(TRG1): $(OBJ1) $(LIBS1)
 $(TRG2): $(OBJ2) $(LIBS2)
 	$(CC) -o $@ $^ $(MYLDFLAGS)
 
-# Since linit.c has changing prerequisites (sets of Lua files),
-# that can not be specified in this makefile, it is better be
-# rebuilt unconditionally; hence use of the double-colon rule.
-linit.c::
-	$(LUAEXE) -erequire(\'generate\')([[$(CONFIG)]],[[$@]],[[$(GEN_METHOD)]],[[$(LUAC)]])
+linit.c: $(bootscript4) $(scripts4) $(modules4)
+	$(LUAEXE) -erequire(\'generate\')([[$@]],[[$(GEN_METHOD)]],[[$(LUAC)]],$(bootscript3),$(scripts3),$(modules3))
+
+# $(PATH_PLUGIN)\lf4ed_message.lua: $(PATH_PLUGIN)\lf4ed_lang.lua $(PATH_PLUGIN)\lf4ed_lang.templ
+#	cd $(PATH_PLUGIN) && $(LUAEXE) lf4ed_lang.lua
 
 luaplug1.o: $(PATH_LUAFARSRC)\luaplug.c
 	$(CC) -c -o $@ $< $(CFLAGS1)
@@ -89,19 +118,8 @@ luaplug1.o: $(PATH_LUAFARSRC)\luaplug.c
 luaplug2.o: $(PATH_LUAFARSRC)\luaplug.c
 	$(CC) -c -o $@ $< $(CFLAGS2)
 
-auxilfiles: $(PATH_AUXIL)
-	cd $(PATH_AUXIL) && $(MAKE)
-	copy /y $(PATH_AUXIL)\farcolor.lua $(PATH_PLUGIN)
-	copy /y $(PATH_AUXIL)\farkeys.lua $(PATH_PLUGIN)
-
-cleanplug:
-	cd $(PATH_PLUGIN) && del *.dll *.d $(SCRIPTS) farcolor.lua farkeys.lua
-
-cleansrc:
+clean:
 	del *.o *.dll luac.out linit.c
 
-clean:
-	$(MAKE) cleanplug cleansrc
-
-.PHONY: noembed embed auxilfiles clean cleanplug cleansrc
+.PHONY: noembed embed clean
 

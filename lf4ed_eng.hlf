@@ -3,7 +3,7 @@
 .Options CtrlColorChar=\
 
 @Contents
-$ #LuaFAR for Editor (version 2.8) - Help Contents -#
+$ #LuaFAR for Editor (version 3.0) - Help Contents -#
  LuaFAR for Editor is a collection of utilities that implement various
 actions controlling the work of FAR's Editor. The utilities are written in Lua
 programming language.
@@ -87,15 +87,15 @@ error when the script is invoked.
 $ #Block Sum#
  Calculates sum of numbers on several lines (one number per line).
 
-   *  Works on selected blocks of text.
+   *  Works either on the selected block of text or the current line.
 
    *  For each line (or selected part of it), takes the first non-
       space character sequence and converts it to a number. The
-      number can be followed by a character matching the regular
-      expression #[\s,;:]#. If some line cannot be meaningfully
-      converted, it is ignored.
+      number can be followed by a non-word character. If some line
+      cannot be meaningfully converted, it's value is considered to
+      be 0.
 
-   *  The result of the calculation can be configured to be:
+   *  The result of the calculation can be:
           - inserted into the editor
           - copied to the clipboard
 
@@ -154,7 +154,7 @@ $ #Reformat Block#
 $ #Sort Lines#
 ^\1FDescription\-
 
- The plugin sorts lines in the selected block according to up to 3 sorting
+ The utility sorts lines in the selected block according to up to 3 sorting
 criteria at a time.
 
  #Expressions#
@@ -206,16 +206,15 @@ criteria at a time.
 
  #Column Pattern#
 
-    "Column" is part of Editor line defined by a Lua regex pattern in
+    "Column" is part of Editor line defined by a Far ~regex pattern~@:RegExp@ in
     the #Column Pattern# field. By default, a column is a sequence of
     non-space characters. Press the #Default# button to restore the
-    default pattern. To change the definition of column, familiarize
-    yourself with Lua regular expressions.
+    default pattern.
 
  #Load File#
 
     Sometimes, lines have complex structure and sorting must be
-    done in accordance to some complex rules. This plugin handles
+    done in accordance to some complex rules. This utility handles
     such cases by allowing to add functions from Lua scripts on the
     disk. Such function parses the structure in question and
     returns a number or a string representing the "weight" of the
@@ -295,16 +294,16 @@ $ #Plugin's Configuration Dialog#
  #[x] Always reload default script#
 
     Default script (or "main" script) is a file that contains Lua handlers of
-the exported plugin functions. This script is run when FAR calls SetStartupInfo,
-making the handlers available to the plugin.
+the exported plugin functions. This script is run when FAR calls
+#SetStartupInfoW#, making the handlers available to the plugin.
     With this option checked, the default script will be additionally run
-every time FAR calls OpenPlugin and OpenFilePlugin functions. This is handy
-when the default script needs to be debugged.
+every time FAR calls #OpenW# function. This is handy when the default script
+needs to be debugged.
 
  #[x] Always reload on 'require'#
 
     When Lua code 'require's some library first time, it is loaded from the
-disk. Subsequent 'require's of the same library return it from the memory.
+disk. Subsequent 'rire's of the same library return it from the memory.
 With this option checked, libraries are always loaded from the disk (this may
 be needed when debugging a library).
 
@@ -312,13 +311,6 @@ be needed when debugging a library).
 
     With this option turned on, the plugin does not allow access to
 "undeclared" global variables.
-
- #[x] Use searchable menu#
-
-    The main plugin menu becomes "searchable". When the menu is on the screen,
-type a character sequence, and the menu will react by displaying only items
-containing that sequence. Lua regular expressions are partially supported in
-the typed sequences.
 
  #[x] Return to Main menu#
 

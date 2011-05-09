@@ -5,10 +5,23 @@
 
 local far2_dialog = require "far2.dialog"
 local M = require "lf4ed_message"
-local F = far.GetFlags()
+local F = far.Flags
 
 local function ErrMsg (msg)
   far.Message(msg, M.MError, M.MOk, "w")
+end
+
+local function GetNearestWord (pattern)
+  local line = far.EditorGetString(nil, nil, 2)
+  local pos = far.EditorGetInfo().CurPos + 1
+  local r = far.regex(pattern)
+  local start = 1
+  while true do
+    local from, to, word = r:find(line, start)
+    if not from then break end
+    if pos <= to then return from, to, word end
+    start = to + 1
+  end
 end
 
 local function GetAllText()
@@ -16,9 +29,9 @@ local function GetAllText()
   if ei then
     local t = {}
     for n = 0, ei.TotalLines-1 do
-      table.insert(t, far.EditorGetString(n, 2))
+      table.insert(t, far.EditorGetString(nil, n, 2))
     end
-    far.EditorSetPosition(ei)
+    far.EditorSetPosition(nil, ei)
     return table.concat(t, "\n")
   end
 end
@@ -29,7 +42,7 @@ local function GetSelectedText()
     local t = {}
     local n = ei.BlockStartLine
     while true do
-      local s = far.EditorGetString(n, 1)
+      local s = far.EditorGetString(nil, n, 1)
       if not s or s.SelStart == -1 then
         break
       end
@@ -37,7 +50,7 @@ local function GetSelectedText()
       table.insert(t, sel)
       n = n + 1
     end
-    far.EditorSetPosition(ei)
+    far.EditorSetPosition(nil, ei)
     return table.concat(t, "\n"), n-1
   end
 end
@@ -50,23 +63,25 @@ local function CompileParams (s1, s2, s3, s4)
   return p1, p2, p3, p4
 end
 
+local ParamsGuid = win.Uuid("187afc63-174c-40aa-b0b2-00215fdcadb1")
+
 local function ParamsDialog (aData)
   local HIST_PARAM = "LuaFAR\\LuaScript\\Parameter"
   local D = far2_dialog.NewDialog()
   D._             = {"DI_DOUBLEBOX",3, 1, 52,14,0, 0, 0, 0, M.MScriptParams}
   D.label         = {"DI_TEXT",     5, 3,  0,0, 0, 0, 0, 0, "&1."}
-  D.sParam1       = {"DI_EDIT",     8, 3, 49,0, 0, HIST_PARAM, "DIF_HISTORY",0,""}
+  D.sParam1       = {"DI_EDIT",     8, 3, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
   D.label         = {"DI_TEXT",     5, 5,  0,0, 0, 0, 0, 0, "&2."}
-  D.sParam2       = {"DI_EDIT",     8, 5, 49,0, 0, HIST_PARAM, "DIF_HISTORY",0,""}
+  D.sParam2       = {"DI_EDIT",     8, 5, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
   D.label         = {"DI_TEXT",     5, 7,  0,0, 0, 0, 0, 0, "&3."}
-  D.sParam3       = {"DI_EDIT",     8, 7, 49,0, 0, HIST_PARAM, "DIF_HISTORY",0,""}
+  D.sParam3       = {"DI_EDIT",     8, 7, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
   D.label         = {"DI_TEXT",     5, 9,  0,0, 0, 0, 0, 0, "&4."}
-  D.sParam4       = {"DI_EDIT",     8, 9, 49,0, 0, HIST_PARAM, "DIF_HISTORY",0,""}
+  D.sParam4       = {"DI_EDIT",     8, 9, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
   D.bParamsEnable = {"DI_CHECKBOX", 5,11,  0,0, 0, 0, 0, 0, M.MScriptParamsEnable}
-  D.sep           = {"DI_TEXT",     0,12,  0,0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},0,""}
-  D.btnRun        = {"DI_BUTTON",   0,13,  0,0, 0, 0, "DIF_CENTERGROUP", 1, M.MRunScript}
-  D.btnStore      = {"DI_BUTTON",   0,13,  0,0, 0, 0, "DIF_CENTERGROUP", 0, M.MStoreParams}
-  D.btnCancel     = {"DI_BUTTON",   0,13,  0,0, 0, 0, "DIF_CENTERGROUP", 0, M.MCancel}
+  D.sep           = {"DI_TEXT",     0,12,  0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},""}
+  D.btnRun        = {"DI_BUTTON",   0,13,  0,0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MRunScript}
+  D.btnStore      = {"DI_BUTTON",   0,13,  0,0, 0, 0, 0, "DIF_CENTERGROUP", M.MStoreParams}
+  D.btnCancel     = {"DI_BUTTON",   0,13,  0,0, 0, 0, 0, "DIF_CENTERGROUP", M.MCancel}
   ------------------------------------------------------------------------------
   local function DlgProc (hDlg, msg, param1, param2)
     if msg == F.DN_CLOSE then
@@ -81,7 +96,7 @@ local function ParamsDialog (aData)
     end
   end
   far2_dialog.LoadData(D, aData)
-  local ret = far.Dialog (-1,-1,56,16,"ScriptParams",D,0,DlgProc)
+  local ret = far.Dialog (ParamsGuid,-1,-1,56,16,"ScriptParams",D,0,DlgProc)
   ret = (ret==D.btnStore.id) and "store" or (ret==D.btnRun.id) and "run"
   if ret then
     far2_dialog.SaveData(D, aData)
@@ -91,7 +106,7 @@ end
 
 -- WARNING:
 --   don't change the string literals "selection" and "all text",
---   since far.OnError relies on them being exactly such.
+--   since export.OnError relies on them being exactly such.
 local function LuaScript (data)
   local text, chunkname = GetSelectedText(), "selection"
   if not text then
@@ -112,8 +127,19 @@ local function LuaScript (data)
   end
 end
 
-local function ResultDialog (aHelpTopic, aData, result)
+local ResultGuid = win.Uuid("d45fdadc-4918-4d47-b34a-311947d241b2")
+
+local function ResultDialog (aHelpTopic, aData, result, minDigits)
   local Title = (aHelpTopic=="LuaExpression") and M.MExpr or M.MBlockSum
+  if minDigits then
+    result = tostring(result)
+    local last = result:match("%.(%d*)$")
+    if last then
+      result = result .. ("0"):rep(minDigits - #last)
+    else
+      result = result .. "." .. ("0"):rep(minDigits)
+    end
+  end
   local D = far2_dialog.NewDialog()
   ------------------------------------------------------------------------------
   D._         = {"DI_DOUBLEBOX",3, 1,42,7,  0, 0, 0, 0, Title}
@@ -121,48 +147,65 @@ local function ResultDialog (aHelpTopic, aData, result)
   D.edtResult = {"DI_EDIT",     0, 2,40,0,  0, 0, 0, 0, result, _noautoload=1}
   D.cbxInsert = {"DI_CHECKBOX", 5, 3, 0,0,  0, 0, 0, 0, M.MInsertText}
   D.cbxCopy   = {"DI_CHECKBOX", 5, 4, 0,0,  0, 0, 0, 0, M.MCopyToClipboard}
-  D.sep       = {"DI_TEXT",     0, 5, 0,0,  0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, 0, ""}
-  D.btnOk     = {"DI_BUTTON",   0, 6, 0,0,  0, 0, "DIF_CENTERGROUP", 1, M.MOk}
-  D.btnCancel = {"DI_BUTTON",   0, 6, 0,0,  0, 0, "DIF_CENTERGROUP", 0, M.MCancel}
+  D.sep       = {"DI_TEXT",     0, 5, 0,0,  0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
+  D.btnOk     = {"DI_BUTTON",   0, 6, 0,0,  0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
+  D.btnCancel = {"DI_BUTTON",   0, 6, 0,0,  0, 0, 0, "DIF_CENTERGROUP", M.MCancel}
   D.edtResult.X1 = D.lblResult.X1 + D.lblResult.Data:len()
   ------------------------------------------------------------------------------
   far2_dialog.LoadData(D, aData)
-  local ret = far.Dialog (-1,-1,46,9,aHelpTopic,D)
+  local ret =  far.Dialog(ResultGuid,-1,-1,46,9,aHelpTopic,D)
   far2_dialog.SaveData(D, aData)
   return (ret == D.btnOk.id)
 end
 
 -- NOTE: In order to obtain correct offsets, this function should use either
 --       far.find, or unicode.utf8.cfind function.
-local function BlockSum(history)
-  local block = far.EditorGetSelection()
-  if not block then ErrMsg(M.MNoTextSelected) return end
-
+local function BlockSum (history)
   local ei = assert(far.EditorGetInfo(), "EditorGetInfo failed")
+  local block = far.EditorGetSelection()
   local sum = 0
   local x_start, x_dot
-  local regex = far.regex([[ (\S[^\s;,:]*) ]], "x")
-  for n = block.StartLine, block.EndLine do
-    local s = far.EditorGetString (n, 1)
-    local start, _, sel = regex:find( s.StringText:sub(s.SelStart+1, s.SelEnd) )
+  local pattern = [[(\S[\w.]*)]]
+
+  if block then
+    local regex = far.regex(pattern)
+    for n = block.StartLine, block.EndLine do
+      local s = far.EditorGetString (nil, n, 1)
+      local start, _, sel = regex:find( s.StringText:sub(s.SelStart+1, s.SelEnd) )
+      if start then
+        x_start = far.EditorRealToTab(nil, n, s.SelStart + start)
+        local num = tonumber(sel)
+        if num then
+          sum = sum + num
+          local x = far.find(sel, "\\.")
+          if x then x_dot = x_start + x - 1 end
+        end
+      end
+    end
+  else
+    local start, _, word = GetNearestWord(pattern)
     if start then
-      x_start = far.EditorRealToTab(n, s.SelStart + start)
-      local num = tonumber(sel)
+      x_start = far.EditorRealToTab(nil, nil, start)
+      local num = tonumber(word)
       if num then
         sum = sum + num
-        local x = far.find(sel, "\\.")
+        local x = far.find(word, "\\.")
         if x then x_dot = x_start + x - 1 end
       end
     end
   end
-  if not ResultDialog("BlockSum", history, sum) then return end
+
+  if not ResultDialog("BlockSum", history, sum, x_dot and 2) then return end
+
   sum = history.edtResult
-  if history.cbxCopy then far.CopyToClipboard(sum) end
+  if history.cbxCopy then
+    far.CopyToClipboard(sum)
+  end
   if history.cbxInsert then
-    local y = block.EndLine -- position of the last line
-    local s = far.EditorGetString(y) -- get last block line
-    far.EditorSetPosition (y, s.StringText:len()) -- insert a new line
-    far.EditorInsertString()                      -- +
+    local y = block and block.EndLine or ei.CurLine -- position of the last line
+    local s = far.EditorGetString(nil, y)           -- get last line
+    far.EditorSetPosition (nil, y, s.StringText:len()) -- insert a new line
+    far.EditorInsertString()                           -- +
     local prefix = "="
     if x_dot then
       local x = far.find(tostring(sum), "\\.")
@@ -171,22 +214,22 @@ local function BlockSum(history)
     if x_start then
       x_start = x_start>#prefix and x_start-#prefix-1 or 0
     else
-      x_start = (block.BlockType==F.BTYPE_COLUMN) and s.SelStart or 0
+      x_start = block and (block.BlockType==F.BTYPE_COLUMN) and s.SelStart or 0
     end
-    far.EditorSetPosition (y+1, x_start)
-    far.EditorInsertText(prefix .. sum)
+    far.EditorSetPosition (nil, y+1, x_start)
+    far.EditorInsertText(nil, prefix .. sum)
     far.EditorRedraw()
   else
-    far.EditorSetPosition (ei) -- restore the position
+    far.EditorSetPosition (nil, ei) -- restore the position
   end
 end
 
-local function LuaExpr(history)
+local function LuaExpr (history)
   local edInfo = far.EditorGetInfo()
   local text, numline = GetSelectedText()
   if not text then
     numline = edInfo.CurLine
-    text = far.EditorGetString(numline, 2)
+    text = far.EditorGetString(nil, numline, 2)
   end
 
   local func, msg = loadstring("return " .. text)
@@ -209,10 +252,10 @@ local function LuaExpr(history)
 
   result = history.edtResult
   if history.cbxInsert then
-    local line = far.EditorGetString(numline)
+    local line = far.EditorGetString(nil, numline)
     local pos = (edInfo.BlockType==F.BTYPE_NONE) and line.StringLength or line.SelEnd
-    far.EditorSetPosition(numline, pos)
-    far.EditorInsertText(" = " .. result .. " ; ")
+    far.EditorSetPosition(nil, numline, pos)
+    far.EditorInsertText(nil, " = " .. result .. " ; ")
     far.EditorRedraw()
   end
   if history.cbxCopy then

@@ -11,8 +11,9 @@ local SortDialog = sd.SortDialog
 
 local type, tonumber = type, tonumber
 local tinsert = table.insert
-local F = far.GetFlags()
+local F = far.Flags
 local M = require "lf4ed_message"
+local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
 local EditorSetPosition = far.EditorSetPosition
 local EditorSetString = far.EditorSetString
 
@@ -48,7 +49,7 @@ local function EditorBlockLines ()
   if not EditorHasSelection(editInfo) then return function() end; end
   local start_line = editInfo.BlockStartLine
   return function()
-    local lineInfo = far.EditorGetString (start_line, 1)
+    local lineInfo = far.EditorGetString (nil, start_line, 1)
     if lineInfo and lineInfo.SelStart >= 0 and lineInfo.SelEnd ~= 0 then
       start_line = start_line + 1
       return lineInfo
@@ -73,16 +74,16 @@ end
 -- Depends on: FAR API
 local function PutLines(arr_compare, arr_index, arr_target, OnlySelection)
   local editInfo = far.EditorGetInfo()
-  if bit.band (editInfo.CurState, F.ECSTATE_LOCKED) ~= 0 then
+  if band (editInfo.CurState, F.ECSTATE_LOCKED) ~= 0 then
     ErrMsg("The editor is locked"); return
   end
   local pstart = editInfo.BlockStartLine - 1
   local BlockSelStart, BlockSelEnd, BlockSelWidth
   if OnlySelection then
-    far.EditorSetPosition(editInfo.BlockStartLine)
-    local line = far.EditorGetString(-1)
-    BlockSelStart = far.EditorRealToTab(-1, line.SelStart)
-    BlockSelEnd   = far.EditorRealToTab(-1, line.SelEnd)
+    EditorSetPosition(nil, editInfo.BlockStartLine)
+    local line = far.EditorGetString(nil, -1)
+    BlockSelStart = far.EditorRealToTab(nil, -1, line.SelStart)
+    BlockSelEnd   = far.EditorRealToTab(nil, -1, line.SelEnd)
     BlockSelWidth = BlockSelEnd - BlockSelStart
   end
   for i, v in ipairs(arr_index) do
@@ -108,14 +109,14 @@ local function PutLines(arr_compare, arr_index, arr_target, OnlySelection)
       else
         newtext, newEOL = arr_target[v].StringText, arr_target[v].StringEOL
       end
-      EditorSetPosition(pstart + i)
-      EditorSetString(-1, newtext, newEOL)
+      EditorSetPosition(nil, pstart + i)
+      EditorSetString(nil, -1, newtext, newEOL)
     end
   end
 end
 
 local function Column (subj, colnum, colpat)
-  for A in subj:gmatch(colpat) do
+  for A in far.gmatch(subj, colpat) do
     if colnum == 1 then return A end
     colnum = colnum - 1
   end
@@ -139,8 +140,8 @@ local function DoSort (arr_compare, arr_index, arr_dialog)
       local v1, v2 = data.expr(a, i1), data.expr(b, i2)
       if v1 ~= v2 then
         if type(v1) == "string" then
-          v1 = data.case and far.wcscmp(v1,v2) or
-            assert(far.CompareString(v1,v2,nil,"c"), "far.CompareString failed")
+          v1 = data.case and win.wcscmp(v1,v2) or
+            assert(win.CompareString(v1,v2,nil,"c"), "win.CompareString failed")
           v2 = 0
         end
         if v1 > v2 then return data.rev end
@@ -208,9 +209,9 @@ function Package.SortWithRawData (aData)
   DoSort(arr_compare, arr_index, arr_dialog)
   -- put the sorted lines into the editor
   local OnlySelection = columntype and aData.cbxOnlySel
-  far.EditorUndoRedo("EUR_BEGIN")
+  far.EditorUndoRedo(nil, "EUR_BEGIN")
   PutLines(arr_compare, arr_index, arr_target, OnlySelection)
-  far.EditorUndoRedo("EUR_END")
+  far.EditorUndoRedo(nil, "EUR_END")
 end
 
 -- generic

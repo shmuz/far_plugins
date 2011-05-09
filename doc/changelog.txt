@@ -2,6 +2,17 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2011-??-??, v3.0.0
+  PLUGIN:
+      [*] Adaptation to new LuaFAR 3.0 API.
+      [*] Calling from macros via GUID instead of SysId.
+      [-] "searchmenu" is not used by the plugin (but remains available
+          to user scripts).
+  Sort Lines:
+      [*] Column pattern is Far regex (was: Lua regex).
+  Block Sum:
+      [+] If no text is selected, the current line is processed.
+
 2011-02-02, v2.8.0
   PLUGIN:
       [+] Got a SysId (0x10000) for calling from macros. The call syntax is

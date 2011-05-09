@@ -1,0 +1,1902 @@
+<header>
+tag=SMZ1
+ver=2.7
+</header>
+<node>
+id=1
+lv=0
+dt=Text
+nm=LuaFAR for Editor (version 3.0)
+<article>
+#_<markdown>
+#_**LuaFAR for Editor** (a FAR plugin) is a collection of utilities
+#_that implement various actions controlling the work of FAR's
+#_Editor. The plugin also allows to add the unlimited number of new
+#_utilities. Both the plugin and the utilities are written in Lua
+#_programming language. 
+#_
+#_For description of the built-in utilities and the Configuration
+#_Dialog, see the plugin's help file.
+#_
+#_- [What's new](19.html)
+#_- [Incompatibilities with the previous version](11.html)
+#_- [User's utilities](8.html)
+#_- [Command line](59.html)
+#_- [Plugin API](31.html)
+#_- [Lua Modules](21.html)
+#_- [Credits](10.html)
+#_
+#_
+</article>
+</node>
+<node>
+id=19
+lv=0
+dt=Text
+nm=What's new
+mtime=3499931475
+<article>
+#_<markdown>
+#_See the [Changelog](54.html).
+</article>
+</node>
+<node>
+id=54
+lv=1
+dt=Text
+nm=Changelog
+mtime=3505721751
+<article>
+#_<markdown>
+#_    ------------------------------------------------------------------
+#_      Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
+#_    ------------------------------------------------------------------
+#_
+#_    2011-02-02, v2.8.0
+#_      PLUGIN:
+#_          [+] Got a SysId (0x10000) for calling from macros. The call syntax is
+#_              the same as for command line calls (but the prefix is not needed).
+#_              New switch -a for asynchronous calls.
+#_          [+] Function MakeResident: parameter can be a table. That makes
+#_              possible to require() files containing event handlers.
+#_      Sort Lines:
+#_          [+] a GUID added to the dialog.
+#_      Reformat Block:
+#_          [+] a GUID added to the dialog.
+#_
+#_    2010-12-24, v2.7.1
+#_          [!] The build of 2.7.0 was broken due to an error in Makefile.
+#_
+#_    2010-12-23, v2.7.0
+#_      PLUGIN:
+#_          [+] 64-bit build added (works with 64-bit LuaFAR).
+#_          [*] Plugin keeps its data in "%APPDATA%\LuaFAR for Editor" directory
+#_              (was: in the plugin directory).
+#_
+#_    2010-11-26, v2.6.0
+#_      PLUGIN:
+#_          [*] Lua modules used by the plugin do not set global variables.
+#_              Use the value returned by `require`.
+#_      Sort Lines:
+#_          [*] A single "undo" in Editor undoes the entire operation.
+#_      Reformat Block:
+#_          [*] A single "undo" in Editor undoes the entire operation.
+#_      Block Sum:
+#_          [*] The dialog moved from the configuration to the utility.
+#_          [+] The result can be edited in the dialog.
+#_          [*] Items immediately followed by [,;:] are considered valid.
+#_      Lua Expression:
+#_          [*] The dialog moved from the configuration to the utility.
+#_          [+] The result can be edited in the dialog.
+#_          [+] If there's no selection, the current line is processed.
+#_
+#_    2010-10-14, v2.5.0
+#_      PLUGIN:
+#_          [!] Error when calling "Block Sum" or "Lua Expression" settings dialogs.
+#_          [!] Utilities could interfere with each other via parameters table.
+#_      Lua Script:
+#_          [+] Parameters can be passed to the script. Parameters dialog added.
+#_
+#_    2010-08-30, v2.4.0
+#_      PLUGIN:
+#_          [+] AddToMenu: parameter "where" can include letter "d" (for "dialog").
+#_          [*] AddToMenu, AddCommand: unlimited number of additional arguments.
+#_          [*] Installed scripts get their parameters in a table (was: 2 parameters).
+#_              The table may also include fields "From" and "hDlg".
+#_          [!] Fix "Reload user file" with default plugin settings.
+#_
+#_    2010-07-25, v2.3.0
+#_      PLUGIN:
+#_          [*] 'Reload User File' operation resets `package.loaded', in order to
+#_              behave as close as possible to the initial loading.
+#_          [+] new callback ("resident") function ExitScript.
+#_          [+] function AddToMenu supports localization.
+#_
+#_    2010-06-25, v2.2.0
+#_      PLUGIN:
+#_          [*] LuaFAR 2.3 required.
+#_          [+] Localization of the configuration dialog.
+#_          [+] Utility for localization of script packets.
+#_      Sort Lines:
+#_          [!] Fixed shortcut keys in the dialogs.
+#_          [!] Sorting made stable.
+#_      Block Sum:
+#_          [*] Made compatible with LuaFAR 2.3.
+#_
+#_    2010-04-24, v2.1.0
+#_      PLUGIN:
+#_          [!] Fixes to work with Unicode file names and paths (LuaFAR 2.2 required).
+#_      Sort Lines:
+#_          [+] Added constant `I' (number of lines in selection). Help files updated.
+#_
+#_    2010-02-25, v2.0.1
+#_      PLUGIN:
+#_          [+] Added function unicode.utf8.cfind (see the manual).
+#_      Sort Lines:
+#_          [+] Added variable `i' (number of selected line). Help files updated.
+#_
+#_    2010-02-20, v2.0.0
+#_      PLUGIN:
+#_          [*] First Unicode version.
+#_          [*] Requires LuaFAR version 2.0.0.
+#_          [*] s:find() accesses unicode.utf8.find(s), the same goes for all
+#_              string function names. To access the standard string library,
+#_              write string.find(s), etc.
+#_      Sort Lines:
+#_          [*] "Case sensitive" checkboxes added. Help files updated.
+#_
+#_    2010-02-04, v0.12.1
+#_      PLUGIN:
+#_          [!] LuaFAR version check was done after the exported functions were
+#_              already connected (that is, too late).
+#_          [*] Requires LuaFAR version 1.1.
+#_
+#_    2010-01-16, v0.12.0
+#_      PLUGIN:
+#_          [!] When errors occured in a utility called from Editor via shortcut,
+#_              the shortcut was reported to Far as needing further processing.
+#_          [!] Broken stack traceback in error messages (since version 0.11.0).
+#_          [!] Error message window: could not jump to an already open editor
+#_              from the panels.
+#_          [*] Command line syntax changed: see the manual.
+#_      Lua Script:
+#_          [*] When running on the whole Editor buffer, ignore the 1-st line
+#_              if it starts with a # character.
+#_
+#_    2010-01-03, v0.11.0
+#_      PLUGIN:
+#_          [+] Plugin can be called from the command line, via `lfe' prefix.
+#_              A new function `AddCommand' was added.
+#_          [!] lf4ed:config: changes to the "ReturnToMainMenu" option did not work.
+#_          [!] lf4ed:config: changes were not reverted in case of error.
+#_
+#_    2009-12-02, v0.10.0
+#_      PLUGIN:
+#_          [!] `far2.history' module was raising error given an empty history file.
+#_          [*] `far2.history' module renamed to `history'.
+#_          [*] configuration changes done by a user script are reverted by the
+#_              plugin after the script exits.
+#_          [*] lf4ed.config: always returns configuration existed prior to the call.
+#_          [!] far.OnError: eliminate jumps to embedded scripts.
+#_          [!] far.OnError: jump to incorrect line in another file, when there
+#_              was selection in the current file (the bug existed since v. 0.9.0).
+#_          [*] Main Menu, Config. Menu: removed separators after the built-in items.
+#_              (They can be added via files _usermenu.lua).
+#_          [*] The plugin's DLL, as supplied, now embeds scripts and modules in
+#_              source code form (not compiled). That allows to work with LuaJIT.
+#_
+#_    2009-11-02, v0.9.1
+#_      PLUGIN:
+#_          [!] configuration changes were not saved in the history file
+#_              (the bug existed since version 0.8.0).
+#_
+#_    2009-11-01, v0.9.0
+#_      PLUGIN:
+#_          [*] all utilities added by AddToMenu calls within a single usermenu file
+#_              share a common environment that does not change until the next
+#_              "Reload User File" operation (or until FAR termination);
+#_          [+] plugin checks LuaFAR version;
+#_          [*] error handler (far.OnError) improved;
+#_          [*] plugin (as it is supplied) does not embed LuaFAR library;
+#_
+#_    2009-10-02, v0.8.0
+#_      PLUGIN:
+#_          [*] signature and functionality of AddToMenu function changed;
+#_              [*] removed "global functions requirement" for user scripts;
+#_              [+] become possible to add items to Configuration Menu;
+#_              [+] menu separators can be added;
+#_          [+] added function AddUserFile (callable from _usermenu.lua);
+#_          [+] added function AutoInstall (callable from _usermenu.lua);
+#_          [*] '<plugin_path>/scripts/?.lua' is added to package.path;
+#_          [+] added function lf4ed.config: get/set plugin settings from script;
+#_          [+] added function lf4ed.version: get plugin version;
+#_          [+] built-in Lua modules (dialog, history, searchmenu) used in plugin
+#_              are documented; user scripts can now "officially" use them;
+#_          [*] "embedded" versions of the plugin contain LuaFAR 0.8.0;
+#_          [!] unneeded "require 'strict'" removed from far2/sortlines.lua;
+#_          [-] lf4ed_emb.dll is not supplied any more;
+#_
+#_    2009-09-01, v0.7.4
+#_      PLUGIN:
+#_          [!] function far.OnError can be reliably replaced from _usermenu.lua
+#_          [*] plugin built on base LuaFAR 0.7.3
+#_
+#_    2009-08-28, v0.7.3
+#_      PLUGIN:
+#_          [*] plugin built on base LuaFAR 0.7.2
+#_
+#_    2009-06-18, v0.7.2
+#_      PLUGIN:
+#_          [*] plugin built on base LuaFAR 0.7.1
+#_
+#_    2009-02-14, v0.7.1
+#_      Reformat Block:
+#_          [!] error loading and saving start and end column data
+#_
+#_    2009-02-13, v0.7
+#_      PLUGIN:
+#_          [*] plugin built on base LuaFAR 0.7
+#_
+#_    2009-01-14, v0.6
+#_      PLUGIN:
+#_          [*] plugin built on base LuaFAR 0.6
+#_
+#_    2008-12-31, v0.5.2
+#_      PLUGIN:
+#_          [!] improvements in jumping to error lines
+#_          [*] _usermenu.lua (and event handler files) are run in 2 cases only:
+#_                 a) on plugin start-up
+#_                 b) on configuration menu command "Reload User File"
+#_          [*] _usermenu.lua: input arguments are deprecated
+#_          [+] configuration menu command "Reload User File"
+#_          [+] user is able to install event handlers, by means
+#_              of calling new function MakeResident in _usermenu.lua
+#_
+#_    2008-12-27, v0.5.1
+#_      PLUGIN:
+#_          [!] did not work if file _usermenu.lua was missing
+#_          [!] option "always reload on require" was not independent from option
+#_              "always reload default script"
+#_          [!] several problems related to jumping to error lines
+#_          [*] plugin built on base LuaFAR 0.5.1
+#_
+#_    2008-12-22, v0.5
+#_      PLUGIN:
+#_          [+] configuration dialog "Plugin Settings"
+#_          [+] work from viewer and panels
+#_          [+] file farkeys.lua
+#_          [*] _usermenu.lua: AddToMenu API changed
+#_          [*] added <plugin directory>\?.lua to initial value of package.path
+#_          [*] env. variable LUAFAR_INIT is processed on start up (was: LUA_INIT)
+#_          [*] plugin menus can be made "searchable" (thanks to maxdrfl)
+#_          [*] indicator of memory used by the Lua State on the error message boxes
+#_          [*] buttons on error message boxes for jumping to error lines
+#_          [*] plugin built on base LuaFAR 0.5
+#_
+#_    2008-12-13, v0.4
+#_      Reformat Block:
+#_          [+] Russian interface translation
+#_      Block Sum:
+#_          [!] editor window not redrawn after hotkey-initiated execution
+#_      Lua Expression:
+#_          [!] editor window not redrawn after hotkey-initiated execution
+#_      PLUGIN:
+#_          [!] hot keys: multiple executions after a single key press
+#_          [!] hot keys: did not work when they were part of a macro
+#_          [*] _usermenu.lua: is passed 2 arguments (event type and editor ID)
+#_          [*] plugin built on base LuaFAR 0.4
+#_
+#_    2008-12-06, v0.3d
+#_      PLUGIN:
+#_          [!] hot keys: worked only after the menu was called
+#_          [!] hot keys: triple combinations didn't work
+#_          [+] hot keys: can be assigned without adding items to the menu
+#_          [+] hot keys: can be assigned to the built-in utilities
+#_          [*] _usermenu.lua: is (almost) not restricted by its scope
+#_          [*] _usermenu.lua: is run when either of 4 different events occurs,
+#_              and is passed an argument (event type)
+#_
+#_    2008-12-04, v0.3c
+#_      PLUGIN:
+#_          [!] incorrect processing of editor input
+#_
+#_    2008-12-04, v0.3b
+#_      PLUGIN:
+#_          [+] hot keys can be assigned to user utilities
+#_          [+] can work with external Lua DLL
+#_          [*] plugin built on base LuaFAR 0.3
+#_
+#_    2008-11-26, v0.3
+#_      Sort Lines:
+#_          [!] handling different types of EOLs.
+#_          [!] sorting "only selected" in vertical blocks.
+#_      Block Sum:
+#_          [*] the dialog moved to Configuration Menu.
+#_      Lua Expression:
+#_          [*] the dialog moved to Configuration Menu.
+#_          [*] a semicolon is appended to result when inserting into the editor.
+#_      Lua Script:
+#_          [*] works either on selection or on the whole editor buffer.
+#_      PLUGIN:
+#_          [+] adding utilities by the user.
+#_          [+] configuration menu added
+#_
+#_    2008-11-06, v0.2.1
+#_      Sort Lines:
+#_          [!] sorting "only selected" in vertical blocks.
+#_
+#_    2008-11-05, v0.2
+#_      PLUGIN:
+#_          [+] first public release.
+#_
+</article>
+</node>
+<node>
+id=76
+lv=1
+dt=Text
+nm=Version 2.5.0
+ctime=3499357086
+mtime=3499357115
+<article>
+#_<markdown>
+#_**PLUGIN:**<br>
+#_`[!]` Error when calling "Block Sum" or "Lua Expression" settings dialogs.<br>
+#_`[!]` Utilities could interfere with each other via parameters table.
+#_
+#_**Lua Script:**<br>
+#_`[+]` Parameters can be passed to the script. Parameters dialog added.
+#_
+</article>
+</node>
+<node>
+id=74
+lv=1
+dt=Text
+nm=Version 2.4.0
+ctime=3496045837
+mtime=3496045860
+<article>
+#_<markdown>
+#_`[+]` [`AddToMenu`](13.html): parameter "where" can include letter "d" (for "dialog").<br>
+#_`[*]` [`AddToMenu`](13.html), [`AddCommand`](57.html): unlimited number of additional arguments.<br>
+#_`[*]` [Installed scripts get their parameters](73.html) in a table (was: 2 parameters). The table may also include fields "From" and "hDlg".<br>
+#_`[!]` Fix "Reload user file" with default plugin settings.<br>
+#_
+</article>
+</node>
+<node>
+id=72
+lv=1
+dt=Text
+nm=Version 2.3.0
+ctime=3491214241
+mtime=3491214257
+<article>
+#_<markdown>
+#_
+#_###Plugin
+#_`[*]` 'Reload User File' operation resets `package.loaded`,
+#_  in order to behave as close as possible to the initial loading.<br>
+#_`[+]` new callback ("resident") function **`ExitScript`**
+#_  (see [`MakeResident`](20.html) function).<br>
+#_`[+]` function [`AddToMenu`](13.html) supports localization.
+#_
+</article>
+</node>
+<node>
+id=71
+lv=1
+dt=Text
+nm=Version 2.2.0
+ctime=3488732216
+mtime=3488732233
+<article>
+#_<markdown>
+#_
+#_###Plugin
+#_`[+]` Localization of the configuration dialog.<br>
+#_`[+]` [Utility for localization of script packets](68.html).<br>
+#_
+#_###Sort Lines
+#_`[!]` Fixed shortcut keys in the dialogs.<br>
+#_`[!]` Sorting made stable.<br>
+#_
+#_
+</article>
+</node>
+<node>
+id=70
+lv=1
+dt=Text
+nm=Version 2.1.0
+ctime=3485777369
+mtime=3485777385
+<article>
+#_<markdown>
+#_
+#_###Plugin:
+#_`[!]` Fixes to work with Unicode file names and paths
+#_(LuaFAR 2.2 required).
+#_
+#_###Sort Lines:
+#_`[+]` Added constant **`I`** (number of lines in selection).
+#_Help files updated.
+#_
+#_
+</article>
+</node>
+<node>
+id=67
+lv=1
+dt=Text
+nm=Version 2.0.1
+ctime=3478412661
+mtime=3478412690
+<article>
+#_<markdown>
+#_See also [Changelog](54.html).
+#_
+#_1. [`unicode.utf8.cfind`](65.html) function added.
+#_
+</article>
+</node>
+<node>
+id=64
+lv=1
+dt=Text
+nm=Version 0.12.1
+<article>
+#_<markdown>
+#_* **Bug fix:** LuaFAR version check was done after the exported
+#_  functions were already connected (that is, too late).
+#_* Requires LuaFAR version 1.1.
+#_
+#_
+</article>
+</node>
+<node>
+id=62
+lv=1
+dt=Text
+nm=Version 0.12.0
+<article>
+#_<markdown>
+#_
+#_* [Command line](59.html) syntax extended.
+#_* [far2.searchmenu](24.html):
+#_  * produce data allowing custom highlighting of the matched
+#_    part of the item text
+#_  * added property `Map`
+#_* Several bugs fixed: see [Changelog](54.html).
+#_
+</article>
+</node>
+<node>
+id=60
+lv=1
+dt=Text
+nm=Version 0.11.0
+<article>
+#_<markdown>
+#_
+#_###Plugin
+#_
+#_- Plugin can be called from the command line, via the prefix
+#_  **`lfe`** (see [User's utilities](8.html) and
+#_  [`AddCommand`](57.html)).
+#_
+#_###Modules
+#_
+#_- [`history`](23.html): method [`setfield`](58.html) added.
+#_- [`far2.searchmenu`](24.html): added properties `AllowEmpty`, `Menu`,
+#_  `CheckItem`,  `SearchText`; property `SearchPlain` replaced by
+#_  `SearchMethod`.
+#_
+</article>
+</node>
+<node>
+id=55
+lv=1
+dt=Text
+nm=Version 0.10.0
+<article>
+#_<markdown>
+#_
+#_**PLUGIN:**
+#_
+#_- `far2.history` module renamed to [`history`](23.html).
+#_- configuration changes done by a user script are reverted
+#_  by the plugin after the script exits.
+#_- [`lf4ed.config`](32.html): always returns configuration
+#_  existed prior to the call.
+#_- Main Menu, Config. Menu: removed separators after the
+#_  built-in items. (They can be added via files `_usermenu.lua`).
+#_- The plugin's DLL, as supplied, now embeds scripts and modules
+#_  in source code form (not compiled). That allows to work with LuaJIT.
+#_
+#_
+</article>
+</node>
+<node>
+id=39
+lv=1
+dt=Text
+nm=Version 0.9.0
+<article>
+#_<markdown>
+#_
+#_###Installing user's utilities
+#_  * All utilities added by [`AddToMenu`](13.html) calls within
+#_    a single usermenu file share a common environment that does not
+#_    change until the next *Reload User File* operation (or until FAR
+#_    termination). See [`AddUserFile`](34.html).
+#_
+</article>
+</node>
+<node>
+id=41
+lv=1
+dt=Text
+nm=Version 0.8.0
+<article>
+#_<markdown>
+#_
+#_###Installing user's utilities
+#_  * Improved [`AddToMenu`](13.html) function
+#_  * Added [`AddUserFile`](34.html) function
+#_  * Added [`AutoInstall`](35.html) function
+#_  * **`<plugin_path>/scripts/?.lua`** is added to `package.path`.<br>
+#_    (See [Packets of scripts](37.html)).
+#_
+#_###Plugin API
+#_  * Added [`lf4ed.config`](32.html) function
+#_  * Added [`lf4ed.version`](33.html) function
+#_
+#_###Lua modules
+#_  * Added documentation for a few built-in [Lua modules](21.html)
+#_    used in plugin; user utilities can use those modules.
+#_
+#_
+</article>
+</node>
+<node>
+id=43
+lv=1
+dt=Text
+nm=Version 0.7.3
+<article>
+#_<markdown>
+#_* Plugin is built on base LuaFAR 0.7.2
+#_
+</article>
+</node>
+<node>
+id=45
+lv=1
+dt=Text
+nm=Version 0.7
+<article>
+#_<markdown>
+#_* Plugin is built on base LuaFAR 0.7
+#_
+</article>
+</node>
+<node>
+id=47
+lv=1
+dt=Text
+nm=Version 0.6
+<article>
+#_<markdown>
+#_* Plugin is built on base LuaFAR 0.6
+#_
+</article>
+</node>
+<node>
+id=49
+lv=1
+dt=Text
+nm=Version 0.5.2
+<article>
+#_<markdown>
+#_* User is able to install event handlers, by means
+#_  of calling new function `MakeResident` in `_usermenu.lua`
+#_* Configuration menu command "Reload User File"
+#_
+</article>
+</node>
+<node>
+id=51
+lv=1
+dt=Text
+nm=Version 0.5.1
+<article>
+#_<markdown>
+#_This version is mainly a bug-fixing release.
+#_
+#_Also, since this version embeds LuaFAR 0.5.1, it is possible to assign hot keys that were unavailable to previous versions (keys with punctuation characters).
+#_
+</article>
+</node>
+<node>
+id=11
+lv=0
+dt=Text
+nm=Incompatibilities with the previous version
+mtime=3502282318
+<article>
+#_<markdown>
+#_
+</article>
+</node>
+<node>
+id=77
+lv=1
+dt=Text
+nm=Version 2.6.0
+ctime=3502282290
+mtime=3502282311
+<article>
+#_<markdown>
+#_1. [Lua modules](21.html) used by the plugin do not set global variables. Use the value returned by `require`.
+#_
+#_
+</article>
+</node>
+<node>
+id=75
+lv=1
+dt=Text
+nm=Version 2.4.0
+ctime=3496045891
+mtime=3496045909
+<article>
+#_<markdown>
+#_1. [Installed scripts get their parameters](73.html) in a table (was: 2 parameters).<br>
+#_
+</article>
+</node>
+<node>
+id=69
+lv=1
+dt=Text
+nm=Version 2.1.0
+ctime=3485777277
+mtime=3485777291
+<article>
+#_<markdown>
+#_
+#_### Module [`history`](23.html)
+#_1. Methods [`hobj:field`](29.html) and [`hobj:setfield`](58.html) -
+#_   API changed; the code using those methods must be fixed.
+#_
+</article>
+</node>
+<node>
+id=66
+lv=1
+dt=Text
+nm=Version 2.0.0
+ctime=3476257762
+mtime=3476257776
+<article>
+#_<markdown>
+#_1. See *Incompatibilities* section of LuaFAR 2.0.0 manual.
+#_
+</article>
+</node>
+<node>
+id=63
+lv=1
+dt=Text
+nm=Version 0.12.0
+<article>
+#_<markdown>
+#_
+#_* [Command line](59.html) syntax changed.
+#_* [`MakeResident`](20.html): handlers' return values are treated
+#_  slightly differently.
+#_
+#_
+</article>
+</node>
+<node>
+id=61
+lv=1
+dt=Text
+nm=Version 0.11.0
+<article>
+#_<markdown>
+#_
+#_1. [`far2.searchmenu`](24.html): property `SearchPlain` replaced by
+#_   `SearchMethod`.
+#_
+</article>
+</node>
+<node>
+id=56
+lv=1
+dt=Text
+nm=Version 0.10.0
+<article>
+#_<markdown>
+#_
+#_1. Module `far2.history` renamed to [`history`](23.html).
+#_
+</article>
+</node>
+<node>
+id=40
+lv=1
+dt=Text
+nm=Version 0.9.0
+<article>
+#_<markdown>
+#_
+#_1. LuaFAR version 0.9 required.
+#_
+</article>
+</node>
+<node>
+id=42
+lv=1
+dt=Text
+nm=Version 0.8.0
+<article>
+#_<markdown>
+#_1. [`AddToMenu`](13.html): function signature changed. Both the
+#_   existing *_usermenu.lua* files and user script files **must
+#_   be adapted** in order to work correctly with the new API.
+#_
+</article>
+</node>
+<node>
+id=46
+lv=1
+dt=Text
+nm=Version 0.7
+<article>
+#_<markdown>
+#_1. See Incompatibilities section of LuaFAR 0.7 manual.
+#_
+</article>
+</node>
+<node>
+id=48
+lv=1
+dt=Text
+nm=Version 0.6
+<article>
+#_<markdown>
+#_1. See Incompatibilities section of LuaFAR 0.6 manual.
+#_
+</article>
+</node>
+<node>
+id=50
+lv=1
+dt=Text
+nm=Version 0.5.2
+<article>
+#_<markdown>
+#_1. **_usermenu.lua**: no input arguments are passed.
+#_
+</article>
+</node>
+<node>
+id=52
+lv=1
+dt=Text
+nm=Version 0.5.1
+<article>
+#_<markdown>
+#_
+#_1. Incompatibilities of LuaFAR-0.5.1 versus LuaFAR-0.5 (see LuaFAR 0.5.1 manual)
+#_
+</article>
+</node>
+<node>
+id=53
+lv=1
+dt=Text
+nm=Version 0.5
+<article>
+#_<markdown>
+#_
+#_1. Function [`AddToMenu`](13.html): a new first parameter; all existing parameters are shifted toward the right.
+#_
+#_2. `"<plugin directory>\?.lua;"` is prepended to the initial value of `package.path`
+#_
+#_3. Environment variable `LUAFAR_INIT` (if it exists) is processed on start up (was: `LUA_INIT`)
+#_
+#_4. Incompatibilities of LuaFAR-0.5 versus LuaFAR-0.4 (see LuaFAR 0.5 manual)
+#_
+#_
+</article>
+</node>
+<node>
+id=8
+lv=0
+dt=Text
+nm=User's utilities
+<article>
+#_<markdown>
+#_
+#_### Installing user's utilities
+#_
+#_Installing user's utilities can be done via the file **_usermenu.lua**
+#_lying in the plugin's directory. This file is run in two cases:
+#_
+#_- When FAR calls `SetStartupInfo` of the plugin
+#_- When the command "Reload User File" from the Configuration Menu
+#_  is executed
+#_
+#_There are a few [installation functions](36.html) that are
+#_intended to be called from **_usermenu.lua**.
+#_
+#_### Running user's utilities
+#_
+#_User utilities can be run in the following ways:
+#_
+#_- Via a menu item; see [`AddToMenu`](13.html).
+#_- Via a shortcut (from Editor only), see [`AddToMenu`](13.html).
+#_- From the [command line](59.html) (the plugin registers a command
+#_  line prefix **`lfe`**); see [`AddCommand`](57.html).
+#_
+#_### Running scripts without installation
+#_
+#_- From the Editor: use the included utility *Lua Script*.
+#_- From the [command line](59.html).
+#_
+#_### Links
+#_
+#_[Installation functions](36.html)<br>
+#_[Packets of scripts](37.html)<br>
+#_[Binary modules](38.html)<br>
+#_[Example of use](14.html)<br>
+#_
+#_
+#_
+</article>
+</node>
+<node>
+id=36
+lv=1
+dt=Text
+nm=Installation functions
+<article>
+#_<markdown>
+#_
+#_[`AddToMenu`](13.html)<br>
+#_[`AddCommand`](57.html)<br>
+#_[`AddUserFile`](34.html)<br>
+#_[`AutoInstall`](35.html)<br>
+#_[`MakeResident`](20.html)<br>
+#_
+</article>
+</node>
+<node>
+id=13
+lv=2
+dt=Text
+nm=AddToMenu
+mtime=3491313710
+<article>
+#_<markdown>
+#_**`AddToMenu (where, text, hotkey, file [, ...])`**
+#_
+#_Function `AddToMenu` is available to the *_usermenu.lua* script.<br>
+#_It allows to add a specified utility to the plugin's menu and
+#_assign it a hot key.
+#_
+#_### Parameters
+#_
+#_1. `where`<br>
+#_Where the utility is intended to run from: any combination
+#_of letters **[cdepv]** (**c**=configuration menu, **d**=dialog, **e**=editor, **p**=panels, **v**=viewer).
+#_
+#_1. `text`<br>
+#_Text that should appear in the menu.<br>
+#_-- To assign a hot key without adding a menu item, supply a `nil`.<br>
+#_-- To add a separator, specify a string beginning with `":sep:"`
+#_   following by optional text, e.g. `":sep:Block commands"`.<br>
+#_-- If the [utility for localization](68.html) is used, and `text`
+#_   begins with `"::"`, then the rest of the text is treated as a
+#_   message identifier. (In the case of separator, prefix `":sep:::"`
+#_   can be used).
+#_
+#_1. `hotkey`<br>
+#_A key combination for calling the utility, e.g. `"Alt+Shift+F4"`.<br>
+#_Supply `nil` if no hot key is needed.<br>
+#_**NOTE:** a hot key assigned this way works **only from Editor**,
+#_provided that no macro is assigned to that key.
+#_
+#_1. `file`<br>
+#_Name of a Lua script file to run upon this item activation
+#_(its path is relative to the plugin's directory).
+#_
+#_1. Extra parameters (optional)<br>
+#_Values that will be passed to user script (they are passed to the
+#_script in a table). There can be any number of values of any Lua
+#_type.
+#_
+#_### Examples
+#_
+#_      AddToMenu ("e", "Count words", nil, "countw.lua")
+#_      AddToMenu ("e", "Count letters", "Alt+F2", "countl.lua")
+#_      AddToMenu ("e", "Search", "Ctrl+F", "search.lua", "search")
+#_      AddToMenu ("p", "Rename Files", nil, "rename.lua")
+#_      AddToMenu ("evp", "Calendar", "Alt+F12", "calendar.lua", "show")
+#_
+#_To assign a hot key to a built-in utility, supply `text` as `true`
+#_and specify the menu position via `file`:
+#_      AddToMenu ("e", true, "Ctrl+1", 1)
+#_
+</article>
+</node>
+<node>
+id=57
+lv=2
+dt=Text
+nm=AddCommand
+mtime=3491313722
+<article>
+#_<markdown>
+#_**`AddCommand (command, file [, ...])`**
+#_
+#_Function `AddCommand` is available to the *_usermenu.lua* script.<br>
+#_It establishes a correspondence between the given `command` and
+#_the specified utility (`file`). This allows to call that utility
+#_from the command line.
+#_
+#_### Parameters
+#_
+#_1. `command`<br>
+#_The first command line parameter after the plugin's prefix.
+#_
+#_1. `file`<br>
+#_Name of a Lua script file to run upon this command activation
+#_(its path is relative to the plugin's directory).
+#_
+#_1. Extra parameters (optional)<br>
+#_Values that will be passed to user script (they are passed to the
+#_script in a table). There can be any number of values of any Lua
+#_type.
+#_
+#_### Note
+#_
+#_If command line contains more than one argument, then the
+#_second and subsequent arguments will be passed on to the user
+#_script, after the `param2` argument.
+#_
+#_### Examples
+#_      AddCommand("calc", scriptspath.."common/calc.lua")
+#_      AddCommand("umenu", ScriptPath.."LuaFUM/LuaFUM.lua")
+#_
+#_
+</article>
+</node>
+<node>
+id=34
+lv=2
+dt=Text
+nm=AddUserFile
+mtime=3491216844
+<article>
+#_<markdown>
+#_**`AddUserFile (filename)`**
+#_
+#_Function `AddUserFile` is available to the *_usermenu.lua* script.
+#_
+#_Parameter `filename` (its path is relative to the plugin's directory)
+#_specifies a file that is treated as an additional *_usermenu.lua* file.
+#_
+#_All utilities added by [`AddToMenu`](13.html) and
+#_[`AddCommand`](57.html) calls within the file specified by `filename`
+#_share a common environment that does not change until the next
+#_*Reload User File* operation (or until FAR termination).
+#_
+#_In fact, the plugin itself executes `AddUserFile("_usermenu.lua")`.
+#_
+#_
+</article>
+</node>
+<node>
+id=35
+lv=2
+dt=Text
+nm=AutoInstall
+mtime=3491216961
+<article>
+#_<markdown>
+#_**`AutoInstall (startpath, [filepattern], [depth])`**
+#_
+#_Function `AutoInstall` is available to the *_usermenu.lua* script.<br>
+#_It looks for files whose names match `filepattern` in the directory
+#_given by `startpath` and its subdirectories recursively,
+#_and calls [`AddUserFile`](34.html) for each matching file found.
+#_
+#_### Parameters
+#_
+#_1. `startpath` (string)<br>
+#_A path relative to the plugin's directory
+#_
+#_1. `filepattern` (string, or nil)<br>
+#_Lua regular expression specifying what files to install.
+#_Only file name (without path) is matched against this regular
+#_expression. If the parameter is not specified, the value
+#_`"^_usermenu%.lua$"` is used.
+#_
+#_1. `depth` (number, or nil)<br>
+#_The maximum depth of subdirectories to recurse into.
+#_When it is 0, the search is conducted only in `startpath`.
+#_When it is not specified, the recursion depth is unlimited.
+#_
+#_### Warning
+#_This function should be used with caution since it runs
+#_every matching file found.
+#_
+#_### Examples
+#_
+#_      AutoInstall ("scripts")
+#_      AutoInstall ("scripts", nil, 1)
+#_      AutoInstall ("scripts/cool", "^_.*menu%.lua$", 0)
+#_
+</article>
+</node>
+<node>
+id=20
+lv=2
+dt=Text
+nm=MakeResident
+mtime=3509048595
+<article>
+#_<markdown>
+#_**`MakeResident (filename | table)`**
+#_
+#_Function `MakeResident` is available to the *_usermenu.lua* script.<br>
+#_It allows to add either a file (its path is relative to the plugin directory) or a table, containing one or more handlers that will be further called on some FAR events.
+#_
+#_The following handlers are supported:
+#_
+#_* `ProcessEditorInput`
+#_* `ProcessEditorEvent`
+#_* `ProcessViewerEvent`
+#_* `ExitScript`
+#_
+#_### Notes about the handlers
+#_
+#_1. If the parameter is file name, handlers must be defined as global
+#_   functions.
+#_1. There can be multiple handlers for the same event type. They will
+#_   be called in the order their files are specified in
+#_   `_usermenu.lua`.
+#_1. The handlers' input parameters correspond to the *exported
+#_   functions* with the same names, e.g. `ProcessViewerEvent`
+#_   corresponds to `export.ProcessViewerEvent`, etc. (see LuaFAR manual
+#_   for details). `ExitScript` has no parameters, no return value.
+#_1. If the return value of a handler's `ProcessEditorInput` is true,
+#_   the rest of `ProcessEditorInput` handlers are not called, and
+#_   true is returned to Far.
+#_1. The return values of `ProcessEditorEvent` and `ProcessViewerEvent`
+#_   are ignored.
+#_1. `ProcessEditorInput` handlers are not called when a user-defined
+#_   hot key is pressed.
+#_1. `ExitScript` is called when the plugin is about to be unloaded.
+#_   It is also called before the "Reload User file" operation.
+#_
+#_
+</article>
+</node>
+<node>
+id=73
+lv=1
+dt=Text
+nm=Input data of installed scripts
+ctime=3491725586
+mtime=3491811735
+<article>
+#_<markdown>
+#_An installed script, when it is run conventionally, always receives a single argument of *table* type.
+#_
+#_### Scripts installed via `AddToMenu` call (run from plugin menu or shortcut)
+#_
+#_* The array part of the table contains the additional arguments specified in the `AddToMenu` call.
+#_* The hash part of the table has the field **`From`** that contains either of the following strings: **"config"**, **"dialog"**, **"editor"**, **"panels"** or **"viewer"**.
+#_* In the case `From=="dialog"`, the table also has the field **`hDlg`**, that contains the dialog handle (a userdata value).
+#_
+#_### Scripts installed via `AddCommand` call (run via plugin command)
+#_
+#_* The array part of the table contains the additional arguments specified in the `AddCommand` call followed by the command line arguments.
+#_* The hash part of the table has the field **`From`** that contains the string **"panels"**.
+#_
+</article>
+</node>
+<node>
+id=37
+lv=1
+dt=Text
+nm=Packets of scripts
+<article>
+#_<markdown>
+#_If there is a set of utilities that is distributed as a single
+#_unit ("packet of scripts"), it makes sense to install it separately
+#_from other scripts.
+#_
+#_* The standard location for adding packets of scripts is
+#_**`<plugin_path>/scripts`**.
+#_It is recommended to install the packet in subdirectory
+#_**`<plugin_path>/scripts/<packet_name>`**.
+#_
+#_* The plugin modifies `package.path` by adding at the beginning:
+#_**`<plugin_path>/scripts/?.lua;`**. (So the user doesn't have to.)
+#_
+#_* Due to the danger of module names collision, it is **not** recommended
+#_for packet writers to further modify `package.path`. Instead, start
+#_the argument of every `require` call with `<packet_name>`.
+#_E.g., if the packet is named *fl_scripts* then do:
+#_`require 'fl_scripts/utils/read_config'`
+</article>
+</node>
+<node>
+id=68
+lv=1
+dt=Text
+nm=Utility for localization
+ctime=3485729339
+mtime=3486625193
+<article>
+#_<markdown>
+#_
+#_The plugin contains a utility for adding localization to user packets of scripts. The utility consists of two files:
+#_<plugin_directory>/**`lf4ed_lang.lua`** and **`far2/makelang.lua`**.
+#_
+#_(1) Create a "language template" file (similar to **`lf4ed_lang.templ`** file in the plugin directory), let's assume it is *scripts/my_package/lang.templ*.
+#_
+#_   * The exact syntax of "language template" files is described in the file **`far2/makelang.lua`**. The template file should be in UTF-8 encoding, with or without BOM.
+#_
+#_   * Choose some prefix for all your message identifiers (e.g. "mp"), to avoid conflicts with the existing message identifiers (if conflicts occur, they are detected by the program).
+#_
+#_   * Every script using this message system should **`require "lf4ed_message"`**. This returns a table that can be accessed for retrieving localized messages.
+#_
+#_(2) Run the following command from the plugin's directory:<br>
+#_        lua lf4ed_lang.lua scripts/my_package/lang.templ
+#_If no errors occured, this will extend **`*.lng`** files and **`lf4ed_message.lua`** file with the localized messages of your script package.
+#_
+#_(3) Restart Far.
+#_
+#_
+#_**Example of use:**
+#_        local M = require "lf4ed_message"
+#_        ........
+#_        far.Message(M.mpSomeMsgText, M.mpSomeMsgTitle, M.mpSomeMsgButtons)
+#_
+#_
+</article>
+</node>
+<node>
+id=38
+lv=1
+dt=Text
+nm=Binary modules
+mtime=3508666085
+<article>
+#_<markdown>
+#_
+#_Sometimes, user scripts may need some binary module (e.g.,
+#_*LuaFileSystem*) for its functioning. There are two ways
+#_of installing the binary modules:
+#_
+#_* If there is no specific setup for changing `package.cpath`
+#_  (usually via the environment variable `LUAFAR_CPATH`), then
+#_  put the binary modules into `%FARHOME%` directory.
+#_
+#_* Otherwise, put the binary modules into any directory listed
+#_  in `package.cpath`.
+#_
+#_
+</article>
+</node>
+<node>
+id=14
+lv=1
+dt=Text
+nm=Example of use
+<article>
+#_<markdown>
+#_### _usermenu.lua
+#_    AddToMenu("e", "Count words", nil, "countw.lua")
+#_    AddToMenu("e", "Count letters", "Alt+F2", "countl.lua")
+#_    AddToMenu("evp", "Calendar", "Alt+F12", "calendar.lua", "show")
+#_    AddToMenu("c", "Calendar", nil, "calendar.lua", "config")
+#_    AddCommand("calen", "calendar.lua", "show")
+#_    AddUserFile("scripts/fl_scripts/_usermenu.lua")
+#_    AddUserFile("scripts/Rh_Scripts/_testmenu.lua")
+#_    MakeResident("handlers.lua")
+#_
+#_### handlers.lua
+#_    local _F = far.GetFlags()
+#_
+#_    function ProcessEditorInput (Rec)
+#_      if (Rec.EventType == _F.FARMACRO_KEY_EVENT) or
+#_         (Rec.EventType == _F.KEY_EVENT and Rec.bKeyDown)
+#_      then
+#_        if Rec.AsciiChar == ("t"):byte() then
+#_          far.EditorInsertText("X")
+#_          far.EditorRedraw()
+#_          return true
+#_        end
+#_      end
+#_    end
+#_
+#_    function ProcessEditorEvent (Event, Param)
+#_      if Event == _F.EE_READ then
+#_        require 'fl_scripts/editor/template'
+#_        templates_menu()
+#_      end
+#_    end
+#_
+#_
+</article>
+</node>
+<node>
+id=59
+lv=0
+dt=Text
+nm=Command line and macro calls
+mtime=3506938506
+<article>
+#_<markdown>
+#_
+#_###Syntax
+#_      [lfe:] [<options>] <command>|-r<filename> [<arguments>]
+#_
+#_####Options
+#_      -a          asynchronous execution
+#_      -e <str>    execute string <str>
+#_      -l <lib>    load library <lib>
+#_
+#_####Command
+#_Any command added via [`AddCommand`](57.html) function in
+#_*_usermenu.lua*.
+#_
+#_####Filename
+#_Name of a Lua script file. It can be either absolute, or relative
+#_to the current directory.
+#_
+#_####Example of command line call
+#_      lfe: calc 2+2
+#_
+#_####Example of macro call
+#_      CallPlugin("6f332978-08b8-4919-847a-efbb6154c99a","-a calc 2+2")
+</article>
+</node>
+<node>
+id=31
+lv=0
+dt=Text
+nm=Plugin API
+mtime=3475928551
+<article>
+#_<markdown>
+#_
+#_1. There is an important thing to know when writing scripts for
+#_   *LuaFAR for Editor*: indexing string variables accesses functions
+#_   in **`unicode.utf8`** rather than in **`string`** namespace.
+#_     * For example, `s:sub(1,2)` means `unicode.utf8.sub(s,1,2)`.
+#_     * To use `string` library, specify that explicitly,
+#_       e.g., `string.sub(s,1,2)`.
+#_     * **`#s`** refers to `string.len(s)`. Use **`s:len()`**
+#_       to obtain number of characters.
+#_1. The plugin has a few functions that are available to user scripts.
+#_   They are placed under **lf4ed** namespace.
+#_     * [`lf4ed.config`](32.html)
+#_     * [`lf4ed.version`](33.html)
+#_     * [`unicode.utf8.cfind`](65.html)
+#_
+</article>
+</node>
+<node>
+id=32
+lv=1
+dt=Text
+nm=lf4ed.config
+<article>
+#_Get or set the plugin configuration.
+#_
+#_cfg = lf4ed.config ([newcfg])
+#_
+#_**Parameters:**
+#_  *newcfg*:  table
+#_           Fields of *newcfg* (every field is optional):
+#_             ReloadDefaultScript : boolean
+#_             RequireWithReload   : boolean
+#_             UseStrict           : boolean
+#_             UseSearchMenu       : boolean
+#_             ReturnToMainMenu    : boolean
+#_
+#_**Returns:**
+#_  *cfg*:     table (the configuration as it was before the call)
+#_
+#_**Description:**
+#_  If *newcfg* is given, it is a table with configuration
+#_  parameters to be set. Parameters not contained in this
+#_  table will remain unchanged. This means that
+#_  (newcfg.param == false) will set 'param' to false, but
+#_  (newcfg.param == nil) will leave 'param' as it was before
+#_  the call.
+#_  Returned is a copy of the "old" configuration table (as it
+#_  was before the call).
+#_
+#_  If *newcfg* is not given, an up-to-date copy of the
+#_  configuration table is returned. This table contains the
+#_  same fields as the *newcfg* table described above.
+#_
+#_**Note:**
+#_  Configuration changes done by a user script via this
+#_  function are reverted by the plugin after the user script
+#_  exits.
+#_
+#_
+</article>
+</node>
+<node>
+id=33
+lv=1
+dt=Text
+nm=lf4ed.version
+<article>
+#_Get plugin version.
+#_
+#_version = lf4ed.version()
+#_
+#_**Parameters:**
+#_  none
+#_
+#_**Returns:**
+#_  *version*: string, e.g. "0.8.0"
+#_
+#_
+</article>
+</node>
+<node>
+id=65
+lv=1
+dt=Text
+nm=unicode.utf8.cfind
+ctime=3475928416
+mtime=3476258099
+<article>
+#_<markdown>
+#_
+#_It is a helper function. It behaves like
+#_`unicode.utf8.find` except that it treats its input offset and
+#_expresses its output offsets in **characters** rather than **bytes**.
+#_(The only exception are "position captures" that are still returned
+#_expressed in bytes).
+#_
+#_
+</article>
+</node>
+<node>
+id=21
+lv=0
+dt=Text
+nm=Lua Modules
+<article>
+#_<markdown>
+#_There are a few Lua modules that can be used in the utilities added by the user:
+#_
+#_* [`far2.dialog`](22.html)
+#_* [`far2.history`](23.html)
+#_* [`far2.searchmenu`](24.html)
+#_
+</article>
+</node>
+<node>
+id=22
+lv=1
+dt=Text
+nm=far2.dialog
+<article>
+#_<markdown>
+#_Module `far2.dialog` makes common operations with FAR dialogs easier. It contains the following functions: [`NewDialog`][1], [`LoadData`][2] and [`SaveData`][3].
+#_
+#_The module is loaded as follows:<br>
+#_`require "far2.dialog"`
+#_
+#_[1]: 25.html
+#_[2]: 26.html
+#_[3]: 27.html
+#_
+#_
+#_
+</article>
+</node>
+<node>
+id=25
+lv=2
+dt=Text
+nm=NewDialog
+mtime=3511292501
+<article>
+#_dlg = far2_dialog.NewDialog()
+#_
+#_**Parameters:**
+#_  none
+#_
+#_**Returns:**
+#_  dlg: Dialog object (a table).
+#_       It represents the full set of dialog items, and is eventually
+#_       passed to function *far.Dialog* as its 6-th parameter.
+#_
+#_**Description:**
+#_The dialog object has the following features:
+#_
+#_1. To add an item, assign it to some string field of the object, e.g.:
+#_
+#_     dlg.cbxCase = {"DI_CHECKBOX",10,4,0,0, 0, "","",0, "&Case sensitive"}
+#_     dlg.cbxWord = {"DI_CHECKBOX",10,5,0,0, 0, "","",0, "&Whole words"}
+#_
+#_   The added items are now accessible by their names: dlg.cbxCase,
+#_   dlg.cbxWord. If there are items that need not to be accessed
+#_   after their adding, they can be assigned the same name, e.g.,
+#_   dlg.label or dlg._
+#_
+#_2. The properties of the added items are accessible in two ways:
+#_   either by index, or by name.
+#_
+#_     print(dlg.cbxCase[3]) --> 4
+#_     print(dlg.cbxCase.Y1) --> 4
+#_     dlg.cbxCase.Y1 = 6
+#_     print(dlg.cbxCase[3]) --> 6
+#_     print(dlg.cbxCase.Y1) --> 6
+#_
+#_2.1. Here is the correspondence between indexes and names of dialog
+#_   item properties (wherever multiple names are listed for an index,
+#_   any of them may be used):
+#_
+#_      1 : Type
+#_      2 : X1
+#_      3 : Y1
+#_      4 : X2
+#_      5 : Y2
+#_      6 : Selected, ListItems, VBuf
+#_      7 : History
+#_      8 : Mask
+#_      9 : Flags
+#_     10 : Data
+#_     11 : MaxLength
+#_     12 : UserData
+#_
+</article>
+</node>
+<node>
+id=26
+lv=2
+dt=Text
+nm=LoadData
+mtime=3511292550
+<article>
+#_far2_dialog.LoadData(aDialog, aData)
+#_
+#_**Parameters:**
+#_  aDialog : a dialog object created by a NewDialog call
+#_  aData   : a table with data to load into *aDialog*
+#_
+#_**Returns:**
+#_  nothing
+#_
+#_**Description:**
+#_  The function copies input data *aData* into a dialog object *aDialog*.
+#_  The dialog items must be added to the object *before* this function
+#_  is called, since this function loads data only to existing dialog
+#_  items.
+#_
+#_  - The following item types are supported by the function:
+#_    DI_CHECKBOX, DI_RADIOBUTTON, DI_EDIT, DI_FIXEDIT, DI_LISTBOX,
+#_    DI_COMBOBOX.
+#_  
+#_  - The following properties are loaded by the function:
+#_     - For DI_CHECKBOX, DI_RADIOBUTTON: only index 6 ("Selected").
+#_     - For DI_LISTBOX, DI_COMBOBOX: only  field "SelectIndex"
+#_       of index 6 ("ListItems").
+#_     - For DI_EDIT, DI_FIXEDIT: only index 10 ("Data").
+#_
+#_  - Data are loaded to items whose names are identical to the names
+#_    of the *aData* fields.
+#_
+#_  - If an item has either of fields *_noautoload* or *_noauto* set to
+#_    true, it is not loaded.
+#_
+#_**Example:**
+#_  local dlg = far2_dialog.NewDialog()
+#_  dlg.cbxCase = {"DI_CHECKBOX",10,4,0,0, 0, "","",0, "&Case sensitive"}
+#_  dlg.cbxWord = {"DI_CHECKBOX",10,5,0,0, 0, "","",0, "&Whole words"}
+#_  far2_dialog.LoadData(dlg, {cbxCase=true, cbxWord=false})
+#_
+#_@@@
+#_<lua> Links = { ["NewDialog"]="25.html", } </lua>
+#_
+</article>
+</node>
+<node>
+id=27
+lv=2
+dt=Text
+nm=SaveData
+mtime=3511292574
+<article>
+#_far2_dialog.SaveData(aDialog, aData)
+#_
+#_**Parameters:**
+#_  aDialog : a dialog object created by a NewDialog call
+#_  aData   : a table to save data in from *aDialog*
+#_
+#_**Returns:**
+#_  nothing
+#_
+#_**Description:**
+#_  The function copies data from a dialog object *aDialog* to *aData*.
+#_
+#_  - The following item types are supported by the function:
+#_    DI_CHECKBOX, DI_RADIOBUTTON, DI_EDIT, DI_FIXEDIT, DI_LISTBOX,
+#_    DI_COMBOBOX.
+#_  
+#_  - The following properties are saved by the function:
+#_     - For DI_CHECKBOX, DI_RADIOBUTTON: only index 6 ("Selected").
+#_     - For DI_LISTBOX, DI_COMBOBOX: only  field "SelectIndex"
+#_       of index 6 ("ListItems").
+#_     - For DI_EDIT, DI_FIXEDIT: only index 10 ("Data").
+#_
+#_  - Data are saved by the names identical to the item names.
+#_
+#_  - If an item has either of fields *_noautosave* or *_noauto* set to
+#_    true, it is not saved.
+#_
+#_**Example:**
+#_  local dlg = far2_dialog.NewDialog()
+#_  dlg.cbxCase = {"DI_CHECKBOX",10,4,0,0, 0, "","",0, "&Case sensitive"}
+#_  dlg.cbxWord = {"DI_CHECKBOX",10,5,0,0, 0, "","",0, "&Whole words"}
+#_  -- add other items
+#_  -- call far.Dialog(...)
+#_  local data = {}
+#_  far2.dialog.SaveData(dlg, data)
+#_  return data
+#_
+#_@@@
+#_<lua> Links = { ["NewDialog"]="25.html", } </lua>
+#_
+#_function SaveData (aDialog, aData)
+#_  for _,item in ipairs(aDialog) do
+#_    if not item._noautosave then
+#_      if CheckItemType(item, "DI_CHECKBOX", "DI_RADIOBUTTON") then
+#_        aData[item.name] = (item[7] ~= 0)
+#_      elseif CheckItemType(item, "DI_EDIT", "DI_FIXEDIT") then
+#_        aData[item.name] = item[10]
+#_      elseif CheckItemType(item, "DI_LISTBOX", "DI_COMBOBOX") then
+#_        aData[item.name] = aData[item.name] or {}
+#_        aData[item.name].SelectIndex = item[7].SelectIndex
+#_      end
+#_    end
+#_  end
+#_end
+#_
+</article>
+</node>
+<node>
+id=24
+lv=1
+dt=Text
+nm=far2.searchmenu
+<article>
+#_<markdown>
+#_###Description
+#_
+#_This provides a filter for standard menu. Every typed symbol
+#_is added to the pattern which is used to check every menu item.
+#_Every item which satisfies the pattern is displayed, others become
+#_hidden. The pattern is displayed in the menu header.
+#_
+#_###Parameters
+#_    Item, Position = far2.searchmenu(Properties, Items [, BreakKeys])
+#_All arguments and return values are the same as for **`far.Menu`**
+#_(see LuaFAR manual), except some optional additional fields of
+#_`Properties` table:
+#_
+#_      AllowEmpty:    Allow the user to input patterns that make menu
+#_                     empty (boolean)
+#_
+#_      CheckItem:     Function for determining if an item should be
+#_                     displayed:
+#_                       from,to = CheckItem(pattern,text[,searchmethod])
+#_
+#_      Map:           Table that maps keys and key combinations
+#_                     to characters and actions. It allows to add
+#_                     keys or redefine the treatment of user's input.
+#_
+#_      Menu:          Function for displaying the menu
+#_                     (defaults to far.Menu)
+#_
+#_      Pattern:       Initial search pattern (string)
+#_
+#_      SearchMethod:  "lua"   = use Lua regexps (default)
+#_                     "dos"   = use DOS wildcards * and ?
+#_                     "plain" = plain text search
+#_
+#_Also, there is an optional field `SearchText` in a menu item. When
+#_present, it is used instead of the `text` field when checking the
+#_item, while the `text` field is used for displaying the item.
+#_
+#_###Predefined keys
+#_      Space     - insert a space character
+#_      DELETE    - delete the entire pattern
+#_      BACKSPACE - delete the last symbol
+#_      CtrlV     - insert a pattern from the clipboard
+#_
+#_###Available symbols
+#_      Small English letters: a-z
+#_      Numbers:  0-9
+#_      Symbols: .,><=+-_;:/?`~[]{}()\~|'"!@#$%^&*
+#_
+#_
+</article>
+</node>
+<node>
+id=23
+lv=1
+dt=Text
+nm=history
+mtime=3512600117
+<article>
+#_<markdown>
+#_Module `history` saves specified plugin data to files and loads the data from files. The module API consists of functions that create objects and methods of those objects.
+#_
+#_### Functions
+#_- [`newfile`](28.html)
+#_- [`newsettings`](79.html)
+#_
+#_### Methods
+#_
+#_- [`hobj:field`](29.html)
+#_- [`hobj:setfield`](58.html)
+#_- [`hobj:serialize`](78.html)
+#_- [`hobj:save`](30.html)
+#_
+#_The module is loaded as follows:<br>
+#_`require "history"`
+#_
+#_
+</article>
+</node>
+<node>
+id=28
+lv=2
+dt=Text
+nm=newfile
+mtime=3512625423
+<article>
+#_hobj = history.newfile (filename)
+#_
+#_**Parameters:**
+#_  filename : string
+#_
+#_**Returns:**
+#_  hobj     : history object (a table).
+#_
+#_**Description:**
+#_  - The function executes *filename* as a Lua script, in an empty
+#_    environment table.
+#_
+#_  - The script is assumed to contain Lua data in the global
+#_    variable *Data* (a table).
+#_
+#_  - The environment table is returned, with its field *FileName*
+#_    set to the value of *filename* argument.
+#_
+#_  - If the file *filename* was absent or failed to compile, then
+#_    the field *Data* of the returned object is an empty table.
+#_
+#_  - The returned history object *hobj* has four methods:
+#_    hobj:field, hobj:setfield, hobj:serialize and hobj:save.
+#_
+#_@@@
+#_<lua> Links = { ["hobj:field"]="29.html", ["hobj:save"]="30.html", 
+#_["hobj:setfield"]="58.html", ["hobj:serialize"]="78.html"}
+#_</lua>
+#_
+</article>
+</node>
+<node>
+id=79
+lv=2
+dt=Text
+nm=newsettings
+ctime=3512590248
+mtime=3512645783
+<article>
+#_hobj = history.newsettings (Subkey, Name)
+#_
+#_**Parameters:**
+#_  Subkey: string; nil for the root key
+#_  Name  : string
+#_
+#_**Returns:**
+#_  hobj  : history object (a table).
+#_
+#_**Description:**
+#_  - The function reads in the data from Far plugin settings
+#_    database and executes this data as a Lua script, in an empty
+#_    environment table.
+#_
+#_  - The script is assumed to contain Lua data in the global
+#_    variable *Data* (a table).
+#_
+#_  - The environment table is returned, with its fields *Subkey*
+#_    and *Name* set to the value of the respective received arguments.
+#_
+#_  - If the subkey or data were absent or failed to compile, then
+#_    the field *Data* of the returned object is an empty table.
+#_
+#_  - If *Subkey* argument contains dots, then hierarchical subkeys are
+#_    created in the database. E.g. specifying "key1.key2.key3" will
+#_    create or access subkey "key3" under subkey "key2" under subkey
+#_    "key1" under root.
+#_
+#_  - The returned history object *hobj* has four methods:
+#_    hobj:field, hobj:setfield, hobj:serialize and hobj:save.
+#_
+#_@@@
+#_<lua> Links = { ["hobj:field"]="29.html", ["hobj:save"]="30.html", 
+#_["hobj:setfield"]="58.html", ["hobj:serialize"]="78.html"}
+#_</lua>
+#_
+</article>
+</node>
+<node>
+id=29
+lv=2
+dt=Text
+nm=hobj:field
+mtime=3478525904
+<article>
+#_val = hobj:field (name)
+#_
+#_**Parameters:**
+#_  name   : sequence of dot-delimitered fields;
+#_
+#_**Returns:**
+#_  val    : value of the given nested field in history object *hobj*
+#_           (will be created if absent).
+#_
+#_**Description:**
+#_  - hobj:field("key1.key2 ... keyN") returns the equivalent of
+#_    hobj["key1"]["key2"]...["keyN"].
+#_
+#_  - If at any stage of retrieving some intermediate nested field
+#_    "keyM", its value is nil, then both that and all subsequent
+#_    fields are created by assigning each of them a new table.
+#_
+#_**Example:**
+#_
+#_  if From == "e" then     hist = _Hist:field ("menu.editor")
+#_  elseif From == "v" then hist = _Hist:field ("menu.viewer")
+#_  elseif From == "p" then hist = _Hist:field ("menu.pluginsmenu")
+#_  else return
+#_
+#_@@@
+#_
+</article>
+</node>
+<node>
+id=30
+lv=2
+dt=Text
+nm=hobj:save
+<article>
+#_hobj:save ()
+#_
+#_**Parameters:**
+#_  none
+#_
+#_**Returns:**
+#_  nothing
+#_
+#_**Description:**
+#_  - The method saves (serializes) the "history object" into
+#_    the file whose name was given upon the object creation
+#_    (see new function). If the file exists, its contents is
+#_    overwritten.
+#_
+#_  - Only "Data" field of the *hobj* is saved.
+#_    - Within it, values of the following types are saved:
+#_      numbers, strings, booleans and tables (recursively).
+#_    - Not saved: functions, coroutines and userdatas.
+#_    - Not saved: metatable relations.
+#_
+#_@@@
+#_<lua> Links = { ["new"]="28.html", }
+#_</lua>
+#_function history:save()
+#_  serial.SaveInFile (self.FileName, "Data", self.Data)
+#_end
+#_
+</article>
+</node>
+<node>
+id=78
+lv=2
+dt=Text
+nm=hobj:serialize
+ctime=3512482037
+mtime=3512482383
+<article>
+#_str = hobj:serialize ()
+#_
+#_**Parameters:**
+#_  none
+#_
+#_**Returns:**
+#_  str: string
+#_
+#_**Description:**
+#_  - The method serializes the "history object" into a string.
+#_
+#_  - Only "Data" field of the *hobj* is saved.
+#_    - Within it, values of the following types are saved:
+#_      numbers, strings, booleans and tables (recursively).
+#_    - Not saved: functions, coroutines and userdatas.
+#_    - Not saved: metatable relations.
+#_
+#_@@@
+#_
+</article>
+</node>
+<node>
+id=58
+lv=2
+dt=Text
+nm=hobj:setfield
+mtime=3499591303
+<article>
+#_val = hobj:setfield (name, val)
+#_
+#_**Parameters:**
+#_  name  : sequence of dot-delimitered fields;
+#_  val   : value to set the field with
+#_
+#_**Returns:**
+#_  val
+#_
+#_**Description:**
+#_  - hobj:setfield("key1.key2  ... keyN", val) does the equivalent of
+#_    hobj["key1"]["key2"]...["keyN"] = val.
+#_
+#_  - If at any stage of retrieving some intermediate nested field
+#_    "keyM", its value is nil, then both that and all subsequent
+#_    fields are created by assigning each of them a new table.
+#_
+#_@@@
+#_
+</article>
+</node>
+<node>
+id=10
+lv=0
+dt=Text
+nm=Credits
+mtime=3506102769
+<article>
+#_<markdown>
+#_Many thanks to:
+#_
+#_* **maxfl**: ideas, bug reports and the *Searchable Menu* module.
+#_* **GalS**: bug reports.
+#_* **ccaid**: bug reports.
+#_* **Aidar Rakhmatullin**: ideas, translation of the help file into
+#_  Russian; bug reports.
+#_* **Grey**: bug reports.
+#_
+</article>
+</node>
