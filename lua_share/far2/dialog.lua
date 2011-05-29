@@ -77,6 +77,10 @@ function item_map:GetListCurPos (hDlg)
   return pos.SelectPos
 end
 
+function item_map:SetListCurPos (hDlg, pos)
+  return SendDlgMessage(hDlg, "DM_LISTSETCURPOS", self.id, {SelectPos=pos})
+end
+
 -- A key for the "map" (an auxilliary table contained in a dialog table).
 -- *  Both dialog and map tables contain all dialog items:
 --    the dialog table is an array (for access by index by FAR API),
@@ -148,10 +152,12 @@ function Package.LoadDataDyn (hDlg, aDialog, aData)
   for _,item in ipairs(aDialog) do
     if not (item._noautoload or item._noauto) then
       local name = item.name
-      if CheckItemType(item, "DI_CHECKBOX", "DI_RADIOBUTTON") then
-        aDialog[name]:SetCheck(hDlg, aData[name])
-      elseif CheckItemType(item, "DI_EDIT", "DI_FIXEDIT") then
-        aDialog[name]:SetText(hDlg, aData[name])
+      if aData[name] ~= nil then
+        if CheckItemType(item, "DI_CHECKBOX", "DI_RADIOBUTTON") then
+          aDialog[name]:SetCheck(hDlg, aData[name])
+        elseif CheckItemType(item, "DI_EDIT", "DI_FIXEDIT") then
+          aDialog[name]:SetText(hDlg, aData[name])
+        end
       end
     end
   end

@@ -101,15 +101,14 @@ end
 function Package.newsettings (strSubkey, strName)
   far.FreeSettings()
   local sett = far.CreateSettings()
-  local data
   if sett then
     local iSubkey = strSubkey and GetSubkey(sett, strSubkey) or 0
-    data = sett:Get(iSubkey, strName, "FST_DATA") or ""
+    local data = sett:Get(iSubkey, strName, "FST_DATA") or ""
     sett:Free()
+    local self = new(loadstring(data))
+    self.Subkey, self.Name = strSubkey, strName
+    return self
   end
-  local self = new(loadstring(data))
-  self.Subkey, self.Name = strSubkey, strName
-  return self
 end
 
 function history:save()

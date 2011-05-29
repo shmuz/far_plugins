@@ -7,12 +7,15 @@ ARCH = -m32
 # Location of LuaFAR base directory
 PATH_LUAFAR = ..\..\..\luafar_unicode
 
+# Location of Lua modules
+PATH_SHARE = ..\lua_share
+
 # This file must be configured by the user
 include $(PATH_LUAFAR)\config.mak
 #------------------------------------ END OF USER'S SETTINGS -----------------
 
-PATH_SHARE  = ..\lua_share
 PATH_PLUGIN = ..
+PATH_SHARE_ABS = $(abspath $(PATH_SHARE))
 
 bootscript = $(PATH_PLUGIN)*luaplug.lua
 
@@ -51,7 +54,7 @@ modules4    = $(subst *,\,$(modules))
 LUAC        = $(LUADLLPATH)\luac.exe
 PATH_LUAFARSRC = $(PATH_LUAFAR)\src
 GEN_METHOD  = -strip
-MAKE_LANG   = $(LUAEXE) -epackage.path='$(PATH_SHARE)/?.lua' lf4ed_lang.lua
+MAKE_LANG   = $(LUAEXE) -epackage.path='$(PATH_SHARE_ABS)/?.lua' lf4ed_lang.lua
 
 CC          = gcc
 INC         = -I$(INC_LUA) -I$(INC_FAR)
@@ -91,14 +94,12 @@ EXPORTS = \
 #-----------------------------------------------------------------------------
 
 noembed: $(TRG1)
+	cd $(PATH_PLUGIN) && $(MAKE_LANG)
 #	copy /y $< $(PATH_PLUGIN)
-#	$(MAKE) auxilfiles
-#	cd $(PATH_PLUGIN) && $(MAKE_LANG)
 
 embed: $(TRG2)
+	cd $(PATH_PLUGIN) && $(MAKE_LANG)
 #	copy /y $< $(PATH_PLUGIN)
-#	$(MAKE) auxilfiles
-#	cd $(PATH_PLUGIN) && $(MAKE_LANG)
 
 $(TRG1): $(OBJ1) $(LIBS1)
 	$(CC) -o $@ $^ $(MYLDFLAGS)
@@ -108,9 +109,6 @@ $(TRG2): $(OBJ2) $(LIBS2)
 
 linit.c: $(bootscript4) $(scripts4) $(modules4)
 	$(LUAEXE) -erequire(\'generate\')([[$@]],[[$(GEN_METHOD)]],[[$(LUAC)]],$(bootscript3),$(scripts3),$(modules3))
-
-# $(PATH_PLUGIN)\lf4ed_message.lua: $(PATH_PLUGIN)\lf4ed_lang.lua $(PATH_PLUGIN)\lf4ed_lang.templ
-#	cd $(PATH_PLUGIN) && $(LUAEXE) lf4ed_lang.lua
 
 luaplug1.o: $(PATH_LUAFARSRC)\luaplug.c
 	$(CC) -c -o $@ $< $(CFLAGS1)

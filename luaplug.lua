@@ -177,48 +177,19 @@ local EditorMenuItems = {
 }
 
 -- Split command line into separate arguments.
--- * The function does not raise errors: any input string is acceptable and
---   is split into arguments according to the rules below.
--- * An argument is:
---   a) sequence enclosed within a pair of non-escaped double quotes; can
---      contain spaces; enclosing double quotes are stripped from the argument.
---   b) sequence containing non-space, non-unescaped-double-quote characters.
--- * Arguments of both kinds can contain escaped double quotes;
--- * Backslashes escape only double quotes; non-escaped double quotes either
---   start or end an argument.
+-- * An argument is either of:
+--     a) a sequence of 0 or more characters enclosed within a pair of non-escaped
+--        double quotes; can contain spaces; enclosing double quotes are stripped
+--        from the argument.
+--     b) a sequence of 1 or more non-space characters.
+-- * Backslashes only escape double quotes.
+-- * The function does not raise errors.
 local function SplitCommandLine (str)
+  local pat = [["((?:\\"|[^"])*)"|((?:\\"|\S)+)]]
   local out = {}
-  local from = 1
-  while true do
-    local to
-    from = far.find(str, "\\S", from)
-    if not from then break end
-    if str:sub(from,from) == '"' then
-      from, to = from+1, from+1
-      while true do
-        local c = str:sub(to,to)
-        if c == '' or c == '"' then
-          out[#out+1] = str:sub(from,to-1)
-          from = to+1
-          break
-        elseif str:sub(to,to+1) == [[\"]] then to = to+2
-        else to = to+1
-        end
-      end
-    else
-      to = from
-      while true do
-        local c = str:sub(to,to)
-        if c == '' or c == '"' or c:find("%s") then break
-        elseif str:sub(to,to+1) == [[\"]] then to = to+2
-        else to = to+1
-        end
-      end
-      out[#out+1] = str:sub(from,to-1)
-      from = to
-    end
+  for c1, c2 in far.gmatch(str, pat) do
+    out[#out+1] = far.gsub(c1 or c2, [[\\(")|(.)]], "%1%2")
   end
-  for i,v in ipairs(out) do out[i]=v:gsub([[\"]], [["]]) end
   return out
 end
 
