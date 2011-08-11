@@ -24,24 +24,12 @@ local Utils = require "far2.utils"
 local M     = require "lf4ed_message"
 local LibHistory = require "far2.history"
 local F = far.Flags
+local VK = win.GetVirtualKeys()
 local FirstRun = not _Plugin
 local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
 lf4ed = lf4ed or {}
 
 local CurrentConfig, _History, _ModuleDir
-
-local function ErrMsg(msg, buttons, flags)
-  return far.Message(msg, "Error", buttons, flags or "w")
-end
-
-local function ScriptErrMsg(msg)
-  (type(export.OnError)=="function" and export.OnError or ErrMsg)(msg)
-end
-
-local function ShallowCopy (src)
-  local trg = {}; for k,v in pairs(src) do trg[k]=v end
-  return trg
-end
 
 local InternalLibs = { string=1,table=1,os=1,coroutine=1,math=1,io=1,debug=1,
                        _G=1,package=1,far=1,bit64=1,unicode=1,win=1 }
@@ -94,74 +82,46 @@ function lf4ed.version()
   return table.concat(export.GetGlobalInfo().Version, ".")
 end
 
-local function ConvertUserHotkey(str)
-  local d = 0
-  for elem in str:upper():gmatch("[^+-]+") do
-    if elem == "ALT" then d = bor(d, 0x01)
-    elseif elem == "CTRL" then d = bor(d, 0x02)
-    elseif elem == "SHIFT" then d = bor(d, 0x04)
-    else d = d .. "+" .. elem; break
-    end
-  end
-  return d
-end
-
-local function RunUserFunc (aArgTable, aItem, ...)
-  assert(aItem.filename, "no file name")
-  assert(aItem.env, "no environment")
-  -- compile the file
-  local chunk, msg = loadfile(aItem.filename)
-  if not chunk then error(msg,2) end
-  -- copy "fixed" arguments
-  local argCopy = ShallowCopy(aArgTable)
-  for i,v in ipairs(aItem.arg) do argCopy[i] = v end
-  -- append "variable" arguments
-  for i=1,select("#", ...) do argCopy[#argCopy+1] = select(i, ...) end
-  -- run the chunk
-  setfenv(chunk, aItem.env)
-  chunk(argCopy)
-end
-
-local function fSort (aArg)
+local function fSort()
   local sortlines = require "sortlines"
-  aArg[1] = _History:field("SortDialog")
+  local arg = { _History:field("SortDialog") }
   repeat
-    local normal, msg = pcall(sortlines.SortWithDialog, aArg)
+    local normal, msg = pcall(sortlines.SortWithDialog, arg)
     if not normal then
       -- "Cancel" breaks infinite loop when exception is thrown by far.Dialog()
-      if 0 ~= ErrMsg(msg, ";RetryCancel") then break end
+      if 0 ~= far.Message(msg, M.MError, ";RetryCancel", "w") then break end
     end
   until normal
 end
 
-local function fWrap (aArg)
-  aArg[1] = _History:field("WrapDialog")
-  return Utils.RunFile("<wrap|wrap.lua", aArg)
+local function fWrap()
+  local arg = { _History:field("WrapDialog") }
+  return Utils.RunScript("wrap", arg)
 end
 
-local function fBlockSum (aArg)
-  aArg[1], aArg[2] = "BlockSum", _History:field("BlockSum")
-  return Utils.RunFile("<expression|expression.lua", aArg)
+local function fBlockSum()
+  local arg = { "BlockSum", _History:field("BlockSum") }
+  return Utils.RunScript("expression", arg)
 end
 
-local function fExpr (aArg)
-  aArg[1], aArg[2] = "LuaExpr", _History:field("LuaExpression")
-  return Utils.RunFile("<expression|expression.lua", aArg)
+local function fExpr()
+  local arg = { "LuaExpr", _History:field("LuaExpression") }
+  return Utils.RunScript("expression", arg)
 end
 
-local function fScript (aArg)
-  aArg[1], aArg[2] = "LuaScript", _History:field("LuaScript")
-  return Utils.RunFile("<expression|expression.lua", aArg)
+local function fScript()
+  local arg = { "LuaScript", _History:field("LuaScript") }
+  return Utils.RunScript("expression", arg)
 end
 
-local function fScriptParams (aArg)
-  aArg[1], aArg[2] = "ScriptParams", _History:field("LuaScript")
-  return Utils.RunFile("<expression|expression.lua", aArg)
+local function fScriptParams()
+  local arg = { "ScriptParams", _History:field("LuaScript") }
+  return Utils.RunScript("expression", arg)
 end
 
-local function fPluginConfig (aArg)
-  aArg[1] = CurrentConfig
-  if Utils.RunFile("<config|config.lua", aArg) then
+local function fPluginConfig()
+  local arg = { CurrentConfig }
+  if Utils.RunScript("config", arg) then
     OnConfigChange(CurrentConfig)
     return true
   end
@@ -175,74 +135,6 @@ local EditorMenuItems = {
   { text = "::MScript",       action = fScript },
   { text = "::MScriptParams", action = fScriptParams },
 }
-
--- Split command line into separate arguments.
--- * An argument is either of:
---     a) a sequence of 0 or more characters enclosed within a pair of non-escaped
---        double quotes; can contain spaces; enclosing double quotes are stripped
---        from the argument.
---     b) a sequence of 1 or more non-space characters.
--- * Backslashes only escape double quotes.
--- * The function does not raise errors.
-local function SplitCommandLine (str)
-  local pat = [["((?:\\"|[^"])*)"|((?:\\"|\S)+)]]
-  local out = {}
-  for c1, c2 in far.gmatch(str, pat) do
-    out[#out+1] = far.gsub(c1 or c2, [[\\(")|(.)]], "%1%2")
-  end
-  return out
-end
-
-local function MakeAddCommand (Items, Env)
-  return function (aCommand, aFileName, ...)
-    if type(aCommand)=="string" and type(aFileName)=="string" then
-      _Plugin.CommandTable[aCommand] = { filename=_ModuleDir..aFileName, env=Env,
-                                        arg={...} }
-    end
-  end
-end
-
-local function MakeAddToMenu (Items, Env)
-  local function AddToMenu (aWhere, aItemText, aHotKey, aFileName, ...)
-    if type(aWhere) ~= "string" then return end
-    aWhere = aWhere:lower()
-    if not aWhere:find("[evpdc]") then return end
-    ---------------------------------------------------------------------------
-    local SepText = type(aItemText)=="string" and aItemText:match("^:sep:(.*)")
-    local bUserItem = SepText or type(aFileName)=="string"
-    if not bUserItem then
-      if aItemText~=true or type(aFileName)~="number" then
-        return
-      end
-    end
-    ---------------------------------------------------------------------------
-    if not SepText and aWhere:find("[ec]") and type(aHotKey)=="string" then
-      local HotKeyTable = _Plugin.HotKeyTable
-      aHotKey = ConvertUserHotkey (aHotKey)
-      if bUserItem then
-        HotKeyTable[aHotKey] = {filename=_ModuleDir..aFileName, env=Env, arg={...}}
-      else
-        HotKeyTable[aHotKey] = aFileName
-      end
-    end
-    ---------------------------------------------------------------------------
-    if bUserItem and aItemText then
-      local item
-      if SepText then
-        item = { text=SepText, separator=true }
-      else
-        item = { text=tostring(aItemText),
-                 filename=_ModuleDir..aFileName, env=Env, arg={...} }
-      end
-      if aWhere:find"c" then table.insert(Items.config, item) end
-      if aWhere:find"d" then table.insert(Items.dialog, item) end
-      if aWhere:find"e" then table.insert(Items.editor, item) end
-      if aWhere:find"p" then table.insert(Items.panels, item) end
-      if aWhere:find"v" then table.insert(Items.viewer, item) end
-    end
-  end
-  return AddToMenu
-end
 
 local function RunExitScriptHandlers()
   local t = _Plugin.ExitScriptHandlers
@@ -275,99 +167,37 @@ local function MakeResident (source)
   InsertHandler(env, "ExitScript",         _Plugin.ExitScriptHandlers)
 end
 
-local function MakeAddUserFile (aEnv, aItems)
-  local uDepth, uStack, uMeta = 0, {}, {__index = _G}
-  local function AddUserFile (filename)
-    uDepth = uDepth + 1
-    filename = _ModuleDir .. filename
-    if uDepth == 1 then
-      -- if top-level _usermenu.lua doesn't exist, it isn't error
-      local attr = win.GetFileAttr(filename)
-      if not attr or attr:find("d") then return end
-    end
-    ---------------------------------------------------------------------------
-    local chunk = assert(loadfile(filename))
-    ---------------------------------------------------------------------------
-    uStack[uDepth] = setmetatable({}, uMeta)
-    aEnv.AddToMenu = MakeAddToMenu(aItems, uStack[uDepth])
-    aEnv.AddCommand = MakeAddCommand(aItems, uStack[uDepth])
-    setfenv(chunk, aEnv)()
-    uDepth = uDepth - 1
-  end
-  return AddUserFile
-end
-
-local function MakeAutoInstall (AddUserFile)
-  local function AutoInstall (startpath, filepattern, depth)
-    assert(type(startpath)=="string", "bad arg. #1 to AutoInstall")
-    assert(filepattern==nil or type(filepattern)=="string", "bad arg. #2 to AutoInstall")
-    assert(depth==nil or type(depth)=="number", "bad arg. #3 to AutoInstall")
-    ---------------------------------------------------------------------------
-    startpath = _ModuleDir .. startpath:gsub("[\\/]*$", "\\", 1)
-    filepattern = filepattern or "^_usermenu%.lua$"
-    ---------------------------------------------------------------------------
-    local first = depth
-    local offset = _ModuleDir:len() + 1
-    for _, item in ipairs(far.GetDirList(startpath) or {}) do
-      if first then
-        first = false
-        local _, m = item.FileName:gsub("\\", "")
-        depth = depth + m
-      end
-      if not item.FileAttributes:find"d" then
-        local try = true
-        if depth then
-          local _, n = item.FileName:gsub("\\", "")
-          try = (n <= depth)
-        end
-        if try then
-          local relName = item.FileName:sub(offset)
-          local Name = relName:match("[^\\/]+$")
-          if Name:match(filepattern) then AddUserFile(relName) end
-        end
-      end
-    end
-  end
-  return AutoInstall
-end
-
 local function fReloadUserFile()
   if not FirstRun then
     RunExitScriptHandlers()
     ResetPackageLoaded()
   end
   package.path = _Plugin.PackagePath -- restore to original value
-  _Plugin.HotKeyTable = {}
-  _Plugin.CommandTable = {}
   _Plugin.EditorEventHandlers = {}
   _Plugin.ViewerEventHandlers = {}
   _Plugin.EditorInputHandlers = {}
   _Plugin.ExitScriptHandlers = {}
   -----------------------------------------------------------------------------
-  _Plugin.UserItems = { editor={},viewer={},panels={},config={},cmdline={},dialog={} }
-  local env = setmetatable({}, {__index=_G})
-  env.AddUserFile  = MakeAddUserFile(env, _Plugin.UserItems)
-  env.AutoInstall  = MakeAutoInstall(env.AddUserFile)
-  env.MakeResident = MakeResident
-  -----------------------------------------------------------------------------
-  env.AddUserFile("_usermenu.lua")
+  _Plugin.UserItems, _Plugin.CommandTable, _Plugin.HotKeyTable =
+    Utils.LoadUserMenu("_usermenu.lua", MakeResident)
 end
 
 local function traceback3(msg)
   return debug.traceback(msg, 3)
 end
 
-local function RunMenuItem(aArg, aItem, aRestoreConfig)
-  local argCopy = ShallowCopy(aArg) -- prevent parasite connection between utilities
+local function RunMenuItem (aItem, aArg, aRestoreConfig)
+  local argCopy = {} -- prevent parasite connection between utilities
+  for k,v in pairs(aArg) do argCopy[k]=v end
   local restoreConfig = aRestoreConfig and lf4ed.config()
   local function wrapfunc()
     if aItem.action then return aItem.action(argCopy) end
-    return RunUserFunc(argCopy, aItem)
+    return Utils.RunUserFunc(aItem, argCopy)
   end
   local ok, result = xpcall(wrapfunc, traceback3)
   local result2 = CurrentConfig.ReturnToMainMenu
   if restoreConfig then lf4ed.config(restoreConfig) end
-  if not ok then ScriptErrMsg(result) end
+  if not ok then export.OnError(result) end
   return ok, result, result2
 end
 
@@ -383,7 +213,7 @@ local function Configure (aArg)
   while true do
     local item, pos = far.Menu(properties, items)
     if not item then return end
-    local ok, result = RunMenuItem(aArg, item, false)
+    local ok, result = RunMenuItem(item, aArg, false)
     if not ok then return end
     if result then _History:save() end
     if item.action == fReloadUserFile then return "reloaded" end
@@ -396,149 +226,22 @@ local function export_Configure (Guid)
   return true
 end
 
-local function AddMenuItems (src, trg)
-  trg = trg or {}
-  for _, item in ipairs(src) do
-    local text = item.text
-    if type(text)=="string" and text:sub(1,2)=="::" then
-      local newitem = {}
-      for k,v in pairs(item) do newitem[k] = v end
-      newitem.text = M[text:sub(3)]
-      trg[#trg+1] = newitem
-    else
-      trg[#trg+1] = item
-    end
-  end
-  return trg
-end
-
 local function MakeMainMenu(aFrom)
   local properties = {
     Flags = {FMENU_WRAPMODE=1, FMENU_AUTOHIGHLIGHT=1}, Title = M.MPluginName,
     HelpTopic = "Contents", Bottom = "alt+sh+f9", }
   --------
   local items = {}
-  if aFrom == "editor" then AddMenuItems(EditorMenuItems, items) end
-  AddMenuItems(_Plugin.UserItems[aFrom], items)
+  if aFrom == "editor" then Utils.AddMenuItems(EditorMenuItems, items, M) end
+  Utils.AddMenuItems(_Plugin.UserItems[aFrom], items, M)
   --------
   local keys = {{ BreakKey="AS+F9", action=Configure },}
   return properties, items, keys
 end
 
-local function CommandSyntaxMessage()
-  local syn = [[
-
-Syntax:
-  lfe: [<options>] <command>|-r<filename> [<arguments>]
-    or
-  CallPlugin(0x10000, [<options>] <command>|-r<filename>
-                                          [<arguments>])
-Options:
-  -a          asynchronous execution
-  -e <str>    execute string <str>
-  -l <lib>    load library <lib>
-
-Available commands:
-]]
-
-  if next(_Plugin.CommandTable) then
-    local arr = {}
-    for k in pairs(_Plugin.CommandTable) do arr[#arr+1] = k end
-    table.sort(arr)
-    syn = syn .. "  " .. table.concat(arr, ", ")
-  else
-    syn = syn .. "  <no commands available>"
-  end
-  far.Message(syn, M.MPluginName..": "..M.MCommandSyntaxTitle, ";Ok", "l")
-end
-
--------------------------------------------------------------------------------
--- This function processes both command line calls and calls from macros.
--- Externally, it should always be called with a string 1st argument.
--- Internally, it does two passes: the 1-st pass is intended for syntax checking;
--- if the syntax is correct, the function calls itself with a table 1st argument.
--------------------------------------------------------------------------------
-local function ProcessCommand (source, sFrom)
-  local pass2 = (type(source) == "table")
-  local args = pass2 and source or SplitCommandLine(source)
-  if #args==0 then return CommandSyntaxMessage() end
-  local opt, async
-  local env = setmetatable({}, {__index=_G})
-  for i,v in ipairs(args) do
-    local param
-    if opt then
-      param = v
-    elseif v:sub(1,1) == "-" then
-      opt, param = v:match("^%-([aelr])(.*)")
-      if not opt then return CommandSyntaxMessage() end
-    else
-      local fileobject = _Plugin.CommandTable[v]
-      if not fileobject then return CommandSyntaxMessage() end
-      if pass2 then
-        local oldConfig = lf4ed.config()
-        local wrapfunc = function()
-          return RunUserFunc({From=sFrom}, fileobject, unpack(args, i+1))
-        end
-        local ok, res = xpcall(wrapfunc, traceback3)
-        lf4ed.config(oldConfig)
-        if not ok then ScriptErrMsg(res) end
-      end
-      break
-    end
-    if opt == "a" then
-      opt, async = nil, true
-    elseif param ~= "" then
-      if opt=="r" then
-        if pass2 then
-          local f = assert(loadfile(Utils.CorrectPath(param)))
-          setfenv(f, env)(unpack(args, i+1))
-        end
-        break
-      elseif opt=="e" then
-        if pass2 then
-          local f = assert(loadstring(param))
-          setfenv(f, env)()
-        end
-      elseif opt=="l" then
-        if pass2 then require(param) end
-      end
-      opt = nil
-    end
-  end
-  if not pass2 then
-    if async then
-      ---- autocomplete:good; Escape response:bad when timer period < 20;
-      far.Timer(30, function(h) h:Close() ProcessCommand(args, sFrom) end)
-    else
-      ---- autocomplete:bad; Escape responsiveness:good;
-      return ProcessCommand(args, sFrom)
-    end
-  end
-end
-
 local function export_Open (aFrom, aGuid, aItem) -- TODO
 
-  -- Called from macro
-  if band(aFrom, bnot(F.OPEN_FROM_MASK)) ~= 0 then
-    if band(aFrom, F.OPEN_FROMMACRO) ~= 0 then
-      aFrom = band(aFrom, bnot(F.OPEN_FROMMACRO))
-      if band(aFrom, F.OPEN_FROMMACRO_MASK) == F.OPEN_FROMMACROSTRING then
-        local map = {
-          [F.MACROAREA_SHELL]  = "panels",
-          [F.MACROAREA_EDITOR] = "editor",
-          [F.MACROAREA_VIEWER] = "viewer",
-          [F.MACROAREA_DIALOG] = "dialog",
-        }
-        local lowByte = band(aFrom, F.OPEN_FROM_MASK)
-        ProcessCommand(aItem, map[lowByte] or aFrom)
-      end
-    end
-    return
-  end
-
-  -- Called from command line
-  if aFrom == F.OPEN_COMMANDLINE then
-    ProcessCommand(aItem, "panels")
+  if Utils.OpenMacroOrCommandLine(aFrom, aItem, _Plugin.CommandTable, lf4ed.config) then
     return
   end
 
@@ -564,7 +267,7 @@ local function export_Open (aFrom, aGuid, aItem) -- TODO
     history.position = pos
     local arg = { From = sFrom }
     if sFrom == "dialog" then arg.hDlg = aItem.hDlg end
-    local ok, result, bRetToMainMenu = RunMenuItem(arg, item, item.action~=Configure)
+    local ok, result, bRetToMainMenu = RunMenuItem(item, arg, item.action~=Configure)
     if not ok then break end
     _History:save()
     if not (bRetToMainMenu or item.action==Configure) then break end
@@ -612,7 +315,7 @@ local function KeyComb (Rec)
   if 0 ~= band(state, ALT) then f = bor(f, 0x01) end
   if 0 ~= band(state, CTRL) then f = bor(f, 0x02) end
   if 0 ~= band(state, SHIFT) then f = bor(f, 0x04) end
-  f = f .. "+" .. Rec.wVirtualKeyCode
+  f = f .. "+" .. VK[Rec.wVirtualKeyCode%256]
   return f
 end
 
@@ -623,7 +326,7 @@ local function export_ProcessEditorInput (Rec)
     if item then
       if Rec.bKeyDown then
         if type(item)=="number" then item = EditorMenuItems[item] end
-        if item then RunMenuItem({From="editor"}, item, item.action~=Configure) end
+        if item then RunMenuItem(item, {From="editor"}, item.action~=Configure) end
       end
       return true
     end
