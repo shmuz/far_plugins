@@ -2,7 +2,7 @@
 
 local P = {} -- "package"
 local F = far.Flags
-local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
+local band, bor, bnot = bit64.band, bit64.bor, bit64.bnot
 local PluginDir = far.PluginStartupInfo().ModuleName:match(".*\\")
 
 function P.CheckLuafarVersion (reqVersion, msgTitle)
@@ -109,6 +109,20 @@ function P.RunScript (name, ...)
   error(errmsg)
 end
 
+local function LoadName (str)
+  str = str:gsub("%%", "%%%%"):gsub("%.", "\\")
+  for part in package.path:gmatch("[^;]+") do
+    local name = part:gsub("?", str)
+    local attr = win.GetFileAttr(name)
+    if attr and not attr:find("d") then
+      local chunk, msg = loadfile(name)
+      if chunk then return chunk end
+      error(msg)
+    end
+  end
+  error(str.."\nfile not found")
+end
+
 -- @aItem.filename:  script file name
 -- @aItem.env:       environment to run the script in
 -- @aItem.arg:       array of arguments associated with aItem
@@ -120,9 +134,8 @@ end
 function P.RunUserFunc (aItem, aProperties, ...)
   assert(aItem.filename, "no file name")
   assert(aItem.env, "no environment")
-  -- compile the file
-  local chunk, msg = loadfile(aItem.filename)
-  if not chunk then error(msg,2) end
+  -- find and compile the file
+  local chunk = LoadName(aItem.filename)
   -- copy "fixed" and append "variable" arguments
   local args = {}
   for k,v in pairs(aProperties) do args[k] = v end
@@ -162,7 +175,7 @@ local function MakeAddToMenu (Items, Env, HotKeyTable)
     if HotKeyTable and not SepText and aWhere:find("[ec]") and type(aHotKey)=="string" then
       aHotKey = ConvertUserHotkey (aHotKey)
       if bUserItem then
-        HotKeyTable[aHotKey] = {filename=PluginDir..aFileName, env=Env, arg={...}}
+        HotKeyTable[aHotKey] = {filename=aFileName, env=Env, arg={...}}
       else
         HotKeyTable[aHotKey] = aFileName
       end
@@ -173,8 +186,7 @@ local function MakeAddToMenu (Items, Env, HotKeyTable)
       if SepText then
         item = { text=SepText, separator=true }
       else
-        item = { text=tostring(aItemText),
-                 filename=PluginDir..aFileName, env=Env, arg={...} }
+        item = { text=tostring(aItemText), filename=aFileName, env=Env, arg={...} }
       end
       if aWhere:find"c" then table.insert(Items.config, item) end
       if aWhere:find"d" then table.insert(Items.dialog, item) end
@@ -189,7 +201,7 @@ end
 local function MakeAddCommand (CommandTable, Env)
   return function (aCommand, aFileName, ...)
     if type(aCommand)=="string" and type(aFileName)=="string" then
-      CommandTable[aCommand] = { filename=PluginDir..aFileName, env=Env, arg={...} }
+      CommandTable[aCommand] = { filename=aFileName, env=Env, arg={...} }
     end
   end
 end
@@ -228,12 +240,33 @@ local function MakeAutoInstall (AddUserFile)
   return AutoInstall
 end
 
-function P.LoadUserMenu (aFileName, aMakeResident)
+function P.LoadUserMenu (aFileName)
   local userItems = { editor={},viewer={},panels={},config={},cmdline={},dialog={} }
   local commandTable, hotKeyTable = {}, {}
+  local handlers = { EditorInput={}, EditorEvent={}, ViewerEvent={}, ExitScript={} }
+  local mapHandlers = {
+    ProcessEditorInput = handlers.EditorInput,
+    ProcessEditorEvent = handlers.EditorEvent,
+    ProcessViewerEvent = handlers.ViewerEvent,
+    ExitScript         = handlers.ExitScript,
+  }
   local uStack, uDepth, uMeta = {}, 0, {__index = _G}
   local env = setmetatable({}, {__index=_G})
-
+  ------------------------------------------------------------------------------
+  env.MakeResident = function (source)
+    if type(source) == "string" then
+      local chunk = LoadName(source)
+      local env2 = setmetatable({}, { __index=_G })
+      --local ok, errmsg = pcall(setfenv(chunk, env2))
+      --if not ok then error(errmsg, 2) end
+      setfenv(chunk, env2)()
+      for name, target in pairs(mapHandlers) do
+        local f = rawget(env2, name)
+        if type(f)=="function" then table.insert(target, f) end
+      end
+    end
+  end
+  ------------------------------------------------------------------------------
   env.AddUserFile = function (filename)
     uDepth = uDepth + 1
     filename = PluginDir .. filename
@@ -242,21 +275,17 @@ function P.LoadUserMenu (aFileName, aMakeResident)
       local attr = win.GetFileAttr(filename)
       if not attr or attr:find("d") then return end
     end
-    ---------------------------------------------------------------------------
     local chunk = assert(loadfile(filename))
-    ---------------------------------------------------------------------------
     uStack[uDepth] = setmetatable({}, uMeta)
     env.AddToMenu = MakeAddToMenu(userItems, uStack[uDepth], hotKeyTable)
     env.AddCommand = MakeAddCommand(commandTable, uStack[uDepth])
     setfenv(chunk, env)()
     uDepth = uDepth - 1
   end
-
+  ------------------------------------------------------------------------------
   env.AutoInstall = MakeAutoInstall(env.AddUserFile)
-  env.MakeResident = aMakeResident
-
   env.AddUserFile(aFileName)
-  return userItems, commandTable, hotKeyTable
+  return userItems, commandTable, hotKeyTable, handlers
 end
 
 function P.AddMenuItems (src, trg, msgtable)
@@ -392,7 +421,7 @@ local function ExecuteCommandLine (tActions, tCommands, sFrom, fConfig)
   local oldConfig = fConfig and fConfig()
   local ok, res = xpcall(wrapfunc, function(msg) return debug.traceback(msg, 3) end)
   if fConfig then fConfig(oldConfig) end
-  if not ok then P.ScriptErrMsg(res) end
+  if not ok then export.OnError(res) end
 end
 
 -- This function processes both command line calls and calls from macros.

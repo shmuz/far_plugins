@@ -881,7 +881,7 @@ id=13
 lv=2
 dt=Text
 nm=AddToMenu
-mtime=3491313710
+mtime=3522420614
 <article>
 #_<markdown>
 #_**`AddToMenu (where, text, hotkey, file [, ...])`**
@@ -914,7 +914,7 @@ mtime=3491313710
 #_
 #_1. `file`<br>
 #_Name of a Lua script file to run upon this item activation
-#_(its path is relative to the plugin's directory).
+#_(it will be searched on `package.path`).
 #_
 #_1. Extra parameters (optional)<br>
 #_Values that will be passed to user script (they are passed to the
@@ -940,7 +940,7 @@ id=57
 lv=2
 dt=Text
 nm=AddCommand
-mtime=3491313722
+mtime=3522420554
 <article>
 #_<markdown>
 #_**`AddCommand (command, file [, ...])`**
@@ -957,7 +957,7 @@ mtime=3491313722
 #_
 #_1. `file`<br>
 #_Name of a Lua script file to run upon this command activation
-#_(its path is relative to the plugin's directory).
+#_(it will be searched on `package.path`).
 #_
 #_1. Extra parameters (optional)<br>
 #_Values that will be passed to user script (they are passed to the
@@ -1050,13 +1050,13 @@ id=20
 lv=2
 dt=Text
 nm=MakeResident
-mtime=3509048595
+mtime=3522526583
 <article>
 #_<markdown>
-#_**`MakeResident (filename | table)`**
+#_**`MakeResident (file)`**
 #_
 #_Function `MakeResident` is available to the *_usermenu.lua* script.<br>
-#_It allows to add either a file (its path is relative to the plugin directory) or a table, containing one or more handlers that will be further called on some FAR events.
+#_It allows to add a file, containing one or more handlers that will be further called on some FAR events.
 #_
 #_The following handlers are supported:
 #_
@@ -1067,8 +1067,7 @@ mtime=3509048595
 #_
 #_### Notes about the handlers
 #_
-#_1. If the parameter is file name, handlers must be defined as global
-#_   functions.
+#_1. Handlers must be defined as global functions.
 #_1. There can be multiple handlers for the same event type. They will
 #_   be called in the order their files are specified in
 #_   `_usermenu.lua`.

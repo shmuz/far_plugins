@@ -137,34 +137,7 @@ local EditorMenuItems = {
 }
 
 local function RunExitScriptHandlers()
-  local t = _Plugin.ExitScriptHandlers
-  for i = 1,#t do t[i]() end
-end
-
-local function InsertHandler (env, name, target)
-  local f = rawget(env, name)
-  if type(f)=="function" then table.insert(target, f) end
-end
-
-local function MakeResident (source)
-  local env
-  local meta = { __index=_G }
-  local tp = type(source)
-  if tp == "string" then
-    local chunk, errmsg = loadfile(_ModuleDir .. source)
-    if not chunk then error(errmsg, 2) end
-    env = setmetatable({}, meta)
-    local ok, errmsg = pcall(setfenv(chunk, env))
-    if not ok then error(errmsg, 2) end
-  elseif tp == "table" then
-    env = setmetatable(source, meta)
-  else
-    return
-  end
-  InsertHandler(env, "ProcessEditorInput", _Plugin.EditorInputHandlers)
-  InsertHandler(env, "ProcessEditorEvent", _Plugin.EditorEventHandlers)
-  InsertHandler(env, "ProcessViewerEvent", _Plugin.ViewerEventHandlers)
-  InsertHandler(env, "ExitScript",         _Plugin.ExitScriptHandlers)
+  for _,f in ipairs(_Plugin.Handlers.ExitScript) do f() end
 end
 
 local function fReloadUserFile()
@@ -173,13 +146,9 @@ local function fReloadUserFile()
     ResetPackageLoaded()
   end
   package.path = _Plugin.PackagePath -- restore to original value
-  _Plugin.EditorEventHandlers = {}
-  _Plugin.ViewerEventHandlers = {}
-  _Plugin.EditorInputHandlers = {}
-  _Plugin.ExitScriptHandlers = {}
   -----------------------------------------------------------------------------
-  _Plugin.UserItems, _Plugin.CommandTable, _Plugin.HotKeyTable =
-    Utils.LoadUserMenu("_usermenu.lua", MakeResident)
+  _Plugin.UserItems, _Plugin.CommandTable, _Plugin.HotKeyTable, _Plugin.Handlers =
+    Utils.LoadUserMenu("_usermenu.lua")
 end
 
 local function traceback3(msg)
@@ -331,19 +300,19 @@ local function export_ProcessEditorInput (Rec)
       return true
     end
   end
-  for _,f in ipairs(_Plugin.EditorInputHandlers) do
+  for _,f in ipairs(_Plugin.Handlers.EditorInput) do
     if f(Rec) then return true end
   end
 end
 
 local function export_ProcessEditorEvent (Event, Param)
-  for _,f in ipairs(_Plugin.EditorEventHandlers) do
+  for _,f in ipairs(_Plugin.Handlers.EditorEvent) do
     f(Event, Param)
   end
 end
 
 local function export_ProcessViewerEvent (Event, Param)
-  for _,f in ipairs(_Plugin.ViewerEventHandlers) do
+  for _,f in ipairs(_Plugin.Handlers.ViewerEvent) do
     f(Event, Param)
   end
 end
