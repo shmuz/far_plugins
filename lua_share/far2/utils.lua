@@ -99,7 +99,7 @@ local function OnError (msg)
   end
 end
 
-function P.RunScript (name, ...)
+function P.RunInternalScript (name, ...)
   local embed_name = "<"..name
   if package.preload[embed_name] then -- prevent unnecessary disk search with non-embed plugin
     return require(embed_name)(...)
@@ -131,7 +131,7 @@ end
 --
 -- ...:              sequence of additional arguments (appended to existing arguments)
 --
-function P.RunUserFunc (aItem, aProperties, ...)
+function P.RunUserItem (aItem, aProperties, ...)
   assert(aItem.filename, "no file name")
   assert(aItem.env, "no environment")
   -- find and compile the file
@@ -241,7 +241,7 @@ local function MakeAutoInstall (AddUserFile)
 end
 
 function P.LoadUserMenu (aFileName)
-  local userItems = { editor={},viewer={},panels={},config={},cmdline={},dialog={} }
+  local userItems = { editor={},viewer={},panels={},config={},dialog={} }
   local commandTable, hotKeyTable = {}, {}
   local handlers = { EditorInput={}, EditorEvent={}, ViewerEvent={}, ExitScript={} }
   local mapHandlers = {
@@ -257,9 +257,8 @@ function P.LoadUserMenu (aFileName)
     if type(source) == "string" then
       local chunk = LoadName(source)
       local env2 = setmetatable({}, { __index=_G })
-      --local ok, errmsg = pcall(setfenv(chunk, env2))
-      --if not ok then error(errmsg, 2) end
-      setfenv(chunk, env2)()
+      local ok, errmsg = pcall(setfenv(chunk, env2))
+      if not ok then error(errmsg, 2) end
       for name, target in pairs(mapHandlers) do
         local f = rawget(env2, name)
         if type(f)=="function" then table.insert(target, f) end
@@ -288,7 +287,7 @@ function P.LoadUserMenu (aFileName)
   return userItems, commandTable, hotKeyTable, handlers
 end
 
-function P.AddMenuItems (src, trg, msgtable)
+function P.AddMenuItems (trg, src, msgtable)
   trg = trg or {}
   for _, item in ipairs(src) do
     local text = item.text
@@ -396,7 +395,7 @@ local function ExecuteCommandLine (tActions, tCommands, sFrom, fConfig)
     for i,v in ipairs(tActions) do
       if v.command then
         local fileobject = tCommands[v.command]
-        P.RunUserFunc(fileobject, {From=sFrom}, unpack(v))
+        P.RunUserItem(fileobject, {From=sFrom}, unpack(v))
         break
       elseif v.opt == "r" then
         local path = v.param

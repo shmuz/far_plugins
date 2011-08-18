@@ -96,32 +96,32 @@ end
 
 local function fWrap()
   local arg = { _History:field("WrapDialog") }
-  return Utils.RunScript("wrap", arg)
+  return Utils.RunInternalScript("wrap", arg)
 end
 
 local function fBlockSum()
   local arg = { "BlockSum", _History:field("BlockSum") }
-  return Utils.RunScript("expression", arg)
+  return Utils.RunInternalScript("expression", arg)
 end
 
 local function fExpr()
   local arg = { "LuaExpr", _History:field("LuaExpression") }
-  return Utils.RunScript("expression", arg)
+  return Utils.RunInternalScript("expression", arg)
 end
 
 local function fScript()
   local arg = { "LuaScript", _History:field("LuaScript") }
-  return Utils.RunScript("expression", arg)
+  return Utils.RunInternalScript("expression", arg)
 end
 
 local function fScriptParams()
   local arg = { "ScriptParams", _History:field("LuaScript") }
-  return Utils.RunScript("expression", arg)
+  return Utils.RunInternalScript("expression", arg)
 end
 
 local function fPluginConfig()
   local arg = { CurrentConfig }
-  if Utils.RunScript("config", arg) then
+  if Utils.RunInternalScript("config", arg) then
     OnConfigChange(CurrentConfig)
     return true
   end
@@ -161,7 +161,7 @@ local function RunMenuItem (aItem, aArg, aRestoreConfig)
   local restoreConfig = aRestoreConfig and lf4ed.config()
   local function wrapfunc()
     if aItem.action then return aItem.action(argCopy) end
-    return Utils.RunUserFunc(aItem, argCopy)
+    return Utils.RunUserItem(aItem, argCopy)
   end
   local ok, result = xpcall(wrapfunc, traceback3)
   local result2 = CurrentConfig.ReturnToMainMenu
@@ -201,8 +201,8 @@ local function MakeMainMenu(aFrom)
     HelpTopic = "Contents", Bottom = "alt+sh+f9", }
   --------
   local items = {}
-  if aFrom == "editor" then Utils.AddMenuItems(EditorMenuItems, items, M) end
-  Utils.AddMenuItems(_Plugin.UserItems[aFrom], items, M)
+  if aFrom == "editor" then Utils.AddMenuItems(items, EditorMenuItems, M) end
+  Utils.AddMenuItems(items, _Plugin.UserItems[aFrom], M)
   --------
   local keys = {{ BreakKey="AS+F9", action=Configure },}
   return properties, items, keys

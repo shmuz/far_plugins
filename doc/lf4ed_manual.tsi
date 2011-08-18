@@ -7,13 +7,13 @@ id=1
 lv=0
 dt=Text
 nm=LuaFAR for Editor (version 3.0)
+mtime=3522650788
 <article>
 #_<markdown>
-#_**LuaFAR for Editor** (a FAR plugin) is a collection of utilities
-#_that implement various actions controlling the work of FAR's
-#_Editor. The plugin also allows to add the unlimited number of new
-#_utilities. Both the plugin and the utilities are written in Lua
-#_programming language. 
+#_**LuaFAR for Editor** (a Far Manager plugin) is a collection of utilities
+#_working in the Far Editor. The plugin also allows to add the unlimited
+#_number of new utilities. Both the plugin and the utilities are written in
+#_Lua programming language. 
 #_
 #_For description of the built-in utilities and the Configuration
 #_Dialog, see the plugin's help file.
@@ -820,27 +820,26 @@ id=8
 lv=0
 dt=Text
 nm=User's utilities
+mtime=3522656426
 <article>
 #_<markdown>
 #_
 #_### Installing user's utilities
 #_
-#_Installing user's utilities can be done via the file **_usermenu.lua**
-#_lying in the plugin's directory. This file is run in two cases:
+#_The plugin treats the file **_usermenu.lua** lying in the plugin's directory as the installation script for user's utilities. This script is run in two cases:
 #_
-#_- When FAR calls `SetStartupInfo` of the plugin
+#_- When Far calls `SetStartupInfoW` of the plugin
 #_- When the command "Reload User File" from the Configuration Menu
 #_  is executed
 #_
-#_There are a few [installation functions](36.html) that are
-#_intended to be called from **_usermenu.lua**.
+#_There are a few [installation functions](36.html) that are intended to be called from **_usermenu.lua**.
 #_
-#_### Running user's utilities
+#_### Running installed user's utilities
 #_
-#_User utilities can be run in the following ways:
+#_User utilities can be configured to run in the following ways:
 #_
 #_- Via a menu item; see [`AddToMenu`](13.html).
-#_- Via a shortcut (from Editor only), see [`AddToMenu`](13.html).
+#_- Via a shortcut (from Editor only); see [`AddToMenu`](13.html).
 #_- From the [command line](59.html) (the plugin registers a command
 #_  line prefix **`lfe`**); see [`AddCommand`](57.html).
 #_
@@ -848,14 +847,6 @@ nm=User's utilities
 #_
 #_- From the Editor: use the included utility *Lua Script*.
 #_- From the [command line](59.html).
-#_
-#_### Links
-#_
-#_[Installation functions](36.html)<br>
-#_[Packets of scripts](37.html)<br>
-#_[Binary modules](38.html)<br>
-#_[Example of use](14.html)<br>
-#_
 #_
 #_
 </article>
@@ -881,7 +872,7 @@ id=13
 lv=2
 dt=Text
 nm=AddToMenu
-mtime=3522420614
+mtime=3522656207
 <article>
 #_<markdown>
 #_**`AddToMenu (where, text, hotkey, file [, ...])`**
@@ -909,29 +900,25 @@ mtime=3522420614
 #_1. `hotkey`<br>
 #_A key combination for calling the utility, e.g. `"Alt+Shift+F4"`.<br>
 #_Supply `nil` if no hot key is needed.<br>
-#_**NOTE:** a hot key assigned this way works **only from Editor**,
-#_provided that no macro is assigned to that key.
+#_**NOTE:** a hot key assigned this way works **only from Editor**, provided that no macro is assigned to that key.
 #_
 #_1. `file`<br>
-#_Name of a Lua script file to run upon this item activation
-#_(it will be searched on `package.path`).
+#_A specification for a Lua script to run upon this item activation. The exact file name is determined according to the same rules as with `require` function, that is, `package.path` is used to search for the file. But contrary to `require`, the value returned by the script is not cached in `package.loaded`.
 #_
 #_1. Extra parameters (optional)<br>
-#_Values that will be passed to user script (they are passed to the
-#_script in a table). There can be any number of values of any Lua
-#_type.
+#_Values that will be passed to user script (they are passed to the script in a table). There can be any number of values of any Lua type.
 #_
 #_### Examples
 #_
-#_      AddToMenu ("e", "Count words", nil, "countw.lua")
-#_      AddToMenu ("e", "Count letters", "Alt+F2", "countl.lua")
-#_      AddToMenu ("e", "Search", "Ctrl+F", "search.lua", "search")
-#_      AddToMenu ("p", "Rename Files", nil, "rename.lua")
-#_      AddToMenu ("evp", "Calendar", "Alt+F12", "calendar.lua", "show")
+#_      AddToMenu ("e",   "Count words",   nil,      "farscripts.edit.count", "words")
+#_      AddToMenu ("e",   "Count letters", "Alt+F2", "farscripts.edit.count", "letters")
+#_      AddToMenu ("e",   "Search",        "Ctrl+F", "farscripts.edit.search")
+#_      AddToMenu ("p",   "Rename Files",  nil,      "farscripts.rename")
+#_      AddToMenu ("evp", "Calendar",     "Alt+F12", "farscripts.calendar",   "show")
 #_
-#_To assign a hot key to a built-in utility, supply `text` as `true`
-#_and specify the menu position via `file`:
-#_      AddToMenu ("e", true, "Ctrl+1", 1)
+#_To assign a hot key to a built-in utility, supply `text` as `true` and specify the menu position via `file`:
+#_      AddToMenu ("e",   true,           "Ctrl+1",  1)
+#_
 #_
 </article>
 </node>
@@ -940,7 +927,7 @@ id=57
 lv=2
 dt=Text
 nm=AddCommand
-mtime=3522420554
+mtime=3522656715
 <article>
 #_<markdown>
 #_**`AddCommand (command, file [, ...])`**
@@ -956,8 +943,7 @@ mtime=3522420554
 #_The first command line parameter after the plugin's prefix.
 #_
 #_1. `file`<br>
-#_Name of a Lua script file to run upon this command activation
-#_(it will be searched on `package.path`).
+#_A specification for a Lua script to run upon this item activation. The exact file name is determined according to the same rules as with `require` function, that is, `package.path` is used to search for the file. But contrary to `require`, the value returned by the script is not cached in `package.loaded`.
 #_
 #_1. Extra parameters (optional)<br>
 #_Values that will be passed to user script (they are passed to the
@@ -971,8 +957,8 @@ mtime=3522420554
 #_script, after the `param2` argument.
 #_
 #_### Examples
-#_      AddCommand("calc", scriptspath.."common/calc.lua")
-#_      AddCommand("umenu", ScriptPath.."LuaFUM/LuaFUM.lua")
+#_      AddCommand("calc",  "farscripts.fl_scripts.common.calc")
+#_      AddCommand("umenu", "farscripts.Rh_Scripts.LuaFUM.LuaFUM")
 #_
 #_
 </article>
@@ -1050,7 +1036,7 @@ id=20
 lv=2
 dt=Text
 nm=MakeResident
-mtime=3522526583
+mtime=3522666425
 <article>
 #_<markdown>
 #_**`MakeResident (file)`**
@@ -1064,6 +1050,11 @@ mtime=3522526583
 #_* `ProcessEditorEvent`
 #_* `ProcessViewerEvent`
 #_* `ExitScript`
+#_
+#_### Parameters
+#_
+#_1. `file`<br>
+#_A specification for a Lua script that is run by this function. The exact file name is determined according to the same rules as with `require` function, that is, `package.path` is used to search for the file. But contrary to `require`, the value returned by the script is not cached in `package.loaded`.
 #_
 #_### Notes about the handlers
 #_
@@ -1092,7 +1083,7 @@ mtime=3522526583
 id=73
 lv=1
 dt=Text
-nm=Input data of installed scripts
+nm=Passing data to installed scripts
 ctime=3491725586
 mtime=3491811735
 <article>
@@ -1202,27 +1193,28 @@ id=14
 lv=1
 dt=Text
 nm=Example of use
+mtime=3522679061
 <article>
 #_<markdown>
 #_### _usermenu.lua
-#_    AddToMenu("e", "Count words", nil, "countw.lua")
-#_    AddToMenu("e", "Count letters", "Alt+F2", "countl.lua")
-#_    AddToMenu("evp", "Calendar", "Alt+F12", "calendar.lua", "show")
-#_    AddToMenu("c", "Calendar", nil, "calendar.lua", "config")
-#_    AddCommand("calen", "calendar.lua", "show")
+#_    AddToMenu("e",   "Count words",   "Alt+F2",  "edit.count", "words")
+#_    AddToMenu("e",   "Count letters", "Alt+F12", "edit.count", "letters")
+#_    AddToMenu("evp", "Calendar",      nil,       "calendar",   "show")
+#_    AddToMenu("c",   "Calendar",      nil,       "calendar",   "config")
+#_    AddCommand("calen", "calendar", "show")
 #_    AddUserFile("scripts/fl_scripts/_usermenu.lua")
 #_    AddUserFile("scripts/Rh_Scripts/_testmenu.lua")
-#_    MakeResident("handlers.lua")
+#_    MakeResident("handlers")
 #_
 #_### handlers.lua
-#_    local _F = far.GetFlags()
+#_    local F = far.Flags
 #_
 #_    function ProcessEditorInput (Rec)
-#_      if (Rec.EventType == _F.FARMACRO_KEY_EVENT) or
-#_         (Rec.EventType == _F.KEY_EVENT and Rec.bKeyDown)
+#_      if (Rec.EventType == F.FARMACRO_KEY_EVENT) or
+#_         (Rec.EventType == F.KEY_EVENT and Rec.bKeyDown)
 #_      then
 #_        if Rec.AsciiChar == ("t"):byte() then
-#_          far.EditorInsertText("X")
+#_          far.EditorInsertText(nil, "X")
 #_          far.EditorRedraw()
 #_          return true
 #_        end
@@ -1230,7 +1222,7 @@ nm=Example of use
 #_    end
 #_
 #_    function ProcessEditorEvent (Event, Param)
-#_      if Event == _F.EE_READ then
+#_      if Event == F.EE_READ then
 #_        require 'fl_scripts/editor/template'
 #_        templates_menu()
 #_      end
@@ -1301,6 +1293,7 @@ id=32
 lv=1
 dt=Text
 nm=lf4ed.config
+mtime=3522679267
 <article>
 #_Get or set the plugin configuration.
 #_
@@ -1312,7 +1305,6 @@ nm=lf4ed.config
 #_             ReloadDefaultScript : boolean
 #_             RequireWithReload   : boolean
 #_             UseStrict           : boolean
-#_             UseSearchMenu       : boolean
 #_             ReturnToMainMenu    : boolean
 #_
 #_**Returns:**
@@ -1345,6 +1337,7 @@ id=33
 lv=1
 dt=Text
 nm=lf4ed.version
+mtime=3522679757
 <article>
 #_Get plugin version.
 #_
@@ -1354,7 +1347,7 @@ nm=lf4ed.version
 #_  none
 #_
 #_**Returns:**
-#_  *version*: string, e.g. "0.8.0"
+#_  *version*: string, e.g. "3.0.0"
 #_
 #_
 </article>
@@ -1585,69 +1578,11 @@ mtime=3511292574
 </article>
 </node>
 <node>
-id=24
-lv=1
-dt=Text
-nm=far2.searchmenu
-<article>
-#_<markdown>
-#_###Description
-#_
-#_This provides a filter for standard menu. Every typed symbol
-#_is added to the pattern which is used to check every menu item.
-#_Every item which satisfies the pattern is displayed, others become
-#_hidden. The pattern is displayed in the menu header.
-#_
-#_###Parameters
-#_    Item, Position = far2.searchmenu(Properties, Items [, BreakKeys])
-#_All arguments and return values are the same as for **`far.Menu`**
-#_(see LuaFAR manual), except some optional additional fields of
-#_`Properties` table:
-#_
-#_      AllowEmpty:    Allow the user to input patterns that make menu
-#_                     empty (boolean)
-#_
-#_      CheckItem:     Function for determining if an item should be
-#_                     displayed:
-#_                       from,to = CheckItem(pattern,text[,searchmethod])
-#_
-#_      Map:           Table that maps keys and key combinations
-#_                     to characters and actions. It allows to add
-#_                     keys or redefine the treatment of user's input.
-#_
-#_      Menu:          Function for displaying the menu
-#_                     (defaults to far.Menu)
-#_
-#_      Pattern:       Initial search pattern (string)
-#_
-#_      SearchMethod:  "lua"   = use Lua regexps (default)
-#_                     "dos"   = use DOS wildcards * and ?
-#_                     "plain" = plain text search
-#_
-#_Also, there is an optional field `SearchText` in a menu item. When
-#_present, it is used instead of the `text` field when checking the
-#_item, while the `text` field is used for displaying the item.
-#_
-#_###Predefined keys
-#_      Space     - insert a space character
-#_      DELETE    - delete the entire pattern
-#_      BACKSPACE - delete the last symbol
-#_      CtrlV     - insert a pattern from the clipboard
-#_
-#_###Available symbols
-#_      Small English letters: a-z
-#_      Numbers:  0-9
-#_      Symbols: .,><=+-_;:/?`~[]{}()\~|'"!@#$%^&*
-#_
-#_
-</article>
-</node>
-<node>
 id=23
 lv=1
 dt=Text
-nm=history
-mtime=3512600117
+nm=far2.history
+mtime=3522679532
 <article>
 #_<markdown>
 #_Module `history` saves specified plugin data to files and loads the data from files. The module API consists of functions that create objects and methods of those objects.
@@ -1664,7 +1599,7 @@ mtime=3512600117
 #_- [`hobj:save`](30.html)
 #_
 #_The module is loaded as follows:<br>
-#_`require "history"`
+#_`require "far2.history"`
 #_
 #_
 </article>
@@ -1877,6 +1812,318 @@ mtime=3499591303
 #_    fields are created by assigning each of them a new table.
 #_
 #_@@@
+#_
+</article>
+</node>
+<node>
+id=24
+lv=1
+dt=Text
+nm=far2.searchmenu
+<article>
+#_<markdown>
+#_###Description
+#_
+#_This provides a filter for standard menu. Every typed symbol
+#_is added to the pattern which is used to check every menu item.
+#_Every item which satisfies the pattern is displayed, others become
+#_hidden. The pattern is displayed in the menu header.
+#_
+#_###Parameters
+#_    Item, Position = far2.searchmenu(Properties, Items [, BreakKeys])
+#_All arguments and return values are the same as for **`far.Menu`**
+#_(see LuaFAR manual), except some optional additional fields of
+#_`Properties` table:
+#_
+#_      AllowEmpty:    Allow the user to input patterns that make menu
+#_                     empty (boolean)
+#_
+#_      CheckItem:     Function for determining if an item should be
+#_                     displayed:
+#_                       from,to = CheckItem(pattern,text[,searchmethod])
+#_
+#_      Map:           Table that maps keys and key combinations
+#_                     to characters and actions. It allows to add
+#_                     keys or redefine the treatment of user's input.
+#_
+#_      Menu:          Function for displaying the menu
+#_                     (defaults to far.Menu)
+#_
+#_      Pattern:       Initial search pattern (string)
+#_
+#_      SearchMethod:  "lua"   = use Lua regexps (default)
+#_                     "dos"   = use DOS wildcards * and ?
+#_                     "plain" = plain text search
+#_
+#_Also, there is an optional field `SearchText` in a menu item. When
+#_present, it is used instead of the `text` field when checking the
+#_item, while the `text` field is used for displaying the item.
+#_
+#_###Predefined keys
+#_      Space     - insert a space character
+#_      DELETE    - delete the entire pattern
+#_      BACKSPACE - delete the last symbol
+#_      CtrlV     - insert a pattern from the clipboard
+#_
+#_###Available symbols
+#_      Small English letters: a-z
+#_      Numbers:  0-9
+#_      Symbols: .,><=+-_;:/?`~[]{}()\~|'"!@#$%^&*
+#_
+#_
+</article>
+</node>
+<node>
+id=80
+lv=1
+dt=Text
+nm=far2.utils
+ctime=3522680144
+mtime=3522766134
+<article>
+#_<markdown>
+#_This module is intended for the development of LuaFAR plugins. User scripts usually do not need it.
+#_
+#_
+</article>
+</node>
+<node>
+id=85
+lv=2
+dt=Text
+nm=AddMenuItems
+ctime=3522680275
+mtime=3522699929
+<article>
+#_trg = utils.AddMenuItems (trg, src, msgtable)
+#_
+#_**Parameters:**
+#_  trg :     table (array of menu items), or nil
+#_  src :     table (array of menu items)
+#_  msgtable: table (localization conversion table)
+#_
+#_**Returns:**
+#_  trg:      table
+#_
+#_**Description:**
+#_  -- Adds menu items from *src* table to *trg* table.
+#_  -- If *trg* argument is nil, a new empty table is first created.
+#_  -- The items whose text starts with :: are replaced with items
+#_     with their text converted by *msgtable* (see AddToMenu and
+#_     Utility for localization).
+#_
+#_@@@
+#_<lua> Links = { ["Utility for localization"]="68.html", AddToMenu="13.html",}
+#_</lua>
+#_
+#_
+</article>
+</node>
+<node>
+id=81
+lv=2
+dt=Text
+nm=CheckLuafarVersion
+ctime=3522680204
+mtime=3522729356
+<article>
+#_result = utils.CheckLuafarVersion (reqVersion, msgTitle)
+#_
+#_**Parameters:**
+#_  reqVersion: table, e.g.: {3,0,0}
+#_  msgTitle:   string
+#_
+#_**Returns:**
+#_  result:     boolean
+#_
+#_**Description:**
+#_  The function compares the required version argument with
+#_  the actual LuaFAR version. If the required version is less
+#_  than or equal to the actual version, the function returns true,
+#_  otherwise an error message is issued and false is returned.
+#_
+#_@@@
+#_
+#_
+</article>
+</node>
+<node>
+id=87
+lv=2
+dt=Text
+nm=InitPlugin
+ctime=3522680308
+mtime=3522701440
+<article>
+#_plugin = utils.InitPlugin()
+#_
+#_**Parameters:**
+#_  none
+#_
+#_**Returns:**
+#_  plugin:  table
+#_
+#_**Description:**
+#_  The function does the following:
+#_  -- redirects indexing of strings to *unicode.utf8* table, so that e.g.
+#_     str:len() ends up with *unicode.utf8.len(str)* instead of *string.len(str)*.
+#_  -- adds function unicode.utf8.cfind.
+#_  -- sets up *export.OnError* function.
+#_  -- returns a table with *ModuleDir* field set to plugin's directory.
+#_
+#_@@@
+#_<lua> Links = { ["unicode.utf8.cfind"]="65.html", }
+#_</lua>
+#_
+#_
+</article>
+</node>
+<node>
+id=84
+lv=2
+dt=Text
+nm=LoadUserMenu
+ctime=3522680264
+mtime=3522745248
+<article>
+#_menuItems, commands, hotKeys, handlers = utils.LoadUserMenu (FileName)
+#_
+#_**Parameters:**
+#_  FileName:  string (filename relative to the plugin's directory;
+#_                     usually it is "_usermenu.lua")
+#_
+#_**Returns:**
+#_  menuItems: table with the following structure:
+#_               { editor={},viewer={},panels={},config={},dialog={} }
+#_
+#_  commands:  table with the following structure:
+#_               { <command1>={}, ..., <commandN>={} }
+#_
+#_  hotKeys:   table with the following structure:
+#_               { <hotkey1>={}, ..., <hotkeyN>={} }
+#_
+#_  handlers:  table with the following structure:
+#_               { EditorInput={},EditorEvent={},ViewerEvent={},ExitScript={} }
+#_
+#_**Description:**
+#_  1. An environment table *env* containing all the Installation functions is created.
+#_  2. env.AddUserFile(FileName) is run.
+#_
+#_@@@
+#_<lua> Links = { ["Installation functions"]="36.html", AddUserFile="34.html", }
+#_</lua>
+#_
+#_
+</article>
+</node>
+<node>
+id=86
+lv=2
+dt=Text
+nm=OpenMacroOrCommandLine
+ctime=3522680293
+mtime=3522753868
+<article>
+#_result = utils.OpenMacroOrCommandLine (From, Item, Commands, ConfigFunc)
+#_
+#_**Parameters:**
+#_  From:        flag
+#_  Item:        integer or string
+#_  Commands:    table
+#_  ConfigFunc:  function, or nil
+#_
+#_**Returns:**
+#_  result:      boolean
+#_
+#_**Description:**
+#_  This function is intended to be called from *export.Open* function.
+#_  First, it checks its *From* argument, and if it does not specify macro
+#_  or command line call, then the function returns false.
+#_  Otherwise, the function continues the processing as described in the section
+#_  Command line and macro calls and returns true to signal that the processing
+#_  is done.
+#_
+#_  This function should not be called when the plugin creates panels from the command
+#_  line or macro calls.
+#_
+#_@@@
+#_<lua> Links = { ["Command line and macro calls"]="59.html", }
+#_</lua>
+#_
+#_
+</article>
+</node>
+<node>
+id=82
+lv=2
+dt=Text
+nm=RunInternalScript
+ctime=3522680239
+mtime=3522824152
+<article>
+#_result = utils.RunInternalScript (name, ...)
+#_
+#_**Parameters:**
+#_  name:    string
+#_             either field name in package.preload table (without prefix "<"),
+#_             or file name relative to plugin dir (without suffix ".lua").
+#_  ... :    additional parameters (optional)
+#_
+#_**Returns:**
+#_  result:  any type
+#_
+#_**Description:**
+#_  This function is intended to run utilities coming with the plugin (as opposed
+#_  to "user's utilities"). Those utilities can either be part of the plugin's DLL
+#_  ("embedded"), or located in disk files.
+#_
+#_  For example, given argument *name* == "wrap", the function will first try
+#_  to run a script from package.preload["<wrap"], then from the file
+#_  <plugin_directory>/wrap.lua.
+#_
+#_
+</article>
+</node>
+<node>
+id=83
+lv=2
+dt=Text
+nm=RunUserItem
+ctime=3522680250
+mtime=3522851925
+<article>
+#_RunUserItem (Item, Properties, ...)
+#_
+#_**Parameters:**
+#_  Item:       table
+#_                filename: string; script file specification
+#_                env:      table; environment to run the script in
+#_                arg:      table; array of arguments associated with *Item*
+#_
+#_  Properties: table
+#_                From:     string ("config", "dialog", "editor", "panels" or "viewer")
+#_                hDlg:     userdata (dialog handle), or nil
+#_
+#_  ... :       sequence of additional arguments (appended to existing arguments)
+#_
+#_**Returns:**
+#_  nothing
+#_
+#_**Description:**
+#_
+#_  The function runs user's menu item, created as a result of execution of AddToMenu.
+#_
+#_  *Item.filename* is a specification for a Lua script to run upon this item activation.
+#_  The exact file name is determined according to the same rules as with `require` function,
+#_  that is, `package.path` is used to search for the file. But contrary to `require`,
+#_  the value returned by the script is not cached in `package.loaded`.
+#_
+#_  For the script's input arguments, see Passing data to installed scripts.
+#_
+#_@@@
+#_<lua> Links = { AddToMenu="13.html", ["Passing data to installed scripts"]="73.html", }
+#_</lua>
+#_
 #_
 </article>
 </node>
