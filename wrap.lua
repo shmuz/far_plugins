@@ -11,9 +11,9 @@ local insert, concat = table.insert, table.concat
 
 -- iterator factory
 local function EditorBlock (start_line)
-  start_line = start_line or far.EditorGetInfo().BlockStartLine
+  start_line = start_line or editor.GetInfo().BlockStartLine
   return function()
-    local lineInfo = far.EditorGetString (nil, start_line, 1)
+    local lineInfo = editor.GetString (nil, start_line, 1)
     if lineInfo and lineInfo.SelStart >= 0 and lineInfo.SelEnd ~= 0 then
       start_line = start_line + 1
       return lineInfo
@@ -28,7 +28,7 @@ end
 
 
 local function EditorSelectCurLine (editInfo)
-  return far.EditorSelect (nil, "BTYPE_STREAM", editInfo.CurLine, 0, -1, 1)
+  return editor.Select (nil, "BTYPE_STREAM", editInfo.CurLine, 0, -1, 1)
 end
 
 
@@ -96,10 +96,10 @@ end
 
 
 local function Wrap (aColumn1, aColumn2, aPrefix, aJustify, aFactor)
-  local editInfo = far.EditorGetInfo()
+  local editInfo = editor.GetInfo()
   if not EditorHasSelection (editInfo) then
     if EditorSelectCurLine (editInfo) then
-      editInfo = far.EditorGetInfo()
+      editInfo = editor.GetInfo()
     else
       return
     end
@@ -123,7 +123,7 @@ local function Wrap (aColumn1, aColumn2, aPrefix, aJustify, aFactor)
   end
   flush()
 
-  far.EditorDeleteBlock()
+  editor.DeleteBlock()
 
   local aMaxLineLen = aColumn2 - aColumn1 + 1
   local indent = (" "):rep(aColumn1 - 1)
@@ -175,21 +175,21 @@ local function Wrap (aColumn1, aColumn2, aPrefix, aJustify, aFactor)
 
   -- Put reformatted lines into the editor
   local Pos = { CurLine = editInfo.BlockStartLine, CurPos = 0 }
-  far.EditorSetPosition (nil, Pos)
+  editor.SetPosition (nil, Pos)
   for i = #lines_out, 1, -1 do
-    far.EditorInsertString()
-    far.EditorSetPosition (nil, Pos)
-    far.EditorSetString(nil, -1, lines_out[i])
+    editor.InsertString()
+    editor.SetPosition (nil, Pos)
+    editor.SetString(nil, -1, lines_out[i])
   end
 end
 
 
 local function PrefixBlock (aPrefix)
   local bNotSelected
-  local editInfo = far.EditorGetInfo()
+  local editInfo = editor.GetInfo()
   if not EditorHasSelection (editInfo) then
     assert (EditorSelectCurLine (editInfo))
-    editInfo = far.EditorGetInfo()
+    editInfo = editor.GetInfo()
     bNotSelected = true
   end
 
@@ -199,11 +199,11 @@ local function PrefixBlock (aPrefix)
   end
 
   for line in EditorBlock (editInfo.BlockStartLine) do
-    far.EditorSetString(nil, -1, aPrefix() .. line.StringText)
+    editor.SetString(nil, -1, aPrefix() .. line.StringText)
   end
 
-  far.EditorSetPosition (nil, editInfo)
-  if bNotSelected then far.EditorSelect(nil, "BTYPE_NONE") end
+  editor.SetPosition (nil, editInfo)
+  if bNotSelected then editor.Select(nil, "BTYPE_NONE") end
 end
 
 
@@ -263,14 +263,14 @@ local function WrapWithDialog (aData)
     assert(offs1 >= 1, "start column is less than 1")
     assert(offs2 >= offs1, "end column is less than start column")
 
-    far.EditorUndoRedo(nil, "EUR_BEGIN")
+    editor.UndoRedo(nil, "EUR_BEGIN")
     Wrap (offs1, offs2, prefix, aData.cbxJustify, 2.0)
-    far.EditorUndoRedo(nil, "EUR_END")
+    editor.UndoRedo(nil, "EUR_END")
 
   elseif prefix ~= "" then
-    far.EditorUndoRedo(nil, "EUR_BEGIN")
+    editor.UndoRedo(nil, "EUR_BEGIN")
     PrefixBlock(prefix)
-    far.EditorUndoRedo(nil, "EUR_END")
+    editor.UndoRedo(nil, "EUR_END")
   end
 end
 

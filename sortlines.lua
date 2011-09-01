@@ -14,8 +14,8 @@ local tinsert = table.insert
 local F = far.Flags
 local M = require "lf4ed_message"
 local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
-local EditorSetPosition = far.EditorSetPosition
-local EditorSetString = far.EditorSetString
+local EditorSetPosition = editor.SetPosition
+local EditorSetString = editor.SetString
 
 -- Depends on: FAR API
 local function ErrMsg(msg, buttons)
@@ -33,7 +33,7 @@ end
 
 -- Depends on: FAR API
 local function IsColumnType()
-  local editInfo = far.EditorGetInfo()
+  local editInfo = editor.GetInfo()
   return (editInfo.BlockType == F.BTYPE_COLUMN)
 end
 
@@ -45,11 +45,11 @@ end
 -- Depends on: FAR API
 -- Iterator factory
 local function EditorBlockLines ()
-  local editInfo = far.EditorGetInfo()
+  local editInfo = editor.GetInfo()
   if not EditorHasSelection(editInfo) then return function() end; end
   local start_line = editInfo.BlockStartLine
   return function()
-    local lineInfo = far.EditorGetString (nil, start_line, 1)
+    local lineInfo = editor.GetString (nil, start_line, 1)
     if lineInfo and lineInfo.SelStart >= 0 and lineInfo.SelEnd ~= 0 then
       start_line = start_line + 1
       return lineInfo
@@ -73,7 +73,7 @@ end
 
 -- Depends on: FAR API
 local function PutLines(arr_compare, arr_index, arr_target, OnlySelection)
-  local editInfo = far.EditorGetInfo()
+  local editInfo = editor.GetInfo()
   if band (editInfo.CurState, F.ECSTATE_LOCKED) ~= 0 then
     ErrMsg("The editor is locked"); return
   end
@@ -81,9 +81,9 @@ local function PutLines(arr_compare, arr_index, arr_target, OnlySelection)
   local BlockSelStart, BlockSelEnd, BlockSelWidth
   if OnlySelection then
     EditorSetPosition(nil, editInfo.BlockStartLine)
-    local line = far.EditorGetString(nil, -1)
-    BlockSelStart = far.EditorRealToTab(nil, -1, line.SelStart)
-    BlockSelEnd   = far.EditorRealToTab(nil, -1, line.SelEnd)
+    local line = editor.GetString(nil, -1)
+    BlockSelStart = editor.RealToTab(nil, -1, line.SelStart)
+    BlockSelEnd   = editor.RealToTab(nil, -1, line.SelEnd)
     BlockSelWidth = BlockSelEnd - BlockSelStart
   end
   for i, v in ipairs(arr_index) do
@@ -209,9 +209,9 @@ function Package.SortWithRawData (aData)
   DoSort(arr_compare, arr_index, arr_dialog)
   -- put the sorted lines into the editor
   local OnlySelection = columntype and aData.cbxOnlySel
-  far.EditorUndoRedo(nil, "EUR_BEGIN")
+  editor.UndoRedo(nil, "EUR_BEGIN")
   PutLines(arr_compare, arr_index, arr_target, OnlySelection)
-  far.EditorUndoRedo(nil, "EUR_END")
+  editor.UndoRedo(nil, "EUR_END")
 end
 
 -- generic

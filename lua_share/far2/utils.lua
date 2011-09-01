@@ -83,19 +83,19 @@ local function OnError (msg)
         far.AdvControl("ACTL_COMMIT")
       end
     else
-      far.Editor(file, nil,nil,nil,nil,nil, {EF_NONMODAL=1,EF_IMMEDIATERETURN=1})
+      editor.Editor(file, nil,nil,nil,nil,nil, {EF_NONMODAL=1,EF_IMMEDIATERETURN=1})
     end
   end
 
-  local eInfo = far.EditorGetInfo()
+  local eInfo = editor.GetInfo()
   if eInfo then
     if file == '[string "selection"]' then
       local startsel = eInfo.BlockType~=F.BTYPE_NONE and eInfo.BlockStartLine or 0
       line = line + startsel
     end
     local offs = math.floor(eInfo.WindowSizeY / 2)
-    far.EditorSetPosition(nil, line-1, 0, 0, line>offs and line-offs or 0)
-    far.EditorRedraw()
+    editor.SetPosition(nil, line-1, 0, 0, line>offs and line-offs or 0)
+    editor.Redraw()
   end
 end
 
@@ -400,7 +400,7 @@ local function ExecuteCommandLine (tActions, tCommands, sFrom, fConfig)
       elseif v.opt == "r" then
         local path = v.param
         if not path:find("^[a-zA-Z]:") then
-          local panelDir = far.CtrlGetPanelDir(nil, 1)
+          local panelDir = panel.GetPanelDir(nil, 1)
           if path:find("^[\\/]") then
             path = panelDir:sub(1,2) .. path
           else

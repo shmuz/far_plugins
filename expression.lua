@@ -12,8 +12,8 @@ local function ErrMsg (msg)
 end
 
 local function GetNearestWord (pattern)
-  local line = far.EditorGetString(nil, nil, 2)
-  local pos = far.EditorGetInfo().CurPos + 1
+  local line = editor.GetString(nil, nil, 2)
+  local pos = editor.GetInfo().CurPos + 1
   local r = far.regex(pattern)
   local start = 1
   while true do
@@ -25,24 +25,24 @@ local function GetNearestWord (pattern)
 end
 
 local function GetAllText()
-  local ei = far.EditorGetInfo()
+  local ei = editor.GetInfo()
   if ei then
     local t = {}
     for n = 0, ei.TotalLines-1 do
-      table.insert(t, far.EditorGetString(nil, n, 2))
+      table.insert(t, editor.GetString(nil, n, 2))
     end
-    far.EditorSetPosition(nil, ei)
+    editor.SetPosition(nil, ei)
     return table.concat(t, "\n")
   end
 end
 
 local function GetSelectedText()
-  local ei = far.EditorGetInfo()
+  local ei = editor.GetInfo()
   if ei and ei.BlockType ~= F.BTYPE_NONE then
     local t = {}
     local n = ei.BlockStartLine
     while true do
-      local s = far.EditorGetString(nil, n, 1)
+      local s = editor.GetString(nil, n, 1)
       if not s or s.SelStart == -1 then
         break
       end
@@ -50,7 +50,7 @@ local function GetSelectedText()
       table.insert(t, sel)
       n = n + 1
     end
-    far.EditorSetPosition(nil, ei)
+    editor.SetPosition(nil, ei)
     return table.concat(t, "\n"), n-1
   end
 end
@@ -161,8 +161,8 @@ end
 -- NOTE: In order to obtain correct offsets, this function should use either
 --       far.find, or unicode.utf8.cfind function.
 local function BlockSum (history)
-  local ei = assert(far.EditorGetInfo(), "EditorGetInfo failed")
-  local block = far.EditorGetSelection()
+  local ei = assert(editor.GetInfo(), "EditorGetInfo failed")
+  local block = editor.GetSelection()
   local sum = 0
   local x_start, x_dot
   local pattern = [[(\S[\w.]*)]]
@@ -170,10 +170,10 @@ local function BlockSum (history)
   if block then
     local regex = far.regex(pattern)
     for n = block.StartLine, block.EndLine do
-      local s = far.EditorGetString (nil, n, 1)
+      local s = editor.GetString (nil, n, 1)
       local start, _, sel = regex:find( s.StringText:sub(s.SelStart+1, s.SelEnd) )
       if start then
-        x_start = far.EditorRealToTab(nil, n, s.SelStart + start)
+        x_start = editor.RealToTab(nil, n, s.SelStart + start)
         local num = tonumber(sel)
         if num then
           sum = sum + num
@@ -185,7 +185,7 @@ local function BlockSum (history)
   else
     local start, _, word = GetNearestWord(pattern)
     if start then
-      x_start = far.EditorRealToTab(nil, nil, start)
+      x_start = editor.RealToTab(nil, nil, start)
       local num = tonumber(word)
       if num then
         sum = sum + num
@@ -203,9 +203,9 @@ local function BlockSum (history)
   end
   if history.cbxInsert then
     local y = block and block.EndLine or ei.CurLine -- position of the last line
-    local s = far.EditorGetString(nil, y)           -- get last line
-    far.EditorSetPosition (nil, y, s.StringText:len()) -- insert a new line
-    far.EditorInsertString()                           -- +
+    local s = editor.GetString(nil, y)           -- get last line
+    editor.SetPosition (nil, y, s.StringText:len()) -- insert a new line
+    editor.InsertString()                           -- +
     local prefix = "="
     if x_dot then
       local x = far.find(tostring(sum), "\\.")
@@ -216,20 +216,20 @@ local function BlockSum (history)
     else
       x_start = block and (block.BlockType==F.BTYPE_COLUMN) and s.SelStart or 0
     end
-    far.EditorSetPosition (nil, y+1, x_start)
-    far.EditorInsertText(nil, prefix .. sum)
-    far.EditorRedraw()
+    editor.SetPosition (nil, y+1, x_start)
+    editor.InsertText(nil, prefix .. sum)
+    editor.Redraw()
   else
-    far.EditorSetPosition (nil, ei) -- restore the position
+    editor.SetPosition (nil, ei) -- restore the position
   end
 end
 
 local function LuaExpr (history)
-  local edInfo = far.EditorGetInfo()
+  local edInfo = editor.GetInfo()
   local text, numline = GetSelectedText()
   if not text then
     numline = edInfo.CurLine
-    text = far.EditorGetString(nil, numline, 2)
+    text = editor.GetString(nil, numline, 2)
   end
 
   local func, msg = loadstring("return " .. text)
@@ -252,11 +252,11 @@ local function LuaExpr (history)
 
   result = history.edtResult
   if history.cbxInsert then
-    local line = far.EditorGetString(nil, numline)
+    local line = editor.GetString(nil, numline)
     local pos = (edInfo.BlockType==F.BTYPE_NONE) and line.StringLength or line.SelEnd
-    far.EditorSetPosition(nil, numline, pos)
-    far.EditorInsertText(nil, " = " .. result .. " ; ")
-    far.EditorRedraw()
+    editor.SetPosition(nil, numline, pos)
+    editor.InsertText(nil, " = " .. result .. " ; ")
+    editor.Redraw()
   end
   if history.cbxCopy then
     far.CopyToClipboard(result)
