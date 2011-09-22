@@ -108,7 +108,7 @@ $(TRG2): $(OBJ2) $(LIBS2)
 	$(CC) -o $@ $^ $(MYLDFLAGS)
 
 linit.c: $(bootscript4) $(scripts4) $(modules4)
-	$(LUAEXE) -erequire(\'generate\')([[$@]],[[$(GEN_METHOD)]],[[$(LUAC)]],$(bootscript3),$(scripts3),$(modules3))
+	$(LUAEXE) -erequire(\'embed\')([[$@]],[[$(GEN_METHOD)]],[[$(LUAC)]],$(bootscript3),$(scripts3),$(modules3))
 
 luaplug1.o: $(PATH_LUAFARSRC)\luaplug.c
 	$(CC) -c -o $@ $< $(CFLAGS1)
