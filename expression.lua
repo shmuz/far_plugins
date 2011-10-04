@@ -29,7 +29,8 @@ local function GetAllText()
   if ei then
     local t = {}
     for n = 0, ei.TotalLines-1 do
-      table.insert(t, editor.GetString(nil, n, 2))
+      local s = editor.GetString(nil, n, 2)
+      table.insert(t, s)
     end
     editor.SetPosition(nil, ei)
     return table.concat(t, "\n")
