@@ -25,16 +25,14 @@ local function GetNearestWord (pattern)
 end
 
 local function GetAllText()
-  local ei = editor.GetInfo()
-  if ei then
-    local t = {}
-    for n = 0, ei.TotalLines-1 do
-      local s = editor.GetString(nil, n, 2)
-      table.insert(t, s)
-    end
-    editor.SetPosition(nil, ei)
-    return table.concat(t, "\n")
+  local ei = assert(editor.GetInfo())
+  local t = {}
+  for n = 0, ei.TotalLines-1 do
+    local s = editor.GetString(nil, n, 2)
+    table.insert(t, s)
   end
+  editor.SetPosition(nil, ei)
+  return table.concat(t, "\n")
 end
 
 local function GetSelectedText()
@@ -68,24 +66,37 @@ local ParamsGuid = win.Uuid("187afc63-174c-40aa-b0b2-00215fdcadb1")
 
 local function ParamsDialog (aData)
   local HIST_PARAM = "LuaFAR\\LuaScript\\Parameter"
+  local HIST_EXTFILE = "LuaFAR\\LuaScript\\ExternalFile"
   local D = far2_dialog.NewDialog()
-  D._             = {"DI_DOUBLEBOX",3, 1, 52,14,0, 0, 0, 0, M.MScriptParams}
-  D.label         = {"DI_TEXT",     5, 3,  0,0, 0, 0, 0, 0, "&1."}
-  D.sParam1       = {"DI_EDIT",     8, 3, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
-  D.label         = {"DI_TEXT",     5, 5,  0,0, 0, 0, 0, 0, "&2."}
-  D.sParam2       = {"DI_EDIT",     8, 5, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
-  D.label         = {"DI_TEXT",     5, 7,  0,0, 0, 0, 0, 0, "&3."}
-  D.sParam3       = {"DI_EDIT",     8, 7, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
-  D.label         = {"DI_TEXT",     5, 9,  0,0, 0, 0, 0, 0, "&4."}
-  D.sParam4       = {"DI_EDIT",     8, 9, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
-  D.bParamsEnable = {"DI_CHECKBOX", 5,11,  0,0, 0, 0, 0, 0, M.MScriptParamsEnable}
-  D.sep           = {"DI_TEXT",     0,12,  0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},""}
-  D.btnRun        = {"DI_BUTTON",   0,13,  0,0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MRunScript}
-  D.btnStore      = {"DI_BUTTON",   0,13,  0,0, 0, 0, 0, "DIF_CENTERGROUP", M.MStoreParams}
-  D.btnCancel     = {"DI_BUTTON",   0,13,  0,0, 0, 0, 0, "DIF_CENTERGROUP", M.MCancel}
+  D._             = {"DI_DOUBLEBOX",3, 1, 52,16,0, 0, 0, 0, M.MScriptParams}
+  D.bExternalScript = {"DI_CHECKBOX", 5, 2,  0,0, 0, 0, 0, 0, M.MExternalScript}
+  D.sExternalScript = {"DI_EDIT",     5, 3, 49,0, 0, HIST_EXTFILE, 0, "DIF_HISTORY",""}
+  D.sep             = {"DI_TEXT",     0, 4,  0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},M.MParamsSeparator}
+
+  D.label           = {"DI_TEXT",     5, 5,  0,0, 0, 0, 0, 0, "&1."}
+  D.sParam1         = {"DI_EDIT",     8, 5, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
+  D.label           = {"DI_TEXT",     5, 7,  0,0, 0, 0, 0, 0, "&2."}
+  D.sParam2         = {"DI_EDIT",     8, 7, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
+  D.label           = {"DI_TEXT",     5, 9,  0,0, 0, 0, 0, 0, "&3."}
+  D.sParam3         = {"DI_EDIT",     8, 9, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
+  D.label           = {"DI_TEXT",     5,11,  0,0, 0, 0, 0, 0, "&4."}
+  D.sParam4         = {"DI_EDIT",     8,11, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
+  D.bParamsEnable   = {"DI_CHECKBOX", 5,13,  0,0, 0, 0, 0, 0, M.MScriptParamsEnable}
+  D.sep             = {"DI_TEXT",     0,14,  0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},""}
+
+  D.btnRun          = {"DI_BUTTON",   0,15,  0,0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MRunScript}
+  D.btnStore        = {"DI_BUTTON",   0,15,  0,0, 0, 0, 0, "DIF_CENTERGROUP", M.MStoreParams}
+  D.btnCancel       = {"DI_BUTTON",   0,15,  0,0, 0, 0, 0, "DIF_CENTERGROUP", M.MCancel}
   ------------------------------------------------------------------------------
+  local function CheckExternalScript (hDlg)
+    D.sExternalScript:Enable(hDlg, D.bExternalScript:GetCheck(hDlg))
+  end
   local function DlgProc (hDlg, msg, param1, param2)
-    if msg == F.DN_CLOSE then
+    if msg == F.DN_INITDIALOG then
+      CheckExternalScript(hDlg)
+    elseif msg == F.DN_BTNCLICK then
+      if param1 == D.bExternalScript.id then CheckExternalScript(hDlg) end
+    elseif msg == F.DN_CLOSE then
       if param1 == D.btnStore.id or param1 == D.btnRun.id then
         local s1 = D.sParam1:GetText(hDlg)
         local s2 = D.sParam2:GetText(hDlg)
@@ -97,7 +108,7 @@ local function ParamsDialog (aData)
     end
   end
   far2_dialog.LoadData(D, aData)
-  local ret = far.Dialog (ParamsGuid,-1,-1,56,16,"ScriptParams",D,0,DlgProc)
+  local ret = far.Dialog (ParamsGuid,-1,-1,56,18,"ScriptParams",D,0,DlgProc)
   ret = (ret==D.btnStore.id) and "store" or (ret==D.btnRun.id) and "run"
   if ret then
     far2_dialog.SaveData(D, aData)
@@ -105,27 +116,36 @@ local function ParamsDialog (aData)
   return ret
 end
 
--- WARNING:
---   don't change the string literals "selection" and "all text",
---   since export.OnError relies on them being exactly such.
 local function LuaScript (data)
-  local text, chunkname = GetSelectedText(), "selection"
-  if not text then
-    text, chunkname = GetAllText(), "all text"
-    if text and text:sub(1,1)=="#" then text = "--"..text end
-  end
-  if text then
-    local chunk, msg = loadstring(text, chunkname)
-    if not chunk then error(msg,3) end
-    if data.bParamsEnable then
-      local p1,p2,p3,p4 = CompileParams(data.sParam1, data.sParam2,
-                                        data.sParam3, data.sParam4)
-      p1 = p1(); p2 = p2(); p3 = p3(); p4 = p4()
-      return chunk (p1,p2,p3,p4)
-    else
-      return chunk()
+  local chunk
+  if data.bExternalScript then
+    local fname = data.sExternalScript or ""
+    if not far.find(fname, "^([a-zA-Z]:)?[\\/]") then
+      fname = editor.GetInfo().FileName:match("^.+\\") .. fname
     end
+    chunk = assert(loadfile(fname))
+  else
+    -- WARNING:
+    --   don't change the string literals "selection" and "all text",
+    --   since export.OnError relies on them being exactly such.
+    local text, chunkname = GetSelectedText(), "selection"
+    if not text then
+      text, chunkname = GetAllText(), "all text"
+      if text:sub(1,1)=="#" then text = "--"..text end
+    end
+    chunk = assert(loadstring(text, chunkname))
   end
+  ------------------------------------------------------------------------------
+  local p1,p2,p3,p4
+  if data.bParamsEnable then
+    p1,p2,p3,p4 = CompileParams(data.sParam1, data.sParam2, data.sParam3, data.sParam4)
+    p1 = p1(); p2 = p2(); p3 = p3(); p4 = p4()
+    p1,p2,p3,p4 = chunk (p1,p2,p3,p4)
+  else
+    p1,p2,p3,p4 = chunk()
+  end
+  editor.Redraw()
+  return p1,p2,p3,p4
 end
 
 local ResultGuid = win.Uuid("d45fdadc-4918-4d47-b34a-311947d241b2")
@@ -267,7 +287,7 @@ end
 local funcs = {
   BlockSum     = BlockSum,
   LuaExpr      = LuaExpr,
-  LuaScript    = function(aData) return LuaScript(aData) end, -- keep errorlevel==3
+  LuaScript    = function(aData) return LuaScript(aData) end,
   ScriptParams = function(aData)
       if ParamsDialog(aData) == "run" then return LuaScript(aData) end
     end,

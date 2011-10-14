@@ -74,11 +74,11 @@ local function OnError (msg)
         Lower(wInfo.Name:gsub("/","\\")) == Lower(file:gsub("/","\\"))
       then
         trgInfo = wInfo
-        if wInfo.Current then break end
+        if 0 ~= band(wInfo.Flags, F.WIF_CURRENT) then break end
       end
     end
     if trgInfo then
-      if not trgInfo.Current then
+      if 0 == band(trgInfo.Flags, F.WIF_CURRENT) then
         far.AdvControl("ACTL_SETCURRENTWINDOW", trgInfo.Pos)
         far.AdvControl("ACTL_COMMIT")
       end

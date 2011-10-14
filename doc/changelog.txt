@@ -12,6 +12,8 @@
       [*] Column pattern is Far regex (was: Lua regex).
   Block Sum:
       [+] If no text is selected, the current line is processed.
+  Lua Script:
+      [+] External script can be specified (via Script Parameters dialog).
 
 2011-02-02, v2.8.0
   PLUGIN:

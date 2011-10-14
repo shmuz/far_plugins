@@ -14,7 +14,7 @@ programming language.
      ~Block Sum~@BlockSum@
      ~Lua Expression~@LuaExpression@
      ~Lua Script~@LuaScript@
-     ~Script Parameters~@ScriptParams@
+     ~Script Parameters dialog~@ScriptParams@
  More utilities can be added by the user: see the manual.
 
  Technical topics:
@@ -45,34 +45,38 @@ $ #Lua Expression#
 
 @LuaScript
 $ #Lua Script#
-   Gets selected text and runs it as a Lua script.
-If no text is selected, runs the whole editor buffer.
-The script can be invoked with ~parameters~@ScriptParams@.
+   This command runs a Lua script from a Far Editor window.
 
-   #Example 1:#
-       far.Message"Hello, World!"
+   1. If the "External script" option in the ~script parameters~@ScriptParams@
+      dialog is checked then the script is the file specified
+      therein.
+   2. Else, the script is the text selected in the current Far Editor
+      window.
+   3. If no text is selected, the script is the whole current editor
+      window contents.
 
-   #Example 2:#
-       local function factorial(n)
-         local r=1; for k=2,n do r=r*k end; return r
-       end
-       far.Message(factorial(6))
+   The script can be run with ~parameters~@ScriptParams@, regardless of what
+is the script source.
 
  ~Contents~@Contents@
 
 @ScriptParams
-$ #Script Parameters#
-   This dialog allows to specify up to 4 parameters that will be stored and
-passed to ~Lua Script~@LuaScript@ when it is invoked.
-
-   Every parameter is a Lua expression. This means in particular that strings
-must be enclosed in quotes, as it's usual in Lua. An empty parameter line is
-equivalent to nil.
+$ #Script Parameters dialog#
+   The #External script# option lets specify the file (Lua script) that will
+be run. If the file name does not contain absolute path, it considered to be
+relative to the directory containing the edited file. If this option is not
+checked then either selected or entire editor window text will serve as the
+script, as described in the ~Lua Script~@LuaScript@ section.   
+   
+   The dialog allows to specify up to 4 parameters that will be stored and
+passed to ~Lua Script~@LuaScript@ when it is invoked. Every parameter is a Lua
+expression. This means in particular that strings must be enclosed in quotes,
+as it's usual in Lua. An empty parameter line is equivalent to nil.
 
    The parameters are syntax-checked but their evaluation is delayed until
 the script is actually invoked. Therefore, e.g. expression 47+ would
-immediately raise error, while expression 47+nil would be accepted but raise
-error when the script is invoked.
+immediately raise an error, while expression 47+nil would be accepted but
+would raise an error when the script is invoked.
 
    Parameters are evaluated and passed to the script only if
 #Pass parameters to the script# checkbox is checked.
@@ -80,7 +84,7 @@ error when the script is invoked.
    The #Run# command stores the parameters and runs the script.
  
    The #Store# command stores the parameters for future script invocations.
- 
+
  ~Contents~@Contents@
 
 @BlockSum
