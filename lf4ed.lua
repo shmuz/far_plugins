@@ -5,8 +5,8 @@ local MinLuafarVersion = { 3, 0 }
 
 -- CONFIGURATION : keep it at the file top !!
 local DefaultConfig = {
-  -- Default script will be recompiled and run every time OpenPlugin/OpenFilePlugin
-  -- are called: set true for debugging, false for normal use;
+  -- Default script will be recompiled and run every time OpenW
+  -- is called: set true for debugging, false for normal use;
   ReloadDefaultScript = false,
 
   -- Reload Lua libraries each time they are require()d:
