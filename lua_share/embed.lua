@@ -74,23 +74,28 @@ int preload (lua_State *L, char *arr, size_t arrsize) {
 
 ]]
 
-local function addfiles(target, files, method, luac)
-  local strip = (method == "-strip") and require "lstrip51"
-  luac = (luac or "luac") .. " -o luac.out -s "
+local function readfile (filename, mode)
+  local fp = assert(io.open(filename, mode))
+  local s = fp:read("*all")
+  fp:close()
+  return s
+end
+
+local function addfiles(target, files, method, compiler)
+  local strip = (method == "strip") and require "lstrip51"
   for _, f in ipairs(files) do
     local s
     local fullname = f.path .."\\".. f.name
-    if method == "-plain" then
-      local fp = assert(io.open(fullname))
-      s = fp:read("*all")
-      fp:close()
-    elseif strip then
+    if method == "plain" then
+      s = readfile(fullname)
+    elseif method == "strip" then
       s = assert(strip("fsk", fullname))
+    elseif method == "luajit" then
+      assert(0==os.execute((compiler or "luajit").." -b -t raw -s "..fullname.." luajitc.out"))
+      s = readfile("luajitc.out", "rb")
     else
-      assert(0 == os.execute(luac .. fullname))
-      local fp = assert(io.open("luac.out", "rb"))
-      s = fp:read("*all")
-      fp:close()
+      assert(0==os.execute((compiler or "luac").." -o luac.out -s "..fullname))
+      s = readfile("luac.out", "rb")
     end
     target:write("static ", bin2c(s, arrname(f)), "\n")
   end
@@ -158,8 +163,8 @@ local function decode(target, arg, boot)
   table.insert(target, file)
 end
 
-local function embed (target, method, luac, bootscript, ...)
-  assert(bootscript, "syntax: embed(target, method, luac, bootscript [, files])")
+local function embed (target, method, compiler, bootscript, ...)
+  assert(bootscript, "syntax: embed(target, method, compiler, bootscript [, files])")
   local scripts, modules, binlibs = {}, {}, {}
   decode(scripts, bootscript, true)
   local stage
@@ -177,8 +182,8 @@ local function embed (target, method, luac, bootscript, ...)
   local linit = create_linit(scripts, modules, binlibs)
   fp:write(linit)
   fp:write(code)
-  addfiles(fp, scripts, method, luac)
-  addfiles(fp, modules, method, luac)
+  addfiles(fp, scripts, method, compiler)
+  addfiles(fp, modules, method, compiler)
   add_preloads(fp, scripts)
   add_preloads(fp, modules)
   fp:close()

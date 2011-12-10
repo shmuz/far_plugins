@@ -1,11 +1,10 @@
 -- utils.lua --
 
-local P = {} -- "package"
 local F = far.Flags
 local band, bor, bnot = bit64.band, bit64.bor, bit64.bnot
 local PluginDir = far.PluginStartupInfo().ModuleName:match(".*\\")
 
-function P.CheckLuafarVersion (reqVersion, msgTitle)
+local function CheckLuafarVersion (reqVersion, msgTitle)
   local v1, v2 = far.LuafarVersion(true)
   local r1, r2 = reqVersion[1], reqVersion[2]
   if (v1 > r1) or (v1 == r1 and v2 >= r2) then return true end
@@ -60,7 +59,7 @@ local function OnError (msg)
       return line
     end)
   collectgarbage "collect"
-  local caption = ("Error [used: %d Kb]"):format(collectgarbage "count")
+  local caption = ("Error [used: %d KB]"):format(collectgarbage "count")
   local ret = far.Message(msg, caption, buttons, "wl")
   if ret <= 0 then return end
 
@@ -99,7 +98,7 @@ local function OnError (msg)
   end
 end
 
-function P.RunInternalScript (name, ...)
+local function RunInternalScript (name, ...)
   local embed_name = "<"..name
   if package.preload[embed_name] then -- prevent unnecessary disk search with non-embed plugin
     return require(embed_name)(...)
@@ -131,7 +130,7 @@ end
 --
 -- ...:              sequence of additional arguments (appended to existing arguments)
 --
-function P.RunUserItem (aItem, aProperties, ...)
+local function RunUserItem (aItem, aProperties, ...)
   assert(aItem.filename, "no file name")
   assert(aItem.env, "no environment")
   -- find and compile the file
@@ -240,7 +239,7 @@ local function MakeAutoInstall (AddUserFile)
   return AutoInstall
 end
 
-function P.LoadUserMenu (aFileName)
+local function LoadUserMenu (aFileName)
   local userItems = { editor={},viewer={},panels={},config={},dialog={} }
   local commandTable, hotKeyTable = {}, {}
   local handlers = { EditorInput={}, EditorEvent={}, ViewerEvent={}, ExitScript={} }
@@ -287,7 +286,7 @@ function P.LoadUserMenu (aFileName)
   return userItems, commandTable, hotKeyTable, handlers
 end
 
-function P.AddMenuItems (trg, src, msgtable)
+local function AddMenuItems (trg, src, msgtable)
   trg = trg or {}
   for _, item in ipairs(src) do
     local text = item.text
@@ -346,8 +345,8 @@ end
 local function SplitCommandLine (str)
   local pat = [["((?:\\"|[^"])*)"|((?:\\"|\S)+)]]
   local out = {}
-  for c1, c2 in far.gmatch(str, pat) do
-    out[#out+1] = far.gsub(c1 or c2, [[\\(")|(.)]], "%1%2")
+  for c1, c2 in regex.gmatch(str, pat) do
+    out[#out+1] = regex.gsub(c1 or c2, [[\\(")|(.)]], "%1%2")
   end
   return out
 end
@@ -395,7 +394,7 @@ local function ExecuteCommandLine (tActions, tCommands, sFrom, fConfig)
     for i,v in ipairs(tActions) do
       if v.command then
         local fileobject = tCommands[v.command]
-        P.RunUserItem(fileobject, {From=sFrom}, unpack(v))
+        RunUserItem(fileobject, {From=sFrom}, unpack(v))
         break
       elseif v.opt == "r" then
         local path = v.param
@@ -442,7 +441,7 @@ local function ProcessCommandLine (sCommandLine, tCommands, sFrom, fConfig)
   end
 end
 
-function P.OpenMacroOrCommandLine (aFrom, aItem, aCommandTable, fConfig)
+local function OpenMacroOrCommandLine (aFrom, aItem, aCommandTable, fConfig)
   if band(aFrom, bnot(F.OPEN_FROM_MASK)) ~= 0 then
     -- called from macro
     if band(aFrom, F.OPEN_FROMMACRO) ~= 0 then
@@ -482,7 +481,7 @@ local function AddCfindFunction()
   end
 end
 
-function P.InitPlugin()
+local function InitPlugin()
   getmetatable("").__index = unicode.utf8
   AddCfindFunction()
 
@@ -493,4 +492,12 @@ function P.InitPlugin()
   return plugin
 end
 
-return P
+return {
+  AddMenuItems = AddMenuItems,
+  CheckLuafarVersion = CheckLuafarVersion,
+  InitPlugin = InitPlugin,
+  LoadUserMenu = LoadUserMenu,
+  OpenMacroOrCommandLine = OpenMacroOrCommandLine,
+  RunInternalScript = RunInternalScript,
+  RunUserItem = RunUserItem,
+}

@@ -21,18 +21,27 @@ INC_FAR = $(WORKDIR)/system/include/far/unicode
 ifeq ($(ARCH),-m64)
   PATH_EXE = c:/exe64
 else
-  PATH_EXE = c:/exe
+  PATH_EXE = c:/exe32
 endif
 
 LUAEXE = $(PATH_EXE)/lua.exe
-LUAC   = $(PATH_EXE)/luac.exe
 LUADLL = $(PATH_EXE)/lua5.1.dll
 LUAFARDLL = $(PATH_EXE)/luafar3.dll
+
+ifeq ($(EMBED_METHOD),luajit)
+  LUAC = $(PATH_EXE)/luajit.exe
+else
+  LUAC = $(PATH_EXE)/luac.exe
+endif
 #------------------------------------ END OF USER'S SETTINGS -----------------
 
 ifeq ($(ARCH),-m64)
+  TARGET_N = $(PROJECT)-x64.dll
+  TARGET_E = $(PROJECT)_e-x64.dll
   RESFLAGS = -F pe-x86-64
 else
+  TARGET_N = $(PROJECT).dll
+  TARGET_E = $(PROJECT)_e.dll
   RESFLAGS = -F pe-i386
 endif
 
@@ -98,6 +107,6 @@ $(C_INIT): $(bootscript4) $(scripts4) $(modules4)
 	$(LUAEXE) -erequire(\'embed\')([[$@]],[[$(EMBED_METHOD)]],[[$(LUAC)]],$(bootscript3),$(scripts3),$(modules3))
 
 clean:
-	del *.o *.dll luac.out $(C_INIT)
+	del *.o *.dll luac.out luajitc.out $(C_INIT)
 
 .PHONY: noembed embed clean all

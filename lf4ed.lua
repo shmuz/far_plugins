@@ -32,7 +32,7 @@ lf4ed = lf4ed or {}
 local CurrentConfig, _History, _ModuleDir
 
 local InternalLibs = { string=1,table=1,os=1,coroutine=1,math=1,io=1,debug=1,_G=1,package=1,
-                       far=1,bit64=1,unicode=1,win=1,editor=1,viewer=1,panel=1 }
+                       far=1,bit64=1,unicode=1,win=1,editor=1,viewer=1,panel=1,regex=1 }
 if rawget(_G, "jit") and jit.version then
   InternalLibs.jit, InternalLibs.bit, InternalLibs.ffi = 1, 1, 1
 end

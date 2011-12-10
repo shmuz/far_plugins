@@ -14,7 +14,7 @@ end
 local function GetNearestWord (pattern)
   local line = editor.GetString(nil, nil, 2)
   local pos = editor.GetInfo().CurPos + 1
-  local r = far.regex(pattern)
+  local r = regex.new(pattern)
   local start = 1
   while true do
     local from, to, word = r:find(line, start)
@@ -120,7 +120,7 @@ local function LuaScript (data)
   local chunk
   if data.bExternalScript then
     local fname = data.sExternalScript or ""
-    if not far.find(fname, "^([a-zA-Z]:)?[\\/]") then
+    if not regex.find(fname, "^([a-zA-Z]:)?[\\/]") then
       fname = editor.GetInfo().FileName:match("^.+\\") .. fname
     end
     chunk = assert(loadfile(fname))
@@ -180,7 +180,7 @@ local function ResultDialog (aHelpTopic, aData, result, minDigits)
 end
 
 -- NOTE: In order to obtain correct offsets, this function should use either
---       far.find, or unicode.utf8.cfind function.
+--       regex.find, or unicode.utf8.cfind function.
 local function BlockSum (history)
   local ei = assert(editor.GetInfo(), "EditorGetInfo failed")
   local block = editor.GetSelection()
@@ -189,7 +189,7 @@ local function BlockSum (history)
   local pattern = [[(\S[\w.]*)]]
 
   if block then
-    local regex = far.regex(pattern)
+    local regex = regex.new(pattern)
     for n = block.StartLine, block.EndLine do
       local s = editor.GetString (nil, n, 1)
       local start, _, sel = regex:find( s.StringText:sub(s.SelStart+1, s.SelEnd) )
@@ -198,7 +198,7 @@ local function BlockSum (history)
         local num = tonumber(sel)
         if num then
           sum = sum + num
-          local x = far.find(sel, "\\.")
+          local x = regex.find(sel, "\\.")
           if x then x_dot = x_start + x - 1 end
         end
       end
@@ -210,7 +210,7 @@ local function BlockSum (history)
       local num = tonumber(word)
       if num then
         sum = sum + num
-        local x = far.find(word, "\\.")
+        local x = regex.find(word, "\\.")
         if x then x_dot = x_start + x - 1 end
       end
     end
@@ -229,7 +229,7 @@ local function BlockSum (history)
     editor.InsertString()                           -- +
     local prefix = "="
     if x_dot then
-      local x = far.find(tostring(sum), "\\.")
+      local x = regex.find(tostring(sum), "\\.")
       if x then x_start = x_dot - (x - 1) end
     end
     if x_start then

@@ -116,7 +116,7 @@ local function PutLines(arr_compare, arr_index, arr_target, OnlySelection)
 end
 
 local function Column (subj, colnum, colpat)
-  for A in far.gmatch(subj, colpat) do
+  for A in regex.gmatch(subj, colpat) do
     if colnum == 1 then return A end
     colnum = colnum - 1
   end

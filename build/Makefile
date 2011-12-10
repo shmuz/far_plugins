@@ -1,20 +1,13 @@
 # LuaFAR for Editor: Makefile
 
-# adjust the line below according to your configuration
+# adjust the 2 lines below according to your configuration
+PROJECT = lf4ed
 COMMON_MAK = ../../common.mak
 
-ifeq ($(ARCH),-m64)
-  TARGET_N = lf4ed-x64.dll
-  TARGET_E = lf4ed_e-x64.dll
-else
-  TARGET_N = lf4ed.dll
-  TARGET_E = lf4ed_e.dll
-endif
-
 TARGET_M = $(path_plugin)/lf4ed_message.lua
-EMBED_METHOD = -strip
+EMBED_METHOD = strip
 
-bootscript = $(path_plugin)*lf4ed.lua
+bootscript = $(path_plugin)*$(PROJECT).lua
 
 scripts = \
   $(path_plugin)*_globalinfo.lua \
