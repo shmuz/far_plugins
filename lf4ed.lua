@@ -279,7 +279,7 @@ end
 
 local function KeyComb (Rec)
   local f = 0
-  local state = Rec.dwControlKeyState
+  local state = Rec.ControlKeyState
   local ALT   = bor(F.LEFT_ALT_PRESSED, F.RIGHT_ALT_PRESSED)
   local CTRL  = bor(F.LEFT_CTRL_PRESSED, F.RIGHT_CTRL_PRESSED)
   local SHIFT = F.SHIFT_PRESSED
@@ -287,7 +287,7 @@ local function KeyComb (Rec)
   if 0 ~= band(state, ALT) then f = bor(f, 0x01) end
   if 0 ~= band(state, CTRL) then f = bor(f, 0x02) end
   if 0 ~= band(state, SHIFT) then f = bor(f, 0x04) end
-  f = f .. "+" .. VK[Rec.wVirtualKeyCode%256]
+  f = f .. "+" .. VK[Rec.VirtualKeyCode%256]
   return f
 end
 
@@ -296,7 +296,7 @@ local function export_ProcessEditorInput (Rec)
   if (EventType==F.FARMACRO_KEY_EVENT) or (EventType==F.KEY_EVENT) then
     local item = _Plugin.HotKeyTable[KeyComb(Rec)]
     if item then
-      if Rec.bKeyDown then
+      if Rec.KeyDown then
         if type(item)=="number" then item = EditorMenuItems[item] end
         if item then RunMenuItem(item, {From="editor"}, item.action~=Configure) end
       end
