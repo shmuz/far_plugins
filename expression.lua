@@ -189,10 +189,10 @@ local function BlockSum (history)
   local pattern = [[(\S[\w.]*)]]
 
   if block then
-    local regex = regex.new(pattern)
+    local r = regex.new(pattern)
     for n = block.StartLine, block.EndLine do
       local s = editor.GetString (nil, n, 1)
-      local start, _, sel = regex:find( s.StringText:sub(s.SelStart+1, s.SelEnd) )
+      local start, _, sel = r:find( s.StringText:sub(s.SelStart+1, s.SelEnd) )
       if start then
         x_start = editor.RealToTab(nil, n, s.SelStart + start)
         local num = tonumber(sel)

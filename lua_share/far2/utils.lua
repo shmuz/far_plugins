@@ -38,19 +38,20 @@ local function OnError (msg)
     end
   end
 
-  local jumps, buttons = {}, "&OK"
+  local jumps, j, buttons = {}, 0, "&OK"
   msg = tostring(msg):gsub("[^\n]+",
     function(line)
       line = line:gsub("^\t", ""):gsub("(.-)%:(%d+)%:(%s*)",
         function(file, numline, space)
-          if #jumps < 10 then
+          if j < 10 then
             local file2 = file:sub(1,3) ~= "..." and file or repair(file:sub(4))
             if file2 then
               local name = file2:match('^%[string "(.*)"%]$')
               if not name or name=="all text" or name=="selection" then
-                jumps[#jumps+1] = { file=file2, line=tonumber(numline) }
-                buttons = buttons .. ";&" .. (#jumps)
-                return ("\16[J%d]:%s:%s:%s"):format(#jumps, file, numline, space)
+                j = j + 1
+                jumps[j] = { file=file2, line=tonumber(numline) }
+                buttons = buttons .. (j<10 and ";&" or ";") .. j
+                return ("\16[J%d]:%s:%s:%s"):format(j, file, numline, space)
               end
             end
           end
