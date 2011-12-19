@@ -141,7 +141,7 @@ local function DoSort (arr_compare, arr_index, arr_dialog)
       if v1 ~= v2 then
         if type(v1) == "string" then
           v1 = data.case and win.wcscmp(v1,v2) or
-            assert(win.CompareString(v1,v2,nil,"c"), "win.CompareString failed")
+            assert(win.CompareString(v1,v2,nil,"cS"), "win.CompareString failed")
           v2 = 0
         end
         if v1 > v2 then return data.rev end

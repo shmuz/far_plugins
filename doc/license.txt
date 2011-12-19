@@ -1,4 +1,4 @@
-License of LuaFAR for Editor v2.x.x
+License of LuaFAR for Editor v3.x.x
 ------------------------------------
 
 Copyright (C) Shmuel Zeigerman 2007-2011

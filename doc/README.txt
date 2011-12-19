@@ -1,11 +1,12 @@
-      LuaFAR for Editor v2.8.0
+      LuaFAR for Editor v3.0.0
   Set of utilities for FAR Editor
 ====================================
 
-1. Tested with FAR version 2.0 build 1801.
+1. Tested with FAR version 3.0 build 2297.
 
 2. Prerequisites:
-   LuaFAR binaries must be installed (a separate download).
+   LuaFAR binaries (lua5.1.dll and luafar3.dll, available as a separate
+   download) must be present under some directory on PATH.
 
 3. Installation:
    Create a directory under %FARHOME%\Plugins, extract files and subdirectories

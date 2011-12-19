@@ -5,7 +5,7 @@ Prerequisites for building
 ---------------------------
    *  MinGW (Minimalist GNU for Windows)
    *  Lua 5.1 interpreter and compiler: lua.exe, luac.exe
-   *  FAR 2.0 PluginSDK include files (plugin.hpp, ...)
+   *  FAR 3.0 PluginSDK include files: plugin.hpp, farcolor.hpp
    *  Lua 5.1 include files (lua.h, ...), or Lua 5.1 source directory
    *  LuaFAR source directory
 
@@ -21,10 +21,10 @@ What the target names mean:
    noembed  :  The generic LuaFAR plugin DLL is used.
                Lua scripts and modules should be copied into appropriate
                locations on the disk.
-               DLL name: luaplug.dll.
+               DLL name: lf4ed.dll.
 
    embed    :  Lua scripts and modules are merged into the plugin DLL.
-               DLL name: lf4ed.dll.
+               DLL name: lf4ed_e.dll.
 
 
 Steps required to build
@@ -60,7 +60,7 @@ Installation of non-embedded version of LuaFAR for Editor
 
 Run-time dependencies
 ----------------------
-lua5.1.dll and luafarw.dll must be present under some directory listed
+lua5.1.dll and luafar3.dll must be present under some directory listed
 within Windows %PATH%.
 
 

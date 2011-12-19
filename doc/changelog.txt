@@ -4,12 +4,13 @@
 
 2011-??-??, v3.0.0
   PLUGIN:
-      [*] Adaptation to new LuaFAR 3.0 API.
+      [*] Adaptation to Far 3.0 / LuaFAR 3.0 API.
       [*] Calling from macros via GUID instead of SysId.
       [-] "searchmenu" is not used by the plugin (but remains available
           to user scripts).
   Sort Lines:
       [*] Column pattern is Far regex (was: Lua regex).
+      [*] Added flag SORT_STRINGSORT to case-insensitive sort.
   Block Sum:
       [+] If no text is selected, the current line is processed.
   Lua Script:

@@ -67,7 +67,7 @@ C_INIT      = $(TARGET_E)_init.c
 OBJ_INIT    = $(TARGET_E)_init.o
 OBJ_PLUG_N  = $(TARGET_N)_plug.o
 OBJ_PLUG_E  = $(TARGET_E)_plug.o
-OBJ_RC      = $(patsubst %.rc,%.o,$(RCFILE))
+OBJ_RC      = $(patsubst %.rc,%$(ARCH).o,$(RCFILE))
 
 EXPORTS = $(addprefix -DEXPORT_,$(FAR_EXPORTS))
 
@@ -85,7 +85,7 @@ noembed: $(TARGET_N) $(TARGET_M)
 embed:   $(TARGET_E) $(TARGET_M)
 all:     noembed embed
 
-%.o : %.rc
+$(OBJ_RC): $(RCFILE)
 	windres $< -o $@ $(RESFLAGS)
 
 $(TARGET_N): $(OBJ_N) $(LIBS)
