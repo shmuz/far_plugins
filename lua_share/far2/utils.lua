@@ -110,17 +110,15 @@ local function RunInternalScript (name, ...)
 end
 
 local function LoadName (str)
-  str = str:gsub("%%", "%%%%"):gsub("%.", "\\")
+  str = str:gsub("[./]", "\\")
   for part in package.path:gmatch("[^;]+") do
-    local name = part:gsub("?", str)
+    local name = part:gsub("%?", str)
     local attr = win.GetFileAttr(name)
     if attr and not attr:find("d") then
-      local chunk, msg = loadfile(name)
-      if chunk then return chunk end
-      error(msg)
+      return assert(loadfile(name))
     end
   end
-  error(str.."\nfile not found")
+  error(str..": file not found")
 end
 
 -- @aItem.filename:  script file name

@@ -16,6 +16,7 @@ local M = require "lf4ed_message"
 local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
 local EditorSetPosition = editor.SetPosition
 local EditorSetString = editor.SetString
+local CompareString = win.CompareString
 
 -- Depends on: FAR API
 local function ErrMsg(msg, buttons)
@@ -132,7 +133,7 @@ local NC = function(n) return N(C(n)) end
 return function(a, i) _A=a return %s end
 ]]
 
--- depends on: FAR API
+-- depends on: win.wcscmp, win.CompareString
 local function DoSort (arr_compare, arr_index, arr_dialog)
   local function cmp(i1, i2)
     local a, b = arr_compare[i1], arr_compare[i2]
@@ -140,8 +141,7 @@ local function DoSort (arr_compare, arr_index, arr_dialog)
       local v1, v2 = data.expr(a, i1), data.expr(b, i2)
       if v1 ~= v2 then
         if type(v1) == "string" then
-          v1 = data.case and win.wcscmp(v1,v2) or
-            assert(win.CompareString(v1,v2,nil,"cS"), "win.CompareString failed")
+          v1 = assert(data.func(v1,v2), "compare function failed")
           v2 = 0
         end
         if v1 > v2 then return data.rev end
@@ -176,20 +176,28 @@ local function GetExpressions (aData)
     chunk()
   end
   local arr_dialog = {}
-  if aData.cbxUse1 then tinsert(arr_dialog, {
-      expr = compile(aData.edtExpr1, "Expression 1", env, aData.edtColPat),
-      rev = aData.cbxRev1 or false,
-      case = aData.cbxCase1 or false })
-  end
-  if aData.cbxUse2 then tinsert(arr_dialog, {
-      expr = compile(aData.edtExpr2, "Expression 2", env, aData.edtColPat),
-      rev = aData.cbxRev2 or false,
-      case = aData.cbxCase2 or false })
-  end
-  if aData.cbxUse3 then tinsert(arr_dialog, {
-      expr = compile(aData.edtExpr3, "Expression 3", env, aData.edtColPat),
-      rev = aData.cbxRev3 or false,
-      case = aData.cbxCase3 or false })
+  for i = 1,3 do
+    if aData["cbxUse"..i] then
+      local case, expr, rev = aData["cbxCase"..i], aData["edtExpr"..i], aData["cbxRev"..i]
+      local func
+      if case == true then
+        func = function(v1,v2) return CompareString(v1,v2,nil,"S") end
+      elseif case == 2 then
+        local flags, expr2 = expr:match("^:(.-):(.*)")
+        if flags then expr = expr2 else flags = "" end
+        if flags == "1" then
+          func = win.wcscmp
+        else
+          func = function(v1,v2) return CompareString(v1,v2,nil,flags) end
+        end
+      else -- if case == false; default
+        func = function(v1,v2) return CompareString(v1,v2,nil,"cS") end
+      end
+      tinsert(arr_dialog, {
+        expr = compile(expr, "Expression "..i, env, aData.edtColPat),
+        rev = rev or false,
+        func = func})
+    end
   end
   return arr_dialog
 end

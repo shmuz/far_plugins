@@ -182,7 +182,28 @@ criteria at a time.
     when multiple fields are used, upper fields have higher sorting
     priority.
 
- #Variables and functions#
+  #Switch "Case sensit."#
+    This three-state switch controls string compare. Most of the
+    time, the function CompareStringW is used. When the switch is
+    in the state [ ] or [x], the plugin passes the predetermined
+    flag values to the function.
+    When the switch is in the state [?], the flags are specified by
+    the user at the beginning of the expression, enclosed in colons.
+    The flag values are listed below:
+        #c#   NORM_IGNORECASE
+        #k#   NORM_IGNOREKANATYPE
+        #n#   NORM_IGNORENONSPACE
+        #s#   NORM_IGNORESYMBOLS
+        #w#   NORM_IGNOREWIDTH
+        #S#   SORT_STRINGSORT
+        #1#   Use wcscmp rather than CompareStringW. This flag must
+            not be used in conjunction with other flags.
+    Examples of flag specification:
+        #:cns:#
+        #:1:#
+        #::# (may be omitted)
+ 
+#Variables and functions#
 
     Expressions can use the following convenience variables
     and functions:

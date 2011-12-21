@@ -11,6 +11,7 @@
   Sort Lines:
       [*] Column pattern is Far regex (was: Lua regex).
       [*] Added flag SORT_STRINGSORT to case-insensitive sort.
+      [+] "Case-sensitive" check boxes made 3-state.
   Block Sum:
       [+] If no text is selected, the current line is processed.
   Lua Script:
