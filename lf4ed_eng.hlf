@@ -182,13 +182,16 @@ criteria at a time.
     when multiple fields are used, upper fields have higher sorting
     priority.
 
-  #Switch "Case sensit."#
-    This three-state switch controls string compare. Most of the
-    time, the function CompareStringW is used. When the switch is
-    in the state [ ] or [x], the plugin passes the predetermined
-    flag values to the function.
-    When the switch is in the state [?], the flags are specified by
-    the user at the beginning of the expression, enclosed in colons.
+  #"Case sensit." checkbox#
+    If the results of expression evaluations are of string type,
+    they are compared by the special functions. Most of the time,
+    the function CompareStringW is used, and in a separate case -
+    the function wcscmp.    
+    The three-state switch #Case sensit.# controls string compare.
+    When the switch is in the state [ ] or [x], the plugin passes
+    the predetermined flag values to the function CompareStringW.
+    When the switch is in the state [?], the flags are specified
+    by the user, preceding the expression and enclosed in colons.
     The flag values are listed below:
         #c#   NORM_IGNORECASE
         #k#   NORM_IGNOREKANATYPE
@@ -261,16 +264,19 @@ criteria at a time.
  #Example 3:#   a          [x] Case sensit.
     Sort lines alphabetically, case sensitive.
 
- #Example 4:#   C(2)
+ #Example 4:#   :1:a       [?] Case sensit.
+    Sort lines alphabetically using function wcscmp.
+
+ #Example 5:#   C(2)
     Sort lines according to alphabetical order in the 2-nd column.
 
- #Example 5:#   N(a)
+ #Example 6:#   N(a)
     Sort lines (containing one number per line) numerically.
 
- #Example 6:#   NC(3)
+ #Example 7:#   NC(3)
     Sort lines according to numerical order in the 3-rd column.
 
- #Example 7:#   C(2)      [ ] Reverse
+ #Example 8:#   C(2)      [ ] Reverse
               NC(1)     [x] Reverse
               C(4)      [x] Reverse   [x] Case sensit.
     Sort lines according to:
@@ -280,36 +286,36 @@ criteria at a time.
        (c) reverse alphabetical order in the 4-th column; case
            sensitive - lowest priority;
 
- #Example 8:#   NC(2) * NC(3)
+ #Example 9:#   NC(2) * NC(3)
     Sort lines according to product of numbers of 2-nd and 3-rd
     columns.
 
 ^\1FAdvanced Examples (knowledge of Lua is required)\-
 
- #Example 9:#   a:sub(10,20)
+ #Example 10:#   a:sub(10,20)
     Sort lines according to alphabetical order in the substring
     [10,20].
 
- #Example 10:#  a:match"{.-}" or ""
+ #Example 11:#  a:match"{.-}" or ""
     Sort lines according to alphabetical order within the 1-st {}.
 
- #Example 11:#  a:len()
+ #Example 12:#  a:len()
     Sort lines according to their lengths.
 
- #Example 12:#  a:reverse()
+ #Example 13:#  a:reverse()
     Sort lines in the alphabetical order of their reversed values.
 
- #Example 13:#  math.max(NC(1), NC(2), NC(3))
+ #Example 14:#  math.max(NC(1), NC(2), NC(3))
     Sort lines according to the maximum number in their first three
     columns.
 
- #Example 14:#  -i
+ #Example 15:#  -i
     Inverse order of lines in the selection.
 
- #Example 15:#  i%2==0 and i-1 or i+1
+ #Example 16:#  i%2==0 and i-1 or i+1
     Swap lines in every pair of lines in the selection.
 
- #Example 16:#  i%2==1 and i-I or i
+ #Example 17:#  i%2==1 and i-I or i
     First place all lines with odd line numbers, then all lines with even ones.
 
  ~Contents~@Contents@

@@ -133,7 +133,8 @@ local NC = function(n) return N(C(n)) end
 return function(a, i) _A=a return %s end
 ]]
 
--- depends on: win.wcscmp, win.CompareString
+-- Depends on: data names, namely, on the following strings:
+-- "expr", "func", "rev".
 local function DoSort (arr_compare, arr_index, arr_dialog)
   local function cmp(i1, i2)
     local a, b = arr_compare[i1], arr_compare[i2]
@@ -162,6 +163,7 @@ local function compile(expr, fieldname, env, colpat)
   return func(Column, colpat, far.LLowerBuf)
 end
 
+-- Depends on: win.wcscmp, win.CompareString
 -- Depends on: data names, namely, on the following strings:
 --    edtColPat
 --    cbxFileName, edtFileName
