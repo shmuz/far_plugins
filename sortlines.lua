@@ -3,8 +3,6 @@
  Start: 2008-10-17 by Shmuel Zeigerman
 --]]
 
-local Package = {}
-
 -- Depends on: FAR API
 local sd = require "sortdialog"
 local SortDialog = sd.SortDialog
@@ -205,7 +203,7 @@ local function GetExpressions (aData)
 end
 
 -- generic
-function Package.SortWithRawData (aData)
+local function SortWithRawData (aData)
   local columntype = IsColumnType()
   local arr_dialog = GetExpressions(aData)
   if #arr_dialog == 0 then
@@ -225,12 +223,14 @@ function Package.SortWithRawData (aData)
 end
 
 -- generic
-function Package.SortWithDialog (aArg)
+local function SortWithDialog (aArg)
   local data = aArg[1]
   if SortDialog(data, IsColumnType()) then
-    Package.SortWithRawData (data)
+    SortWithRawData(data)
   end
 end
 
-return Package
-
+return {
+  SortWithRawData = SortWithRawData,
+  SortWithDialog = SortWithDialog,
+}

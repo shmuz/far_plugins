@@ -33,7 +33,6 @@
        *  @return:       serialized history object
 --]=]
 
-local Package = {}
 local serial  = require "serial"
 
 local history = {}
@@ -82,7 +81,7 @@ local function new (chunk)
   return setmetatable(self, meta)
 end
 
-function Package.newfile (FileName)
+local function newfile (FileName)
   assert(type(FileName) == "string")
   local self = new(loadfile(FileName))
   self.FileName = FileName
@@ -98,7 +97,7 @@ local function GetSubkey (sett, strSubkey)
   return iSubkey
 end
 
-function Package.newsettings (strSubkey, strName)
+local function newsettings (strSubkey, strName)
   far.FreeSettings()
   local sett = far.CreateSettings()
   if sett then
@@ -125,5 +124,18 @@ function history:save()
   end
 end
 
-return Package
+local function dialoghistory (name, from, to)
+  local obj = far.CreateSettings("far")
+  if obj then
+    local root = obj:OpenSubkey(0, name) -- e.g., "NewFolder"
+    local data = root and obj:Enum(root, from, to)
+    obj:Free()
+    return data
+  end
+end
 
+return {
+  newfile = newfile,
+  newsettings = newsettings,
+  dialoghistory = dialoghistory,
+}
