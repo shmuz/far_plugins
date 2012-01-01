@@ -398,7 +398,7 @@ local function ExecuteCommandLine (tActions, tCommands, sFrom, fConfig)
       elseif v.opt == "r" then
         local path = v.param
         if not path:find("^[a-zA-Z]:") then
-          local panelDir = panel.GetPanelDir(nil, 1)
+          local panelDir = panel.GetPanelDirectory(nil, 1).Name
           if path:find("^[\\/]") then
             path = panelDir:sub(1,2) .. path
           else

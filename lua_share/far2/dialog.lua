@@ -1,6 +1,5 @@
 -- Dialog module
 
-local Package = {}
 local F = far.Flags
 local SendDlgMessage = far.SendDlgMessage
 
@@ -16,7 +15,6 @@ local function CheckItemType(item, ...)
   end
   return false
 end
-Package.CheckItemType = CheckItemType
 
 
 -- Bind dialog item names (see struct FarDialogItem) to their indexes.
@@ -111,11 +109,11 @@ local dialog_meta = {
 
 
 -- Dialog constructor
-function Package.NewDialog ()
+local function NewDialog ()
   return setmetatable ({ [mapkey]={} }, dialog_meta)
 end
 
-function Package.LoadData (aDialog, aData)
+local function LoadData (aDialog, aData)
   for _,item in ipairs(aDialog) do
     if not (item._noautoload or item._noauto) then
       local v = aData[item.name]
@@ -132,7 +130,7 @@ function Package.LoadData (aDialog, aData)
   end
 end
 
-function Package.SaveData (aDialog, aData)
+local function SaveData (aDialog, aData)
   for _,item in ipairs(aDialog) do
     if not (item._noautosave or item._noauto) then
       if CheckItemType(item, "DI_CHECKBOX", "DI_RADIOBUTTON") then
@@ -148,7 +146,7 @@ function Package.SaveData (aDialog, aData)
   end
 end
 
-function Package.LoadDataDyn (hDlg, aDialog, aData)
+local function LoadDataDyn (hDlg, aDialog, aData)
   for _,item in ipairs(aDialog) do
     if not (item._noautoload or item._noauto) then
       local name = item.name
@@ -163,7 +161,7 @@ function Package.LoadDataDyn (hDlg, aDialog, aData)
   end
 end
 
-function Package.SaveDataDyn (hDlg, aDialog, aData)
+local function SaveDataDyn (hDlg, aDialog, aData)
   for _,item in ipairs(aDialog) do
     if not (item._noautosave or item._noauto) then
       if CheckItemType(item, "DI_CHECKBOX", "DI_RADIOBUTTON") then
@@ -175,7 +173,14 @@ function Package.SaveDataDyn (hDlg, aDialog, aData)
   end
 end
 
-return Package
+return {
+  CheckItemType = CheckItemType,
+  NewDialog = NewDialog,
+  LoadData = LoadData,
+  SaveData = SaveData,
+  LoadDataDyn = LoadDataDyn,
+  SaveDataDyn = SaveDataDyn,
+}
 
 -- Adding item example:
 -- dlg = dialog.NewDialog()
