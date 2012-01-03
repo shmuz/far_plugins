@@ -24,7 +24,8 @@ modules = \
   $(path_share)*far2/dialog.lua     \
   $(path_share)*far2/utils.lua      \
   $(path_share)*far2/searchmenu.lua \
-  $(path_share)*far2/makelang.lua
+  $(path_share)*far2/makelang.lua   \
+  $(path_share)*far2/message.lua
 
 FAR_EXPORTS = \
   CONFIGURE           \

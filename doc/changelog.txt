@@ -2,7 +2,7 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
-2012-01-??, v3.0.0
+2012-01-04, v3.0.0
   PLUGIN:
       [*] Adaptation to Far 3.0 / LuaFAR 3.0 API.
       [*] Calling from macros via GUID instead of SysId.
