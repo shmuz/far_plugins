@@ -1,24 +1,69 @@
 -- started: 2011-02-20
-local standard = [[C:\Program Files\Far3\Plugins\Standard\]]
-local separate = [[C:\Program Files\Far3\Plugins\Separate\]]
 
-local items = {
-  { text="FTP client",         path=standard.."FTP\\FarFtp.dll" },
-  { text="Search and Replace", path=separate.."S_and_R\\s_and_r.dll" },
-  { separator=true },
+-- Get space for this script's data. Kept alive between this script's invocations.
+local ScriptId = win.Uuid("263e6208-e5b2-4bf7-8953-59da207279c7")
+if not rawget(_G, ScriptId) then rawset(_G, ScriptId, {}) end
+local T = _G[ScriptId]
+
+-- A table for plugins' data. Each plugin is keyed here by its GUID.
+T.plugins = T.plugins or {}
+
+-- Reset all handles, as they may be closed already.
+for k,v in pairs(T.plugins) do v.handle = nil end
+
+-- Update plugins' data with the fresh info.
+for _, handle in ipairs(far.GetPlugins()) do
+  local info = far.GetPluginInformation(handle)
+  info.handle = handle
+  T.plugins[info.GInfo.Guid] = info
+end
+
+-- Create menu items.
+local items = {}
+for k,v in pairs(T.plugins) do
+  items[#items+1] = {
+    text = v.GInfo.Title,
+    info = v,
+    handle = v.handle,
+    grayed = not v.handle,
+  }
+end
+
+-- Sort menu items alphabetically.
+table.sort(items,
+  function(a,b) return win.CompareString(a.text, b.text, nil, "cS") < 0 end)
+
+local breakkeys = {
+  { BreakKey="RETURN", command="load", success="Loaded", fail="Failed to load" },
+  { BreakKey="INSERT", command="forcedload", success="Force-loaded", fail="Failed to force-load" },
+  { BreakKey="DELETE", command="unload", success="Unloaded", fail="Failed to unload" },
 }
-local bkeys = {
-  { BreakKey="RETURN", command="PCTL_LOADPLUGIN", success="Loaded", fail="Failed to load" },
-  { BreakKey="INSERT", command="PCTL_FORCEDLOADPLUGIN", success="Force-loaded", fail="Failed to force-load" },
-  { BreakKey="DELETE", command="PCTL_UNLOADPLUGIN", success="Unloaded", fail="Failed to unload" },
+
+local properties = {
+  Title="Load/Unload Plugins", Bottom="Enter=load, Ins=force-load, Del=unload",
 }
-local props = {
-  Title="Plugins", Bottom="Enter/Ins/Del",
-}
-local item, pos = far.Menu(props, items, bkeys)
-if item then
-  local bItem = item.BreakKey and item or bkeys[1]
+
+while true do
+  local item, pos = far.Menu(properties, items, breakkeys)
+  if not item then break end
+  properties.SelectIndex = pos
+  local bItem = item.BreakKey and item or breakkeys[1]
   local mItem = items[pos]
-  local result = far.PluginsControl(nil, bItem.command, "PLT_PATH", mItem.path)
-  far.Message(result and bItem.success or bItem.fail, mItem.text)
+  local result
+  if bItem.command == "load" then
+    mItem.handle = far.LoadPlugin("PLT_PATH", mItem.info.ModuleName)
+    result = mItem.handle and true
+    mItem.grayed = not result
+  elseif bItem.command == "forcedload" then
+    mItem.handle = far.ForcedLoadPlugin("PLT_PATH", mItem.info.ModuleName)
+    result = mItem.handle and true
+    mItem.grayed = not result
+  elseif bItem.command == "unload" then
+    if mItem.handle then
+      result = far.UnloadPlugin(mItem.handle)
+      if result then mItem.handle = nil end
+      mItem.grayed = result
+    end
+  end
+  --far.Message(result and bItem.success or bItem.fail, mItem.text)
 end

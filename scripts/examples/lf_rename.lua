@@ -4,6 +4,7 @@
 local Title = "LF Rename"
 local RegPath = "LuaFAR\\RenameFiles\\"
 local far2_dialog = require "far2.dialog"
+local far2_message = require "far2.message"
 local F = far.Flags
 
 local function ErrorMsg (text, title)
@@ -251,24 +252,45 @@ local function UserDialog (aData, aList, aHelpTopic)
   return close_params
 end
 
+local function GetUserChoice (aTitle, s_found, s_rep)
+  local color = far.AdvControl("ACTL_GETCOLOR", far.Colors.COL_DIALOGTEXT)
+  color = 15-color.ForegroundColor + 16*(15-color.BackgroundColor)
+  local c = far2_message.msgbox(
+    {
+      "Rename\n",
+      { text=s_found, color=color },"\n",
+      "to\n",
+      { text=s_rep, color=color },
+    },
+    aTitle, "&Rename;&All;&Skip;&Cancel", "c", nil,
+    win.Uuid("b527e9e5-25c0-4572-952d-3002b57a5463"))
+  return c==0 and "yes" or c==1 and "all" or c==2 and "no" or "cancel"
+end
+
 local function DoAction (aParams, aList, aDir, aLog)
   local Regex = aParams.Regex
   local fReplace = GetReplaceFunction(aParams.ReplacePat)
   local nFound, nReps = 0, 0
+  local sChoice
   for i, oldname in ipairs(aList) do
     local sLine, nF, nR = NewGsub(oldname, Regex, fReplace, i)
     nFound, nReps = nFound + nF, nReps + nR
     if sLine ~= oldname then
-      local res, err = win.RenameFile(aDir..oldname, aDir..sLine)
-      aLog:write('"', oldname, '" >> "', sLine, '"')
-      if err then
-        err = string.gsub(err, "[\r\n]+", " ")
-        aLog:write(" >> ERROR: ", err)
+      if sChoice ~= "all" then
+        sChoice = GetUserChoice(Title, oldname, sLine)
+        if sChoice == "cancel" then break end
       end
-      aLog:write("\n")
+      if sChoice ~= "no" then
+        local res, err = win.RenameFile(aDir..oldname, aDir..sLine)
+        aLog:write('"', oldname, '" >> "', sLine, '"')
+        if err then
+          err = string.gsub(err, "[\r\n]+", " ")
+          aLog:write(" >> ERROR: ", err)
+        end
+        aLog:write("\n")
+      end
     end
   end
-  -----------------------------------------------------------------------------
   return nFound, nReps
 end
 

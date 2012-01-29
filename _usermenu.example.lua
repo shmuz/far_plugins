@@ -21,5 +21,5 @@ AddToMenu ("evp", "Hello, Lua", nil, "scripts/examples/hello")
 -- lfe:ren
 AddCommand("ren", "scripts/examples/lf_rename")
 
--- The following line adds another user menu file from a "scripts" subtree.
+-- Add another user menu file from the "scripts" subtree.
 AddUserFile ("scripts/examples/_usermenu.lua")

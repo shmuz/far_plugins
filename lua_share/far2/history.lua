@@ -39,14 +39,7 @@ local history = {}
 local meta = { __index = history }
 
 function history:serialize()
-  local arr, n = {}, 0
-  serial.Save("Data", self.Data, {},
-    function(...)
-      for i=1, select("#", ...) do
-        n = n + 1; arr[n] = select(i, ...)
-      end
-    end)
-  return table.concat(arr)
+  return serial.SaveToString("Data", self.Data)
 end
 
 function history:field (fieldname)
@@ -112,7 +105,7 @@ end
 
 function history:save()
   if self.FileName then
-    serial.SaveInFile (self.FileName, "Data", self.Data)
+    serial.SaveToFile (self.FileName, "Data", self.Data)
   elseif self.Name then
     far.FreeSettings()
     local sett = far.CreateSettings()
