@@ -45,12 +45,27 @@ id=54
 lv=1
 dt=Text
 nm=Changelog
-mtime=3505721751
+mtime=3537776305
 <article>
 #_<markdown>
 #_    ------------------------------------------------------------------
 #_      Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 #_    ------------------------------------------------------------------
+#_
+#_    2012-01-04, v3.0.0
+#_      PLUGIN:
+#_          [*] Adaptation to Far 3.0 / LuaFAR 3.0 API.
+#_          [*] Calling from macros via GUID instead of SysId.
+#_          [-] "searchmenu" is not used by the plugin (but remains available
+#_              to user scripts).
+#_      Sort Lines:
+#_          [*] Column pattern is Far regex (was: Lua regex).
+#_          [*] Added flag SORT_STRINGSORT to case-insensitive sort.
+#_          [+] "Case-sensitive" check boxes made 3-state.
+#_      Block Sum:
+#_          [+] If no text is selected, the current line is processed.
+#_      Lua Script:
+#_          [+] External script can be specified (via Script Parameters dialog).
 #_
 #_    2011-02-02, v2.8.0
 #_      PLUGIN:

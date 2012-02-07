@@ -308,15 +308,15 @@ local function export_ProcessEditorInput (Rec)
   end
 end
 
-local function export_ProcessEditorEvent (Event, Param)
+local function export_ProcessEditorEvent (EditorId, Event, Param)
   for _,f in ipairs(_Plugin.Handlers.EditorEvent) do
-    f(Event, Param)
+    f(EditorId, Event, Param)
   end
 end
 
-local function export_ProcessViewerEvent (Event, Param)
+local function export_ProcessViewerEvent (ViewerId, Event, Param)
   for _,f in ipairs(_Plugin.Handlers.ViewerEvent) do
-    f(Event, Param)
+    f(ViewerId, Event, Param)
   end
 end
 

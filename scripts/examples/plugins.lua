@@ -1,6 +1,6 @@
 -- started: 2011-02-20
 
--- Get space for this script's data. Kept alive between this script's invocations.
+-- Get space for this script's data. Kept alive between the script's invocations.
 local ScriptId = win.Uuid("263e6208-e5b2-4bf7-8953-59da207279c7")
 if not rawget(_G, ScriptId) then rawset(_G, ScriptId, {}) end
 local T = _G[ScriptId]
@@ -22,7 +22,7 @@ end
 local items = {}
 for k,v in pairs(T.plugins) do
   items[#items+1] = {
-    text = v.GInfo.Title,
+    text = v.PInfo.PluginMenu.Strings[1] or v.GInfo.Title,
     info = v,
     handle = v.handle,
     grayed = not v.handle,
@@ -60,9 +60,14 @@ while true do
     mItem.grayed = not result
   elseif bItem.command == "unload" then
     if mItem.handle then
-      result = far.UnloadPlugin(mItem.handle)
-      if result then mItem.handle = nil end
-      mItem.grayed = result
+      local GInfo = export.GetGlobalInfo()
+      if GInfo.Guid ~= mItem.info.GInfo.Guid then
+        result = far.UnloadPlugin(mItem.handle)
+        if result then mItem.handle = nil end
+        mItem.grayed = result
+      else
+        far.Message("\nI'm running this script and cannot unload myself !!!\n", GInfo.Title, nil, "w")
+      end
     end
   end
   --far.Message(result and bItem.success or bItem.fail, mItem.text)
