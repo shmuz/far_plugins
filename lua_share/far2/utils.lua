@@ -5,13 +5,14 @@ local band, bor, bnot = bit64.band, bit64.bor, bit64.bnot
 local PluginDir = far.PluginStartupInfo().ModuleName:match(".*\\")
 
 local function CheckLuafarVersion (reqVersion, msgTitle)
-  local v1, v2 = far.LuafarVersion(true)
-  local r1, r2 = reqVersion[1], reqVersion[2]
-  if (v1 > r1) or (v1 == r1 and v2 >= r2) then return true end
+  local v1, v2, v3 = far.LuafarVersion(true)
+  local r1, r2, r3 = reqVersion[1], reqVersion[2] or 0, reqVersion[3] or 0
+  if v1 > r1 or v1 == r1 and (v2 > r2 or v2 == r2 and v3 >= r3) then
+    return true
+  end
   far.Message(
-    ("LuaFAR %s or newer is required\n(loaded version is %s)")
-    :format(reqVersion, far.LuafarVersion()),
-    msgTitle, ";Ok", "w")
+    ("LuaFAR %d.%d.%d or newer is required\n(loaded version is %s)")
+    :format(r1, r2, r3, far.LuafarVersion()), msgTitle, ";Ok", "w")
   return false
 end
 
@@ -441,20 +442,16 @@ local function ProcessCommandLine (sCommandLine, tCommands, sFrom, fConfig)
 end
 
 local function OpenMacroOrCommandLine (aFrom, aItem, aCommandTable, fConfig)
-  if band(aFrom, bnot(F.OPEN_FROM_MASK)) ~= 0 then
-    -- called from macro
-    if band(aFrom, F.OPEN_FROMMACRO) ~= 0 then
-      aFrom = band(aFrom, bnot(F.OPEN_FROMMACRO))
-      if band(aFrom, F.OPEN_FROMMACRO_MASK) == F.OPEN_FROMMACROSTRING then
-        local map = {
-          [F.MACROAREA_SHELL]  = "panels",
-          [F.MACROAREA_EDITOR] = "editor",
-          [F.MACROAREA_VIEWER] = "viewer",
-          [F.MACROAREA_DIALOG] = "dialog",
-        }
-        local lowByte = band(aFrom, F.OPEN_FROM_MASK)
-        ProcessCommandLine(aItem, aCommandTable, map[lowByte] or aFrom, fConfig)
-      end
+  if aFrom == F.OPEN_FROMMACRO then
+    if aItem.Type == F.FMVT_STRING then
+      local map = {
+        [F.MACROAREA_SHELL]  = "panels",
+        [F.MACROAREA_EDITOR] = "editor",
+        [F.MACROAREA_VIEWER] = "viewer",
+        [F.MACROAREA_DIALOG] = "dialog",
+      }
+      local area = far.MacroGetArea()
+      ProcessCommandLine(aItem.Value, aCommandTable, map[area] or aFrom, fConfig)
     end
     return true
   elseif aFrom == F.OPEN_COMMANDLINE then

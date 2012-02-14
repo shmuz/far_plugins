@@ -334,7 +334,7 @@ needs to be debugged.
  #[x] Always reload on 'require'#
 
     When Lua code 'require's some library first time, it is loaded from the
-disk. Subsequent 'rire's of the same library return it from the memory.
+disk. Subsequent 'require's of the same library return it from the memory.
 With this option checked, libraries are always loaded from the disk (this may
 be needed when debugging a library).
 
