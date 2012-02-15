@@ -443,7 +443,8 @@ end
 
 local function OpenMacroOrCommandLine (aFrom, aItem, aCommandTable, fConfig)
   if aFrom == F.OPEN_FROMMACRO then
-    if aItem.Type == F.FMVT_STRING then
+    local arg1 = aItem[1]
+    if arg1 and arg1.Type == F.FMVT_STRING then
       local map = {
         [F.MACROAREA_SHELL]  = "panels",
         [F.MACROAREA_EDITOR] = "editor",
@@ -451,7 +452,7 @@ local function OpenMacroOrCommandLine (aFrom, aItem, aCommandTable, fConfig)
         [F.MACROAREA_DIALOG] = "dialog",
       }
       local area = far.MacroGetArea()
-      ProcessCommandLine(aItem.Value, aCommandTable, map[area] or aFrom, fConfig)
+      ProcessCommandLine(arg1.Value, aCommandTable, map[area] or aFrom, fConfig)
     end
     return true
   elseif aFrom == F.OPEN_COMMANDLINE then

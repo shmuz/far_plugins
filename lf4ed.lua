@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- LuaFAR for Editor: main script
 -------------------------------------------------------------------------------
-local MinLuafarVersion = { 3,0,4 }
+local MinLuafarVersion = { 3,0,5 }
 
 -- CONFIGURATION : keep it at the file top !!
 local DefaultConfig = {
