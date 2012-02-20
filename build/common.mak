@@ -8,7 +8,6 @@ ARCH = -m32
 # Root work directory
 WORKDIR = s:/progr/work
 path_share = $(WORKDIR)/lua_share
-path_plugin = ..
 
 # Location of LuaFAR source directory
 PATH_LUAFARSRC = $(WORKDIR)/luafar/luafar_unicode/src
@@ -36,12 +35,12 @@ endif
 #------------------------------------ END OF USER'S SETTINGS -----------------
 
 ifeq ($(ARCH),-m64)
-  TARGET_N = $(PROJECT)-x64.dll
-  TARGET_E = $(PROJECT)_e-x64.dll
+  T_NOEMBED = $(PROJECT)-x64.dll
+  T_EMBED = $(PROJECT)_e-x64.dll
   RESFLAGS = -F pe-x86-64
 else
-  TARGET_N = $(PROJECT).dll
-  TARGET_E = $(PROJECT)_e.dll
+  T_NOEMBED = $(PROJECT).dll
+  T_EMBED = $(PROJECT)_e.dll
   RESFLAGS = -F pe-i386
 endif
 
@@ -58,15 +57,16 @@ bootscript3 = [[$(bootscript)]]
 scripts3    = $(subst $(space),$(comma),$(scripts2))
 modules3    = $(subst $(space),$(comma),$(modules2))
 
-bootscript4 = $(subst *,/,$(bootscript))
-scripts4    = $(subst *,/,$(scripts))
-modules4    = $(subst *,/,$(modules))
+bootscript4 = $(subst *,\,$(bootscript))
+scripts4    = $(subst *,\,$(scripts))
+modules4    = $(subst *,\,$(modules))
 
-LUAPLUG     = $(PATH_LUAFARSRC)/luaplug.c
-C_INIT      = $(TARGET_E)_init.c
-OBJ_INIT    = $(TARGET_E)_init.o
-OBJ_PLUG_N  = $(TARGET_N)_plug.o
-OBJ_PLUG_E  = $(TARGET_E)_plug.o
+GLOBINFO    = $(path_plugin)\_globalinfo.lua
+LUAPLUG     = $(PATH_LUAFARSRC)\luaplug.c
+C_INIT      = $(T_EMBED)_init.c
+OBJ_INIT    = $(T_EMBED)_init.o
+OBJ_PLUG_N  = $(T_NOEMBED)_plug.o
+OBJ_PLUG_E  = $(T_EMBED)_plug.o
 OBJ_RC      = $(patsubst %.rc,%$(ARCH).o,$(RCFILE))
 
 EXPORTS = $(addprefix -DEXPORT_,$(FAR_EXPORTS))
@@ -81,20 +81,17 @@ CC = gcc
 LIBS    = $(LUADLL) $(LUAFARDLL)
 LDFLAGS = -Wl,--kill-at -shared -s $(ARCH)
 
-noembed: $(TARGET_N) $(TARGET_M)
-embed:   $(TARGET_E) $(TARGET_M)
+noembed: $(T_NOEMBED) $(T_MESSAGE) $(GLOBINFO) $(HELP)
+embed:   $(T_EMBED) $(T_MESSAGE) $(HELP)
 all:     noembed embed
 
-$(OBJ_RC): $(RCFILE)
-	windres $< -o $@ $(RESFLAGS)
-
-$(TARGET_N): $(OBJ_N) $(LIBS)
+$(T_NOEMBED): $(OBJ_N) $(LIBS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-$(TARGET_E): $(OBJ_E) $(LIBS)
+$(T_EMBED): $(OBJ_E) $(LIBS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-$(TARGET_M): $(addprefix $(path_plugin)/,$(TEMPL))
+$(T_MESSAGE): $(addprefix $(path_plugin)/,$(TEMPL))
 	cd $(path_plugin) && $(LUAEXE) -epackage.path='$(path_share_abs)/?.lua' $(TEMPL_SCR) $(TEMPL)
 
 $(OBJ_PLUG_N): $(LUAPLUG)
@@ -103,10 +100,29 @@ $(OBJ_PLUG_N): $(LUAPLUG)
 $(OBJ_PLUG_E): $(LUAPLUG)
 	$(CC) -c $< -o $@ $(CFLAGS_E)
 
+$(OBJ_RC): $(RCFILE) version.h
+	windres $< -o $@ $(RESFLAGS)
+
 $(C_INIT): $(bootscript4) $(scripts4) $(modules4)
 	$(LUAEXE) -erequire(\'embed\')([[$@]],[[$(EMBED_METHOD)]],[[$(LUAC)]],$(bootscript3),$(scripts3),$(modules3))
 
+version.h release.mak $(GLOBINFO) $(HELP) : % : %.mcr define.lua
+	$(LUAEXE) -erequire([[macro]])([[define.lua]],[[$<]],[[$@]])
+
+### Release section ##########################################################
+release: release.mak
+	$(MAKE) -f$< all
+
+srelease: release.mak
+	$(MAKE) -f$< src
+
+brelease: release.mak
+	$(MAKE) -f$< bin
+
+##############################################################################
+
 clean:
 	del *.o *.dll luac.out luajitc.out $(C_INIT)
+	del release.mak version.h
 
-.PHONY: noembed embed clean all
+.PHONY: noembed embed clean all release srelease brelease

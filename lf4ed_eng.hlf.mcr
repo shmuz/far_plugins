@@ -3,7 +3,7 @@
 .Options CtrlColorChar=\
 
 @Contents
-$ #LuaFAR for Editor (version 3.0) - Help Contents -#
+$ #LuaFAR for Editor (version #{VER_STRING}) - Help Contents -#
  LuaFAR for Editor is a collection of utilities that implement various
 actions controlling the work of FAR's Editor. The utilities are written in Lua
 programming language.

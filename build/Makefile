@@ -1,10 +1,11 @@
 # LuaFAR for Editor: Makefile
 
-# adjust the 2 lines below according to your configuration
+# adjust the 3 lines below according to your configuration
 PROJECT = lf4ed
-COMMON_MAK = ../../common.mak
+path_plugin = ..
+COMMON_MAK = $(path_plugin)/../common.mak
 
-TARGET_M = $(path_plugin)/lf4ed_message.lua
+T_MESSAGE = $(path_plugin)/lf4ed_message.lua
 EMBED_METHOD = strip
 
 bootscript = $(path_plugin)*$(PROJECT).lua
@@ -38,5 +39,6 @@ FAR_EXPORTS = \
 RCFILE    = lf4ed.rc
 TEMPL     = lf4ed_lang.templ
 TEMPL_SCR = lf4ed_lang.lua
+HELP      = $(path_plugin)\lf4ed_eng.hlf $(path_plugin)\lf4ed_rus.hlf
 
 include $(COMMON_MAK)
