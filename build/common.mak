@@ -50,8 +50,8 @@ comma:= ,
 empty:=
 space:= $(empty) $(empty)
 
-scripts2 = [[-s]],$(addsuffix ]],$(addprefix [[,$(scripts)))
-modules2 = [[-m]],$(addsuffix ]],$(addprefix [[,$(modules)))
+scripts2 = $(addsuffix ]],$(addprefix [[,$(scripts)))
+modules2 = $(addsuffix ]],$(addprefix [[,$(modules)))
 
 bootscript3 = [[$(bootscript)]]
 scripts3    = $(subst $(space),$(comma),$(scripts2))
@@ -104,7 +104,9 @@ $(OBJ_RC): $(RCFILE) version.h
 	windres $< -o $@ $(RESFLAGS)
 
 $(C_INIT): $(bootscript4) $(scripts4) $(modules4)
-	$(LUAEXE) -erequire(\'embed\')([[$@]],[[$(EMBED_METHOD)]],[[$(LUAC)]],$(bootscript3),$(scripts3),$(modules3))
+	$(LUAEXE) -e "require('embed')\
+	  ([[$@]], [[$(EMBED_METHOD)]], [[$(LUAC)]],\
+	  $(bootscript3), {$(scripts3)}, {$(modules3)})"
 
 version.h release.mak $(GLOBINFO) $(HELP) : % : %.mcr define.lua
 	$(LUAEXE) -erequire([[macro]])([[define.lua]],[[$<]],[[$@]])

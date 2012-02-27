@@ -83,19 +83,27 @@ end
 
 local function addfiles(target, files, method, compiler)
   local strip = (method == "strip") and require "lstrip51"
+  local diet = (method == "luasrcdiet") and require "luasrcdiet"
   for _, f in ipairs(files) do
     local s
     local fullname = f.path .."\\".. f.name
-    if method == "plain" then
-      s = readfile(fullname)
-    elseif method == "strip" then
+    if method == "strip" then
       s = assert(strip("fsk", fullname))
+    elseif method == "luasrcdiet" then
+      if jit then
+        diet(fullname, "-o", "luac.out", "--noopt-emptylines", "--quiet", "--noopt-binequiv")
+      else
+        diet(fullname, "-o", "luac.out", "--noopt-emptylines", "--quiet")
+      end
+      s = readfile("luac.out", "rb")
+    elseif method == "luac" then
+      assert(0==os.execute((compiler or "luac").." -o luac.out -s "..fullname))
+      s = readfile("luac.out", "rb")
     elseif method == "luajit" then
       assert(0==os.execute((compiler or "luajit").." -b -t raw -s "..fullname.." luajitc.out"))
       s = readfile("luajitc.out", "rb")
-    else
-      assert(0==os.execute((compiler or "luac").." -o luac.out -s "..fullname))
-      s = readfile("luac.out", "rb")
+    else -- "plain"
+      s = readfile(fullname)
     end
     target:write("static ", bin2c(s, arrname(f)), "\n")
   end
@@ -157,25 +165,27 @@ int preload_%s (lua_State *L)
 end
 
 local function decode(target, arg, boot)
-  local file = { boot=boot }
-  file.path, file.name = arg:match("(.+)%*(.+)")
-  if file.path == nil then error("bad argument: "..arg) end
-  table.insert(target, file)
+  local path, name = arg:match("(.+)%*(.+)")
+  if path == nil then path, name = arg:match("(.+)[/\\](.+)") end
+  if path == nil then error("bad argument: "..arg) end
+  table.insert(target, { boot=boot, path=path, name=name })
 end
 
-local function embed (target, method, compiler, bootscript, ...)
-  assert(bootscript, "syntax: embed(target, method, compiler, bootscript [, files])")
-  local scripts, modules, binlibs = {}, {}, {}
+--------------------------------------------------------------------------------
+-- @target:     name of the output file
+-- @method:     either of "plain" (default), "strip", "luasrcdiet", "luac", "luajit"
+-- @compiler:   compiler file name (used with "luac" and "luajit" methods)
+-- @bootscript: boot script name
+-- @tscripts:   array of scripts names (optional)
+-- @tmodules:   array of modules names (optional)
+-- @tbinlibs:   array of binary libraries names (optional)
+--------------------------------------------------------------------------------
+local function embed (target, method, compiler, bootscript, tscripts, tmodules, tbinlibs)
+  assert(bootscript, "syntax: embed(target, method, compiler, bootscript, tscripts, tmodules, tbinlibs)")
+  local scripts, modules, binlibs = {}, {}, tbinlibs or {}
   decode(scripts, bootscript, true)
-  local stage
-  for _, arg in ipairs {...} do
-    if arg:find("^%-[smb]$") then stage = arg
-    elseif stage == "-s" then decode(scripts, arg, false)
-    elseif stage == "-m" then decode(modules, arg, false)
-    elseif stage == "-b" then table.insert(binlibs, arg)
-    else error ("type of parameter not specified")
-    end
-  end
+  for _, arg in ipairs(tscripts or {}) do decode(scripts, arg, false) end
+  for _, arg in ipairs(tmodules or {}) do decode(modules, arg, false) end
 
   local fp = assert(io.open(target, "w"))
   fp:write("/* This is a generated file. */\n\n")

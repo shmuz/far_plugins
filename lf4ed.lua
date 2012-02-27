@@ -1,7 +1,6 @@
 -------------------------------------------------------------------------------
 -- LuaFAR for Editor: main script
 -------------------------------------------------------------------------------
-local MinLuafarVersion = { 3,0,5 }
 
 -- CONFIGURATION : keep it at the file top !!
 local DefaultConfig = {
@@ -340,7 +339,7 @@ end
 local function main()
   if FirstRun then
     _Plugin = Utils.InitPlugin()
-    if not Utils.CheckLuafarVersion(MinLuafarVersion, M.MPluginName) then
+    if not Utils.CheckLuafarVersion(M.MPluginName) then
       return
     end
     _Plugin.PackagePath = package.path:gsub(";", ";".._Plugin.ModuleDir.."scripts\\?.lua;", 1)
