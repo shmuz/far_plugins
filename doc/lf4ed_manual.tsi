@@ -1348,26 +1348,6 @@ mtime=3522679267
 </article>
 </node>
 <node>
-id=33
-lv=1
-dt=Text
-nm=lf4ed.version
-mtime=3522679757
-<article>
-#_Get plugin version.
-#_
-#_version = lf4ed.version()
-#_
-#_**Parameters:**
-#_  none
-#_
-#_**Returns:**
-#_  *version*: string, e.g. "3.0.0"
-#_
-#_
-</article>
-</node>
-<node>
 id=65
 lv=1
 dt=Text
@@ -2029,6 +2009,24 @@ mtime=3539546094
 #_  contains the field *MinLuafarVersion*.
 #_
 #_@@@
+#_
+#_
+</article>
+</node>
+<node>
+id=33
+lv=2
+dt=Text
+nm=GetPluginVersion
+mtime=3539581147
+<article>
+#_version = GetPluginVersion()
+#_
+#_**Parameters:**
+#_  none
+#_
+#_**Returns:**
+#_  *version*: string, e.g. "3.0.0"
 #_
 #_
 </article>

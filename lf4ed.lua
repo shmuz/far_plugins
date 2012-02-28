@@ -80,10 +80,6 @@ function lf4ed.config (newcfg)
   return t
 end
 
-function lf4ed.version()
-  return table.concat(export.GetGlobalInfo().Version, ".")
-end
-
 local function fSort()
   local sortlines = require "sortlines"
   local arg = { _History:field("SortDialog") }

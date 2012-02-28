@@ -490,9 +490,14 @@ local function InitPlugin()
   return plugin
 end
 
+local function GetPluginVersion()
+  return table.concat(export.GetGlobalInfo().Version, ".")
+end
+
 return {
   AddMenuItems = AddMenuItems,
   CheckLuafarVersion = CheckLuafarVersion,
+  GetPluginVersion = GetPluginVersion,
   InitPlugin = InitPlugin,
   LoadUserMenu = LoadUserMenu,
   OpenMacroOrCommandLine = OpenMacroOrCommandLine,
