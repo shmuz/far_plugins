@@ -2,6 +2,11 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2012-03-04, v3.0.3
+  PLUGIN:
+      [*] Function lf4ed.version moved to `utils' module and renamed to
+          GetPluginVersion.
+
 2012-01-04, v3.0.0
   PLUGIN:
       [*] Adaptation to Far 3.0 / LuaFAR 3.0 API.

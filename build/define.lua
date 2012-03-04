@@ -1,7 +1,7 @@
 -- Definitions
 
-PLUGINVERSION = { 3, 0, 2 }
-MINFARVERSION = "{ 3, 0, 0, 2460 }"
+PLUGINVERSION = { 3, 0, 3 }
+MINFARVERSION = "{ 3, 0, 0, 2516 }"
 MINLUAFARVERSION = "{ 3, 0, 5 }"
 
 -- Derivative values --
