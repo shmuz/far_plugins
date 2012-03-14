@@ -1,23 +1,30 @@
 -- started: 2011-02-17
 
+local F = far.Flags
+
 local function Fill (Id, sym)
-  local Sel = editor.GetSelection(Id)
-  if not Sel then return end
+  local EI = editor.GetInfo(Id)
+  if EI.BlockType == F.BTYPE_NONE then return end
   sym = sym:sub(1, 1)
   editor.UndoRedo(Id, "EUR_BEGIN")
-  for L=Sel.StartLine, Sel.EndLine do
-    local S, s = editor.GetString(Id, L, 1)
-    if S.SelEnd < 0 then
-      s = S.StringText:sub(1, S.SelStart) .. sym:rep(S.StringLength - S.SelStart)
+  for numline=EI.BlockStartLine, EI.TotalLines-1 do
+    local SI, text = editor.GetString(Id, numline, 1)
+    if SI.SelStart < 0 or SI.SelEnd == 0 then break end
+    local tabStart = editor.RealToTab(Id, numline, SI.SelStart)
+    local tabLength = editor.RealToTab(Id, numline, SI.StringLength)
+    if SI.SelEnd < 0 then
+      text = SI.StringText:sub(1, SI.SelStart) .. sym:rep(tabLength - tabStart)
     else
-      s = S.StringText:sub(1, S.SelStart) ..
-          (" "):rep(S.SelStart - S.StringLength) ..
-          sym:rep(S.SelEnd - S.SelStart) ..
-          S.StringText:sub(S.SelEnd + 1)
+      local tabEnd = editor.RealToTab(Id, numline, SI.SelEnd)
+      text = SI.StringText:sub(1, SI.SelStart) ..
+             (" "):rep(tabStart - tabLength) ..
+             sym:rep(tabEnd - tabStart) ..
+             SI.StringText:sub(SI.SelEnd + 1)
     end
-    editor.SetString(Id, nil, s, S.StringEOL)
+    editor.SetString(Id, numline, text, SI.StringEOL)
   end
   editor.UndoRedo(Id, "EUR_END")
+  editor.SetPosition(Id, EI)
   editor.Redraw(Id)
 end
 

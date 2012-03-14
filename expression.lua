@@ -183,15 +183,20 @@ end
 --       regex.find, or unicode.utf8.cfind function.
 local function BlockSum (history)
   local ei = assert(editor.GetInfo(), "EditorGetInfo failed")
-  local block = editor.GetSelection()
+  local blockEndLine
   local sum = 0
   local x_start, x_dot
   local pattern = [[(\S[\w.]*)]]
 
-  if block then
+  if ei.BlockType ~= F.BTYPE_NONE then
     local r = regex.new(pattern)
-    for n = block.StartLine, block.EndLine do
+    for n=ei.BlockStartLine, ei.TotalLines-1 do
       local s = editor.GetString (nil, n, 1)
+      if s.SelEnd == 0 or s.SelStart < 0 then
+        blockEndLine = n - 1
+        if s.SelStart < 0 then editor.SetPosition(nil, blockEndLine) end
+        break
+      end
       local start, _, sel = r:find( s.StringText:sub(s.SelStart+1, s.SelEnd) )
       if start then
         x_start = editor.RealToTab(nil, n, s.SelStart + start)
@@ -223,7 +228,7 @@ local function BlockSum (history)
     far.CopyToClipboard(sum)
   end
   if history.cbxInsert then
-    local y = block and block.EndLine or ei.CurLine -- position of the last line
+    local y = blockEndLine or ei.CurLine -- position of the last line
     local s = editor.GetString(nil, y)           -- get last line
     editor.SetPosition (nil, y, s.StringText:len()) -- insert a new line
     editor.InsertString()                           -- +
@@ -235,7 +240,7 @@ local function BlockSum (history)
     if x_start then
       x_start = x_start>#prefix and x_start-#prefix-1 or 0
     else
-      x_start = block and (block.BlockType==F.BTYPE_COLUMN) and s.SelStart or 0
+      x_start = (ei.BlockType==F.BTYPE_COLUMN) and s.SelStart or 0
     end
     editor.SetPosition (nil, y+1, x_start)
     editor.InsertText(nil, prefix .. sum)

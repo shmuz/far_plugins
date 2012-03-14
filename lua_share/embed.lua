@@ -82,19 +82,18 @@ local function readfile (filename, mode)
 end
 
 local function addfiles(target, files, method, compiler)
-  local strip = (method == "strip") and require "lstrip51"
-  local diet = (method == "luasrcdiet") and require "luasrcdiet"
+  local diet, diet_arg
+  if method == "strip" or method == "luasrcdiet" then
+    diet = require "luasrcdiet"
+    diet_arg = { "-o", "luac.out", "--noopt-emptylines", "--quiet" }
+    table.insert(diet_arg, method=="strip" and "--noopt-locals" or "--opt-locals")
+    table.insert(diet_arg, jit and "--noopt-binequiv" or "--opt-binequiv")
+  end
   for _, f in ipairs(files) do
     local s
     local fullname = f.path .."\\".. f.name
-    if method == "strip" then
-      s = assert(strip("fsk", fullname))
-    elseif method == "luasrcdiet" then
-      if jit then
-        diet(fullname, "-o", "luac.out", "--noopt-emptylines", "--quiet", "--noopt-binequiv")
-      else
-        diet(fullname, "-o", "luac.out", "--noopt-emptylines", "--quiet")
-      end
+    if method == "strip" or method == "luasrcdiet" then
+      diet(fullname, unpack(diet_arg))
       s = readfile("luac.out", "rb")
     elseif method == "luac" then
       assert(0==os.execute((compiler or "luac").." -o luac.out -s "..fullname))

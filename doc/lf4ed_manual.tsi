@@ -45,12 +45,17 @@ id=54
 lv=1
 dt=Text
 nm=Changelog
-mtime=3537776305
+mtime=3540014138
 <article>
 #_<markdown>
 #_    ------------------------------------------------------------------
 #_      Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 #_    ------------------------------------------------------------------
+#_
+#_    2012-03-04, v3.0.3
+#_      PLUGIN:
+#_          [*] Function lf4ed.version moved to `utils' module and renamed to
+#_              GetPluginVersion.
 #_
 #_    2012-01-04, v3.0.0
 #_      PLUGIN:
