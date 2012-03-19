@@ -13,7 +13,8 @@
 
 
 local F = far.Flags
-local band, bor, rshift = bit64.band, bit64.bor, bit64.rshift
+local bnot, band, bor, lshift, rshift =
+  bit64.bnot, bit64.band, bit64.bor, bit64.lshift, bit64.rshift
 local min, max = math.min, math.max
 local subW, Utf8, Utf16 = win.subW, win.Utf16ToUtf8, win.Utf8ToUtf16
 
@@ -89,7 +90,7 @@ end
               (0 is the first button).
 --]]
 
-local function MessageBox (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)
+local function Message (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)
   local bColorMode = aFlags and aFlags:find("c")
   if bColorMode then
     assert(type(aText)=="table", "argument #1 must be table when flag 'c' is specified")
@@ -287,11 +288,20 @@ local function TableBox (items, title, buttons, flags, helptopic, id)
     end
   end
   flags = (flags or "") .. "lc"
-  return MessageBox(out, title, buttons, flags, helptopic, id)
+  return Message(out, title, buttons, flags, helptopic, id)
+end
+
+local function GetInvertedColor (element)
+  local color = far.AdvControl("ACTL_GETCOLOR", far.Colors[element])
+  local fc, bc = color.ForegroundColor, color.BackgroundColor
+  fc = band(bnot(fc), 0xF)
+  bc = band(bnot(bc), 0xF)
+  return bor(fc, lshift(bc, 4))
 end
 
 return {
-  msgbox = MessageBox,
-  maxchars = GetMaxChars,
-  tablebox = TableBox,
+  GetInvertedColor = GetInvertedColor,
+  GetMaxChars = GetMaxChars,
+  Message = Message,
+  TableBox = TableBox,
 }

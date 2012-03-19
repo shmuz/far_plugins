@@ -255,7 +255,7 @@ end
 local function GetUserChoice (aTitle, s_found, s_rep)
   local color = far.AdvControl("ACTL_GETCOLOR", far.Colors.COL_DIALOGTEXT)
   color = 15-color.ForegroundColor + 16*(15-color.BackgroundColor)
-  local c = far2_message.msgbox(
+  local c = far2_message.Message(
     {
       "Rename\n",
       { text=s_found, color=color },"\n",

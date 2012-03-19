@@ -2221,7 +2221,7 @@ id=10
 lv=0
 dt=Text
 nm=Credits
-mtime=3506102769
+mtime=3541056902
 <article>
 #_<markdown>
 #_Many thanks to:
@@ -2232,6 +2232,7 @@ mtime=3506102769
 #_* **Aidar Rakhmatullin**: ideas, translation of the help file into
 #_  Russian; bug reports.
 #_* **Grey**: bug reports.
+#_* **Vadim Yegorov**: ideas, bug reports.
 #_
 </article>
 </node>
