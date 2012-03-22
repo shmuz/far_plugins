@@ -253,8 +253,7 @@ local function UserDialog (aData, aList, aHelpTopic)
 end
 
 local function GetUserChoice (aTitle, s_found, s_rep)
-  local color = far.AdvControl("ACTL_GETCOLOR", far.Colors.COL_DIALOGTEXT)
-  color = 15-color.ForegroundColor + 16*(15-color.BackgroundColor)
+  local color = far2_message.GetInvertedColor("COL_DIALOGTEXT")
   local c = far2_message.Message(
     {
       "Rename\n",
@@ -296,7 +295,7 @@ end
 
 do
   local arg = ...
-  local helpTopic = arg[1]
+  local helpTopic = arg and arg[1]
   local panelInfo = panel.GetPanelInfo (nil, 1)
   if panelInfo.SelectedItemsNumber == 0 then return end
 
