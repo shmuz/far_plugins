@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2012-03-24, v3.0.4
+      [!] Maintenance version (minor fixes).
+
 2012-03-04, v3.0.3
   PLUGIN:
       [*] Function lf4ed.version moved to `utils' module and renamed to

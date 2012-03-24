@@ -17,6 +17,7 @@ local bnot, band, bor, lshift, rshift =
   bit64.bnot, bit64.band, bit64.bor, bit64.lshift, bit64.rshift
 local min, max = math.min, math.max
 local subW, Utf8, Utf16 = win.subW, win.Utf16ToUtf8, win.Utf8ToUtf16
+local STARTX, STARTY = 5, 2
 
 -- Dialog API constants
 local IDX_X1, IDX_Y1, IDX_X2, IDX_Y2, IDX_FLAGS, IDX_DATA = 2,3,4,5,9,10
@@ -30,14 +31,17 @@ local function Separator (y1, kind, text, color)
   return {"DI_TEXT", 0,y1,0,y1, 0,0,0,flags, text or "", color=color}
 end
 
-local function WrapText (aText, MAXLEN, MAXLEN1, MAX_ITEMS)
+local function WrapText (aText, aMaxLen, aMaxLen1, aMaxItems)
+  aMaxItems = aMaxItems or math.huge
+  local sub do
+    local wText = Utf16(aText)
+    sub = function (from,to) return Utf8(subW(wText,from,to)) end -- much much faster than aText:sub(from,to)
+  end
   local items = {}
-  local lastSpace, lastDelim = nil, nil -- nil stands for "invalid"
-  local start, pos, maxlen = 1, 1, (MAXLEN1 or MAXLEN)
-  local wText = Utf16(aText)
-  local sub = function (from,to) return Utf8(subW(wText,from,to)) end -- much much faster than aText:sub(from,to)
+  local lastSpace, lastDelim
+  local start, pos, maxlen = 1, 1, (aMaxLen1 or aMaxLen)
 
-  while not MAX_ITEMS or (#items < MAX_ITEMS) do
+  while #items < aMaxItems do
     local char = sub(pos, pos)
     if char == "" then -- end of the entire message
       items[#items+1] = sub(start)
@@ -46,7 +50,7 @@ local function WrapText (aText, MAXLEN, MAXLEN1, MAX_ITEMS)
       items[#items+1] = sub(start, pos-1)
       start = pos + 1
       if char=='\r' and sub(start,start)=='\n' then start = start+1 end
-      maxlen, pos, lastSpace, lastDelim = MAXLEN, start, nil, nil
+      maxlen, pos, lastSpace, lastDelim = aMaxLen, start, nil, nil
     elseif pos-start < maxlen then            -- characters inside the line
       if char==' ' or char=='\t' then lastSpace = pos
       elseif char:find('[^%w_]') then lastDelim = pos
@@ -56,10 +60,57 @@ local function WrapText (aText, MAXLEN, MAXLEN1, MAX_ITEMS)
       pos = lastSpace or lastDelim or pos-1
       items[#items+1] = sub(start, pos)
       start = pos + 1
-      maxlen, pos, lastSpace, lastDelim = MAXLEN, start, nil, nil
+      maxlen, pos, lastSpace, lastDelim = aMaxLen, start, nil, nil
     end
   end
   return items
+end
+
+local function AddElement (self, aElement, aTarget, aMaxLines)
+  local start_y = self.y
+  aMaxLines = aMaxLines or math.huge
+  local text, color, separator
+  if type(aElement) == "table" then
+    text = aElement.text==nil and "" or tostring(aElement.text)
+    color, separator = aElement.color, aElement.separator
+  else
+    text = tostring(aElement)
+  end
+  if separator then
+    if aMaxLines > 0 then
+      text = text:sub(1, self.maxchars):match("[^\r\n]*")
+      if self.x ~= STARTX then self.y = self.y + 1 end
+      aTarget[#aTarget+1] = Separator(self.y, separator, text, color)
+      self.x, self.y = STARTX, self.y + 1
+    end
+  elseif self.bWrapLines then
+    local items = WrapText(text, self.maxchars, self.maxchars+STARTX-self.x, aMaxLines)
+    local w = 0
+    for i,v in ipairs(items) do
+      if i == 2 then self.x = STARTX end
+      w = v:len()
+      if v ~= "" then
+        aTarget[#aTarget+1] = Label(self.x, self.y+i-1, v, color)
+      end
+    end
+    self.y = self.y + #items - 1
+    self.x = self.x + w
+  else
+    local added_lines = 0
+    for line, eol in text:gmatch("([^\r\n]*)(\r?\n?)") do
+      if added_lines >= aMaxLines then break end
+      if line ~= "" then
+        local w = min(line:len(), self.maxchars - self.x + STARTX)
+        aTarget[#aTarget+1] = Label(self.x, self.y, line:sub(1,w), color)
+        self.x = self.x + w
+      end
+      if eol ~= "" then
+        self.x, self.y = STARTX, self.y + 1
+        added_lines = added_lines + 1
+      end
+    end
+  end
+  return self.y - start_y
 end
 
 --[[
@@ -91,74 +142,26 @@ end
 --]]
 
 local function Message (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)
-  local bColorMode = aFlags and aFlags:find("c")
-  if bColorMode then
+  if aFlags and aFlags:find("c") then
     assert(type(aText)=="table", "argument #1 must be table when flag 'c' is specified")
+  else
+    aText = { tostring(aText) }
   end
-  if not bColorMode then aText = { tostring(aText) } end
   aTitle = aTitle or "Message"
   aButtons = aButtons or "OK"
   aId = aId or win.Uuid("bee50a78-be62-418d-95f0-a84982ac268e")
-  local bWarning = aFlags and aFlags:find("w")
-  local bCentered = not (aFlags and aFlags:find("l"))
-  local bWrapLines = not (aFlags and aFlags:find("R"))
 
-  local sb = win.GetConsoleScreenBufferInfo()
-  local MAXWIDTH = max(8, sb.WindowRight - sb.WindowLeft - 3)
-  local MAXHEIGHT = max(7, sb.WindowBottom - sb.WindowTop - 1)
-
-  local D = {{"DI_DOUBLEBOX",  3,1,0,0,  0,0,0,0,  aTitle},}
-  local currline, numchars = 2, 0
-  local maxlines = MAXHEIGHT-4
-  local maxchars = MAXWIDTH-9
-  local STARTX = 5
-  local x = STARTX
-
-  -- lines
-  local function AddElement (target, text, color, separator)
-    if separator then
-      text = (text or ""):sub(1, maxchars):gsub("[\r\n].*", "")
-      local w = text:len()
-      if numchars < w then numchars = w end
-      if x ~= STARTX then currline = currline + 1 end
-      target[#target+1] = Separator(currline, separator, text, color)
-      x, currline = STARTX, currline + 1
-    elseif bWrapLines then
-      local items = WrapText (text, maxchars, maxchars+STARTX-x, maxlines)
-      local w = 0
-      for i,v in ipairs(items) do
-        if i == 2 then x = STARTX end
-        w = v:len()
-        if v ~= "" then
-          if numchars < w+x-STARTX then numchars = w+x-STARTX end
-          target[#target+1] = Label(x, currline+i-1, v, color)
-        end
-      end
-      currline = currline + #items - 1
-      x = x + w
-    else
-      for line, eol in text:gmatch("([^\r\n]*)(\r?\n?)") do
-        if currline-1 > maxlines then break end
-        if line ~= "" then
-          local w = line:len()
-          if w+x-STARTX > maxchars then w = maxchars-x+STARTX end
-          if numchars < w+x-STARTX then numchars = w+x-STARTX end
-          target[#target+1] = Label(x, currline, line:sub(1,w), color)
-          x = x + w
-        end
-        if eol ~= "" then x, currline = STARTX, currline + 1 end
-      end
-    end
-  end
-
-  local tb_labels = {}
-  for _, elem in ipairs(aText) do
-    if type(elem) == "table" then
-      local text = elem.text==nil and "" or tostring(elem.text)
-      AddElement(tb_labels, text, elem.color, elem.separator)
-    else
-      AddElement(tb_labels, tostring(elem), nil, nil)
-    end
+  local data do
+    local sb = win.GetConsoleScreenBufferInfo()
+    local MAXWIDTH = max(8, sb.WindowRight - sb.WindowLeft - 3)
+    local MAXHEIGHT = max(7, sb.WindowBottom - sb.WindowTop - 1)
+    data = {
+      bWrapLines = not (aFlags and aFlags:find("R")),
+      maxlines = MAXHEIGHT - STARTY - 2,
+      maxchars = MAXWIDTH - STARTX - 4,
+      y = STARTY,
+      x = STARTX,
+    }
   end
 
   -- buttons
@@ -167,22 +170,22 @@ local function Message (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)
 
   local function putfirstbutton (btn)
     btnlines = btnlines + 1
-    btnlen = min(btn:gsub("&",""):len() + 4, maxchars)
+    btnlen = min(btn:gsub("&",""):len() + 4, data.maxchars)
     maxbtnlen = max(maxbtnlen, btnlen)
-    if btnlen == maxchars then btnlen = 0 end
+    if btnlen == data.maxchars then btnlen = 0 end
   end
 
   for btn, delim in aButtons:gmatch("([^;\n]+)([;\n]?)") do
-    if btnlines >= maxlines then break end
+    if btnlines >= data.maxlines then break end
     numbuttons = numbuttons + 1
     if btnlen == 0 then -- new line
       putfirstbutton (btn)
     else
       btnlen = btnlen + btn:gsub("&",""):len() + 5
-      if btnlen == maxchars then
-        maxbtnlen = maxchars
+      if btnlen == data.maxchars then
+        maxbtnlen = data.maxchars
         btnlen = 0
-      elseif btnlen > maxchars then
+      elseif btnlen > data.maxchars then
         putfirstbutton (btn)
       else
         maxbtnlen = max(maxbtnlen, btnlen)
@@ -193,34 +196,48 @@ local function Message (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)
   end
 
   local nseparator = btnlines==0 and 0 or 1
-  local numlines = currline - 1
-  local n = numlines + btnlines + nseparator
-  if n > maxlines then numlines = maxlines - btnlines - nseparator end
+  local numlines = data.maxlines - btnlines - nseparator
 
+  local heights, tb_labels = {}, {}
+  for i, elem in ipairs(aText) do
+    heights[i] = AddElement(data, elem, tb_labels, 500)
+  end
+  if aText.callback and aText.callback(heights, numlines, data.y-STARTY+1) then
+    data.y, data.x = STARTY, STARTX
+    tb_labels = {}
+    for i, elem in ipairs(aText) do
+      AddElement(data, elem, tb_labels, heights[i] + 1)
+    end
+  end
+  numlines = min(numlines, data.y-STARTY+1)
+
+  local numchars = 0
+  local D = {{"DI_DOUBLEBOX",  3,1,0,0,  0,0,0,0,  aTitle},}
   for _,v in ipairs(tb_labels) do
-    if v[IDX_Y1] > numlines + 1 then break end
+    if v[IDX_Y1] > numlines + STARTY - 1 then break end
     D[#D+1] = v
+    numchars = max(numchars, v[IDX_X1] - STARTX + v[IDX_DATA]:len())
   end
 
   if numbuttons > 0 then
-    D[#D+1] = Separator(numlines + 2)
+    D[#D+1] = Separator(numlines + STARTY)
     numchars = max(numchars, maxbtnlen)
     for k=1,numbuttons do
       local btn = tb_buttons[k]
-      btn[IDX_Y1] = btn[IDX_Y1] + numlines + 2
+      btn[IDX_Y1] = btn[IDX_Y1] + numlines + STARTY
       D[#D+1] = btn
     end
-    local btn1 = D[#D-numbuttons+1]
+    local btn1 = tb_buttons[1]
     btn1[IDX_FLAGS] = bor(btn1[IDX_FLAGS], F.DIF_DEFAULTBUTTON)
   end
 
-  numchars = min(MAXWIDTH-10, max(numchars, aTitle:len()+2))
-  D[1][IDX_Y2] = numlines + btnlines + nseparator + 2
-  D[1][IDX_X2] = numchars + 6
+  numchars = min(data.maxchars, max(numchars, aTitle:len()+2))
+  D[1][IDX_Y2] = numlines + btnlines + nseparator + STARTY
+  D[1][IDX_X2] = numchars + STARTX + 1
 
-  if bCentered then
+  if not (aFlags and aFlags:find("l")) then -- centered text
     local idx1, y1
-    for k=1,#tb_labels+1 do -- upper limit is incremented by purpose
+    for k=1,#tb_labels+1 do -- upper limit is incremented on purpose
       local label = tb_labels[k]
       if idx1 then
         if not label or label[IDX_Y1] > y1 then
@@ -249,7 +266,7 @@ local function Message (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)
     end
   end
 
-  local dflags = bWarning and F.FDLG_WARNING or 0
+  local dflags = aFlags and aFlags:find("w") and F.FDLG_WARNING or 0
   local ret = far.Dialog(aId, -1, -1, D[1][IDX_X2]+4, D[1][IDX_Y2]+2, aHelpTopic, D, dflags, DlgProc)
   return ret < 0 and ret or (ret - (#D - numbuttons))
 end

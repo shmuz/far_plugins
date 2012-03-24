@@ -1,8 +1,8 @@
-      LuaFAR for Editor v3.0.3
+      LuaFAR for Editor v3.0.4
   Set of utilities for FAR Editor
 ====================================
 
-1. Tested with FAR version 3.0 build 2516.
+1. Tested with FAR version 3.0 build 2561.
 
 2. Prerequisites:
    LuaFAR binaries (lua5.1.dll and luafar3.dll, available as a separate

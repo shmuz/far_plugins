@@ -45,12 +45,15 @@ id=54
 lv=1
 dt=Text
 nm=Changelog
-mtime=3540014138
+mtime=3541770323
 <article>
 #_<markdown>
 #_    ------------------------------------------------------------------
 #_      Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 #_    ------------------------------------------------------------------
+#_
+#_    2012-03-24, v3.0.4
+#_          [!] Maintenance version (minor fixes).
 #_
 #_    2012-03-04, v3.0.3
 #_      PLUGIN:
@@ -1829,37 +1832,39 @@ mtime=3535892594
 id=89
 lv=2
 dt=Text
-nm=msgbox
+nm=Message
 ctime=3535892608
-mtime=3535893017
+mtime=3541708481
 <article>
-#_**result = far2_message.msgbox (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)**
+#_**result = far2_message.Message (Text, Title, Buttons, Flags, HelpTopic, Id)**
 #_
-#_@aText      : Text elements to display inside the dialog frame.
-#_              Either a string or a table, depending on flag 'c'.
-#_              Sequences '\n', '\r\n' and '\r' are treated as line separators.
-#_@aTitle     : Title string; optional.
-#_@aButtons   : Buttons string; ';' and '\n' serve as button separators; optional.
-#_              Buttons automatically wrap on multiple lines if don't fit on one
-#_              line. Separator '\n' forces new line for the next button.
-#_@aFlags     : Concatenation of 0 or more character flags; optional.
-#_              'l' - left-align text lines (default: center lines on the dialog).
-#_              'w' - use "warning" color set for the dialog and its elements.
-#_              'R' - don't wrap long text lines (default: wrap).
-#_              'c' - "color"-mode, that changes treating the aText argument. With
-#_                 this flag set, aText should be an array of individual elements,
-#_                 each of which is either a string or a table.
-#_                 A table elements may have the following fields:
-#_                    "text" (string)
-#_                    "color" (number; optional)
-#_                    "separator" (1 = single line, 2 = double line; optional)
-#_                 Each element's begins at the position next to the previous
-#_                 element's end. Separators are always put on separate lines.
-#_@aHelpTopic : Help topic string; optional.
-#_@aId        : Dialog Id; binary GUID string; optional.
+#_**Parameters:**
+#_  Text       : Text elements to display inside the dialog frame.
+#_               Either a string or a table, depending on flag 'c'.
+#_               Sequences '\n', '\r\n' and '\r' are treated as line separators.
+#_  Title      : Title string; optional.
+#_  Buttons    : Buttons string; ';' and '\n' serve as button separators; optional.
+#_               Buttons automatically wrap on multiple lines if don't fit on one
+#_               line. Separator '\n' forces new line for the next button.
+#_  Flags      : Concatenation of 0 or more character flags; optional.
+#_               'l' - left-align text lines (default: center lines on the dialog).
+#_               'w' - use "warning" color set for the dialog and its elements.
+#_               'R' - don't wrap long text lines (default: wrap).
+#_               'c' - "color"-mode, that changes treating the aText argument. With
+#_                  this flag set, aText should be an array of individual elements,
+#_                  each of which is either a string or a table.
+#_                  A table elements may have the following fields:
+#_                     "text" (string)
+#_                     "color" (number; optional)
+#_                     "separator" (1 = single line, 2 = double line; optional)
+#_                  Each element's begins at the position next to the previous
+#_                  element's end. Separators are always put on separate lines.
+#_  HelpTopic  : Help topic string; optional.
+#_  Id         : Dialog Id; binary GUID string; optional.
 #_
-#_@returns    : negative number when dialog was canceled, button number otherwise
-#_              (0 is the first button).
+#_**Returns:**
+#_  result     : negative number when dialog was canceled, button number otherwise
+#_               (0 is the first button).
 #_
 </article>
 </node>
@@ -1867,19 +1872,21 @@ mtime=3535893017
 id=90
 lv=2
 dt=Text
-nm=tablebox
+nm=TableBox
 ctime=3535893105
-mtime=3535893267
+mtime=3541708540
 <article>
-#_**result = far2_message.tablebox (items, title, buttons, flags, helptopic, id)**
+#_**result = far2_message.TableBox (items, title, buttons, flags, helptopic, id)**
 #_
 #_Display a two-column table.
 #_
-#_@items: an array of rows (tables); row[1],row[2] = left and right column texts.
-#_        A row can also be a single or double separator line if row.separator is
-#_        1 or 2; a separator can have optional field row.text.
+#_**Parameters:**
+#_  items: an array of rows (tables); row[1],row[2] = left and right column texts.
+#_         A row can also be a single or double separator line if row.separator is
+#_         1 or 2; a separator can have optional field row.text.
 #_
 #_Other parameters and return value are similar to those of *far.Message*.
+#_
 #_
 </article>
 </node>
