@@ -14,3 +14,6 @@ AddToMenu ("p", "SelectingEx", nil, dir.."selectingEx")
 
 AddToMenu ("evp", "Plugins control", nil, dir.."plugins")
 AddToMenu ("evp", "Chess",           nil, dir.."chess")
+
+-- cross in the editor
+MakeResident(dir.."cross")

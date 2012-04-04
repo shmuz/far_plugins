@@ -164,7 +164,7 @@ local function Message (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)
     }
   end
 
-  -- buttons
+  -- Calculate buttons.
   local tb_buttons = {}
   local btnlen, maxbtnlen, btnlines, numbuttons = 0, 0, 0, 0
 
@@ -195,9 +195,9 @@ local function Message (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)
     tb_buttons[numbuttons] = {"DI_BUTTON",  0,btnlines,0,0,  0,0,0,F.DIF_CENTERGROUP, btn}
   end
 
+  -- Calculate text lines.
   local nseparator = btnlines==0 and 0 or 1
   local numlines = data.maxlines - btnlines - nseparator
-
   local heights, tb_labels = {}, {}
   for i, elem in ipairs(aText) do
     heights[i] = AddElement(data, elem, tb_labels, 500)
@@ -209,8 +209,9 @@ local function Message (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)
       AddElement(data, elem, tb_labels, heights[i] + 1)
     end
   end
-  numlines = min(numlines, data.y-STARTY+1)
 
+  -- Add labels.
+  numlines = min(numlines, data.y-STARTY+1)
   local numchars = 0
   local D = {{"DI_DOUBLEBOX",  3,1,0,0,  0,0,0,0,  aTitle},}
   for _,v in ipairs(tb_labels) do
@@ -219,6 +220,7 @@ local function Message (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)
     numchars = max(numchars, v[IDX_X1] - STARTX + v[IDX_DATA]:len())
   end
 
+  -- Add a separator and buttons.
   if numbuttons > 0 then
     D[#D+1] = Separator(numlines + STARTY)
     numchars = max(numchars, maxbtnlen)

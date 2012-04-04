@@ -2,6 +2,9 @@
 #  The target embeds Lua scripts and has dependencies on Lua and LuaFAR DLLs.
 
 #------------------------------------ SETTINGS TO BE CONFIGURED BY THE USER --
+# Lua version
+LUAVERSION = 51
+
 # 32 or 64-bit plugin
 ARCH = -m32
 
@@ -13,7 +16,7 @@ path_share = $(WORKDIR)/lua_share
 PATH_LUAFARSRC = $(WORKDIR)/luafar/luafar_unicode/src
 
 # Include paths
-INC_LUA = $(WORKDIR)/system/include
+INC_LUA = $(WORKDIR)/system/include/lua$(LUAVERSION)
 INC_FAR = $(WORKDIR)/system/include/far/unicode
 
 # Location of executable files and DLLs
@@ -24,8 +27,13 @@ else
 endif
 
 LUAEXE = $(PATH_EXE)/lua.exe
-LUADLL = $(PATH_EXE)/lua5.1.dll
 LUAFARDLL = $(PATH_EXE)/luafar3.dll
+
+ifeq ($(LUAVERSION),51)
+  LUADLL = $(PATH_EXE)/lua5.1.dll
+else
+  LUADLL = $(PATH_EXE)/lua52.dll
+endif
 
 ifeq ($(EMBED_METHOD),luajit)
   LUAC = $(PATH_EXE)/luajit.exe

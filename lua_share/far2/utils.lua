@@ -480,11 +480,8 @@ local function AddCfindFunction()
 end
 
 local function InitPlugin()
-  getmetatable("").__index = unicode.utf8
   AddCfindFunction()
-
   export.OnError = OnError
-
   local plugin = {}
   plugin.ModuleDir = PluginDir
   return plugin
