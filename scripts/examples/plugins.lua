@@ -1,7 +1,7 @@
 -- started: 2011-02-20
 
 -- Get space for this script's data. Kept alive between the script's invocations.
-local ScriptId = win.Uuid("263e6208-e5b2-4bf7-8953-59da207279c7")
+local ScriptId = "263e6208-e5b2-4bf7-8953-59da207279c7"
 if not rawget(_G, ScriptId) then rawset(_G, ScriptId, {}) end
 local T = _G[ScriptId]
 

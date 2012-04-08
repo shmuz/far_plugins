@@ -120,7 +120,7 @@ local function LuaScript (data)
   local chunk
   if data.bExternalScript then
     local fname = data.sExternalScript or ""
-    if not regex.find(fname, "^([a-zA-Z]:)?[\\/]") then
+    if not regex.find(fname, [=[^([a-zA-Z]:)?[\\\/]]=]) then
       fname = editor.GetInfo().FileName:match("^.+\\") .. fname
     end
     chunk = assert(loadfile(fname))
