@@ -2,8 +2,11 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2012-04-09, v3.0.6
+2012-03-26, v3.0.5
 2012-03-24, v3.0.4
-      [!] Maintenance version (minor fixes).
+      [!] Maintenance versions (minor fixes).
+      [+] Examples added.
 
 2012-03-04, v3.0.3
   PLUGIN:

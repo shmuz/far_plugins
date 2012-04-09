@@ -45,15 +45,18 @@ id=54
 lv=1
 dt=Text
 nm=Changelog
-mtime=3541770323
+mtime=3543150544
 <article>
 #_<markdown>
 #_    ------------------------------------------------------------------
 #_      Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 #_    ------------------------------------------------------------------
 #_
+#_    2012-04-09, v3.0.6
+#_    2012-03-26, v3.0.5
 #_    2012-03-24, v3.0.4
-#_          [!] Maintenance version (minor fixes).
+#_          [!] Maintenance versions (minor fixes).
+#_          [+] Examples added.
 #_
 #_    2012-03-04, v3.0.3
 #_      PLUGIN:
@@ -2228,7 +2231,7 @@ id=10
 lv=0
 dt=Text
 nm=Credits
-mtime=3541056902
+mtime=3543150660
 <article>
 #_<markdown>
 #_Many thanks to:
@@ -2239,7 +2242,7 @@ mtime=3541056902
 #_* **Aidar Rakhmatullin**: ideas, translation of the help file into
 #_  Russian; bug reports.
 #_* **Grey**: bug reports.
-#_* **Vadim Yegorov**: ideas, bug reports.
+#_* **Vadim Yegorov**: ideas, code examples, bug reports.
 #_
 </article>
 </node>

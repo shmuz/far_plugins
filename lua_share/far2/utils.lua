@@ -173,11 +173,13 @@ local function MakeAddToMenu (Items, Env, HotKeyTable)
     end
     ---------------------------------------------------------------------------
     if HotKeyTable and not SepText and aWhere:find("[ec]") and type(aHotKey)=="string" then
-      aHotKey = ConvertUserHotkey (aHotKey)
-      if bUserItem then
-        HotKeyTable[aHotKey] = {filename=aFileName, env=Env, arg={...}}
+      local key = ConvertUserHotkey (aHotKey)
+      if HotKeyTable[key] then
+        far.Message(("Key `%s' is already allocated"):format(aHotKey),"AddToMenu",nil,"w")
+      elseif bUserItem then
+        HotKeyTable[key] = {filename=aFileName, env=Env, arg={...}}
       else
-        HotKeyTable[aHotKey] = aFileName
+        HotKeyTable[key] = aFileName -- menu position of a built-in utility
       end
     end
     ---------------------------------------------------------------------------
