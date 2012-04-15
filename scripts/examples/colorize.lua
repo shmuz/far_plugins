@@ -52,7 +52,10 @@ end
 local function CallMenu (data)
   local items = {}
   for k,v in ipairs(data) do
-    if v.Title then items[#items+1] = { text=v.Title, plugin=v } end
+    if v.Title then
+      local handle = far.FindPlugin("PFM_GUID", v.Guid)
+      items[#items+1] = { checked=handle, text=v.Title, ModuleName=v.ModuleName }
+    end
   end
   items[#items+1] = { text="Unload all" }
   return far.Menu({ Title="Select colorizer" }, items)
@@ -88,7 +91,7 @@ do
     if item then
       UnloadAllPlugins(data)
       CleanAllEditors(data)
-      if item.plugin then far.LoadPlugin("PLT_PATH", item.plugin.ModuleName) end
+      if item.ModuleName then far.LoadPlugin("PLT_PATH", item.ModuleName) end
     end
   end
 end
