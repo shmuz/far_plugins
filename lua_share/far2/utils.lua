@@ -112,6 +112,10 @@ local function RunInternalScript (name, ...)
 end
 
 local function LoadName (str)
+  local embed_name = "<"..str
+  if package.preload[embed_name] then -- prevent unnecessary disk search with non-embed plugin
+    return require(embed_name)
+  end
   str = str:gsub("[./]", "\\")
   for part in package.path:gmatch("[^;]+") do
     local name = part:gsub("%?", str)

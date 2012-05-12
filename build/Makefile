@@ -14,7 +14,8 @@ scripts = \
   $(path_plugin)\_globalinfo.lua \
   $(path_plugin)\config.lua      \
   $(path_plugin)\expression.lua  \
-  $(path_plugin)\wrap.lua
+  $(path_plugin)\wrap.lua        \
+  $(path_share)*far2\tableview.lua
 
 modules = \
   $(path_plugin)*sortdialog.lua     \

@@ -142,8 +142,8 @@ local function create_linit (aScripts, aModules, aBinlibs)
       elseif tag == "scripts" then
         tinsert(ret, "  /*-------- scripts --------*/")
         for _,v in ipairs(aScripts) do
-          local name = arrname(v)
-          tinsert(ret, "  {\"<" .. name .. "\", preload_" .. name .. "},")
+          local requirename = v.boot and "boot" or remove_ext(v.name):gsub("[\\/]", ".")
+          tinsert(ret, "  {\"<" .. requirename .. "\", preload_" .. arrname(v) .. "},")
         end
       end
       --------------------------------------------------------------------------

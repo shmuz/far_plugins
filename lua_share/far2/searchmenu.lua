@@ -1,3 +1,5 @@
+-- Original author: Maxim Gonchar.
+
 local F = far.Flags
 local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
 local break_keys={}
