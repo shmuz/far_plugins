@@ -9,15 +9,24 @@ local opts={
   keywidth=25,--30,
   nmax=3
 }
+local dialog
 local dlgArguments
 
 local keys={}
 local function dlgProc(handle,msg,p1,p2)
-  if msg==F.DN_CONTROLINPUT or msg==F.DN_INPUT then
+  if msg==F.DN_INITDIALOG then
+    far.SendDlgMessage(handle, F.DM_SETMOUSEEVENTNOTIFY, 1, 0)
+  elseif msg==F.DN_CONTROLINPUT or msg==F.DN_INPUT then
     if p2.EventType==F.KEY_EVENT then
       local f=keys[far.InputRecordToName(p2)]
       if f then
         return f(handle, p1)
+      end
+    elseif p1==dialog.list.id and p2.EventType==F.MOUSE_EVENT then
+      if p2.EventFlags==F.DOUBLE_CLICK then
+        return keys.Enter(handle, p1)
+      elseif bit64.band(p2.ButtonState, F.RIGHTMOST_BUTTON_PRESSED) ~= 0 then
+        return keys.BS(handle, p1)
       end
     end
   elseif msg==F.DN_CLOSE then
@@ -25,7 +34,6 @@ local function dlgProc(handle,msg,p1,p2)
   end
 end
 
-local dialog
 local function init()
   opts.valuewidth=opts.textwidth-opts.keywidth+3-opts.nmax
   opts.height=opts.textheight+5

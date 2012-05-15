@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2012-??-??, v3.?.?
+      [+] Add 'Table View' utility (original author: Maxim Gonchar).
+
 2012-04-09, v3.0.6
 2012-03-26, v3.0.5
 2012-03-24, v3.0.4

@@ -101,21 +101,23 @@ local function OnError (msg)
   end
 end
 
-local function RunInternalScript (name, ...)
+local function LoadEmbeddedScript (name)
   local embed_name = "<"..name
-  if package.preload[embed_name] then -- prevent unnecessary disk search with non-embed plugin
-    return require(embed_name)(...)
-  end
-  local func, errmsg = loadfile(PluginDir..name..".lua")
-  if func then return func(...) end
+  local loader = package.preload[embed_name]
+  return loader and loader(embed_name)
+end
+
+local function RunInternalScript (name, ...)
+  local f = LoadEmbeddedScript(name)
+  if f then return f(...) end
+  local f, errmsg = loadfile(PluginDir..name..".lua")
+  if f then return f(...) end
   error(errmsg)
 end
 
 local function LoadName (str)
-  local embed_name = "<"..str
-  if package.preload[embed_name] then -- prevent unnecessary disk search with non-embed plugin
-    return require(embed_name)
-  end
+  local f = LoadEmbeddedScript(str)
+  if f then return f end
   str = str:gsub("[./]", "\\")
   for part in package.path:gmatch("[^;]+") do
     local name = part:gsub("%?", str)
