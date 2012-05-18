@@ -2,6 +2,7 @@
 
 local far2dialog=require 'far2.dialog'
 local F=far.Flags
+local IND_X2, IND_Y2, IND_LISTITEMS, IND_DATA = 4, 5, 6, 10
 local history={}
 local opts={
   textheight=16,--30,
@@ -67,13 +68,13 @@ end
 
 local function initDlgSizes(h)
   local shrink=0
-  dialog.box[4]=opts.width+6-opts.nmax
-  dialog.list[4]=opts.textwidth+25-opts.nmax
-  dialog.path[4]=opts.textwidth+24-opts.nmax
-  dialog.box[5]=opts.height
-  dialog.list[5]=opts.textheight+4
+  dialog.box[IND_X2]=opts.width+6-opts.nmax
+  dialog.list[IND_X2]=opts.textwidth+25-opts.nmax
+  dialog.path[IND_X2]=opts.textwidth+24-opts.nmax
+  dialog.box[IND_Y2]=opts.height
+  dialog.list[IND_Y2]=opts.textheight+4
 
-  dlgArguments[5]=opts.height+2-shrink
+  dlgArguments[IND_Y2]=opts.height+2-shrink
 end
 
 local function repr(a)
@@ -116,7 +117,7 @@ __metatable="@"
 local function gettitle(list)
   local tit=("Elements: %i"):format(#list)
   local mt=(getmetatable(list.tbl))
-  if mt then
+  if type(mt)=="table" then
     local mts={' ('}
     for k,v in pairs(mt) do
       if mtnames[k] then
@@ -145,7 +146,7 @@ local function tblToList(aTbl)
 end
 
 local function loadTable(aPath, aTbl)
-  dialog.path[10]=aPath and tostring(aPath) or '<internal>'
+  dialog.path[IND_DATA]=aPath and tostring(aPath) or '<internal>'
   local tbl=aTbl
   if aPath and not aTbl then
     local fun,err=loadstring( ("return %s"):format(aPath) )
@@ -170,9 +171,9 @@ local function loadTable(aPath, aTbl)
 
   history[#history+1]={path=aPath, list=list}
 
-  dialog.list[6]=list
-  dialog.list[10]=gettitle(list)
-  dialog.list.Title=dialog.list[10]
+  dialog.list[IND_LISTITEMS]=list
+  dialog.list[IND_DATA]=gettitle(list)
+  dialog.list.Title=dialog.list[IND_DATA]
 
   initDlgSizes(#list)
 end
@@ -200,13 +201,16 @@ keys.Enter = function(handle, p1)
   local path,tbl
   if p1==dialog.path.id then
     path=far.SendDlgMessage(handle, F.DM_GETTEXT, dialog.path.id)
-    dialog.path[10]=path
+    dialog.path[IND_DATA]=path
     history[#history].pos=history[#history].pos or {}
   elseif p1==dialog.list.id then
-    local iteminfo=far.SendDlgMessage(handle, F.DM_LISTINFO, dialog.list.id)
-    local itemn=iteminfo.SelectPos
-    history[#history].pos=iteminfo
-    local list=dialog.list[6]
+    local listinfo=far.SendDlgMessage(handle, F.DM_LISTINFO, dialog.list.id)
+    if listinfo.ItemsNumber==0 then
+      return true
+    end
+    local itemn=listinfo.SelectPos
+    history[#history].pos=listinfo
+    local list=dialog.list[IND_LISTITEMS]
     local item=list[itemn]
     tbl=list.tbl[item.key]
 
@@ -214,18 +218,21 @@ keys.Enter = function(handle, p1)
       deferFunc=tbl
       far.SendDlgMessage(handle, F.DM_CLOSE)
       return false
+    elseif type(tbl)~='table' then
+      far.Message('Table or function expected, got '..type(tbl), 'Error', nil, 'w')
+      return true
     end
 
     if type(item.key)=='string' then
-      path=dialog.path[10]..'.'..item.key
+      path=dialog.path[IND_DATA]..'.'..item.key
     else
-      path=dialog.path[10]..'['..item.key..']'
+      path=dialog.path[IND_DATA]..'['..item.key..']'
     end
-    dialog.path[10]=path
+    dialog.path[IND_DATA]=path
   end
   loadTable(path,tbl)
-  far.SendDlgMessage(handle, F.DM_SETTEXT, dialog.path.id, dialog.path[10])
-  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[6])
+  far.SendDlgMessage(handle, F.DM_SETTEXT, dialog.path.id, dialog.path[IND_DATA])
+  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[IND_LISTITEMS])
   far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
   return true
 end
@@ -239,11 +246,11 @@ keys.BS = function(handle, p1)
   history[#history]=nil
   local hist=history[#history]
   local list=hist.list
-  dialog.list[6]=list
+  dialog.list[IND_LISTITEMS]=list
   dialog.list.Title=gettitle(list)
-  dialog.path[10]=history[#history].path
+  dialog.path[IND_DATA]=history[#history].path
   far.SetDlgItem(handle, dialog.path.id, dialog.path)
-  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[6])
+  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[IND_LISTITEMS])
   far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
   far.SendDlgMessage(handle, F.DM_LISTSETCURPOS, dialog.list.id, hist.pos)
   return true
@@ -272,10 +279,10 @@ keys.Ins = function(handle, p1)
     if not val then return end
   end
 
-  local list=dialog.list[6]
+  local list=dialog.list[IND_LISTITEMS]
   list.tbl[key]=editable[valtype](val)
   loadTable(history[#history].path, list.tbl)
-  list=dialog.list[6]
+  list=dialog.list[IND_LISTITEMS]
   local pos={ SelectPos=1 }
   for i=1,#list do
     if list[i].key==key then
@@ -285,24 +292,27 @@ keys.Ins = function(handle, p1)
   end
 
   far.SendDlgMessage(handle, F.DM_LISTSETCURPOS, dialog.list.id, pos)
-  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[6])
+  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[IND_LISTITEMS])
   far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
   return true
 end
 
 keys.Del = function(handle, p1)
   if p1~=dialog.list.id then return end
-  local iteminfo=far.SendDlgMessage(handle, F.DM_LISTINFO, dialog.list.id)
-  local itemn=iteminfo.SelectPos
+  local listinfo=far.SendDlgMessage(handle, F.DM_LISTINFO, dialog.list.id)
+  if listinfo.ItemsNumber==0 then
+    return
+  end
+  local itemn=listinfo.SelectPos
   local pos={ SelectPos=1 }
 
   local res=far.Message("Are you sure you want to delete element "..itemn.."?", "", "No;Yes", "w")
   if res<=0 then return end
 
-  local list=dialog.list[6]
+  local list=dialog.list[IND_LISTITEMS]
   list.tbl[list[itemn].key]=nil
   loadTable(history[#history].path, list.tbl)
-  list=dialog.list[6]
+  list=dialog.list[IND_LISTITEMS]
   local pos={ SelectPos=1 }
   for i=1,#list do
     if list[i].key==key then
@@ -312,7 +322,7 @@ keys.Del = function(handle, p1)
   end
 
   far.SendDlgMessage(handle, F.DM_LISTSETCURPOS, dialog.list.id, pos)
-  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[6])
+  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[IND_LISTITEMS])
   far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
   return
 end
@@ -323,17 +333,17 @@ keys.F4 = function(handle, p1)
   local itemn=iteminfo.SelectPos
   local pos={ SelectPos=itemn, TopPos=iteminfo.TopPos}
 
-  local list=dialog.list[6]
+  local list=dialog.list[IND_LISTITEMS]
   local key=list[itemn].key
   local res=edit(list.tbl[key], "Enter new value:")
   if not res then return end
 
   list.tbl[key]=res
   loadTable(history[#history].path, list.tbl)
-  list=dialog.list[6]
+  list=dialog.list[IND_LISTITEMS]
 
   far.SendDlgMessage(handle, F.DM_LISTSETCURPOS, dialog.list.id, pos)
-  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[6])
+  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[IND_LISTITEMS])
   far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
   return
 end
