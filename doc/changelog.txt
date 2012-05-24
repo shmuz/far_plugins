@@ -4,6 +4,7 @@
 
 2012-??-??, v3.?.?
       [+] Add 'Table View' utility (original author: Maxim Gonchar).
+      [+] Add 'keynames.lua' module (original author: Aidar Rakhmatullin).
 
 2012-04-09, v3.0.6
 2012-03-26, v3.0.5

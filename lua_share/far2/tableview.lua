@@ -1,3 +1,4 @@
+-- Encoding: UTF-8
 -- Original author: Maxim Gonchar.
 
 local far2dialog=require 'far2.dialog'
@@ -7,13 +8,13 @@ local history={}
 local opts={
   textheight=16,--30,
   textwidth=50,--60,
-  keywidth=25,--30,
+  keywidth=24,--30,
   nmax=3
 }
 local dialog
 local dlgArguments
-
 local keys={}
+
 local function dlgProc(handle,msg,p1,p2)
   if msg==F.DN_INITDIALOG then
     far.SendDlgMessage(handle, F.DM_SETMOUSEEVENTNOTIFY, 1, 0)
@@ -36,20 +37,20 @@ local function dlgProc(handle,msg,p1,p2)
 end
 
 local function init()
-  opts.valuewidth=opts.textwidth-opts.keywidth+3-opts.nmax
+  opts.valuewidth=opts.textwidth-opts.keywidth+2-opts.nmax
   opts.height=opts.textheight+5
   opts.width=opts.textwidth+23-opts.nmax
-  opts.fmt=('%%%ii║ %%1.1s │ %%%i.%is║ %%1.1s │ %%%i.%is'):format(opts.nmax, opts.keywidth, opts.keywidth, opts.valuewidth, opts.valuewidth)
+  opts.fmt=('%%%ii║ %%1.1s │ %%%i.%is║ %%1.1s │ %%%i.%is'):format(
+    opts.nmax, opts.keywidth, opts.keywidth, opts.valuewidth, opts.valuewidth)
 
   dialog=far2dialog.NewDialog()
-  dialog.box  = { "DI_DOUBLEBOX",    3, 1, 1, 1,    0,0,0,0,    "Table View" }
-  dialog.path = { "DI_EDIT",         5, 2, 1, 2,    0,0,0,0,    "" }
-  dialog.list = { "DI_LISTBOX",      4, 3, 1, 1,    0,0,0,0,    "" }
+  dialog.box  = { "DI_DOUBLEBOX",    3, 1, 0, 0,    0,0,0,0,    "Table View" }
+  dialog.path = { "DI_EDIT",         5, 2, 0, 0,    0,0,0,0,    "" }
+  dialog.list = { "DI_LISTBOX",      4, 3, 0, 0,    0,0,0,0,    "" }
 
   local Id = win.Uuid("76fec618-17b3-4dc0-b966-6073a589034f")
   dlgArguments={Id, -1, -1, opts.width+6, opts.height+6, nil, dialog, nil, dlgProc}
 end
-init()
 
 local editable = {
  string=tostring,
@@ -66,15 +67,14 @@ local function edit(value, title)
   return result and editable[tp](result)
 end
 
-local function initDlgSizes(h)
-  local shrink=0
-  dialog.box[IND_X2]=opts.width+6-opts.nmax
-  dialog.list[IND_X2]=opts.textwidth+25-opts.nmax
-  dialog.path[IND_X2]=opts.textwidth+24-opts.nmax
+local function initDlgSizes()
+  dialog.box[IND_X2]=opts.width+2
+  dialog.list[IND_X2]=opts.textwidth+24-opts.nmax
+  dialog.path[IND_X2]=opts.textwidth+23-opts.nmax
   dialog.box[IND_Y2]=opts.height
   dialog.list[IND_Y2]=opts.textheight+4
 
-  dlgArguments[IND_Y2]=opts.height+2-shrink
+  dlgArguments[5]=opts.height+2 -- "Y2" parameter
 end
 
 local function repr(a)
@@ -146,7 +146,6 @@ local function tblToList(aTbl)
 end
 
 local function loadTable(aPath, aTbl)
-  dialog.path[IND_DATA]=aPath and tostring(aPath) or '<internal>'
   local tbl=aTbl
   if aPath and not aTbl then
     local fun,err=loadstring( ("return %s"):format(aPath) )
@@ -163,7 +162,7 @@ local function loadTable(aPath, aTbl)
   local list=tblToList(tbl)
   local nlen=#tostring(#list)
   if nlen>opts.nmax then
-    far.Message('Updating opts.nmax from '..opts.nmax..' to '..nlen)
+    far.Message('Updating opts.nmax from '..opts.nmax..' to '..nlen, 'Debug message')
     opts.nmax=nlen
     init()
     return loadTable(aPath, aTbl)
@@ -171,11 +170,12 @@ local function loadTable(aPath, aTbl)
 
   history[#history+1]={path=aPath, list=list}
 
+  dialog.path[IND_DATA]=aPath and tostring(aPath) or '<internal>'
   dialog.list[IND_LISTITEMS]=list
   dialog.list[IND_DATA]=gettitle(list)
   dialog.list.Title=dialog.list[IND_DATA]
 
-  initDlgSizes(#list)
+  initDlgSizes()
 end
 
 local deferFunc=nil
@@ -189,12 +189,29 @@ local function callDefer()
     return
   end
 
-  local fun=loadstring( ("return %s"):format(result) )
+  local fun,err=loadstring( ("return %s"):format(result) )
   if not fun then
     deferFunc=nil
+    far.Message(err, 'Syntax error', nil, 'w')
     return
   end
-  far.Message(deferFunc(fun()) or "nothing", "Function call result:")
+  local function showResult(...)
+    local msg = select("#", ...)==0 and "<nothing>" or select(1, ...)
+    far.Message(msg, "Function call result:")
+  end
+  showResult(deferFunc(fun()))
+end
+
+local function UpdateList(handle, pos)
+  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[IND_LISTITEMS])
+  far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
+  if pos then
+    far.SendDlgMessage(handle, F.DM_LISTSETCURPOS, dialog.list.id, pos)
+  end
+end
+
+local function UpdatePath(handle)
+  far.SendDlgMessage(handle, F.DM_SETTEXT, dialog.path.id, dialog.path[IND_DATA])
 end
 
 keys.Enter = function(handle, p1)
@@ -231,16 +248,15 @@ keys.Enter = function(handle, p1)
     dialog.path[IND_DATA]=path
   end
   loadTable(path,tbl)
-  far.SendDlgMessage(handle, F.DM_SETTEXT, dialog.path.id, dialog.path[IND_DATA])
-  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[IND_LISTITEMS])
-  far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
+  UpdatePath(handle)
+  UpdateList(handle, nil)
   return true
 end
 keys.NumEnter=keys.Enter
 
 keys.BS = function(handle, p1)
   if p1~=dialog.list.id then return end
-  if #history==1 then
+  if #history<2 then
     return true
   end
   history[#history]=nil
@@ -249,10 +265,8 @@ keys.BS = function(handle, p1)
   dialog.list[IND_LISTITEMS]=list
   dialog.list.Title=gettitle(list)
   dialog.path[IND_DATA]=history[#history].path
-  far.SetDlgItem(handle, dialog.path.id, dialog.path)
-  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[IND_LISTITEMS])
-  far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
-  far.SendDlgMessage(handle, F.DM_LISTSETCURPOS, dialog.list.id, hist.pos)
+  UpdatePath(handle)
+  UpdateList(handle, hist.pos)
   return true
 end
 
@@ -279,72 +293,48 @@ keys.Ins = function(handle, p1)
     if not val then return end
   end
 
+  local pos={ SelectPos=1 }
   local list=dialog.list[IND_LISTITEMS]
   list.tbl[key]=editable[valtype](val)
   loadTable(history[#history].path, list.tbl)
   list=dialog.list[IND_LISTITEMS]
-  local pos={ SelectPos=1 }
   for i=1,#list do
     if list[i].key==key then
-      pos.SelectPos=list[i].idx
+      pos.SelectPos=i
       break
     end
   end
-
-  far.SendDlgMessage(handle, F.DM_LISTSETCURPOS, dialog.list.id, pos)
-  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[IND_LISTITEMS])
-  far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
+  UpdateList(handle, pos)
   return true
 end
 
 keys.Del = function(handle, p1)
   if p1~=dialog.list.id then return end
   local listinfo=far.SendDlgMessage(handle, F.DM_LISTINFO, dialog.list.id)
-  if listinfo.ItemsNumber==0 then
-    return
-  end
-  local itemn=listinfo.SelectPos
-  local pos={ SelectPos=1 }
+  if listinfo.ItemsNumber==0 then return end
 
+  local itemn=listinfo.SelectPos
   local res=far.Message("Are you sure you want to delete element "..itemn.."?", "", "No;Yes", "w")
   if res<=0 then return end
 
   local list=dialog.list[IND_LISTITEMS]
   list.tbl[list[itemn].key]=nil
   loadTable(history[#history].path, list.tbl)
-  list=dialog.list[IND_LISTITEMS]
-  local pos={ SelectPos=1 }
-  for i=1,#list do
-    if list[i].key==key then
-      pos.SelectPos=list[i].idx
-      break
-    end
-  end
-
-  far.SendDlgMessage(handle, F.DM_LISTSETCURPOS, dialog.list.id, pos)
-  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[IND_LISTITEMS])
-  far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
-  return
+  UpdateList(handle, listinfo)
 end
 
 keys.F4 = function(handle, p1)
   if p1~=dialog.list.id then return end
-  local iteminfo=far.SendDlgMessage(handle, F.DM_LISTINFO, dialog.list.id)
-  local itemn=iteminfo.SelectPos
-  local pos={ SelectPos=itemn, TopPos=iteminfo.TopPos}
+  local listinfo=far.SendDlgMessage(handle, F.DM_LISTINFO, dialog.list.id)
 
   local list=dialog.list[IND_LISTITEMS]
-  local key=list[itemn].key
+  local key=list[listinfo.SelectPos].key
   local res=edit(list.tbl[key], "Enter new value:")
   if not res then return end
 
   list.tbl[key]=res
   loadTable(history[#history].path, list.tbl)
-  list=dialog.list[IND_LISTITEMS]
-
-  far.SendDlgMessage(handle, F.DM_LISTSETCURPOS, dialog.list.id, pos)
-  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[IND_LISTITEMS])
-  far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
+  UpdateList(handle, listinfo)
   return
 end
 
@@ -355,4 +345,5 @@ local function showDialog(path, tbl)
   callDefer()
 end
 
+init()
 showDialog('_G')

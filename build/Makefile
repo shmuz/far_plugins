@@ -22,12 +22,13 @@ modules = \
   $(path_plugin)*sortlines.lua      \
   $(path_share)*serial.lua          \
   $(path_share)*strict.lua          \
-  $(path_share)*far2\history.lua    \
   $(path_share)*far2\dialog.lua     \
-  $(path_share)*far2\utils.lua      \
-  $(path_share)*far2\searchmenu.lua \
+  $(path_share)*far2\history.lua    \
+  $(path_share)*far2\keynames.lua   \
   $(path_share)*far2\makelang.lua   \
-  $(path_share)*far2\message.lua
+  $(path_share)*far2\message.lua    \
+  $(path_share)*far2\searchmenu.lua \
+  $(path_share)*far2\utils.lua
 
 FAR_EXPORTS = \
   CONFIGURE           \

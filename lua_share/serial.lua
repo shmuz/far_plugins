@@ -5,15 +5,15 @@ local format = string.format
 local frexp, modf = math.frexp, math.modf
 
 
-local function basicSerialize (o)
-  local tp = type(o)
+local function basicSerialize (value)
+  local tp = type(value)
   if tp == "boolean" then
-    return tostring(o)
+    return value and "true" or "false"
   elseif tp == "number" then
-    if o == modf(o) then return tostring(o) end
-    return format("(%.17f * 2^%d)", frexp(o)) -- preserve accuracy
+    if value == modf(value) then return format("%.0f", value) end
+    return format("(%.17f * 2^%d)", frexp(value))
   elseif tp == "string" then
-    return format("%q", o)
+    return format("%q", value)
   end
   return nil, tp
 end

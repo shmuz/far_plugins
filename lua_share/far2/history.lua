@@ -67,10 +67,9 @@ local function new (chunk)
   if chunk then
     self = {}
     setfenv(chunk, self)()
+    if type(self.Data) ~= "table" then self = nil end
   end
-  if type(self) ~= "table" or type(self.Data) ~= "table" then
-    self = { Data = {} }
-  end
+  self = self or { Data={} }
   return setmetatable(self, meta)
 end
 
