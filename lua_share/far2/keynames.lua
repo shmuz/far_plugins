@@ -1,13 +1,8 @@
+-- Key names
 -- Original author: Aidar Rakhmatullin
 
--- Key names
-
---[[
-local log = require "context.samples.logging"
-local logShow = log.Show
---]]
-
 local F = far.Flags
+local band = bit64.band
 
 -- ControlKeyState.
 local VKey_State = {
@@ -140,7 +135,6 @@ local SKey_Enhanced = {
 } --- SKey_Enhanced
 
 ---------------------------------------- local
-local band = bit64.band
 
 -- Check flag in mod.
 local function ismod (mod, flag)
@@ -148,21 +142,19 @@ local function ismod (mod, flag)
 end
 
 ----------------------------------------
-local tconcat = table.concat
+local function KeyStateToTable (KeyState)
+  local t = {"","",""}
 
-local function KeyStateToName (KeyState)
-  local t = {}
+  if ismod(KeyState, VKey_State.RIGHT_CTRL_PRESSED)    then t[1] = "RCtrl"
+  elseif ismod(KeyState, VKey_State.LEFT_CTRL_PRESSED) then t[1] = "Ctrl"
+  end
+  if ismod(KeyState, VKey_State.RIGHT_ALT_PRESSED)     then t[2] = "RAlt"
+  elseif ismod(KeyState, VKey_State.LEFT_ALT_PRESSED)  then t[2] = "Alt"
+  end
+  if ismod(KeyState, VKey_State.SHIFT_PRESSED)         then t[3] = "Shift" end
 
-  if ismod(KeyState, VKey_State.RIGHT_CTRL_PRESSED) then t[#t+1] = "RCtrl" end
-  if ismod(KeyState, VKey_State.LEFT_CTRL_PRESSED)  then t[#t+1] = "Ctrl"  end
-  if ismod(KeyState, VKey_State.RIGHT_ALT_PRESSED)  then t[#t+1] = "RAlt"  end
-  if ismod(KeyState, VKey_State.LEFT_ALT_PRESSED)   then t[#t+1] = "Alt"   end
-  if ismod(KeyState, VKey_State.SHIFT_PRESSED)      then t[#t+1] = "Shift" end
-
-  return tconcat(t)
-end -- KeyStateToName
-
-local schar = string.char
+  return t
+end -- KeyStateToTable
 
 local function InputRecordToName (Rec, isSeparate)
   -- Keyboard only.
@@ -170,14 +162,11 @@ local function InputRecordToName (Rec, isSeparate)
     return far.InputRecordToName(Rec)
   end
 
-  --logShow{ "VirKey", Rec }
-
   local VKey, SKey = Rec.VirtualKeyCode
-  local VMod, SMod = Rec.ControlKeyState, ""
+  local VMod = Rec.ControlKeyState
 
-  if VKey >= 0x30 and VKey <= 0x39 or
-     VKey >= 0x41 and VKey <= 0x5A then
-    SKey = schar(VKey)
+  if (VKey >= 0x30 and VKey <= 0x39) or (VKey >= 0x41 and VKey <= 0x5A) then
+    SKey = string.char(VKey)
   elseif VKey_Mods[VKey] then
     SKey = ""
   elseif not SKey then
@@ -189,16 +178,15 @@ local function InputRecordToName (Rec, isSeparate)
     SKey = SKey_Enhanced[SKey] or SKey
   end
 
-  if VMod ~= 0 then
-    SMod = KeyStateToName(VMod) or ""
-  end
-
-  local KeyName = SMod..SKey
+  local TMod = KeyStateToTable(VMod)
+  TMod[4] = SKey
   if isSeparate then
-    local c, a, s, key = regex.match(KeyName, "(R?Ctrl)?(R?Alt)?(Shift)?(.*)")
-    return c, a, s, key ~= "" and key or false
+    for k=1,4 do
+      if TMod[k]=="" then TMod[k]=false end
+    end
+    return unpack(TMod)
   else
-    return KeyName
+    return table.concat(TMod)
   end
 end -- InputRecordToName
 
