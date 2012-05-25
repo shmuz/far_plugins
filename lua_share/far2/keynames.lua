@@ -20,18 +20,18 @@ local VKey_State = {
 local VKey_Keys = win.GetVirtualKeys()
 
 local VKey_Mods = {
-  SHIFT     = 0x10, -- Shift
-  CONTROL   = 0x11, -- Ctrl
-  MENU      = 0x12, -- Alt
-  LWIN      = 0x5B,
-  RWIN      = 0x5C,
-  APPS      = 0x5D,
-  LSHIFT    = 0xA0,
-  RSHIFT    = 0xA1,
-  LCONTROL  = 0xA2,
-  RCONTROL  = 0xA3,
-  LMENU     = 0xA4,
-  RMENU     = 0xA5,
+  [0x10] = "SHIFT",   -- Shift
+  [0x11] = "CONTROL", -- Ctrl
+  [0x12] = "MENU",    -- Alt
+  [0x5B] = "LWIN",
+  [0x5C] = "RWIN",
+  [0x5D] = "APPS",
+  [0xA0] = "LSHIFT",
+  [0xA1] = "RSHIFT",
+  [0xA2] = "LCONTROL",
+  [0xA3] = "RCONTROL",
+  [0xA4] = "LMENU",
+  [0xA5] = "RMENU",
 } --- VKey_Mods
 
 -- VK_ key names
@@ -162,14 +162,12 @@ local function InputRecordToName (Rec, isSeparate)
     return far.InputRecordToName(Rec)
   end
 
-  local VKey, SKey = Rec.VirtualKeyCode
+  local VKey, SKey = Rec.VirtualKeyCode, ""
   local VMod = Rec.ControlKeyState
 
   if (VKey >= 0x30 and VKey <= 0x39) or (VKey >= 0x41 and VKey <= 0x5A) then
     SKey = string.char(VKey)
-  elseif VKey_Mods[VKey] then
-    SKey = ""
-  elseif not SKey then
+  elseif not VKey_Mods[VKey] then
     SKey = VKey_Keys[VKey] or ""
     SKey = VKey_Names[SKey] or SKey
   end
