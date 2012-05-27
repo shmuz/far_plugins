@@ -1,14 +1,18 @@
 -- Rename files in the directory, using Far regular expressions
 --
 
-local Title = "LF Rename"
-local RegPath = "LuaFAR\\RenameFiles\\"
+local AppName = "LF Rename"
+local RegPath = "LuaFAR\\"..AppName.."\\"
 local far2_dialog = require "far2.dialog"
 local far2_message = require "far2.message"
 local F = far.Flags
 
+local far2_history = require "far2.history"
+local History = far2_history.newsettings(AppName, "alldata")
+local HistData = History:field("alldata")
+
 local function ErrorMsg (text, title)
-  far.Message (text, title or "Error", nil, "w")
+  far.Message (text, title or AppName, nil, "w")
 end
 
 local function TransformReplacePat (aStr)
@@ -159,15 +163,13 @@ end
 
 local UserGuid = win.Uuid("af8d7072-ff17-4407-9af4-7323273ba899")
 
-local function UserDialog (aData, aList, aHelpTopic)
+local function UserDialog (aData, aList, aHelpTopic, aDlgTitle)
   local HIST_SEARCHPAT = RegPath .. "Search"
   local HIST_REPLACEPAT = RegPath .. "Replace"
   local W, X1 = 72, 14
-  local term = (#aList == 1) and "item" or "items"
-  local Title = ("%s (%d %s)"):format(Title, #aList, term)
   ------------------------------------------------------------------------------
   local D = far2_dialog.NewDialog()
-  D._          = {"DI_DOUBLEBOX",3, 1, W,11,0, 0, 0, 0, Title}
+  D._          = {"DI_DOUBLEBOX",3, 1, W,12,0, 0, 0, 0, aDlgTitle}
   D.lab        = {"DI_TEXT",     5, 2, 0,0, 0, 0, 0, 0, "&Search for:"}
   D.sSearchPat = {"DI_EDIT",     5, 3,W-2,6, 0, HIST_SEARCHPAT, 0, {DIF_HISTORY=1,DIF_USELASTHISTORY=1}, ""}
   D.lab        = {"DI_TEXT",     5, 4, 0,0, 0, 0, 0, 0, "&Replace with:"}
@@ -178,8 +180,9 @@ local function UserDialog (aData, aList, aHelpTopic)
   D.lab        = {"DI_TEXT",     5, 8, 0,0, 0, 0, 0, 0, "After :"}
   D.labAfter   = {"DI_TEXT",    X1, 8, 0,0, 0, 0, 0, 0, ""}
   D.sep        = {"DI_TEXT",     5, 9, 0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  D.btnOk      = {"DI_BUTTON",   0,10, 0,0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, "Ok"}
-  D.btnCancel  = {"DI_BUTTON",   0,10, 0,0, 0, 0, 0, "DIF_CENTERGROUP", "Cancel"}
+  D.bLogFile   = {"DI_CHECKBOX", 5,10, 0,0, HistData.bLogFile and 1 or 0, 0, 0, 0, "&Log file" }
+  D.btnOk      = {"DI_BUTTON",   0,11, 0,0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, "Ok"}
+  D.btnCancel  = {"DI_BUTTON",   0,11, 0,0, 0, 0, 0, "DIF_CENTERGROUP", "Cancel"}
   ------------------------------------------------------------------------------
   local uRegex, tReplace, fReplace
   local sErrSearch, sErrReplace
@@ -245,10 +248,12 @@ local function UserDialog (aData, aList, aHelpTopic)
           end
           return 0
         end
+        HistData.bLogFile = D.bLogFile:GetCheck(hDlg)
+        History:save()
       end
     end
   end
-  far.Dialog (UserGuid,-1,-1,W+4,13,aHelpTopic,D,0,DlgProc)
+  far.Dialog (UserGuid,-1,-1,W+4,14,aHelpTopic,D,0,DlgProc)
   return close_params
 end
 
@@ -267,6 +272,7 @@ local function GetUserChoice (aTitle, s_found, s_rep)
 end
 
 local function DoAction (aParams, aList, aDir, aLog)
+  aLog = aLog or { write=function() end }
   local Regex = aParams.Regex
   local fReplace = GetReplaceFunction(aParams.ReplacePat)
   local nFound, nReps = 0, 0
@@ -276,7 +282,7 @@ local function DoAction (aParams, aList, aDir, aLog)
     nFound, nReps = nFound + nF, nReps + nR
     if sLine ~= oldname then
       if sChoice ~= "all" then
-        sChoice = GetUserChoice(Title, oldname, sLine)
+        sChoice = GetUserChoice(AppName, oldname, sLine)
         if sChoice == "cancel" then break end
       end
       if sChoice ~= "no" then
@@ -293,40 +299,55 @@ local function DoAction (aParams, aList, aDir, aLog)
   return nFound, nReps
 end
 
-do
-  local arg = ...
-  local helpTopic = arg and arg[1]
-  local panelInfo = panel.GetPanelInfo (nil, 1)
-  if panelInfo.SelectedItemsNumber == 0 then return end
+local function main (helpTopic)
+  local panelInfo = panel.GetPanelInfo(nil, 1)
+  if panelInfo.ItemsNumber <= 1 then
+    far.Message(" Nothing to rename. ", AppName)
+    return
+  end
 
   -- prepare list of files to rename, to avoid recursive renaming
   local list = {}
-  for i=1, panelInfo.SelectedItemsNumber do
-    local item = panel.GetSelectedPanelItem (nil, 1, i)
-    table.insert(list, item.FileName)
+  local dlgTitle
+  if (panelInfo.SelectedItemsNumber > 1) or
+        (panelInfo.SelectedItemsNumber == 1 and
+        bit64.band(panel.GetSelectedPanelItem(nil, 1, 1).Flags, F.PPIF_SELECTED) ~= 0) then
+    for i=1, panelInfo.SelectedItemsNumber do
+      local item = panel.GetSelectedPanelItem (nil, 1, i)
+      table.insert(list, item.FileName)
+    end
+    dlgTitle = ("%s (%d selected %s)"):format(AppName, #list, (#list==1) and "item" or "items")
+  else
+    for i=1, panelInfo.ItemsNumber do
+      local item = panel.GetPanelItem (nil, 1, i)
+      if item.FileName ~= ".." then table.insert(list, item.FileName) end
+    end
+    dlgTitle = ("%s (total of %d %s)"):format(AppName, #list, (#list==1) and "item" or "items")
   end
 
   local data = {}
-  local tParams = UserDialog(data, list, helpTopic)
+  local tParams = UserDialog(data, list, helpTopic, dlgTitle)
   if not tParams then return end
-  local sSearchPat, sReplacePat, num = data.sSearchPat, data.sReplacePat
 
   local dir = panel.GetPanelDirectory(nil, 1).Name
   if not dir:find("[\\/]$") then dir = dir.."\\" end
 
-  local log = assert( io.open(dir.."rename.log", "w") )
-  do  -- print log-file header
-    log:write (string.rep("=====", 15),    "\n")
-    log:write ("Pattern:  \"",  sSearchPat,     "\"\n")
-    log:write ("Replace:  \"",  sReplacePat,    "\"\n")
-    log:write ("NumRep:   ", num or "multiple", "\n")
-    log:write (string.rep("=====", 15),  "\n\n")
+  local log = HistData.bLogFile and assert( io.open(dir.."lf_rename.log", "w") )
+  if log then  -- print log-file header
+    log:write (("====="):rep(15), "\n")
+    log:write ("Pattern:  \"", data.sSearchPat, "\"\n")
+    log:write ("Replace:  \"", data.sReplacePat, "\"\n")
+    log:write (("====="):rep(15), "\n\n")
   end
 
   DoAction (tParams, list, dir, log)
 
-  log:write("\n")
-  log:close()
+  if log then log:write("\n"); log:close(); end
+
   panel.UpdatePanel (nil, 1, true)
   panel.RedrawPanel (nil, 1)
 end
+
+local arg = ...
+local helpTopic = arg and arg[1]
+main(helpTopic)

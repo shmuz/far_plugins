@@ -34,19 +34,20 @@ directories.
 $ #Rename#
 ^#- Description -#
  The utility is intended for renaming files and directories. It works from
-panels. First, select the files and directories to be renamed. (If nothing
-is selected, the utility will rename the file or directory under cursor).
+panels. First, select the files and directories to be renamed. If nothing
+is selected, the utility will try to rename all files and directories in the
+panel.
 
  Call the utility from the plugin menu. The "LF Rename" dialog will be
 displayed. Number of items to be renamed is displayed in the dialog title.
 
-       Field #Search for:#
- It should contain a ~Far regex~@:RegExp@ pattern that will be
+ #Search for:#
+ This field should contain a ~Far regex~@:RegExp@ pattern that will be
 matched against every selected file or directory name. The matching is case
 insensitive.
 
-       Field #Replace with:#
- It should contain a pattern with the following syntax:
+ #Replace with:#
+ This field should contain a pattern with the following syntax:
 
     #$1#-#$9#, #$A#-#$F#     submatches (groups)
     #$0#               the whole match
@@ -55,7 +56,7 @@ insensitive.
     punctuation characters may or may not be escaped.
 
     #\N#               file name, without extension
-    #\X#               file extension
+    #\X#               file extension (the dot not included)
     #\xhhhh#           character with hex code #hhhh#
 
     #\L#               turn the following text into lower case
@@ -73,3 +74,8 @@ insensitive.
     #\R{#offset#,#width#}# as above, but inserted with the specified
                      width (zeros are added at the beginning),
                      e.g. \R{20,4} or \R{-10,4}
+
+ #Log file#
+ If checked, a log file #lf_rename.log# will be created. If a file with this
+name exists, it will be overwritten.
+

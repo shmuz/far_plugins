@@ -9,7 +9,7 @@ LUAVERSION = 51
 ARCH = -m32
 
 # Root work directory
-WORKDIR = s:/progr/work
+WORKDIR = ../../../..
 path_share = $(WORKDIR)/lua_share
 
 # Location of LuaFAR source directory
