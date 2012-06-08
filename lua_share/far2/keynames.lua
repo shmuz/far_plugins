@@ -159,7 +159,7 @@ end -- KeyStateToTable
 local function InputRecordToName (Rec, isSeparate)
   -- Keyboard only.
   if Rec.EventType ~= F.KEY_EVENT then
-    return far.InputRecordToName(Rec)
+    return far.InputRecordToName(Rec, isSeparate)
   end
 
   local VKey, SKey = Rec.VirtualKeyCode, ""

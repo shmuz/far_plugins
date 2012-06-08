@@ -15,6 +15,7 @@ scripts = \
   $(path_plugin)\config.lua      \
   $(path_plugin)\expression.lua  \
   $(path_plugin)\wrap.lua        \
+  $(path_plugin)\mreplace.lua    \
   $(path_share)*far2\tableview.lua
 
 modules = \

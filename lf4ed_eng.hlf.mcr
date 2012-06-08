@@ -11,6 +11,7 @@ programming language.
  The following utilities are included:
      ~Sort Lines~@SortLines@
      ~Reformat Block~@Wrap@
+     ~Multi-Line Replace~@MReplace@
      ~Block Sum~@BlockSum@
      ~Lua Expression~@LuaExpression@
      ~Lua Script~@LuaScript@
@@ -357,5 +358,72 @@ This may be needed if _usermenu.lua or one of the files containing event
 handlers were edited by the user.
 
     For details on file _usermenu.lua and event handlers, see the manual.
+
+ ~Contents~@Contents@
+
+@MReplace
+$ #Multi-Line Replace#
+^#- Description -#
+ The utility searches and replaces inside several lines of text in the editor.
+Those lines should be selected before the operation begins. The kind of
+selection (stream or vertical) does not matter, if even one position in a line
+is selected, the whole line participates in the operation.
+
+ If there is no selection, the operation is performed on the whole editor
+contents.
+
+ In the search stage, lines of text are concatenated with \n between them,
+no matter what the real line breaks sequences are. In the replace stage,
+the default line break sequences are inserted.
+
+ All replacements take place at once with no prompt for the user. In the
+similar way they all can be cancelled at once by pressing Ctrl-Z.
+
+^#Dialog settings# 
+ #Search for#
+ The search pattern. If "Reg. Expression" option is checked then it is
+interpreted as a ~regular expression~@:RegExp@, otherwise as a literal string.
+
+ #Replace with#
+ The replace pattern.
+ If Regular Expression option is checked then:
+    *  #$1#-#$9# are used for specifying submatches (groups).
+       #$0# stands for the whole match.
+    *  Literal dollar signs (#$#) and backslashes (#\#) must be escaped
+       with #\#
+    *  Other punctuation marks may or may not be escaped with #\#
+
+    *  The following escape sequences can be used as they are easier
+       to put into a dialog field than their character equivalents:
+       #\a#        alarm (hex 07)
+       #\e#        escape (hex 1B)
+       #\f#        formfeed (hex 0C)
+       #\n#        linefeed (hex 0A)
+       #\r#        carriage return (hex 0D)
+       #\t#        tab (hex 09)
+       #\xhhhh#    character with hex code #hhhh#
+
+ #Case sensitive#
+ Toggles case sensitivity.
+
+ #Whole words#
+ Search for whole words.
+
+ #Reg. Expression#
+ If checked, then the string to search is treated as a regular expression,
+otherwise as a literal string.
+
+ #Ignore spaces#
+ All literal whitespace in the search pattern is deleted before the search
+begins. Escape the whitespace with #\# if it is an integral part of the
+pattern.
+
+ #File as a line#
+ If checked then #.# (dot) in regular expressions matches any character,
+including \r and \n.
+ 
+ #Multiline mode#
+ If checked then #^# and #$# in regular expressions match correspondingly
+beginnings and ends of every line.
 
  ~Contents~@Contents@

@@ -78,4 +78,3 @@ insensitive.
  #Log file#
  If checked, a log file #lf_rename.log# will be created. If a file with this
 name exists, it will be overwritten.
-

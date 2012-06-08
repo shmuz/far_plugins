@@ -97,6 +97,11 @@ local function fWrap()
   return Utils.RunInternalScript("wrap", arg)
 end
 
+local function fMReplace()
+  local arg = { "dialog", _History:field("MultilineReplace") }
+  return Utils.RunInternalScript("mreplace", arg)
+end
+
 local function fBlockSum()
   local arg = { "BlockSum", _History:field("BlockSum") }
   return Utils.RunInternalScript("expression", arg)
@@ -128,6 +133,7 @@ end
 local EditorMenuItems = {
   { text = "::MSort",         action = fSort },
   { text = "::MWrap",         action = fWrap },
+  { text = "::MMultilineReplace", action = fMReplace },
   { text = "::MBlockSum",     action = fBlockSum },
   { text = "::MExpr",         action = fExpr },
   { text = "::MScript",       action = fScript },

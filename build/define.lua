@@ -1,6 +1,6 @@
 -- Definitions
 
-PLUGINVERSION = { 3, 0, 7 }
+PLUGINVERSION = { 3, 0, 8 }
 MINFARVERSION = "{ 3, 0, 0, 2572 }"
 MINLUAFARVERSION = "{ 3, 0, 9 }"
 

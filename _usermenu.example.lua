@@ -11,6 +11,7 @@ AddToMenu ("e", true, "Alt+3", 3)
 AddToMenu ("e", true, "Alt+4", 4)
 AddToMenu ("e", true, "Alt+5", 5)
 AddToMenu ("e", true, "Alt+6", 6)
+AddToMenu ("e", true, "Alt+7", 7)
 
 -- Utility for viewing and editing Lua variables.
 AddToMenu ("evp", "Table View", nil, "far2.tableview")
