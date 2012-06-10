@@ -410,8 +410,8 @@ interpreted as a ~regular expression~@:RegExp@, otherwise as a literal string.
  Search for whole words.
 
  #Reg. Expression#
- If checked, then the string to search is treated as a regular expression,
-otherwise as a literal string.
+ If checked, then the string to search is treated as a
+~regular expression~@:RegExp@, otherwise as a literal string.
 
  #Ignore spaces#
  All literal whitespace in the search pattern is deleted before the search

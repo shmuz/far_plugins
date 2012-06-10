@@ -98,8 +98,9 @@ local function fWrap()
 end
 
 local function fMReplace()
-  local arg = { "dialog", _History:field("MultilineReplace") }
-  return Utils.RunInternalScript("mreplace", arg)
+  local lib = require "far2.mreplace"
+  lib.Init(M)
+  lib.ReplaceWithDialog(_History:field("MultilineReplace"))
 end
 
 local function fBlockSum()
