@@ -373,7 +373,7 @@ is selected, the whole line participates in the operation.
 contents.
 
  In the search stage, lines of text are concatenated with \n between them,
-no matter what the real line breaks sequences are. In the replace stage,
+no matter what the real line break sequences are. In the replace stage,
 the default line break sequences are inserted.
 
  All replacements take place at once with no prompt for the user. In the
@@ -387,7 +387,7 @@ interpreted as a ~regular expression~@:RegExp@, otherwise as a literal string.
  #Replace with#
  The replace pattern.
  If Regular Expression option is checked then:
-    *  #$1#-#$9# are used for specifying submatches (groups).
+    *  #$1#-#$9#, #$A#-#$Z# are used for specifying submatches (groups).
        #$0# stands for the whole match.
     *  Literal dollar signs (#$#) and backslashes (#\#) must be escaped
        with #\#

@@ -62,14 +62,14 @@ local function TransformReplacePattern (data)
   end
   local subst = { ["\\"]="\\", ["%"]="%%", a="\a", e="\27", f="\f", n="\n", r="\r", t="\t" }
   local pat = regex.gsub(data.sReplacePat,
-    [[ \\x([0-9a-f]{1,4}) | \\(.) | (\%) | \$([0-9]) ]],
+    [[ \\x([0-9A-Fa-f]{1,4}) | \\(.) | (\%) | \$([0-9A-Za-z]) ]],
     function(j,k,l,m)
       if j then
         j = unicode.utf8.char(tonumber(j,16))
         return j=="%" and "%%" or j
       end
       return k and (subst[k] or k) or l and "%%" or "%"..m
-    end, nil, "ix")
+    end, nil, "x")
   return pat
 end
 
