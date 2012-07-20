@@ -1,4 +1,4 @@
-local PluginDir = far.PluginStartupInfo().ModuleName:match(".+\\")
+local PluginDir = far.PluginStartupInfo().ModuleDir
 local dir = "scripts/examples/"
 local HelpDir = PluginDir..dir
 

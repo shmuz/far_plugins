@@ -2,7 +2,7 @@
 
 local F = far.Flags
 local band, bor, bnot = bit64.band, bit64.bor, bit64.bnot
-local PluginDir = far.PluginStartupInfo().ModuleName:match(".*\\")
+local PluginDir = far.PluginStartupInfo().ModuleDir
 
 local function CheckLuafarVersion (msgTitle)
   local v1, v2, v3 = far.LuafarVersion(true)
