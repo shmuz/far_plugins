@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2012-09-29, v3.1.0
+      [*] Rebuild for current Far plugins API.
+
 2012-06-08, v3.0.8
       [+] Added utility: Multi-Line Replace.
       [-] Removed example: mergelines.lua.

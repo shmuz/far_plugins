@@ -13,6 +13,7 @@
 3. The following utilities are included:
    -- Sort Lines
    -- Reformat Block
+   -- Multi-Line Replace
    -- Block Sum
    -- Lua Expression
    -- Lua Script
