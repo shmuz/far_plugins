@@ -2,15 +2,11 @@
   Set of utilities for FAR Editor
 ====================================
 
-1. Prerequisites:
-   LuaFAR binaries (lua5.1.dll and luafar3.dll, available as a separate
-   download) must be present under some directory on PATH.
-
-2. Installation:
+1. Installation:
    Create a directory under %FARHOME%\Plugins, extract files and subdirectories
    into it, then restart Far.
 
-3. The following utilities are included:
+2. The following utilities are included:
    -- Sort Lines
    -- Reformat Block
    -- Multi-Line Replace
@@ -19,6 +15,6 @@
    -- Lua Script
    More utilities can be added by the user.
 
-4. How to use - see the help file and the manual.
+3. How to use - see the help file and the manual.
 
-5. Both the plugin and the utilities are written in Lua programming language.
+4. Both the plugin and the utilities are written in Lua programming language.

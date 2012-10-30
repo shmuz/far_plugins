@@ -6,28 +6,27 @@
 LUAVERSION = 51
 
 # 32 or 64-bit plugin
-ARCH = -m32
+DIRBIT = 32
 
 # Root work directory
 WORKDIR = ../../../..
 path_share = $(WORKDIR)/lua_share
 
+# Location of FAR source directory
+FARDIR = C:\farmanager\unicode_far
+
 # Location of LuaFAR source directory
-PATH_LUAFARSRC = $(WORKDIR)/luafar/luafar_unicode/src
+PATH_LUAFARSRC = $(FARDIR)/../plugins/luamacro/luafar
 
 # Include paths
 INC_LUA = $(WORKDIR)/system/include/lua$(LUAVERSION)
-INC_FAR = $(WORKDIR)/system/include/far/unicode
+INC_FAR = $(FARDIR)/../plugins/common/unicode
 
 # Location of executable files and DLLs
-ifeq ($(ARCH),-m64)
-  PATH_EXE = c:/exe64
-else
-  PATH_EXE = c:/exe32
-endif
+PATH_EXE = c:/exe$(DIRBIT)
 
 LUAEXE = $(PATH_EXE)/lua.exe
-LUAFARDLL = $(PATH_EXE)/luafar3.dll
+LUAFARDLL = $(FARDIR)\Release.$(DIRBIT).gcc/luafar3.dll
 
 ifeq ($(LUAVERSION),51)
   LUADLL = $(PATH_EXE)/lua5.1.dll
@@ -42,7 +41,9 @@ else
 endif
 #------------------------------------ END OF USER'S SETTINGS -----------------
 
-ifeq ($(ARCH),-m64)
+ARCH = -m$(DIRBIT)
+
+ifeq ($(DIRBIT),64)
   T_NOEMBED = $(PROJECT)-x64.dll
   T_EMBED = $(PROJECT)_e-x64.dll
   RESFLAGS = -F pe-x86-64

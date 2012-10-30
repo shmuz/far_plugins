@@ -43,7 +43,7 @@ local function jump (from, to, step)
 end
 
 if item.act=="clipCopy" then
-  far.MacroPost("CtrlShiftIns")
+  far.MacroPost("Keys'CtrlShiftIns'")
 
 elseif item.act=="clipSelect" or item.act=="clipDeselect" then
   local clip = far.PasteFromClipboard()
@@ -109,8 +109,8 @@ elseif item.act=="jumpPrevious"   then jump(APanel.CurrentItem-1, 1, -1)
 elseif item.act=="jumpNext"       then jump(APanel.CurrentItem+1, APanel.ItemsNumber, 1)
 elseif item.act=="jumpLast"       then jump(APanel.ItemsNumber, 1, -1)
 
-elseif item.act=="dialogSelect"   then far.MacroPost("Add")
-elseif item.act=="dialogDeselect" then far.MacroPost("Subtract")
+elseif item.act=="dialogSelect"   then far.MacroPost("Keys'Add'")
+elseif item.act=="dialogDeselect" then far.MacroPost("Keys'Subtract'")
 
 end
 
