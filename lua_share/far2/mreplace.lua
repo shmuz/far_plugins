@@ -21,7 +21,8 @@ local function ReplaceDialog (histData)
   Dlg.bExtended   = {"DI_CHECKBOX", 26, 8,  0, 0, 0, 0, 0, 0, M.MDlgExtended}
   Dlg.bMultiLine  = {"DI_CHECKBOX", 48, 8,  0, 0, 0, 0, 0, 0, M.MDlgMultiline}
 
-  Dlg.btnOk       = {"DI_BUTTON",    0,10,  0, 0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
+  Dlg.btnReplace  = {"DI_BUTTON",    0,10,  0, 0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MDlgBtnReplace}
+  Dlg.btnCount    = {"DI_BUTTON",    0,10,  0, 0, 0, 0, 0, F.DIF_CENTERGROUP, M.MDlgBtnCount}
   Dlg.btnCancel   = {"DI_BUTTON",    0,10,  0, 0, 0, 0, 0, F.DIF_CENTERGROUP, M.MCancel}
 
   local function CheckRegexChange (hDlg)
@@ -44,7 +45,8 @@ local function ReplaceDialog (histData)
   far2_dialog.LoadData(Dlg, histData)
   local ret = far.Dialog(id,-1,-1,76,13,"MReplace",Dlg,0,DlgProc)
   far2_dialog.SaveData(Dlg, histData)
-  return ret==Dlg.btnOk.id
+  return ret==Dlg.btnReplace.id and "replace" or
+         ret==Dlg.btnCount.id and "count"
 end
 
 local function TransformSearchPattern (data)
@@ -107,7 +109,7 @@ local function EditorAction (op, data)
   editor.SetPosition(nil, bSelection and editorInfo.BlockStartLine or 0, 0)
 
   local result, nFound, nReps = regex.gsub(table.concat(t,"\n"), SearchPat, ReplacePat, nil, Flags)
-  if nFound == 0 then
+  if nFound == 0 or op == "count" then
     return nFound, nReps
   end
 
@@ -138,11 +140,14 @@ local function Init (messageTable)
 end
 
 local function ReplaceWithDialog (histData)
-  if ReplaceDialog(histData) then
-    local ok, ret = pcall(EditorAction, "replace", histData)
+  local op = ReplaceDialog(histData)
+  if op then
+    local ok, nFound, nReps = pcall(EditorAction, op, histData)
     editor.Redraw()
     if ok then
-      local msg = (ret==0) and M.MNotFound or ("%s%d"):format(M.MTotalReplaced, ret)
+      local msg = (nFound==0) and M.MNotFound or
+        op=="replace" and ("%s%d"):format(M.MTotalReplaced, nReps) or
+        op=="count" and ("%s%d"):format(M.MTotalFound, nFound)
       far.Message(msg, AppName)
     else
       far.Message(ret, "Error", nil, "w")

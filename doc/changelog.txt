@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2012-??-??, v3.?.?
+  Multi-Line Replace:
+      [+] Added 'Count' operation.
+
 2012-10-30, v3.1.1
       [*] Rebuild for current Far plugins API.
 
