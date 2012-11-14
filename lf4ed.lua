@@ -100,7 +100,7 @@ end
 local function fMReplace()
   local lib = require "far2.mreplace"
   lib.Init(M)
-  lib.ReplaceWithDialog(_History:field("MultilineReplace"))
+  lib.ReplaceWithDialog(_History:field("MultilineReplace"), true)
 end
 
 local function fBlockSum()

@@ -139,7 +139,7 @@ local function Init (messageTable)
   AppName = M.MMultilineReplace
 end
 
-local function ReplaceWithDialog (histData)
+local function ReplaceWithDialog (histData, collect)
   local op = ReplaceDialog(histData)
   if op then
     local ok, nFound, nReps = pcall(EditorAction, op, histData)
@@ -152,6 +152,7 @@ local function ReplaceWithDialog (histData)
     else
       far.Message(ret, "Error", nil, "w")
     end
+    if collect then collectgarbage("collect") end
   end
 end
 
