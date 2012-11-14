@@ -344,7 +344,7 @@ Available commands:
 end
 
 -- Split command line into separate arguments.
--- * An argument is either of:
+-- * An argument is any sequence of (a) and (b):
 --     a) a sequence of 0 or more characters enclosed within a pair of non-escaped
 --        double quotes; can contain spaces; enclosing double quotes are stripped
 --        from the argument.
@@ -352,10 +352,13 @@ end
 -- * Backslashes only escape double quotes.
 -- * The function does not raise errors.
 local function SplitCommandLine (str)
-  local pat = [["((?:\\"|[^"])*)"|((?:\\"|\S)+)]]
+  local quoted   = [[" (?: \\" | [^"]   )* "? ]]
+  local unquoted = [[  (?: \\" | [^"\s] )+    ]]
+  local pat = ("(?: %s|%s )+"):format(quoted, unquoted)
   local out = {}
-  for c1, c2 in regex.gmatch(str, pat) do
-    out[#out+1] = regex.gsub(c1 or c2, [[\\(")|(.)]], "%1%2")
+  local rep = { ['\\"']='"', ['"']='' }
+  for arg in regex.gmatch(str, pat, "x") do
+    out[#out+1] = arg:gsub('(\\?")', rep)
   end
   return out
 end
