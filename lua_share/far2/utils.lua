@@ -320,7 +320,7 @@ Command line syntax:
   %s: [<options>] <command>|-r<filename> [<arguments>]
 
 Macro call syntax:
-  CallPlugin("%s",
+  Plugin.Call("%s",
       "[<options>] <command>|-r<filename> [<arguments>]")
 
 Options:
