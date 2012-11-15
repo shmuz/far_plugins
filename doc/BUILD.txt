@@ -58,13 +58,4 @@ Installation of non-embedded version of LuaFAR for Editor
       .....................
 
 
-Run-time dependencies
-----------------------
-lua5.1.dll and luafar3.dll must be present under some directory listed
-within Windows %PATH%.
-
-
-Important Note
----------------
-After the installation, make sure that the plugin directory contains
-exactly one file with the .dll extension.
+[END OF FILE]
