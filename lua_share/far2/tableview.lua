@@ -1,10 +1,34 @@
 -- Encoding: UTF-8
--- Original author: Maxim Gonchar.
+-- Original author: Maxim Gonchar
+-- Modifications by: Shmuel Zeigerman
+-------------------------------------------------------------------------------
+local Stack={}
+local StackMeta={__index=Stack}
+local function NewStack() return setmetatable({},StackMeta); end
+function Stack:size() return #self; end
+function Stack:peek() return self[#self]; end
+function Stack:push(val) self[#self+1]=val; end
+function Stack:pop() local val=self[#self]; self[#self]=nil; return val; end
+-------------------------------------------------------------------------------
+local function ShowResults(title, ...)
+  local nargs = select("#", ...)
+  local props = {
+    Title=title,
+    Bottom=nargs==0 and "No results" or nargs==1 and "1 result" or nargs.." results",
+  }
+  local items={}
+  for k=1,nargs do
+    local val = select(k, ...)
+    items[#items+1] = { text=("%d. %-16s %s"):format(k, type(val), tostring(val)) }
+  end
+  return far.Menu(props,items)
+end
+-------------------------------------------------------------------------------
 
 local far2dialog=require 'far2.dialog'
 local F=far.Flags
 local IND_X2, IND_Y2, IND_LISTITEMS, IND_DATA = 4, 5, 6, 10
-local history={}
+local history=NewStack()
 local opts={
   textheight=16,--30,
   textwidth=50,--60,
@@ -19,20 +43,21 @@ local function dlgProc(handle,msg,p1,p2)
   if msg==F.DN_INITDIALOG then
     far.SendDlgMessage(handle, F.DM_SETMOUSEEVENTNOTIFY, 1, 0)
   elseif msg==F.DN_CONTROLINPUT or msg==F.DN_INPUT then
+    local func
     if p2.EventType==F.KEY_EVENT then
-      local f=keys[far.InputRecordToName(p2)]
-      if f then
-        return f(handle, p1)
-      end
+      func=keys[far.InputRecordToName(p2)]
     elseif p1==dialog.list.id and p2.EventType==F.MOUSE_EVENT then
       if p2.EventFlags==F.DOUBLE_CLICK then
-        return keys.Enter(handle, p1)
+        func=keys.Enter
       elseif bit64.band(p2.ButtonState, F.RIGHTMOST_BUTTON_PRESSED) ~= 0 then
-        return keys.BS(handle, p1)
+        func=keys.BS
       end
     end
+    if func then
+      return func(handle, p1)
+    end
   elseif msg==F.DN_CLOSE then
-    history={}
+    history=NewStack()
   end
 end
 
@@ -40,7 +65,7 @@ local function init()
   opts.valuewidth=opts.textwidth-opts.keywidth+2-opts.nmax
   opts.height=opts.textheight+5
   opts.width=opts.textwidth+23-opts.nmax
-  opts.fmt=('%%%ii║ %%1.1s │ %%%i.%is║ %%1.1s │ %%%i.%is'):format(
+  opts.fmt=('%%%ii║ %%1.1s │ %%-%i.%is║ %%1.1s │ %%-%i.%is'):format(
     opts.nmax, opts.keywidth, opts.keywidth, opts.valuewidth, opts.valuewidth)
 
   dialog=far2dialog.NewDialog()
@@ -57,14 +82,14 @@ local editable = {
  number=tonumber,
  boolean=function(a) return a~='false' and a~='nil' end
 }
-local function edit(value, title)
+local function editValue(value, title)
   local tp=type(value)
   if not editable[tp] then
     far.Message("Field of type '"..tp.."' is not editable")
     return
   end
-  local result=far.InputBox(nil, title, nil, nil, tostring(value), 30, nil, nil )
-  return result and editable[tp](result)
+  local result=far.InputBox(nil, title, nil, nil, tostring(value))
+  if result then return true, editable[tp](result); end
 end
 
 local function initDlgSizes()
@@ -80,7 +105,7 @@ end
 local function repr(a)
   if type(a)=='table'  then
     local str='table'
-    if not next(a) then
+    if next(a)==nil then
       str=str..': empty'
     elseif #a>0 then
       str=str..': n='..#a
@@ -116,7 +141,7 @@ __metatable="@"
 }
 local function gettitle(list)
   local tit=("Elements: %i"):format(#list)
-  local mt=(getmetatable(list.tbl))
+  local mt=(getmetatable(list.table))
   if type(mt)=="table" then
     local mts={' ('}
     for k,v in pairs(mt) do
@@ -131,9 +156,9 @@ local function gettitle(list)
   return tit
 end
 
-local function tblToList(aTbl)
+local function tblToList(aTable)
   local list={}
-  for k, v in pairs(aTbl) do
+  for k, v in pairs(aTable) do
     table.insert(list, { key=k, value=v } )
   end
   table.sort(list, function(a,b) return tostring(a.key)<tostring(b.key) end)
@@ -141,13 +166,13 @@ local function tblToList(aTbl)
     v.Text=opts.fmt:format(i, type(v.key), repr(v.key), type(v.value), repr(v.value))
     v.id=i
   end
-  list.tbl=aTbl
+  list.table=aTable
   return list
 end
 
-local function loadTable(aPath, aTbl)
-  local tbl=aTbl
-  if aPath and not aTbl then
+local function loadTable(aPath, aTable)
+  local tbl=aTable
+  if aPath and not aTable then
     local fun,err=loadstring( ("return %s"):format(aPath) )
     if not fun then
       far.Message(err, 'Syntax error', nil, 'w')
@@ -165,10 +190,10 @@ local function loadTable(aPath, aTbl)
     far.Message('Updating opts.nmax from '..opts.nmax..' to '..nlen, 'Debug message')
     opts.nmax=nlen
     init()
-    return loadTable(aPath, aTbl)
+    return loadTable(aPath, aTable)
   end
 
-  history[#history+1]={path=aPath, list=list}
+  history:push{path=aPath, list=list}
 
   dialog.path[IND_DATA]=aPath and tostring(aPath) or '<internal>'
   dialog.list[IND_LISTITEMS]=list
@@ -178,28 +203,16 @@ local function loadTable(aPath, aTbl)
   initDlgSizes()
 end
 
-local deferFunc=nil
-local function callDefer()
-  if not deferFunc then
-    return
-  end
-  local result=far.InputBox(nil, nil, "Arguments:", nil, "", 30, nil, nil)
-  if not result then
-    deferFunc=nil
-    return
-  end
+local function callFunction(func)
+  local result=far.InputBox(nil, nil, "Arguments:")
+  if not result then return end
 
-  local fun,err=loadstring( ("return %s"):format(result) )
-  if not fun then
-    deferFunc=nil
+  local getArgList,err=loadstring( ("return %s"):format(result) )
+  if not getArgList then
     far.Message(err, 'Syntax error', nil, 'w')
     return
   end
-  local function showResult(...)
-    local msg = select("#", ...)==0 and "<nothing>" or select(1, ...)
-    far.Message(msg, "Function call result:")
-  end
-  showResult(deferFunc(fun()))
+  ShowResults("Function call results", func(getArgList()))
 end
 
 local function UpdateList(handle, pos)
@@ -215,28 +228,27 @@ local function UpdatePath(handle)
 end
 
 keys.Enter = function(handle, p1)
-  local path,tbl
+  local path,val
   if p1==dialog.path.id then
     path=far.SendDlgMessage(handle, F.DM_GETTEXT, dialog.path.id)
     dialog.path[IND_DATA]=path
-    history[#history].pos=history[#history].pos or {}
+    history:peek().pos=history:peek().pos or {}
   elseif p1==dialog.list.id then
     local listinfo=far.SendDlgMessage(handle, F.DM_LISTINFO, dialog.list.id)
     if listinfo.ItemsNumber==0 then
       return true
     end
     local itemn=listinfo.SelectPos
-    history[#history].pos=listinfo
+    history:peek().pos=listinfo
     local list=dialog.list[IND_LISTITEMS]
     local item=list[itemn]
-    tbl=list.tbl[item.key]
+    val=list.table[item.key]
 
-    if type(tbl)=='function' then
-      deferFunc=tbl
-      far.SendDlgMessage(handle, F.DM_CLOSE)
-      return false
-    elseif type(tbl)~='table' then
-      far.Message('Table or function expected, got '..type(tbl), 'Error', nil, 'w')
+    if type(val)=='function' then
+      callFunction(val)
+      return true
+    elseif type(val)~='table' then
+      keys.F4(handle,p1)
       return true
     end
 
@@ -247,7 +259,7 @@ keys.Enter = function(handle, p1)
     end
     dialog.path[IND_DATA]=path
   end
-  loadTable(path,tbl)
+  loadTable(path,val)
   UpdatePath(handle)
   UpdateList(handle, nil)
   return true
@@ -256,15 +268,15 @@ keys.NumEnter=keys.Enter
 
 keys.BS = function(handle, p1)
   if p1~=dialog.list.id then return end
-  if #history<2 then
+  if history:size()<2 then
     return true
   end
-  history[#history]=nil
-  local hist=history[#history]
+  history:pop()
+  local hist=history:peek()
   local list=hist.list
   dialog.list[IND_LISTITEMS]=list
   dialog.list.Title=gettitle(list)
-  dialog.path[IND_DATA]=history[#history].path
+  dialog.path[IND_DATA]=hist.path
   UpdatePath(handle)
   UpdateList(handle, hist.pos)
   return true
@@ -272,31 +284,33 @@ end
 
 keys.Ins = function(handle, p1)
   if p1~=dialog.list.id then return end
-  local keytype=edit('string', 'Enter key type:')
+  local ok,keytype=editValue('string', 'Enter key type:')
+  if not ok then return end
   if not editable[keytype] then
-    far.Message('Invalid type '..tostring(keytype))
+    far.Message('Not editable type: '..tostring(keytype))
     return
   end
-  local key=edit(keytype=='string' and '' or keytype=='number' and 0 or keytype=='boolean', 'Enter key:')
-  if not key then return end
+  local ok,key=editValue(keytype=='string' and '' or keytype=='number' and 0 or keytype=='boolean', 'Enter key:')
+  if not (ok and key) then return end
   key=editable[keytype](key)
-  local valtype=edit('string', 'Enter value type:')
+  local ok,valtype=editValue('string', 'Enter value type:')
+  if not ok then return end
   local val
   if valtype=='table' then
     val={}
   else
     if not editable[valtype] then
-      far.Message('Invalid type '..tostring(valtype))
+      far.Message('Not editable type: '..tostring(valtype))
       return
     end
-    val=edit(valtype=='string' and '' or valtype=='number' and 0 or valtype=='boolean', 'Enter value:')
-    if not val then return end
+    ok,val=editValue(valtype=='string' and '' or valtype=='number' and 0 or valtype=='boolean', 'Enter value:')
+    if not (ok and val) then return end
   end
 
   local pos={ SelectPos=1 }
   local list=dialog.list[IND_LISTITEMS]
-  list.tbl[key]=editable[valtype](val)
-  loadTable(history[#history].path, list.tbl)
+  list.table[key]=editable[valtype](val)
+  loadTable(history:peek().path, list.table)
   list=dialog.list[IND_LISTITEMS]
   for i=1,#list do
     if list[i].key==key then
@@ -318,8 +332,8 @@ keys.Del = function(handle, p1)
   if res<=0 then return end
 
   local list=dialog.list[IND_LISTITEMS]
-  list.tbl[list[itemn].key]=nil
-  loadTable(history[#history].path, list.tbl)
+  list.table[list[itemn].key]=nil
+  loadTable(history:peek().path, list.table)
   UpdateList(handle, listinfo)
 end
 
@@ -329,20 +343,17 @@ keys.F4 = function(handle, p1)
 
   local list=dialog.list[IND_LISTITEMS]
   local key=list[listinfo.SelectPos].key
-  local res=edit(list.tbl[key], "Enter new value:")
-  if not res then return end
+  local ok,res=editValue(list.table[key], "Enter new value:")
+  if not (ok and res) then return end
 
-  list.tbl[key]=res
-  loadTable(history[#history].path, list.tbl)
+  list.table[key]=res
+  loadTable(history:peek().path, list.table)
   UpdateList(handle, listinfo)
-  return
 end
 
 local function showDialog(path, tbl)
   loadTable(path, tbl)
-  far.Dialog(unpack(dlgArguments))
-
-  callDefer()
+  far.Dialog(unpack(dlgArguments,1,9))
 end
 
 init()
