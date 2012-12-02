@@ -32,7 +32,6 @@ end
 
 local far2dialog=require 'far2.dialog'
 local F=far.Flags
-local IND_X2, IND_Y2, IND_LISTITEMS, IND_DATA = 4, 5, 6, 10
 local history=NewStack()
 local opts={
   textheight=16,--30,
@@ -61,8 +60,6 @@ local function dlgProc(handle,msg,p1,p2)
     if func then
       return func(handle, p1)
     end
-  elseif msg==F.DN_CLOSE then
-    history=NewStack()
   end
 end
 
@@ -95,16 +92,6 @@ local function editValue(value, title)
   end
   local result=far.InputBox(nil, title, nil, nil, tostring(value))
   if result then return true, editable[tp](result); end
-end
-
-local function initDlgSizes()
-  dialog.box[IND_X2]=opts.width+2
-  dialog.list[IND_X2]=opts.textwidth+24-opts.nmax
-  dialog.path[IND_X2]=opts.textwidth+23-opts.nmax
-  dialog.box[IND_Y2]=opts.height
-  dialog.list[IND_Y2]=opts.textheight+4
-
-  dlgArguments[5]=opts.height+2 -- "Y2" parameter
 end
 
 local function repr(a)
@@ -145,7 +132,7 @@ __mode="?",
 __metatable="@"
 }
 local function gettitle(list)
-  local tit=("Elements: %i"):format(#list)
+  local title=("Elements: %i"):format(#list)
   local mt=(getmetatable(list.table))
   if type(mt)=="table" then
     local mts={' ('}
@@ -155,10 +142,9 @@ local function gettitle(list)
       end
     end
     table.insert(mts, ')')
-    tit=tit..table.concat(mts)
+    title=title..table.concat(mts)
   end
-
-  return tit
+  return title
 end
 
 local function tblToList(aTable)
@@ -192,7 +178,6 @@ local function loadTable(aPath, aTable)
   local list=tblToList(tbl)
   local nlen=#tostring(#list)
   if nlen>opts.nmax then
-    far.Message('Updating opts.nmax from '..opts.nmax..' to '..nlen, 'Debug message')
     opts.nmax=nlen
     init()
     return loadTable(aPath, aTable)
@@ -200,12 +185,18 @@ local function loadTable(aPath, aTable)
 
   history:push{path=aPath, list=list}
 
-  dialog.path[IND_DATA]=aPath and tostring(aPath) or '<internal>'
-  dialog.list[IND_LISTITEMS]=list
-  dialog.list[IND_DATA]=gettitle(list)
-  dialog.list.Title=dialog.list[IND_DATA]
+  dialog.path.Data=aPath and tostring(aPath) or '<internal>'
+  dialog.list.ListItems=list
+  dialog.list.Data=gettitle(list)
+  dialog.list.Title=dialog.list.Data
 
-  initDlgSizes()
+  dialog.box.X2=opts.width+2
+  dialog.list.X2=opts.textwidth+24-opts.nmax
+  dialog.path.X2=opts.textwidth+23-opts.nmax
+  dialog.box.Y2=opts.height
+  dialog.list.Y2=opts.textheight+4
+
+  dlgArguments[5]=opts.height+2 -- "Y2" parameter
 end
 
 local function callFunction(func)
@@ -221,7 +212,7 @@ local function callFunction(func)
 end
 
 local function UpdateList(handle, pos)
-  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list[IND_LISTITEMS])
+  far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list.ListItems)
   far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
   if pos then
     far.SendDlgMessage(handle, F.DM_LISTSETCURPOS, dialog.list.id, pos)
@@ -229,14 +220,14 @@ local function UpdateList(handle, pos)
 end
 
 local function UpdatePath(handle)
-  far.SendDlgMessage(handle, F.DM_SETTEXT, dialog.path.id, dialog.path[IND_DATA])
+  far.SendDlgMessage(handle, F.DM_SETTEXT, dialog.path.id, dialog.path.Data)
 end
 
 keys.Enter = function(handle, p1)
   local path,val
   if p1==dialog.path.id then
     path=far.SendDlgMessage(handle, F.DM_GETTEXT, dialog.path.id)
-    dialog.path[IND_DATA]=path
+    dialog.path.Data=path
     history:peek().pos=history:peek().pos or {}
   elseif p1==dialog.list.id then
     local listinfo=far.SendDlgMessage(handle, F.DM_LISTINFO, dialog.list.id)
@@ -245,7 +236,7 @@ keys.Enter = function(handle, p1)
     end
     local itemn=listinfo.SelectPos
     history:peek().pos=listinfo
-    local list=dialog.list[IND_LISTITEMS]
+    local list=dialog.list.ListItems
     local item=list[itemn]
     val=list.table[item.key]
 
@@ -258,11 +249,11 @@ keys.Enter = function(handle, p1)
     end
 
     if type(item.key)=='string' then
-      path=dialog.path[IND_DATA]..'.'..item.key
+      path=dialog.path.Data..'.'..item.key
     else
-      path=dialog.path[IND_DATA]..'['..item.key..']'
+      path=dialog.path.Data..'['..item.key..']'
     end
-    dialog.path[IND_DATA]=path
+    dialog.path.Data=path
   end
   loadTable(path,val)
   UpdatePath(handle)
@@ -279,9 +270,9 @@ keys.BS = function(handle, p1)
   history:pop()
   local hist=history:peek()
   local list=hist.list
-  dialog.list[IND_LISTITEMS]=list
+  dialog.list.ListItems=list
   dialog.list.Title=gettitle(list)
-  dialog.path[IND_DATA]=hist.path
+  dialog.path.Data=hist.path
   UpdatePath(handle)
   UpdateList(handle, hist.pos)
   return true
@@ -313,10 +304,10 @@ keys.Ins = function(handle, p1)
   end
 
   local pos={ SelectPos=1 }
-  local list=dialog.list[IND_LISTITEMS]
+  local list=dialog.list.ListItems
   list.table[key]=editable[valtype](val)
   loadTable(history:peek().path, list.table)
-  list=dialog.list[IND_LISTITEMS]
+  list=dialog.list.ListItems
   for i=1,#list do
     if list[i].key==key then
       pos.SelectPos=i
@@ -336,7 +327,7 @@ keys.Del = function(handle, p1)
   local res=far.Message("Are you sure you want to delete element "..itemn.."?", "", "No;Yes", "w")
   if res<=0 then return end
 
-  local list=dialog.list[IND_LISTITEMS]
+  local list=dialog.list.ListItems
   list.table[list[itemn].key]=nil
   loadTable(history:peek().path, list.table)
   UpdateList(handle, listinfo)
@@ -345,8 +336,9 @@ end
 keys.F4 = function(handle, p1)
   if p1~=dialog.list.id then return end
   local listinfo=far.SendDlgMessage(handle, F.DM_LISTINFO, dialog.list.id)
+  if listinfo.ItemsNumber==0 then return end
 
-  local list=dialog.list[IND_LISTITEMS]
+  local list=dialog.list.ListItems
   local key=list[listinfo.SelectPos].key
   local ok,res=editValue(list.table[key], "Enter new value:")
   if not (ok and res) then return end
