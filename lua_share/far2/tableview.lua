@@ -12,14 +12,19 @@ function Stack:pop() local val=self[#self]; self[#self]=nil; return val; end
 -------------------------------------------------------------------------------
 local function ShowResults(title, ...)
   local nargs = select("#", ...)
+  if select(1, ...) == false then
+    far.Message(select(2, ...), "Error", nil, "w")
+    return
+  end
+  nargs = nargs - 1 -- discard the first return value of pcall()
   local props = {
     Title=title,
     Bottom=nargs==0 and "No results" or nargs==1 and "1 result" or nargs.." results",
   }
   local items={}
   for k=1,nargs do
-    local val = select(k, ...)
-    items[#items+1] = { text=("%d. %-16s %s"):format(k, type(val), tostring(val)) }
+    local val = select(k+1, ...)
+    items[k] = { text=("%d. %-16s %s"):format(k, type(val), tostring(val)) }
   end
   return far.Menu(props,items)
 end
@@ -212,7 +217,7 @@ local function callFunction(func)
     far.Message(err, 'Syntax error', nil, 'w')
     return
   end
-  ShowResults("Function call results", func(getArgList()))
+  ShowResults("Function call results", pcall(func, getArgList()))
 end
 
 local function UpdateList(handle, pos)
