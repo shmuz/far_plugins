@@ -1,7 +1,27 @@
 -- Encoding: UTF-8
 -- Original author: Maxim Gonchar
 -- Modifications by: Shmuel Zeigerman
--------------------------------------------------------------------------------
+--[[---------------------------------------------------------------------------
+TODO:
+1. Из-за сохранения в стеке-истории таблиц-списков вместо оригинальных таблиц,
+   при выполнении операции keys.BS возможно отображение на экране устаревшей
+   информации (например, какое-то поле редактировалось, а мы его увидим в
+   состоянии "до редактирования".
+2. [DONE]
+   Ошибка времени исполнения, приводящая к закрытию программы, может возникнуть
+   не только при вызове пользователем функции (тут есть защита, pcall), но и до
+   вызова, при вычислении параметров функции. Например, если указать один из
+   параметров как ttt.fff, при том, что ttt==nil. Поэтому, видимо нужен pcall
+   на более высоком уровне (или дополнительно, или вместо существующего).
+3. [DONE]
+   history:push() должно выполняться в функции keys.Enter, а не в функции
+   loadTable. Иначе, например, после редактирования поля во вложенной таблице,
+   данная таблица добавляется в стек, и нужно уже 2 нажатия BS, чтобы вернуться
+   на предыдущий уровень.
+4. Если вызванная пользователем функция возвращает одну или несколько таблиц,
+   надо иметь возможность "заходить" и в эти таблицы ("Lua Explorer" умеет).
+5. Доступ к "свойствам" (properties) при запуске из макросов.
+--]]---------------------------------------------------------------------------
 local Stack={}
 local StackMeta={__index=Stack}
 local function NewStack() return setmetatable({},StackMeta); end
@@ -12,18 +32,13 @@ function Stack:pop() local val=self[#self]; self[#self]=nil; return val; end
 -------------------------------------------------------------------------------
 local function ShowResults(title, ...)
   local nargs = select("#", ...)
-  if select(1, ...) == false then
-    far.Message(select(2, ...), "Error", nil, "w")
-    return
-  end
-  nargs = nargs - 1 -- discard the first return value of pcall()
   local props = {
     Title=title,
     Bottom=nargs==0 and "No results" or nargs==1 and "1 result" or nargs.." results",
   }
   local items={}
   for k=1,nargs do
-    local val = select(k+1, ...)
+    local val = select(k, ...)
     items[k] = { text=("%d. %-16s %s"):format(k, type(val), tostring(val)) }
   end
   return far.Menu(props,items)
@@ -183,7 +198,9 @@ local function loadTable(aPath, aTable)
     return loadTable(aPath, aTable)
   end
 
-  history:push{path=aPath, list=list}
+  if history:size()==0 then
+    history:push{path=aPath, list=list}
+  end
 
   dialog.path.Data=aPath and tostring(aPath) or '<internal>'
   dialog.list.ListItems=list
@@ -199,18 +216,6 @@ local function loadTable(aPath, aTable)
   dlgArguments[5]=opts.height+2 -- "Y2" parameter
 end
 
-local function callFunction(func)
-  local result=far.InputBox(nil, nil, "Arguments:")
-  if not result then return end
-
-  local getArgList,err=loadstring( ("return %s"):format(result) )
-  if not getArgList then
-    far.Message(err, 'Syntax error', nil, 'w')
-    return
-  end
-  ShowResults("Function call results", pcall(func, getArgList()))
-end
-
 local function UpdateList(handle, pos)
   far.SendDlgMessage(handle, F.DM_LISTSET, dialog.list.id, dialog.list.ListItems)
   far.SendDlgMessage(handle, F.DM_LISTSETTITLES, dialog.list.id, dialog.list)
@@ -221,6 +226,11 @@ end
 
 local function UpdatePath(handle)
   far.SendDlgMessage(handle, F.DM_SETTEXT, dialog.path.id, dialog.path.Data)
+end
+
+local function callFunction(func,arglist)
+  local getArgList = assert(loadstring("return "..arglist))
+  ShowResults("Function call results", func(getArgList()))
 end
 
 keys.Enter = function(handle, p1)
@@ -241,7 +251,11 @@ keys.Enter = function(handle, p1)
     val=list.table[item.key]
 
     if type(val)=='function' then
-      callFunction(val)
+      local arglist=far.InputBox(nil, ("Arguments to '%s'"):format(tostring(item.key)), "", "Function arguments")
+      if arglist then
+        local ok, msg = pcall(callFunction, val, arglist)
+        if not ok then far.Message(msg, "Error", nil, "w") end
+      end
       return true
     elseif type(val)~='table' then
       keys.F4(handle,p1)
@@ -255,6 +269,7 @@ keys.Enter = function(handle, p1)
     end
     dialog.path.Data=path
   end
+  history:push{path=path, list=tblToList(val)}
   loadTable(path,val)
   UpdatePath(handle)
   UpdateList(handle, nil)
