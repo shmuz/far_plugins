@@ -7,20 +7,8 @@ TODO:
    при выполнении операции keys.BS возможно отображение на экране устаревшей
    информации (например, какое-то поле редактировалось, а мы его увидим в
    состоянии "до редактирования".
-2. [DONE]
-   Ошибка времени исполнения, приводящая к закрытию программы, может возникнуть
-   не только при вызове пользователем функции (тут есть защита, pcall), но и до
-   вызова, при вычислении параметров функции. Например, если указать один из
-   параметров как ttt.fff, при том, что ttt==nil. Поэтому, видимо нужен pcall
-   на более высоком уровне (или дополнительно, или вместо существующего).
-3. [DONE]
-   history:push() должно выполняться в функции keys.Enter, а не в функции
-   loadTable. Иначе, например, после редактирования поля во вложенной таблице,
-   данная таблица добавляется в стек, и нужно уже 2 нажатия BS, чтобы вернуться
-   на предыдущий уровень.
-4. Если вызванная пользователем функция возвращает одну или несколько таблиц,
+2. Если вызванная пользователем функция возвращает одну или несколько таблиц,
    надо иметь возможность "заходить" и в эти таблицы ("Lua Explorer" умеет).
-5. Доступ к "свойствам" (properties) при запуске из макросов.
 --]]---------------------------------------------------------------------------
 local Stack={}
 local StackMeta={__index=Stack}
@@ -57,6 +45,11 @@ local opts={
 local dialog
 local dlgArguments
 local keys={}
+local macroCheck = {
+  [Area or 1]=1, [APanel or 1]=1, [PPanel or 1]=1, [CmdLine or 1]=1,
+  [Dlg or 1]=1, [Drv or 1]=1, [Editor or 1]=1, [Far or 1]=1, [Help or 1]=1,
+  [Menu or 1]=1, [Mouse or 1]=1, [Object or 1]=1, [Viewer or 1]=1,
+}
 
 local function dlgProc(handle,msg,p1,p2)
   if msg==F.DN_INITDIALOG then
@@ -167,6 +160,11 @@ local function tblToList(aTable)
   for k, v in pairs(aTable) do
     table.insert(list, { key=k, value=v } )
   end
+  if macroCheck[aTable] and aTable.properties then
+    for k, v in pairs(aTable.properties) do
+      table.insert(list, { key=k, value=v() } )
+    end
+  end
   table.sort(list, function(a,b) return tostring(a.key)<tostring(b.key) end)
   for i, v in ipairs(list) do
     v.Text=opts.fmt:format(i, type(v.key), repr(v.key), type(v.value), repr(v.value))
@@ -176,19 +174,28 @@ local function tblToList(aTable)
   return list
 end
 
-local function loadTable(aPath, aTable)
-  local tbl=aTable
-  if aPath and not aTable then
-    local fun,err=loadstring( ("return %s"):format(aPath) )
-    if not fun then
-      far.Message(err, 'Syntax error', nil, 'w')
-      return
+local function PathToTable(aPath)
+  local func,msg = loadstring(("return %s"):format(aPath))
+  if func then
+    local ok,val = pcall(func)
+    if ok then
+      if type(val)=="table" then return val end
+      return nil,'Table expected, got '..type(val)
+    else
+      return nil,val
     end
-    tbl=fun()
+  else
+    return nil,msg
   end
-  if type(tbl)~='table' then
-    far.Message('Table expected, got '..type(tbl), 'Error', nil, 'w')
-    return
+end
+
+local function loadTable(aPath, aTable)
+  local tbl,err = aTable,nil
+  if aPath and not aTable then
+    tbl,err = PathToTable(aPath)
+    if not tbl then
+      far.Message(err, 'Error', nil, 'w'); return
+    end
   end
   local list=tblToList(tbl)
   local nlen=#tostring(#list)
@@ -269,10 +276,13 @@ keys.Enter = function(handle, p1)
     end
     dialog.path.Data=path
   end
-  history:push{path=path, list=tblToList(val)}
-  loadTable(path,val)
-  UpdatePath(handle)
-  UpdateList(handle, nil)
+  val = val or PathToTable(path)
+  if val then
+    history:push{path=path, list=tblToList(val)}
+    loadTable(path,val)
+    UpdatePath(handle)
+    UpdateList(handle, nil)
+  end
   return true
 end
 keys.NumEnter=keys.Enter
@@ -302,7 +312,7 @@ keys.Ins = function(handle, p1)
     return
   end
   local ok,key=editValue(keytype=='string' and '' or keytype=='number' and 0 or keytype=='boolean', 'Enter key:')
-  if not (ok and key) then return end
+  if not ok or key==nil then return end
   key=editable[keytype](key)
   local ok,valtype=editValue('string', 'Enter value type:')
   if not ok then return end
@@ -315,7 +325,7 @@ keys.Ins = function(handle, p1)
       return
     end
     ok,val=editValue(valtype=='string' and '' or valtype=='number' and 0 or valtype=='boolean', 'Enter value:')
-    if not (ok and val) then return end
+    if not ok or val==nil then return end
   end
 
   local pos={ SelectPos=1 }
@@ -356,7 +366,7 @@ keys.F4 = function(handle, p1)
   local list=dialog.list.ListItems
   local key=list[listinfo.SelectPos].key
   local ok,res=editValue(list.table[key], "Enter new value:")
-  if not (ok and res) then return end
+  if not ok or res==nil then return end
 
   list.table[key]=res
   loadTable(history:peek().path, list.table)
