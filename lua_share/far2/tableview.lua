@@ -3,12 +3,10 @@
 -- Modifications by: Shmuel Zeigerman
 --[[---------------------------------------------------------------------------
 TODO:
-1. Из-за сохранения в стеке-истории таблиц-списков вместо оригинальных таблиц,
-   при выполнении операции keys.BS возможно отображение на экране устаревшей
-   информации (например, какое-то поле редактировалось, а мы его увидим в
-   состоянии "до редактирования".
-2. Если вызванная пользователем функция возвращает одну или несколько таблиц,
+1. Если вызванная пользователем функция возвращает одну или несколько таблиц,
    надо иметь возможность "заходить" и в эти таблицы ("Lua Explorer" умеет).
+2. Для правильного показа значений "properties" надо перед их считыванием
+   закрывать диалог (закрывать, а не прятать), а затем переоткрывать.
 --]]---------------------------------------------------------------------------
 local Stack={}
 local StackMeta={__index=Stack}
@@ -57,7 +55,9 @@ local function dlgProc(handle,msg,p1,p2)
   elseif msg==F.DN_CONTROLINPUT or msg==F.DN_INPUT then
     local func
     if p2.EventType==F.KEY_EVENT then
-      func=keys[far.InputRecordToName(p2)]
+      local keyname = far.InputRecordToName(p2)
+      if keyname=="CtrlAltF" then return true end -- suppress ListBox filtering.
+      func=keys[keyname]
     elseif p1==dialog.list.id and p2.EventType==F.MOUSE_EVENT then
       if p2.EventFlags==F.DOUBLE_CLICK then
         func=keys.Enter
@@ -202,7 +202,7 @@ local function loadTable(aPath, aTable)
   if nlen>opts.nmax then
     opts.nmax=nlen
     init()
-    return loadTable(aPath, aTable)
+    list=tblToList(tbl)
   end
 
   if history:size()==0 then
@@ -262,6 +262,8 @@ keys.Enter = function(handle, p1)
       if arglist then
         local ok, msg = pcall(callFunction, val, arglist)
         if not ok then far.Message(msg, "Error", nil, "w") end
+        loadTable(dialog.path.Data, dialog.list.table)
+        UpdateList(handle, listinfo)
       end
       return true
     elseif type(val)~='table' then
@@ -294,7 +296,7 @@ keys.BS = function(handle, p1)
   end
   history:pop()
   local hist=history:peek()
-  local list=hist.list
+  local list=tblToList(hist.list.table)
   dialog.list.ListItems=list
   dialog.list.Title=gettitle(list)
   dialog.path.Data=hist.path

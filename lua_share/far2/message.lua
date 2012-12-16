@@ -28,7 +28,7 @@ end
 
 local function Separator (y1, kind, text, color)
   local flags = bor(F.DIF_SHOWAMPERSAND, kind==2 and F.DIF_SEPARATOR2 or F.DIF_SEPARATOR)
-  return {"DI_TEXT", 0,y1,0,y1, 0,0,0,flags, text or "", color=color}
+  return {"DI_TEXT", -1,y1,-1,y1, 0,0,0,flags, text or "", color=color}
 end
 
 local function WrapText (aText, aMaxLen, aMaxLen1, aMaxItems)

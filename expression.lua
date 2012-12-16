@@ -71,7 +71,7 @@ local function ParamsDialog (aData)
   D._             = {"DI_DOUBLEBOX",3, 1, 52,16,0, 0, 0, 0, M.MScriptParams}
   D.bExternalScript = {"DI_CHECKBOX", 5, 2,  0,0, 0, 0, 0, 0, M.MExternalScript}
   D.sExternalScript = {"DI_EDIT",     5, 3, 49,0, 0, HIST_EXTFILE, 0, "DIF_HISTORY",""}
-  D.sep             = {"DI_TEXT",     0, 4,  0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},M.MParamsSeparator}
+  D.sep             = {"DI_TEXT",    -1, 4,  0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},M.MParamsSeparator}
 
   D.label           = {"DI_TEXT",     5, 5,  0,0, 0, 0, 0, 0, "&1."}
   D.sParam1         = {"DI_EDIT",     8, 5, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}

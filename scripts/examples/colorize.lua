@@ -25,18 +25,11 @@ end
 
 -- Unload all colorizers except the first found one.
 --    Should be called from an autostarting macro, like this:
---    <?xml version="1.0" encoding="UTF-8" ?>
---    <farconfig version="3.0.2583">
---     <macros>
---      <keymacros>
---       <macro area="Shell" key="AltShiftF24" flags="RunAfterFARStart" description="Init colorizer">
---        <text>
---         CallPlugin("6f332978-08b8-4919-847a-efbb6154c99a","InitColorizer")
---        </text>
---       </macro>
---      </keymacros>
---     </macros>
---    </farconfig>
+-- Macro {
+--   area="Shell"; key="AltShiftF24"; flags="RunAfterFARStart"; description="Init colorizer"; action = function()
+--      CallPlugin("6f332978-08b8-4919-847a-efbb6154c99a","InitColorizer")
+--   end;
+-- }
 local function AutoStart (data)
   local firstfound
   for k,v in ipairs(data) do
