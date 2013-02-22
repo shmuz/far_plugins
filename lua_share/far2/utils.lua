@@ -225,7 +225,13 @@ local function MakeAutoInstall (AddUserFile)
     ---------------------------------------------------------------------------
     local first = depth
     local offset = PluginDir:len() + 1
-    for _, item in ipairs(far.GetDirList(startpath) or {}) do
+
+    local DirList = {}
+    far.RecursiveSearch(startpath, "*",
+      function(item, fullname) item.FileName=fullname; DirList[#DirList+1]=item end,
+      bor(F.FRS_RECUR,F.FRS_SCANSYMLINK))
+
+    for _, item in ipairs(DirList) do
       if first then
         first = false
         local _, m = item.FileName:gsub("\\", "")

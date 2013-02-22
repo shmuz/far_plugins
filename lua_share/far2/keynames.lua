@@ -158,7 +158,7 @@ end -- KeyStateToTable
 
 local function InputRecordToName (Rec, isSeparate)
   -- Keyboard only.
-  if Rec.EventType ~= F.KEY_EVENT then
+  if Rec.EventType ~= F.KEY_EVENT and Rec.EventType ~= F.FARMACRO_KEY_EVENT then
     return far.InputRecordToName(Rec, isSeparate)
   end
 
