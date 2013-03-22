@@ -13,7 +13,7 @@ end
 
 local function GetNearestWord (pattern)
   local line = editor.GetString(nil, nil, 2)
-  local pos = editor.GetInfo().CurPos + 1
+  local pos = editor.GetInfo().CurPos
   local r = regex.new(pattern)
   local start = 1
   while true do
@@ -27,7 +27,7 @@ end
 local function GetAllText()
   local ei = assert(editor.GetInfo())
   local t = {}
-  for n = 0, ei.TotalLines-1 do
+  for n = 1, ei.TotalLines do
     local s = editor.GetString(nil, n, 2)
     table.insert(t, s)
   end
@@ -42,10 +42,10 @@ local function GetSelectedText()
     local n = ei.BlockStartLine
     while true do
       local s = editor.GetString(nil, n, 1)
-      if not s or s.SelStart == -1 then
+      if not s or s.SelStart == 0 then
         break
       end
-      local sel = s.StringText:sub (s.SelStart+1, s.SelEnd)
+      local sel = s.StringText:sub (s.SelStart, s.SelEnd)
       table.insert(t, sel)
       n = n + 1
     end
@@ -190,21 +190,21 @@ local function BlockSum (history)
 
   if ei.BlockType ~= F.BTYPE_NONE then
     local r = regex.new(pattern)
-    for n=ei.BlockStartLine, ei.TotalLines-1 do
+    for n=ei.BlockStartLine, ei.TotalLines do
       local s = editor.GetString (nil, n, 1)
-      if s.SelEnd == 0 or s.SelStart < 0 then
+      if s.SelEnd == 0 or s.SelStart < 1 then
         blockEndLine = n - 1
-        if s.SelStart < 0 then editor.SetPosition(nil, blockEndLine) end
+        if s.SelStart < 1 then editor.SetPosition(nil, blockEndLine) end
         break
       end
-      local start, _, sel = r:find( s.StringText:sub(s.SelStart+1, s.SelEnd) )
+      local start, _, sel = r:find( s.StringText:sub(s.SelStart, s.SelEnd) ) -- 'start' in selection
       if start then
-        x_start = editor.RealToTab(nil, n, s.SelStart + start)
+        x_start = editor.RealToTab(nil, n, s.SelStart + start - 1) -- 'start' column in line
         local num = tonumber(sel)
         if num then
           sum = sum + num
           local x = regex.find(sel, "\\.")
-          if x then x_dot = x_start + x - 1 end
+          if x then x_dot = x_start + x - 1 end -- 'dot' column in line
         end
       end
     end
@@ -229,18 +229,18 @@ local function BlockSum (history)
   end
   if history.cbxInsert then
     local y = blockEndLine or ei.CurLine -- position of the last line
-    local s = editor.GetString(nil, y)           -- get last line
-    editor.SetPosition (nil, y, s.StringText:len()) -- insert a new line
-    editor.InsertString()                           -- +
+    local s = editor.GetString(nil, y)                -- get last line
+    editor.SetPosition (nil, y, s.StringText:len()+1) -- insert a new line
+    editor.InsertString()                             -- +
     local prefix = "="
     if x_dot then
       local x = regex.find(tostring(sum), "\\.")
       if x then x_start = x_dot - (x - 1) end
     end
     if x_start then
-      x_start = x_start>#prefix and x_start-#prefix-1 or 0
+      x_start = x_start>#prefix and x_start-#prefix or 1
     else
-      x_start = (ei.BlockType==F.BTYPE_COLUMN) and s.SelStart or 0
+      x_start = (ei.BlockType==F.BTYPE_COLUMN) and s.SelStart or 1
     end
     editor.SetPosition (nil, y+1, x_start)
     editor.InsertText(nil, prefix .. sum)
@@ -280,7 +280,7 @@ local function LuaExpr (history)
   if history.cbxInsert then
     local line = editor.GetString(nil, numline)
     local pos = (edInfo.BlockType==F.BTYPE_NONE) and line.StringLength or line.SelEnd
-    editor.SetPosition(nil, numline, pos)
+    editor.SetPosition(nil, numline, pos+1)
     editor.InsertText(nil, " = " .. result .. " ; ")
     editor.Redraw()
   end

@@ -92,11 +92,11 @@ local function OnError (msg)
   local eInfo = editor.GetInfo()
   if eInfo then
     if file == '[string "selection"]' then
-      local startsel = eInfo.BlockType~=F.BTYPE_NONE and eInfo.BlockStartLine or 0
+      local startsel = eInfo.BlockType~=F.BTYPE_NONE and eInfo.BlockStartLine-1 or 0
       line = line + startsel
     end
     local offs = math.floor(eInfo.WindowSizeY / 2)
-    editor.SetPosition(nil, line-1, 0, 0, line>offs and line-offs or 0)
+    editor.SetPosition(nil, line, 0, 0, line>offs and line-offs or 1)
     editor.Redraw()
   end
 end

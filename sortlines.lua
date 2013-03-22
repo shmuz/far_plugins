@@ -38,7 +38,7 @@ end
 
 -- Depends on: FAR API
 local function EditorHasSelection (editInfo)
-  return editInfo.BlockType ~= 0 and editInfo.BlockStartLine >= 0
+  return editInfo.BlockType ~= 0 and editInfo.BlockStartLine >= 1
 end
 
 -- Depends on: FAR API
@@ -49,7 +49,7 @@ local function EditorBlockLines ()
   local start_line = editInfo.BlockStartLine
   return function()
     local lineInfo = editor.GetString (nil, start_line, 1)
-    if lineInfo and lineInfo.SelStart >= 0 and lineInfo.SelEnd ~= 0 then
+    if lineInfo and lineInfo.SelStart >= 1 and lineInfo.SelEnd ~= 0 then
       start_line = start_line + 1
       return lineInfo
     end
@@ -63,7 +63,7 @@ local function GetLines (columntype)
   for line in EditorBlockLines() do
     tinsert(arr_index, #arr_index+1)
     tinsert(arr_target, line)
-    local s = columntype and line.StringText:sub(line.SelStart+1, line.SelEnd)
+    local s = columntype and line.StringText:sub(line.SelStart, line.SelEnd)
       or line.StringText
     tinsert(arr_compare, s)
   end
@@ -80,10 +80,10 @@ local function PutLines(arr_compare, arr_index, arr_target, OnlySelection)
   local BlockSelStart, BlockSelEnd, BlockSelWidth
   if OnlySelection then
     EditorSetPosition(nil, editInfo.BlockStartLine)
-    local line = editor.GetString(nil, -1)
-    BlockSelStart = editor.RealToTab(nil, -1, line.SelStart)
-    BlockSelEnd   = editor.RealToTab(nil, -1, line.SelEnd)
-    BlockSelWidth = BlockSelEnd - BlockSelStart
+    local line = editor.GetString(nil, nil)
+    BlockSelStart = editor.RealToTab(nil, nil, line.SelStart)
+    BlockSelEnd   = editor.RealToTab(nil, nil, line.SelEnd)
+    BlockSelWidth = BlockSelEnd - BlockSelStart + 1
   end
   for i, v in ipairs(arr_index) do
     if i ~= v then
@@ -94,13 +94,13 @@ local function PutLines(arr_compare, arr_index, arr_target, OnlySelection)
         local S = arr_compare[v]
         local S2 = S .. (" "):rep(BlockSelWidth - S:len())
         local TrgScrLen = TabLen(oldtext, editInfo.TabSize)
-        if TrgScrLen <= BlockSelStart then
+        if TrgScrLen < BlockSelStart then
           if S == "" then newtext = oldtext
-          else newtext = oldtext .. (" "):rep(BlockSelStart-TrgScrLen) .. S
+          else newtext = oldtext .. (" "):rep(BlockSelStart-TrgScrLen-1) .. S
           end
         else
-          newtext = oldtext:sub(1, TrgLine.SelStart)
-          if TrgScrLen <= BlockSelEnd then newtext = newtext .. S
+          newtext = oldtext:sub(1, TrgLine.SelStart-1)
+          if TrgScrLen < BlockSelEnd then newtext = newtext .. S
           else newtext = newtext .. S2 .. oldtext:sub(TrgLine.SelEnd + 1)
           end
         end
@@ -109,7 +109,7 @@ local function PutLines(arr_compare, arr_index, arr_target, OnlySelection)
         newtext, newEOL = arr_target[v].StringText, arr_target[v].StringEOL
       end
       EditorSetPosition(nil, pstart + i)
-      EditorSetString(nil, -1, newtext, newEOL)
+      EditorSetString(nil, nil, newtext, newEOL)
     end
   end
 end

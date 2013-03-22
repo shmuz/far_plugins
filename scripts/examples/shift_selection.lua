@@ -13,14 +13,14 @@ local function Shift (Id, forward)
   local EI = editor.GetInfo(Id)
   if EI.BlockType ~= F.BTYPE_COLUMN then return end
   editor.UndoRedo(Id, "EUR_BEGIN")
-  for numline=EI.BlockStartLine, EI.TotalLines-1 do
+  for numline=EI.BlockStartLine, EI.TotalLines do
     local SI = editor.GetStringW(Id, numline, 1)
-    if SI.SelStart < 0 or SI.SelEnd == 0 then break end
+    if SI.SelStart < 1 or SI.SelEnd == 0 then break end
     -- local tabStart = editor.RealToTab(Id, numline, SI.SelStart)
     -- local tabLength = editor.RealToTab(Id, numline, SI.StringLength)
     -- local tabEnd = editor.RealToTab(Id, numline, SI.SelEnd)
     local text = SI.StringText
-    local sel = sub(text, SI.SelStart+1, SI.SelEnd)
+    local sel = sub(text, SI.SelStart, SI.SelEnd)
     if pat_nospace:findW(sel) then
       if forward then
         if SI.SelEnd <= SI.StringLength then
@@ -33,7 +33,7 @@ local function Shift (Id, forward)
         if sel and SI.SelEnd < SI.StringLength then sel = sel..SPACE end
       end
       if sel then
-        text = sub(text, 1, SI.SelStart) .. sel .. sub(text, SI.SelEnd + 1)
+        text = sub(text, 1, SI.SelStart-1) .. sel .. sub(text, SI.SelEnd + 1)
         editor.SetStringW(Id, numline, text, SI.StringEOL)
       end
     end

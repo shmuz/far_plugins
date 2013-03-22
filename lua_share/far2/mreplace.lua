@@ -94,19 +94,19 @@ local function EditorAction (op, data)
   regex.gsub("foo", SearchPat, ReplacePat, nil, Flags) -- test patterns, provoke exception
 
   local t={}
-  local lineno=bSelection and editorInfo.BlockStartLine or 0
+  local lineno=bSelection and editorInfo.BlockStartLine or 1
   local eol
   editor.SetPosition(nil, lineno, 0)
-  while lineno < editorInfo.TotalLines do
+  while lineno <= editorInfo.TotalLines do
     local line=editor.GetString(nil, lineno)
-    if bSelection and (line.SelStart<0 or line.SelEnd==0) then
+    if bSelection and (line.SelStart<=0 or line.SelEnd==0) then
       if eol~="" then t[#t+1]="" end
       break
     end
     t[#t+1], eol = line.StringText, line.StringEOL
     lineno = lineno+1
   end
-  editor.SetPosition(nil, bSelection and editorInfo.BlockStartLine or 0, 0)
+  editor.SetPosition(nil, bSelection and editorInfo.BlockStartLine or 1, 1)
 
   local result, nFound, nReps = regex.gsub(table.concat(t,"\n"), SearchPat, ReplacePat, nil, Flags)
   if nFound == 0 or op == "count" then
@@ -114,10 +114,10 @@ local function EditorAction (op, data)
   end
 
   editor.UndoRedo(nil, F.EUR_BEGIN)
-  for i=bSelection and editorInfo.BlockStartLine or 0,lineno-1 do
+  for i=bSelection and editorInfo.BlockStartLine or 1,lineno-1 do
     editor.DeleteString()
   end
-  lineno = bSelection and editorInfo.BlockStartLine or 0
+  lineno = bSelection and editorInfo.BlockStartLine or 1
   for line, eol in result:gmatch("([^\r\n]*)(\r?\n?)") do
     if eol ~= "" then
       editor.InsertString()

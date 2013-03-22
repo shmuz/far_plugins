@@ -67,8 +67,8 @@ local function CleanAllEditors (data)
     local winfo = far.AdvControl("ACTL_GETWINDOWINFO", k-1)
     if winfo.Type == F.WTYPE_EDITOR then
       local info = editor.GetInfo(winfo.Id)
-      for y = 0,info.TotalLines-1 do
-        for k,v in ipairs(data) do editor.DelColor(winfo.Id, y, -1, v.Guid) end
+      for y = 1,info.TotalLines do
+        for k,v in ipairs(data) do editor.DelColor(winfo.Id, y, nil, v.Guid) end
       end
     end
   end

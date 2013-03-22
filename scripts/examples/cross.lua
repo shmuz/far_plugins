@@ -10,15 +10,15 @@ local scrolllock=false
 function GetData(id)
   local data=editors[id]
   if not data then
-    editors[id]={start=0,finish=0}
+    editors[id]={start=1,finish=1}
     data=editors[id]
   end
   return data
 end
 
 function RemoveCrest(id,data)
-  for ii=data.start,data.finish-1 do
-    editor.DelColor(id,ii,-1)
+  for ii=data.start,data.finish do
+    editor.DelColor(id,ii,nil)
   end
 end
 
@@ -34,8 +34,8 @@ function ProcessEditorInput(rec)
       if scrolllock then
         ProcessCrest(editor.GetInfo(-1).EditorID,
           function(data)
-            data.start=0
-            data.finish=0
+            data.start=1
+            data.finish=1
           end
         )
         scrolllock=false
@@ -53,7 +53,7 @@ end
 
 function ProcessEditorEvent(id,event,param)
   if event==F.EE_READ then
-    editors[id]={start=0,finish=0}
+    editors[id]={start=1,finish=1}
   end
   if event==F.EE_CLOSE then
     editors[id]=nil
@@ -65,7 +65,7 @@ function ProcessEditorEvent(id,event,param)
         function(data)
           data.start=ei.TopScreenLine
           data.finish=math.min(ei.TopScreenLine+ei.WindowSizeY,ei.TotalLines)
-          for ii=data.start,data.finish-1 do
+          for ii=data.start,data.finish do
             local toreal=function(pos) return editor.TabToReal(ei.EditorID,ii,pos) end
             if ei.CurLine==ii then
               editor.AddColor(ei.EditorID,ii,toreal(ei.LeftPos),toreal(ei.LeftPos+ei.WindowSizeX),F.ECF_TABMARKCURRENT,color,200)
@@ -86,8 +86,8 @@ function ExitScript()
     if info and F.WTYPE_EDITOR==info.Type then
       ProcessCrest(info.Id,
         function(data)
-          data.start=0
-          data.finish=0
+          data.start=1
+          data.finish=1
         end
       )
     end
