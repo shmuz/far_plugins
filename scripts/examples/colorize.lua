@@ -64,7 +64,7 @@ end
 local function CleanAllEditors (data)
   local count = far.AdvControl("ACTL_GETWINDOWCOUNT")
   for k=1,count do
-    local winfo = far.AdvControl("ACTL_GETWINDOWINFO", k-1)
+    local winfo = far.AdvControl("ACTL_GETWINDOWINFO", k)
     if winfo.Type == F.WTYPE_EDITOR then
       local info = editor.GetInfo(winfo.Id)
       for y = 1,info.TotalLines do

@@ -71,7 +71,7 @@ local function OnError (msg)
   if not luaScript then
     local trgInfo
     for i=1,far.AdvControl("ACTL_GETWINDOWCOUNT") do
-      local wInfo = far.AdvControl("ACTL_GETWINDOWINFO", i-1)
+      local wInfo = far.AdvControl("ACTL_GETWINDOWINFO", i)
       if wInfo.Type==F.WTYPE_EDITOR and
         Lower(wInfo.Name:gsub("/","\\")) == Lower(file:gsub("/","\\"))
       then

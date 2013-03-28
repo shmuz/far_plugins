@@ -81,7 +81,7 @@ end
 
 function ExitScript()
   local wincount=far.AdvControl(F.ACTL_GETWINDOWCOUNT,0,0)
-  for ii=0,wincount-1 do
+  for ii=1,wincount do
     local info=far.AdvControl(F.ACTL_GETWINDOWINFO,ii,0)
     if info and F.WTYPE_EDITOR==info.Type then
       ProcessCrest(info.Id,
