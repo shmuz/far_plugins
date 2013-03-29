@@ -68,7 +68,7 @@ local function ParamsDialog (aData)
   local HIST_PARAM = "LuaFAR\\LuaScript\\Parameter"
   local HIST_EXTFILE = "LuaFAR\\LuaScript\\ExternalFile"
   local D = far2_dialog.NewDialog()
-  D._             = {"DI_DOUBLEBOX",3, 1, 52,16,0, 0, 0, 0, M.MScriptParams}
+  D._             = {"DI_DOUBLEBOX",3, 1, 52,16,0, 0, 0, 0, M.MDlgScriptParams}
   D.bExternalScript = {"DI_CHECKBOX", 5, 2,  0,0, 0, 0, 0, 0, M.MExternalScript}
   D.sExternalScript = {"DI_EDIT",     5, 3, 49,0, 0, HIST_EXTFILE, 0, "DIF_HISTORY",""}
   D.sep             = {"DI_TEXT",    -1, 4,  0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},M.MParamsSeparator}
@@ -151,7 +151,7 @@ end
 local ResultGuid = win.Uuid("d45fdadc-4918-4d47-b34a-311947d241b2")
 
 local function ResultDialog (aHelpTopic, aData, result, minDigits)
-  local Title = (aHelpTopic=="LuaExpression") and M.MExpr or M.MBlockSum
+  local Title = (aHelpTopic=="LuaExpression") and M.MDlgExpr or M.MDlgBlockSum
   if minDigits then
     result = tostring(result)
     local last = result:match("%.(%d*)$")

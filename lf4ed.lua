@@ -132,13 +132,13 @@ local function fPluginConfig()
 end
 
 local EditorMenuItems = {
-  { text = "::MSort",         action = fSort },
-  { text = "::MWrap",         action = fWrap },
-  { text = "::MMultilineReplace", action = fMReplace },
-  { text = "::MBlockSum",     action = fBlockSum },
-  { text = "::MExpr",         action = fExpr },
-  { text = "::MScript",       action = fScript },
-  { text = "::MScriptParams", action = fScriptParams },
+  { text = "::MMenuSortLines",        action = fSort },
+  { text = "::MMenuWrap",             action = fWrap },
+  { text = "::MMenuMultilineReplace", action = fMReplace },
+  { text = "::MMenuBlockSum",         action = fBlockSum },
+  { text = "::MMenuExpr",             action = fExpr },
+  { text = "::MMenuScript",           action = fScript },
+  { text = "::MMenuScriptParams",     action = fScriptParams },
 }
 
 local function RunExitScriptHandlers()

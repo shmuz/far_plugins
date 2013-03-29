@@ -8,7 +8,7 @@ local AppName
 
 local function ReplaceDialog (histData)
   local Dlg = far2_dialog.NewDialog()
-  Dlg.dbox        = {"DI_DOUBLEBOX", 3, 1, 72,11, 0, 0, 0, 0, M.MMultilineReplace}
+  Dlg.dbox        = {"DI_DOUBLEBOX", 3, 1, 72,11, 0, 0, 0, 0, M.MDlgMultilineReplace}
   Dlg.lab         = {"DI_TEXT",      5, 2,  0, 0, 0, 0, 0, 0, M.MDlgSearchPat}
   Dlg.sSearchPat  = {"DI_EDIT",      5, 3, 70, 4, 0, "SearchText", 0, {DIF_HISTORY=1,DIF_USELASTHISTORY=1}, ""}
   Dlg.lab         = {"DI_TEXT",      5, 4,  0, 0, 0, 0, 0, 0, M.MDlgReplacePat}
@@ -19,7 +19,7 @@ local function ReplaceDialog (histData)
   Dlg.bFileAsLine = {"DI_CHECKBOX", 48, 7,  0, 0, 0, 0, 0, 0, M.MDlgFileAsLine}
   Dlg.bWholeWords = {"DI_CHECKBOX",  5, 8,  0, 0, 0, 0, 0, 0, M.MDlgWholeWords}
   Dlg.bExtended   = {"DI_CHECKBOX", 26, 8,  0, 0, 0, 0, 0, 0, M.MDlgExtended}
-  Dlg.bMultiLine  = {"DI_CHECKBOX", 48, 8,  0, 0, 0, 0, 0, 0, M.MDlgMultiline}
+  Dlg.bMultiLine  = {"DI_CHECKBOX", 48, 8,  0, 0, 0, 0, 0, 0, M.MDlgMultilineMode}
 
   Dlg.btnReplace  = {"DI_BUTTON",    0,10,  0, 0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MDlgBtnReplace}
   Dlg.btnCount    = {"DI_BUTTON",    0,10,  0, 0, 0, 0, 0, F.DIF_CENTERGROUP, M.MDlgBtnCount}
@@ -136,7 +136,7 @@ end
 
 local function Init (messageTable)
   M = messageTable
-  AppName = M.MMultilineReplace
+  AppName = M.MDlgMultilineReplace
 end
 
 local function ReplaceWithDialog (histData, collect)
