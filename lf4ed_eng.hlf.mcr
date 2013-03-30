@@ -120,38 +120,28 @@ $ #Block Sum#
 
 @Wrap
 $ #Reformat Block#
- This function can perform two operations:
+ This function can perform either of two operations:
     a) reformat selected block, or current line.
-    b) prefix lines in selected block, or current line.
- If both actions are selected, they are executed in the shown above order.
+    b) process lines in selected block, or current line.
 
  #Reformat Block#
 
  First, the selected lines are joined into one line.
- Then that line is split according to the values in #Start column#
- and #End column# boxes. Right text border is justified if the
+ Then that line is split according to the values in "Start column"
+ and "End column" boxes. Right text border is justified if the
  corresponding checkbox is checked.
 
- #Prefix Lines#
+ #Process Lines#
 
- Lines are prefixed according to a command appearing in the #Command#
- edit box. A command consists of a command letter followed by a colon
- followed by one or more comma-separated parameters.
-
- There are 3 command types available:
-     #S#:<number of spaces>[:]
-     #L#:<literal string>[:]
-     #N#:<starting number/letter>,<reserved width>,<literal string>[:]
-
- An optional trailing colon will not appear in the resulting text.
- Its purpose - to make the prefix visible when it has trailing
- spaces. (Put an extra colon if there *should* be a trailing colon).
-
- Examples of commands:
-     #S:4#       insert 4 spaces:  #"    "#
-     #L:> :#     insert string:    #"> "#
-     #N:3,2,) :# insert numbering: #" 3) "#
-               (auto-incremented on following lines).
+ Lines are processed according to a Lua expression appearing in the
+ "Expression" edit box. The expression is evaluated for every line of
+ the block.
+   #*# If its value is a string, it replaces that line's contents.
+   #*# If its value is false/nil/nothing, the line remains unchanged.
+   #*# Otherwise, the line is deleted.
+ Two special variables are available to the expression:
+   #N# - number of the processed line within the block
+   #L# - contents of the processed line
 
  ~Contents~@Contents@
 

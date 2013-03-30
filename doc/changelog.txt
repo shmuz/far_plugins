@@ -2,6 +2,11 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2013-xx-xx, v3.x.x
+  Reformat Block:
+      [*] "Prefix Lines" operation is replaced by much more powerful
+          "Process Lines" one.
+
 2013-03-22, v3.2.0
       [*] Adapted for current LuaFAR API.
 
