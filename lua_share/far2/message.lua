@@ -256,8 +256,8 @@ local function Message (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)
 
   local function DlgProc (hDlg, msg, param1, param2)
     if msg == F.DN_CTLCOLORDLGITEM then
-      if param1 >= 1 and param1 <= #tb_labels then
-        local color = D[param1 + 1].color
+      if param1 > 1 and param1 <= #tb_labels+1 then
+        local color = D[param1].color
         if color then
           for _,v in ipairs(param2) do
             v.ForegroundColor, v.BackgroundColor = band(color,0xF), rshift(color,4)

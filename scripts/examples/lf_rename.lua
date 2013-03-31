@@ -268,7 +268,7 @@ local function GetUserChoice (aTitle, s_found, s_rep)
     },
     aTitle, "&Rename;&All;&Skip;&Cancel", "c", nil,
     win.Uuid("b527e9e5-25c0-4572-952d-3002b57a5463"))
-  return c==0 and "yes" or c==1 and "all" or c==2 and "no" or "cancel"
+  return c==1 and "yes" or c==2 and "all" or c==3 and "no" or "cancel"
 end
 
 local function DoAction (aParams, aList, aDir, aLog)

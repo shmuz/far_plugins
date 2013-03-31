@@ -98,7 +98,7 @@ local dialog_meta = {
   __newindex =
       function (self, item_name, item)
         item.name = item_name
-        item.id = #self --> id is 0-based
+        item.id = #self+1 --> id is 1-based
         setmetatable (item, item_meta)
         rawset (self, #self+1, item) -- table.insert (self, item)
         self[mapkey][item_name] = item

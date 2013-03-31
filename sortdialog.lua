@@ -59,7 +59,7 @@ function Package.SortDialog (aData, columntype)
   end
   ------------------------------------------------------------------------------
   local function SaveData(hDlg)
-    for i, v in ipairs(D) do far.GetDlgItem(hDlg, i-1, v) end
+    for i, v in ipairs(D) do far.GetDlgItem(hDlg, i, v) end
     D.cbxOnlySel._noautosave = not columntype
     far2_dialog.SaveData(D, aData)
   end
