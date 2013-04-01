@@ -87,7 +87,7 @@ local function fSort()
     local normal, msg = pcall(sortlines.SortWithDialog, arg)
     if not normal then
       -- "Cancel" breaks infinite loop when exception is thrown by far.Dialog()
-      if 0 ~= far.Message(msg, M.MError, ";RetryCancel", "w") then break end
+      if 1 ~= far.Message(msg, M.MError, ";RetryCancel", "w") then break end
     end
   until normal
 end

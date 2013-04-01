@@ -352,7 +352,7 @@ keys.Del = function(handle, p1)
 
   local itemn=listinfo.SelectPos
   local res=far.Message("Are you sure you want to delete element "..itemn.."?", "", "No;Yes", "w")
-  if res<=0 then return end
+  if res<=1 then return end
 
   local list=dialog.list.ListItems
   list.table[list[itemn].key]=nil

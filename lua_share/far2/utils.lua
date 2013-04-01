@@ -64,7 +64,7 @@ local function OnError (msg)
   collectgarbage "collect"
   local caption = ("Error [used: %d KB]"):format(collectgarbage "count")
   local ret = far.Message(msg, caption, buttons, "wl")
-  if ret <= 0 then return end
+  if ret <= 1 then return end
 
   local file, line = jumps[ret].file, jumps[ret].line
   local luaScript = file=='[string "all text"]' or file=='[string "selection"]'
