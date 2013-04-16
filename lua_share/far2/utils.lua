@@ -66,7 +66,7 @@ local function OnError (msg)
   local ret = far.Message(msg, caption, buttons, "wl")
   if ret <= 1 then return end
 
-  local file, line = jumps[ret].file, jumps[ret].line
+  local file, line = jumps[ret-1].file, jumps[ret-1].line
   local luaScript = file=='[string "all text"]' or file=='[string "selection"]'
   if not luaScript then
     local trgInfo

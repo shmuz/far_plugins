@@ -2,6 +2,12 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2013-04-16, v3.3.1
+  PLUGIN:
+      [!] Fix jumps from error message window.
+  Reformat Block:
+      [*] "Process Lines": the line is deleted if the expression is false.
+
 2013-04-02, v3.3.0
   PLUGIN:
       [*] Adapted for current LuaFAR API.

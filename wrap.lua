@@ -219,7 +219,7 @@ local function ProcessBlock (aCode)
         end
       end
       lnum = lnum + 1
-    elseif repl then
+    elseif not repl then
       editor.DeleteString()
       eInfo.TotalLines = eInfo.TotalLines - 1
     else
@@ -246,7 +246,7 @@ local function WrapWithDialog (aData)
     Wrap (offs1, offs2, aData.cbxJustify, 2.0)
     editor.UndoRedo(nil, "EUR_END")
 
-  elseif code ~= "" then
+  else
     editor.UndoRedo(nil, "EUR_BEGIN")
     ProcessBlock(code)
     editor.UndoRedo(nil, "EUR_END")

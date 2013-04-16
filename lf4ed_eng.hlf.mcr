@@ -137,8 +137,8 @@ $ #Reformat Block#
  "Expression" edit box. The expression is evaluated for every line of
  the block.
    #*# If its value is a string, it replaces that line's contents.
-   #*# If its value is false/nil/nothing, the line remains unchanged.
-   #*# Otherwise, the line is deleted.
+   #*# If its value is false/nil/nothing, the line is deleted.
+   #*# Otherwise, the line remains unchanged.
  Two special variables are available to the expression:
    #N# - number of the processed line within the block
    #L# - contents of the processed line
