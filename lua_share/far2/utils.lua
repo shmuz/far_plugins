@@ -257,10 +257,11 @@ end
 local function LoadUserMenu (aFileName)
   local userItems = { editor={},viewer={},panels={},config={},dialog={} }
   local commandTable, hotKeyTable = {}, {}
-  local handlers = { EditorInput={}, EditorEvent={}, ViewerEvent={}, ExitScript={} }
+  local handlers = { EditorInput={}, EditorEvent={}, EditorChange={}, ViewerEvent={}, ExitScript={} }
   local mapHandlers = {
     ProcessEditorInput = handlers.EditorInput,
     ProcessEditorEvent = handlers.EditorEvent,
+    ProcessEditorChange = handlers.EditorChange,
     ProcessViewerEvent = handlers.ViewerEvent,
     ExitScript         = handlers.ExitScript,
   }

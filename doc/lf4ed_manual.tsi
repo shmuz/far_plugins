@@ -1062,7 +1062,7 @@ id=20
 lv=2
 dt=Text
 nm=MakeResident
-mtime=3522666425
+mtime=3575915457
 <article>
 #_<markdown>
 #_**`MakeResident (file)`**
@@ -1074,6 +1074,7 @@ mtime=3522666425
 #_
 #_* `ProcessEditorInput`
 #_* `ProcessEditorEvent`
+#_* `ProcessEditorChange`
 #_* `ProcessViewerEvent`
 #_* `ExitScript`
 #_
@@ -1095,8 +1096,8 @@ mtime=3522666425
 #_1. If the return value of a handler's `ProcessEditorInput` is true,
 #_   the rest of `ProcessEditorInput` handlers are not called, and
 #_   true is returned to Far.
-#_1. The return values of `ProcessEditorEvent` and `ProcessViewerEvent`
-#_   are ignored.
+#_1. The return values of `ProcessEditorEvent`, `ProcessEditorChange` and
+#_   `ProcessViewerEvent` are ignored.
 #_1. `ProcessEditorInput` handlers are not called when a user-defined
 #_   hot key is pressed.
 #_1. `ExitScript` is called when the plugin is about to be unloaded.
