@@ -145,12 +145,6 @@ local function RunExitScriptHandlers()
   for _,f in ipairs(_Plugin.Handlers.ExitScript) do f() end
 end
 
-local function export_ProcessEditorChange (EditorId, Param)
-  for _,f in ipairs(_Plugin.Handlers.EditorChange) do
-    f(EditorId, Param)
-  end
-end
-
 local function fReloadUserFile()
   if not FirstRun then
     RunExitScriptHandlers()
@@ -158,8 +152,8 @@ local function fReloadUserFile()
   end
   package.path = _Plugin.PackagePath -- restore to original value
   -----------------------------------------------------------------------------
-  _Plugin.UserItems, _Plugin.CommandTable, _Plugin.HotKeyTable, _Plugin.Handlers = Utils.LoadUserMenu("_usermenu.lua")
-  export.ProcessEditorChange = _Plugin.Handlers.EditorChange[1] and export_ProcessEditorChange
+  _Plugin.UserItems, _Plugin.CommandTable, _Plugin.HotKeyTable, _Plugin.Handlers =
+    Utils.LoadUserMenu("_usermenu.lua")
 end
 
 local function traceback3(msg)

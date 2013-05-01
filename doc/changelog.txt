@@ -2,11 +2,6 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
-2013-xx-xx, vx.x.x
-  PLUGIN:
-      [*] ProcessEditorEvent does not receive Event==EE_CHANGE.
-          Use ProcessEditorChange for that.
-
 2013-04-16, v3.3.1
   PLUGIN:
       [!] Fix jumps from error message window.
