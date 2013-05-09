@@ -149,7 +149,7 @@ local function RunUserItem (aItem, aProperties, ...)
   for i=1,select("#", ...) do args[#args+1] = select(i, ...) end
   -- run the chunk
   setfenv(chunk, aItem.env)
-  chunk(args)
+  return chunk(args)
 end
 
 local function ConvertUserHotkey(str)
@@ -327,7 +327,7 @@ Command line syntax:
 
 Macro call syntax:
   Plugin.Call("%s",
-      "[<options>] <command>|-r<filename> [<arguments>]")
+              <command> [,<arguments>])
 
 Options:
   -a          asynchronous execution
@@ -440,8 +440,7 @@ local function ExecuteCommandLine (tActions, tCommands, sFrom, fConfig)
   if not ok then export.OnError(res) end
 end
 
--- This function processes both command line calls and calls from macros.
-local function ProcessCommandLine (sCommandLine, tCommands, sFrom, fConfig)
+local function OpenCommandLine (sCommandLine, tCommands, fConfig)
   local tActions = CompileCommandLine(sCommandLine, tCommands)
   if not tActions[1] then
     CommandSyntaxMessage(tCommands)
@@ -450,35 +449,37 @@ local function ProcessCommandLine (sCommandLine, tCommands, sFrom, fConfig)
     far.Timer(30,
       function(h)
         if not h.Closed then
-          h:Close(); ExecuteCommandLine(tActions, tCommands, sFrom, fConfig)
+          h:Close(); ExecuteCommandLine(tActions, tCommands, "panels", fConfig)
         end
       end)
   else
     ---- autocomplete:bad; Escape responsiveness:good;
-    ExecuteCommandLine(tActions, tCommands, sFrom, fConfig)
+    ExecuteCommandLine(tActions, tCommands, "panels", fConfig)
   end
 end
 
-local function OpenMacroOrCommandLine (aFrom, aItem, aCommandTable, fConfig)
-  if aFrom == F.OPEN_FROMMACRO then
-    local arg1 = aItem[1]
-    if type(arg1) == "string" then
-      local map = {
-        [F.MACROAREA_SHELL]  = "panels",
-        [F.MACROAREA_EDITOR] = "editor",
-        [F.MACROAREA_VIEWER] = "viewer",
-        [F.MACROAREA_DIALOG] = "dialog",
-      }
-      local area = far.MacroGetArea()
-      ProcessCommandLine(arg1, aCommandTable, map[area] or aFrom, fConfig)
+local function OpenMacro (aArgs, aCommandTable, fConfig)
+  local fileobject = aCommandTable[aArgs[1]]
+  if not fileobject then
+    CommandSyntaxMessage(aCommandTable)
+    return false
+  else
+    local oldConfig = fConfig and fConfig()
+    local map = {
+      [F.MACROAREA_SHELL]  = "panels", [F.MACROAREA_EDITOR] = "editor",
+      [F.MACROAREA_VIEWER] = "viewer", [F.MACROAREA_DIALOG] = "dialog",
+    }
+    local wrapfunc = function()
+      return RunUserItem(fileobject, {From=map[far.MacroGetArea()] or aFrom}, unpack(aArgs,2))
     end
-    return true
-  elseif aFrom == F.OPEN_COMMANDLINE then
-    -- called from command line
-    ProcessCommandLine(aItem, aCommandTable, "panels", fConfig)
-    return true
+    local retfunc = function (ok, ...)
+      if fConfig then fConfig(oldConfig) end
+      if ok then return ... end
+      export.OnError(...)
+      return true
+    end
+    return retfunc(xpcall(wrapfunc, function(msg) return debug.traceback(msg, 3) end))
   end
-  return false
 end
 
 -- Add function unicode.utf8.cfind:
@@ -514,7 +515,8 @@ return {
   GetPluginVersion = GetPluginVersion,
   InitPlugin = InitPlugin,
   LoadUserMenu = LoadUserMenu,
-  OpenMacroOrCommandLine = OpenMacroOrCommandLine,
+  OpenMacro = OpenMacro,
+  OpenCommandLine = OpenCommandLine,
   RunInternalScript = RunInternalScript,
   RunUserItem = RunUserItem,
 }

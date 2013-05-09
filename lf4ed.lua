@@ -215,8 +215,10 @@ end
 
 local function export_Open (aFrom, aGuid, aItem) -- TODO
 
-  if Utils.OpenMacroOrCommandLine(aFrom, aItem, _Plugin.CommandTable, lf4ed.config) then
-    return
+  if aFrom == F.OPEN_FROMMACRO then
+    return Utils.OpenMacro(aItem, _Plugin.CommandTable, lf4ed.config)
+  elseif aFrom == F.OPEN_COMMANDLINE then
+    return Utils.OpenCommandLine(aItem, _Plugin.CommandTable, lf4ed.config)
   end
 
   -- Called from a not supported source

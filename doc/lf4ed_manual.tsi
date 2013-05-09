@@ -6,7 +6,7 @@ ver=2.7
 id=1
 lv=0
 dt=Text
-nm=LuaFAR for Editor (version 3.0)
+nm=LuaFAR for Editor (version 3.3)
 mtime=3522650788
 <article>
 #_<markdown>
@@ -953,7 +953,7 @@ id=57
 lv=2
 dt=Text
 nm=AddCommand
-mtime=3522656715
+mtime=3577279999
 <article>
 #_<markdown>
 #_**`AddCommand (command, file [, ...])`**
@@ -975,12 +975,6 @@ mtime=3522656715
 #_Values that will be passed to user script (they are passed to the
 #_script in a table). There can be any number of values of any Lua
 #_type.
-#_
-#_### Note
-#_
-#_If command line contains more than one argument, then the
-#_second and subsequent arguments will be passed on to the user
-#_script, after the `param2` argument.
 #_
 #_### Examples
 #_      AddCommand("calc",  "farscripts.fl_scripts.common.calc")
@@ -1261,32 +1255,57 @@ mtime=3524032875
 id=59
 lv=0
 dt=Text
-nm=Command line and macro calls
-mtime=3506938506
+nm=Command line calls
+mtime=3577278175
 <article>
 #_<markdown>
 #_
-#_###Syntax
-#_      [lfe:] [<options>] <command>|-r<filename> [<arguments>]
+#_### Syntax
+#_      lfe: [<options>] <command>|-r<filename> [<arguments>]
 #_
-#_####Options
+#_----------------------------------------------------------------
+#_
+#_#### Options
 #_      -a          asynchronous execution
 #_      -e <str>    execute string <str>
 #_      -l <lib>    load library <lib>
 #_
-#_####Command
-#_Any command added via [`AddCommand`](57.html) function in
-#_*_usermenu.lua*.
+#_#### Command
+#_Any command added via [`AddCommand`](57.html) function in *_usermenu.lua*.
 #_
-#_####Filename
+#_#### Filename
 #_Name of a Lua script file. It can be either absolute, or relative
 #_to the current directory.
 #_
-#_####Example of command line call
+#_----------------------------------------------------------------
+#_
+#_#### Example
 #_      lfe: calc 2+2
 #_
-#_####Example of macro call
-#_      CallPlugin("6f332978-08b8-4919-847a-efbb6154c99a","-a calc 2+2")
+</article>
+</node>
+<node>
+id=92
+lv=0
+dt=Text
+nm=Macro calls
+ctime=3577277876
+mtime=3577278180
+<article>
+#_<markdown>
+#_
+#_### Macro call syntax
+#_      Plugin.Call("6f332978-08b8-4919-847a-efbb6154c99a", <command> [,<arguments>])
+#_
+#_----------------------------------------------------------------
+#_
+#_#### Command
+#_Any command added via [`AddCommand`](57.html) function in *_usermenu.lua*.
+#_
+#_----------------------------------------------------------------
+#_
+#_#### Example
+#_      CallPlugin("6f332978-08b8-4919-847a-efbb6154c99a", "calc", "2+2")
 </article>
 </node>
 <node>
@@ -2157,34 +2176,63 @@ mtime=3522745248
 id=86
 lv=2
 dt=Text
-nm=OpenMacroOrCommandLine
+nm=OpenMacro
 ctime=3522680293
-mtime=3522753868
+mtime=3577279708
 <article>
-#_result = utils.OpenMacroOrCommandLine (From, Item, Commands, ConfigFunc)
+#_results = utils.OpenMacro (Item, Commands, ConfigFunc)
 #_
 #_**Parameters:**
-#_  From:        flag
-#_  Item:        integer or string
+#_  Item:        table
 #_  Commands:    table
 #_  ConfigFunc:  function, or nil
 #_
 #_**Returns:**
-#_  result:      boolean
+#_  results:     zero or more Lua values
 #_
 #_**Description:**
 #_  This function is intended to be called from *export.Open* function.
-#_  First, it checks its *From* argument, and if it does not specify macro
-#_  or command line call, then the function returns false.
-#_  Otherwise, the function continues the processing as described in the section
-#_  Command line and macro calls and returns true to signal that the processing
-#_  is done.
+#_  The function does arguments processing as described in the section
+#_  Macro calls.
 #_
 #_  This function should not be called when the plugin creates panels from the command
 #_  line or macro calls.
 #_
 #_@@@
-#_<lua> Links = { ["Command line and macro calls"]="59.html", }
+#_<lua> Links = { ["Macro calls"]="92.html", }
+#_</lua>
+#_
+#_
+</article>
+</node>
+<node>
+id=93
+lv=2
+dt=Text
+nm=OpenCommandLine
+ctime=3577278558
+mtime=3577279735
+<article>
+#_utils.OpenCommandLine (Item, Commands, ConfigFunc)
+#_
+#_**Parameters:**
+#_  Item:        integer or string
+#_  Commands:    table
+#_  ConfigFunc:  function, or nil
+#_
+#_**Returns:**
+#_  result:      nothing
+#_
+#_**Description:**
+#_  This function is intended to be called from *export.Open* function.
+#_  The function does arguments processing as described in the section
+#_  Command line calls.
+#_
+#_  This function should not be called when the plugin creates panels from the command
+#_  line or macro calls.
+#_
+#_@@@
+#_<lua> Links = { ["Command line calls"]="59.html", }
 #_</lua>
 #_
 #_
@@ -2227,9 +2275,9 @@ lv=2
 dt=Text
 nm=RunUserItem
 ctime=3522680250
-mtime=3522851925
+mtime=3577279870
 <article>
-#_RunUserItem (Item, Properties, ...)
+#_results = RunUserItem (Item, Properties, ...)
 #_
 #_**Parameters:**
 #_  Item:       table
@@ -2244,7 +2292,7 @@ mtime=3522851925
 #_  ... :       sequence of additional arguments (appended to existing arguments)
 #_
 #_**Returns:**
-#_  nothing
+#_  results:    zero or more Lua values
 #_
 #_**Description:**
 #_
