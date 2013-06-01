@@ -150,17 +150,8 @@ end
 
 local ResultGuid = win.Uuid("d45fdadc-4918-4d47-b34a-311947d241b2")
 
-local function ResultDialog (aHelpTopic, aData, result, minDigits)
+local function ResultDialog (aHelpTopic, aData, result)
   local Title = (aHelpTopic=="LuaExpression") and M.MDlgExpr or M.MDlgBlockSum
-  if minDigits then
-    result = tostring(result)
-    local last = result:match("%.(%d*)$")
-    if last then
-      result = result .. ("0"):rep(minDigits - #last)
-    else
-      result = result .. "." .. ("0"):rep(minDigits)
-    end
-  end
   local D = far2_dialog.NewDialog()
   ------------------------------------------------------------------------------
   D._         = {"DI_DOUBLEBOX",3, 1,42,7,  0, 0, 0, 0, Title}
@@ -185,7 +176,7 @@ local function BlockSum (history)
   local ei = assert(editor.GetInfo(), "EditorGetInfo failed")
   local blockEndLine
   local sum = 0
-  local x_start, x_dot
+  local x_start, x_dot, has_dots
   local pattern = [[(\S[\w.]*)]]
 
   if ei.BlockType ~= F.BTYPE_NONE then
@@ -197,31 +188,46 @@ local function BlockSum (history)
         if s.SelStart < 1 then editor.SetPosition(nil, blockEndLine) end
         break
       end
-      local start, _, sel = r:find( s.StringText:sub(s.SelStart, s.SelEnd) ) -- 'start' in selection
+      local start, fin, sel = r:find( s.StringText:sub(s.SelStart, s.SelEnd) ) -- 'start' in selection
       if start then
         x_start = editor.RealToTab(nil, n, s.SelStart + start - 1) -- 'start' column in line
         local num = tonumber(sel)
         if num then
           sum = sum + num
           local x = regex.find(sel, "\\.")
-          if x then x_dot = x_start + x - 1 end -- 'dot' column in line
+          if x then
+            has_dots = true
+            x_dot = x_start + x - 1  -- 'dot' column in line
+          else
+            x_dot = editor.RealToTab(nil, n, s.SelStart + fin)
+          end
         end
       end
     end
   else
-    local start, _, word = GetNearestWord(pattern)
+    local start, fin, word = GetNearestWord(pattern)
     if start then
       x_start = editor.RealToTab(nil, nil, start)
       local num = tonumber(word)
       if num then
         sum = sum + num
         local x = regex.find(word, "\\.")
-        if x then x_dot = x_start + x - 1 end
+        if x then
+          has_dots = true
+          x_dot = x_start + x - 1
+        else
+          x_dot = editor.RealToTab(nil, nil, 1 + fin)
+        end
       end
     end
   end
 
-  if not ResultDialog("BlockSum", history, sum, x_dot and 2) then return end
+  if has_dots then
+    sum = tostring(sum)
+    local last = sum:match("%.(%d+)$")
+    sum = sum .. (last and ("0"):rep(2 - #last) or ".00")
+  end
+  if not ResultDialog("BlockSum", history, sum) then return end
 
   sum = history.edtResult
   if history.cbxCopy then
@@ -234,7 +240,7 @@ local function BlockSum (history)
     editor.InsertString()                             -- +
     local prefix = "="
     if x_dot then
-      local x = regex.find(tostring(sum), "\\.")
+      local x = regex.find(tostring(sum), "\\.") or #sum+1
       if x then x_start = x_dot - (x - 1) end
     end
     if x_start then

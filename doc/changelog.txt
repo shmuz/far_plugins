@@ -8,6 +8,8 @@
           -- The 1-st argument must be string: one of the registered commands.
           -- There can be arbitrary number of additional arguments.
           -- There can be arbitrary number of returns.
+  Block Sum:
+      [*] Better alignment of inserted result.
 
 2013-04-16, v3.3.1
   PLUGIN:
