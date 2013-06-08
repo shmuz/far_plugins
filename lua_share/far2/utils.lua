@@ -435,7 +435,7 @@ local function ExecuteCommandLine (tActions, tCommands, sFrom, fConfig)
     end
   end
   local oldConfig = fConfig and fConfig()
-  local ok, res = xpcall(wrapfunc, function(msg) return debug.traceback(msg, 3) end)
+  local ok, res = xpcall(wrapfunc, function(msg) return debug.traceback(msg, 2) end)
   if fConfig then fConfig(oldConfig) end
   if not ok then export.OnError(res) end
 end
