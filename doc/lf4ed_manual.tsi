@@ -2055,37 +2055,6 @@ mtime=3522699929
 </article>
 </node>
 <node>
-id=81
-lv=2
-dt=Text
-nm=CheckLuafarVersion
-ctime=3522680204
-mtime=3539546094
-<article>
-#_result = utils.CheckLuafarVersion (msgTitle)
-#_
-#_**Parameters:**
-#_  msgTitle:   string (optional)
-#_
-#_**Returns:**
-#_  result:     boolean
-#_
-#_**Description:**
-#_  The function compares the required version with the actual
-#_  LuaFAR version. If the required version is less than or equal
-#_  to the actual version, the function returns true, otherwise
-#_  an error message is issued and false is returned.
-#_
-#_**Note:**
-#_  This function assumes that the table returned by export.GetGlobalInfo()
-#_  contains the field *MinLuafarVersion*.
-#_
-#_@@@
-#_
-#_
-</article>
-</node>
-<node>
 id=33
 lv=2
 dt=Text

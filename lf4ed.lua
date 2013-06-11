@@ -344,9 +344,6 @@ end
 local function main()
   if FirstRun then
     _Plugin = Utils.InitPlugin()
-    if not Utils.CheckLuafarVersion(M.MPluginName) then
-      return
-    end
     _Plugin.PackagePath = package.path:gsub(";", ";".._Plugin.ModuleDir.."scripts\\?.lua;", 1)
     _Plugin.OriginalRequire = require
     _Plugin.History = LibHistory.newsettings(nil, "alldata")

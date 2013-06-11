@@ -4,19 +4,6 @@ local F = far.Flags
 local band, bor, bnot = bit64.band, bit64.bor, bit64.bnot
 local PluginDir = far.PluginStartupInfo().ModuleDir
 
-local function CheckLuafarVersion (msgTitle)
-  local v1, v2, v3 = far.LuafarVersion(true)
-  local globInfo = export.GetGlobalInfo()
-  local r = globInfo.MinLuafarVersion
-  if v1 > r[1] or v1 == r[1] and (v2 > r[2] or v2 == r[2] and v3 >= r[3]) then
-    return true
-  end
-  far.Message(
-    ("LuaFAR %d.%d.%d or newer is required\n(loaded version is %s)")
-    :format(r[1], r[2], r[3], far.LuafarVersion()), msgTitle or globInfo.Title, ";Ok", "w")
-  return false
-end
-
 local function OnError (msg)
   local Lower = far.LLowerBuf
 
@@ -511,7 +498,6 @@ end
 
 return {
   AddMenuItems = AddMenuItems,
-  CheckLuafarVersion = CheckLuafarVersion,
   GetPluginVersion = GetPluginVersion,
   InitPlugin = InitPlugin,
   LoadUserMenu = LoadUserMenu,

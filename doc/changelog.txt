@@ -8,6 +8,7 @@
           -- The 1-st argument must be string: one of the registered commands.
           -- There can be arbitrary number of additional arguments.
           -- There can be arbitrary number of returns.
+      [-] Removed function far2.utils.CheckLuafarVersion.
   Block Sum:
       [*] Better alignment of inserted result.
 

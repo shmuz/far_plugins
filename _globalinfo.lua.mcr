@@ -6,7 +6,5 @@ function export.GetGlobalInfo()
     Title         = "LuaFAR for Editor",
     Description   = "A host for scripts and script packets",
     Author        = "Shmuel Zeigerman",
-    -----------------------------------------------------------------
-    MinLuafarVersion = #{MINLUAFARVERSION},
   }
 end
