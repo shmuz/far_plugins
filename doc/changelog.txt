@@ -2,7 +2,7 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
-2013-??-??, v3.?.?
+2013-07-26, v3.4.0
   PLUGIN:
       [*] Syntax of macro calls has changed:
           -- The 1-st argument must be string: one of the registered commands.
