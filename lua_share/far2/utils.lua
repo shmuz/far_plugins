@@ -133,7 +133,9 @@ local function RunUserItem (aItem, aProperties, ...)
   local args = {}
   for k,v in pairs(aProperties) do args[k] = v end
   for i,v in ipairs(aItem.arg)  do args[i] = v end
-  for i=1,select("#", ...) do args[#args+1] = select(i, ...) end
+  local n, n2 = #args, select("#", ...)
+  args.n = n + n2
+  for i=1,n2 do args[n+i] = select(i, ...) end
   -- run the chunk
   setfenv(chunk, aItem.env)
   return chunk(args)
@@ -312,14 +314,15 @@ local function CommandSyntaxMessage (tCommands)
 Command line syntax:
   %s: [<options>] <command>|-r<filename> [<arguments>]
 
-Macro call syntax:
-  Plugin.Call("%s",
-              <command> [,<arguments>])
-
 Options:
   -a          asynchronous execution
   -e <str>    execute string <str>
   -l <lib>    load library <lib>
+
+Macro call syntax:
+  Plugin.Call("%s",
+              "code"|"file"|"command",
+              <code>|<file>|<command> [,<arguments>])
 
 Available commands:
 ]]
@@ -446,26 +449,39 @@ local function OpenCommandLine (sCommandLine, tCommands, fConfig)
 end
 
 local function OpenMacro (aArgs, aCommandTable, fConfig)
-  local fileobject = aCommandTable[aArgs[1]]
-  if not fileobject then
-    CommandSyntaxMessage(aCommandTable)
-    return false
-  else
-    local oldConfig = fConfig and fConfig()
-    local map = {
-      [F.MACROAREA_SHELL]  = "panels", [F.MACROAREA_EDITOR] = "editor",
-      [F.MACROAREA_VIEWER] = "viewer", [F.MACROAREA_DIALOG] = "dialog",
-    }
-    local wrapfunc = function()
-      return RunUserItem(fileobject, {From=map[far.MacroGetArea()] or aFrom}, unpack(aArgs,2))
+  if type(aArgs[1])~="string" or type(aArgs[2])~="string" then return end
+
+  if aArgs[1]=="code" or aArgs[1]=="file" then
+    local chunk, env
+    if aArgs[1]=="code" then chunk = assert(loadstring(aArgs[2]))
+    else chunk = assert(loadfile((aArgs[2]:gsub("%%(.-)%%",win.GetEnv))))
     end
-    local retfunc = function (ok, ...)
-      if fConfig then fConfig(oldConfig) end
-      if ok then return ... end
-      export.OnError(...)
-      return true
+    env = setmetatable({}, { __index=_G })
+    setfenv(chunk, env)
+    return chunk(unpack(aArgs,3,aArgs.n))
+
+  elseif aArgs[1]=="command" then
+    local fileobject = aCommandTable[aArgs[2]]
+    if not fileobject then
+      CommandSyntaxMessage(aCommandTable)
+      return false
+    else
+      local oldConfig = fConfig and fConfig()
+      local map = {
+        [F.MACROAREA_SHELL]  = "panels", [F.MACROAREA_EDITOR] = "editor",
+        [F.MACROAREA_VIEWER] = "viewer", [F.MACROAREA_DIALOG] = "dialog",
+      }
+      local wrapfunc = function()
+        return RunUserItem(fileobject, { From=map[far.MacroGetArea()] }, unpack(aArgs,3,aArgs.n))
+      end
+      local retfunc = function (ok, ...)
+        if fConfig then fConfig(oldConfig) end
+        if ok then return ... end
+        export.OnError(...)
+        return true
+      end
+      return retfunc(xpcall(wrapfunc, function(msg) return debug.traceback(msg, 3) end))
     end
-    return retfunc(xpcall(wrapfunc, function(msg) return debug.traceback(msg, 3) end))
   end
 end
 
