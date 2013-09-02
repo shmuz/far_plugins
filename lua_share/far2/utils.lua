@@ -40,7 +40,7 @@ local function OnError (msg)
                 j = j + 1
                 jumps[j] = { file=file2, line=tonumber(numline) }
                 buttons = buttons .. (j<10 and ";&" or ";") .. j
-                return ("\16[J%d]:%s:%s:%s"):format(j, file, numline, space)
+                return ("\16[J%d]:%s:%s:%s\n"):format(j, file, numline, space)
               end
             end
           end
@@ -321,8 +321,7 @@ Options:
 
 Macro call syntax:
   Plugin.Call("%s",
-              "code"|"file"|"command",
-              <code>|<file>|<command> [,<arguments>])
+              <code> | @<file> | *<command> [,<arguments>])
 
 Available commands:
 ]]
@@ -449,30 +448,19 @@ local function OpenCommandLine (sCommandLine, tCommands, fConfig)
 end
 
 local function OpenMacro (aArgs, aCommandTable, fConfig)
-  if type(aArgs[1])~="string" or type(aArgs[2])~="string" then return end
+  if type(aArgs[1]) ~= "string" then return end
 
-  if aArgs[1]=="code" or aArgs[1]=="file" then
-    local chunk, env
-    if aArgs[1]=="code" then chunk = assert(loadstring(aArgs[2]))
-    else chunk = assert(loadfile((aArgs[2]:gsub("%%(.-)%%",win.GetEnv))))
-    end
-    env = setmetatable({}, { __index=_G })
-    setfenv(chunk, env)
-    return chunk(unpack(aArgs,3,aArgs.n))
-
-  elseif aArgs[1]=="command" then
-    local fileobject = aCommandTable[aArgs[2]]
-    if not fileobject then
-      CommandSyntaxMessage(aCommandTable)
-      return false
-    else
+  local prefix = aArgs[1]:sub(1,1)
+  if prefix == "*" then -- command
+    local fileobject = aCommandTable[aArgs[1]:sub(2)]
+    if fileobject then
       local oldConfig = fConfig and fConfig()
       local map = {
         [F.MACROAREA_SHELL]  = "panels", [F.MACROAREA_EDITOR] = "editor",
         [F.MACROAREA_VIEWER] = "viewer", [F.MACROAREA_DIALOG] = "dialog",
       }
       local wrapfunc = function()
-        return RunUserItem(fileobject, { From=map[far.MacroGetArea()] }, unpack(aArgs,3,aArgs.n))
+        return RunUserItem(fileobject, { From=map[far.MacroGetArea()] }, unpack(aArgs,2,aArgs.n))
       end
       local retfunc = function (ok, ...)
         if fConfig then fConfig(oldConfig) end
@@ -481,7 +469,19 @@ local function OpenMacro (aArgs, aCommandTable, fConfig)
         return true
       end
       return retfunc(xpcall(wrapfunc, function(msg) return debug.traceback(msg, 3) end))
+    else
+      CommandSyntaxMessage(aCommandTable)
+      return false
     end
+
+  else
+    local chunk
+    if prefix == "@" then chunk = assert(loadfile((aArgs[1]:sub(2):gsub("%%(.-)%%",win.GetEnv))))
+    else chunk = assert(loadstring(aArgs[1]))
+    end
+    local env = setmetatable({}, { __index=_G })
+    setfenv(chunk, env)
+    return chunk(unpack(aArgs,2,aArgs.n))
   end
 end
 
