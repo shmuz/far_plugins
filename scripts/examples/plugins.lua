@@ -1,5 +1,7 @@
 -- started: 2011-02-20
 
+local F=far.Flags
+
 -- Get space for this script's data. Kept alive between the script's invocations.
 local ScriptId = "263e6208-e5b2-4bf7-8953-59da207279c7"
 if not rawget(_G, ScriptId) then rawset(_G, ScriptId, {}) end
@@ -37,6 +39,7 @@ local breakkeys = {
   { BreakKey="RETURN", command="load", success="Loaded", fail="Failed to load" },
   { BreakKey="INSERT", command="forcedload", success="Force-loaded", fail="Failed to force-load" },
   { BreakKey="DELETE", command="unload", success="Unloaded", fail="Failed to unload" },
+  { BreakKey="F3", command="info" },
 }
 
 local properties = {
@@ -69,6 +72,8 @@ while true do
         far.Message("\nI'm running this script and cannot unload myself !!!\n", GInfo.Title, nil, "w")
       end
     end
+  elseif bItem.command == "info" then
+    far.Message(0~=bit64.band(mItem.info.Flags,F.FPF_LOADED) and "is loaded" or "is not loaded")
   end
   --far.Message(result and bItem.success or bItem.fail, mItem.text)
 end

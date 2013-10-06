@@ -475,10 +475,8 @@ local function OpenMacro (aArgs, aCommandTable, fConfig)
     end
 
   else
-    local chunk
-    if prefix == "@" then chunk = assert(loadfile((aArgs[1]:sub(2):gsub("%%(.-)%%",win.GetEnv))))
-    else chunk = assert(loadstring(aArgs[1]))
-    end
+    local chunk = prefix=="@" and assert(loadfile((aArgs[1]:sub(2):gsub("%%(.-)%%",win.GetEnv))))
+                               or assert(loadstring(aArgs[1]))
     local env = setmetatable({}, { __index=_G })
     setfenv(chunk, env)
     return chunk(unpack(aArgs,2,aArgs.n))
