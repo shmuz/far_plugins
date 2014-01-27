@@ -1,14 +1,8 @@
 local bin2c = require "bin2c"
 
-local function remove_ext(s)
-  return (s:gsub("%.[^\\/.]+$", ""))
-end
-
-local function arrname(file)
-  return file.boot and "boot" or remove_ext(file.name):gsub("[\\/.]", "_")
-end
-
 local linit = [[
+/* This is a generated file. */
+
 /*
 ** $Id: linit.c,v 1.14.1.1 2007/12/27 13:02:25 roberto Exp $
 ** Initialization of libraries for lua.c
@@ -33,7 +27,11 @@ static const luaL_Reg lualibs[] = {
   {NULL, NULL}
 };
 
-
+/*
+  1. Makefile: add -DFUNC_OPENLIBS=luafar_openlibs to compilation flags
+  2. Plugin (GetGlobalInfoW): call LF_InitLuaState1(L,FUNC_OPENLIBS)
+  3. LuaFAR (LF_InitLuaState1): call FUNC_OPENLIBS unless it is NULL
+*/
 LUALIB_API int luafar_openlibs (lua_State *L) {
   const luaL_Reg *lib = lualibs;
   for (; lib->func; lib++) {
@@ -44,10 +42,11 @@ LUALIB_API int luafar_openlibs (lua_State *L) {
   return 0;
 }
 
-]]
-
-local code = [[
-int loader (lua_State *L) {
+/*
+  This loader is shared by all added scripts and modules.
+  Particular script is selected by upvalues.
+*/
+static int loader (lua_State *L) {
   void *arr = lua_touserdata(L, lua_upvalueindex(1));
   size_t arrsize = lua_tointeger(L, lua_upvalueindex(2));
   const char *name = lua_tostring(L,1);
@@ -61,7 +60,10 @@ int loader (lua_State *L) {
   return 0;
 }
 
-int preload (lua_State *L, char *arr, size_t arrsize) {
+/*
+  Place a loader for given script or module into package.preload
+*/
+static int preload (lua_State *L, char *arr, size_t arrsize) {
   lua_getglobal(L, "package");
   lua_getfield(L, -1, "preload");
   lua_pushlightuserdata(L, arr);
@@ -73,6 +75,10 @@ int preload (lua_State *L, char *arr, size_t arrsize) {
 }
 
 ]]
+
+local function remove_ext(s)
+  return (s:gsub("%.[^\\/.]+$", ""))
+end
 
 local function readfile (filename, mode)
   local fp = assert(io.open(filename, mode))
@@ -91,26 +97,25 @@ local function addfiles(target, files, method, compiler)
   end
   for _, f in ipairs(files) do
     local s
-    local fullname = f.path .."\\".. f.name
     if method == "strip" or method == "luasrcdiet" then
-      diet(fullname, unpack(diet_arg))
+      diet(f.fullname, unpack(diet_arg))
       s = readfile("luac.out", "rb")
     elseif method == "luac" then
-      assert(0==os.execute((compiler or "luac").." -o luac.out -s "..fullname))
+      assert(0==os.execute((compiler or "luac").." -o luac.out -s "..f.fullname))
       s = readfile("luac.out", "rb")
     elseif method == "luajit" then
-      assert(0==os.execute((compiler or "luajit").." -b -t raw -s "..fullname.." luajitc.out"))
+      assert(0==os.execute((compiler or "luajit").." -b -t raw -s "..f.fullname.." luajitc.out"))
       s = readfile("luajitc.out", "rb")
     else -- "plain"
-      s = readfile(fullname)
+      s = readfile(f.fullname)
     end
-    target:write("static ", bin2c(s, arrname(f)), "\n")
+    target:write("static ", bin2c(s, f.arrayname), "\n")
   end
 end
 
 local function create_linit (aScripts, aModules, aBinlibs)
   local tinsert = table.insert
-  return linit:gsub("<$([^>]+)>",
+  local result = linit:gsub("<$([^>]+)>",
     function(tag)
       local ret = {}
       --------------------------------------------------------------------------
@@ -120,10 +125,10 @@ local function create_linit (aScripts, aModules, aBinlibs)
           tinsert(ret, "int luaopen_" .. libname .. " (lua_State*);")
         end
         for _,v in ipairs(aScripts) do
-          tinsert(ret, "int preload_" .. arrname(v) .. " (lua_State*);")
+          tinsert(ret, "static int preload_" .. v.arrayname .. " (lua_State*);")
         end
         for _,v in ipairs(aModules) do
-          tinsert(ret, "int preload_" .. arrname(v) .. " (lua_State*);")
+          tinsert(ret, "static int preload_" .. v.arrayname .. " (lua_State*);")
         end
       --------------------------------------------------------------------------
       elseif tag == "binmodules" and #aBinlibs > 0 then
@@ -135,62 +140,69 @@ local function create_linit (aScripts, aModules, aBinlibs)
       elseif tag == "modules" then
         tinsert(ret, "  /*-------- modules --------*/")
         for _,v in ipairs(aModules) do
-          local requirename = remove_ext(v.name):gsub("[\\/]", ".")
-          tinsert(ret, "  {\"" .. requirename .. "\", preload_" .. arrname(v) .. "},")
+          tinsert(ret, "  {\"" .. v.requirename .. "\", preload_" .. v.arrayname .. "},")
         end
       --------------------------------------------------------------------------
       elseif tag == "scripts" then
         tinsert(ret, "  /*-------- scripts --------*/")
         for _,v in ipairs(aScripts) do
-          local requirename = v.boot and "boot" or remove_ext(v.name):gsub("[\\/]", ".")
-          tinsert(ret, "  {\"<" .. requirename .. "\", preload_" .. arrname(v) .. "},")
+          tinsert(ret, "  {\"<" .. v.requirename .. "\", preload_" .. v.arrayname .. "},")
         end
       end
       --------------------------------------------------------------------------
       tinsert(ret, "")
       return table.concat(ret, "\n")
     end)
+  return result
 end
 
 local function add_preloads (target, files)
   local template = [[
-int preload_%s (lua_State *L)
+static int preload_%s (lua_State *L)
     { return preload(L, %s, sizeof(%s)); }
 ]]
   for _,v in ipairs(files) do
-    local name = arrname(v)
+    local name = v.arrayname
     target:write(template:format(name, name, name))
   end
 end
 
-local function decode(target, arg, boot)
+--- Preprocess a file specification.
+-- @target: Output array (table).
+-- @arg:    File name containing path (string).
+--          The function splits it into path and name.
+--          If it should be split at a point other than the last (back)slash, use an asterisk to specify where.
+-- @boot:   Whether `arg` is the boot script (boolean).
+local function preprocess(target, arg, boot)
   local path, name = arg:match("(.+)%*(.+)")
   if path == nil then path, name = arg:match("(.+)[/\\](.+)") end
-  if path == nil then error("bad argument: "..arg) end
-  table.insert(target, { boot=boot, path=path, name=name })
+  if path == nil then error("Bad argument: "..arg) end
+  table.insert(target,
+    { fullname    = path.."\\"..name,
+      arrayname   = boot and "boot" or remove_ext(name):gsub("[\\/.]", "_"),
+      requirename = boot and "boot" or remove_ext(name):gsub("[\\/]", ".")
+    })
 end
 
 --------------------------------------------------------------------------------
--- @target:     name of the output file
--- @method:     either of "plain" (default), "strip", "luasrcdiet", "luac", "luajit"
--- @compiler:   compiler file name (used with "luac" and "luajit" methods)
--- @bootscript: boot script name
--- @tscripts:   array of scripts names (optional)
--- @tmodules:   array of modules names (optional)
--- @tbinlibs:   array of binary libraries names (optional)
+--- Embed Lua scripts into a C-file.
+-- @target:     Name of the output file
+-- @method:     Either of "plain" (default), "strip", "luasrcdiet", "luac", "luajit"
+-- @compiler:   Compiler file name (used with "luac" and "luajit" methods)
+-- @bootscript: Boot script name
+-- @tscripts:   Array of scripts names (optional)
+-- @tmodules:   Array of modules names (optional)
+-- @tbinlibs:   Array of binary libraries names (optional)
 --------------------------------------------------------------------------------
 local function embed (target, method, compiler, bootscript, tscripts, tmodules, tbinlibs)
-  assert(bootscript, "syntax: embed(target, method, compiler, bootscript, tscripts, tmodules, tbinlibs)")
+  assert(bootscript, "Syntax: embed(target, method, compiler, bootscript, tscripts, tmodules, tbinlibs)")
   local scripts, modules, binlibs = {}, {}, tbinlibs or {}
-  decode(scripts, bootscript, true)
-  for _, arg in ipairs(tscripts or {}) do decode(scripts, arg, false) end
-  for _, arg in ipairs(tmodules or {}) do decode(modules, arg, false) end
+  preprocess(scripts, bootscript, true)
+  for _, arg in ipairs(tscripts or {}) do preprocess(scripts, arg, false) end
+  for _, arg in ipairs(tmodules or {}) do preprocess(modules, arg, false) end
 
   local fp = assert(io.open(target, "w"))
-  fp:write("/* This is a generated file. */\n\n")
-  local linit = create_linit(scripts, modules, binlibs)
-  fp:write(linit)
-  fp:write(code)
+  fp:write(create_linit(scripts, modules, binlibs))
   addfiles(fp, scripts, method, compiler)
   addfiles(fp, modules, method, compiler)
   add_preloads(fp, scripts)

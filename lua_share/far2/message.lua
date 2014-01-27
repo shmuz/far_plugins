@@ -138,7 +138,7 @@ end
 @aId        : Dialog Id; binary GUID string; optional.
 
 @returns    : negative number when dialog was canceled, button number otherwise
-              (0 is the first button).
+              (1 is the first button).
 --]]
 
 local function Message (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)

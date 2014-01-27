@@ -35,7 +35,7 @@ else
 endif
 
 ifeq ($(EMBED_METHOD),luajit)
-  LUAC = $(PATH_EXE)/luajit.exe
+  LUAC = $(PATH_EXE)/LuaJIT/luajit.exe
 else
   LUAC = $(PATH_EXE)/luac.exe
 endif

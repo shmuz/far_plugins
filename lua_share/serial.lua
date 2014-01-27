@@ -42,16 +42,16 @@ local function Save (name, value, saved, f_write)
       return
     end
     saved[tbl] = name  -- save name for next time
-    f_write(indent, format("do local %s = {}; %s = %s\n", tname, name, tname))
+    f_write(indent, "do local ", tname, " = {}; ", name, " = ", tname, "\n")
     local indent2 = indent .. "  "
     for k,v in pairs(tbl) do    -- save its fields
       local sKey = basicSerialize(k)
       if sKey then
         local sVal, tp = basicSerialize(v)
         if sVal then
-          f_write(indent2, format("%s[%s] = %s\n", tname, sKey, sVal))
+          f_write(indent2, tname, "[", sKey, "] = ", sVal, "\n")
         elseif tp == "table" then
-          local fieldname = format("%s[%s]", name, sKey)
+          local fieldname = name .. "[" .. sKey .. "]"
           save_table(fieldname, v, indent2)
         end
       end
