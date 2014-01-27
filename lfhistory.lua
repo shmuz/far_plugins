@@ -134,10 +134,7 @@ local function GetMaxItems (aConfig)
 end
 
 local function DelayedSaveHistory (hist, delay)
-  far.Timer(delay,
-    function(h)
-      if not h.Closed then h:Close(); hist:save(); end
-    end)
+  far.Timer(delay, function(h) h:Close(); hist:save(); end)
 end
 
 local function get_history (aConfig)

@@ -11,7 +11,7 @@ folders, and viewed/edited files.
 patterns entered from the keyboard. The pattern is displayed in the window
 title. There are 4 switchable filtering methods available:
 
- - DOS patterns (#*# и #?#)
+ - DOS patterns (#*# and #?#)
  - Lua patterns
  - FAR regular expressions
  - Plain text

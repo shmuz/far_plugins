@@ -816,12 +816,13 @@ local function Menu (props, list)
 
     elseif msg == F.DN_GETVALUE then
       if param1 == 1 then
-        if param2.GetType == 7 then                             -- get CurPos
+        local tp = param2.GetType
+        if tp == 7 then                             -- get CurPos
           return { ValType=F.FMVT_INTEGER, Value=list.sel }
-        elseif param2.GetType == 10 then                        -- get item text
+        elseif tp == 0 or tp == 10 then             -- get item text
           local item = list.drawitems[list.sel]
           return item and { ValType=F.FMVT_STRING, Value=item.text or "" }
-        elseif param2.GetType == 11 then                        -- get ItemCount
+        elseif tp == 11 then                        -- get ItemCount
           return { ValType=F.FMVT_INTEGER, Value=#list.drawitems }
         end
       end

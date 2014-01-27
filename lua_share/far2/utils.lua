@@ -437,9 +437,7 @@ local function OpenCommandLine (sCommandLine, tCommands, fConfig)
     ---- autocomplete:good; Escape response:bad when timer period < 20;
     far.Timer(30,
       function(h)
-        if not h.Closed then
-          h:Close(); ExecuteCommandLine(tActions, tCommands, "panels", fConfig)
-        end
+        h:Close(); ExecuteCommandLine(tActions, tCommands, "panels", fConfig)
       end)
   else
     ---- autocomplete:bad; Escape responsiveness:good;
@@ -511,6 +509,8 @@ local function GetPluginVersion()
 end
 
 return {
+  AddCfindFunction = AddCfindFunction,
+  OnError = OnError,
   AddMenuItems = AddMenuItems,
   GetPluginVersion = GetPluginVersion,
   InitPlugin = InitPlugin,
