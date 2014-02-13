@@ -2,6 +2,11 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2014-02-12, v3.5.1
+  PLUGIN:
+      [*] Plugin does not rely on LuaFAR anymore to include its path
+          in package.path.
+
 2013-10-07, v3.5.0
   PLUGIN:
       [*] Syntax of macro calls has changed again (run lfe: to see the syntax).

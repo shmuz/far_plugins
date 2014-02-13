@@ -19,16 +19,27 @@ local DefaultConfig = {
 }
 
 -- UPVALUES : keep them above all function definitions !!
+
 local Utils = require "far2.utils"
-local M     = require "lf4ed_message"
 local LibHistory = require "far2.history"
+
+local FirstRun = not _Plugin
+if FirstRun then
+  _Plugin = Utils.InitPlugin()
+  package.path = _Plugin.ModuleDir.."?.lua;".._Plugin.ModuleDir.."scripts\\?.lua;"..package.path
+  _Plugin.PackagePath = package.path
+  _Plugin.OriginalRequire = require
+  _Plugin.History = LibHistory.newsettings(nil, "alldata")
+end
+
+local M = require "lf4ed_message"
 local F = far.Flags
 local VK = win.GetVirtualKeys()
-local FirstRun = not _Plugin
 local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
 lf4ed = lf4ed or {}
+local _ModuleDir, _History = _Plugin.ModuleDir, _Plugin.History
 
-local CurrentConfig, _History, _ModuleDir
+local CurrentConfig
 
 local InternalLibs = { string=1,table=1,os=1,coroutine=1,math=1,io=1,debug=1,_G=1,package=1,
                        far=1,bit64=1,unicode=1,win=1,editor=1,viewer=1,panel=1,regex=1 }
@@ -335,27 +346,16 @@ local function SetExportFunctions()
 end
 
 local function InitUpvalues (_Plugin)
-  _ModuleDir, _History = _Plugin.ModuleDir, _Plugin.History
   CurrentConfig = _History:field("PluginSettings")
   setmetatable(CurrentConfig, { __index=DefaultConfig })
   OnConfigChange(CurrentConfig)
 end
 
-local function main()
-  if FirstRun then
-    _Plugin = Utils.InitPlugin()
-    _Plugin.PackagePath = package.path:gsub(";", ";".._Plugin.ModuleDir.."scripts\\?.lua;", 1)
-    _Plugin.OriginalRequire = require
-    _Plugin.History = LibHistory.newsettings(nil, "alldata")
-  end
-
+do
   InitUpvalues(_Plugin)
   SetExportFunctions()
-
   if FirstRun then
     fReloadUserFile()
     FirstRun = false -- needed when (ReloadDefaultScript == false)
   end
 end
-
-main()
