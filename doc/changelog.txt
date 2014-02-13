@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2014-02-12, v3.3.2
+  [*] Plugin does not rely on LuaFAR anymore to include its path in package.path.
+
 2014-01-27, v3.3.1
   [!] Faster opening of history windows.
 

@@ -5,6 +5,6 @@
 #define VER_MINOR   #{VER_MINOR}
 #define VER_MICRO   #{VER_MICRO}
 #define VER_STRING  "#{VER_STRING}"
-#define COPYRIGHT   "Shmuel Zeigerman, 2009-2013"
+#define COPYRIGHT   "Shmuel Zeigerman, 2009-2014"
 
 #endif

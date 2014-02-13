@@ -2,11 +2,18 @@
 -- lf_history.lua --
 --------------------
 local Utils      = require "far2.utils"
-local M          = require "lfh_message"
 local LibHistory = require "far2.history"
 package.loaded["far2.custommenu"] = nil
 local custommenu = require "far2.custommenu"
 
+local FirstRun = not _Plugin
+if FirstRun then
+  _Plugin = Utils.InitPlugin()
+  _Plugin.History = LibHistory.newsettings(nil, "config")
+  package.path = far.PluginStartupInfo().ModuleDir .. "?.lua;" .. package.path
+end
+
+local M = require "lfh_message"
 local F = far.Flags
 local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
 local FarId = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
@@ -357,15 +364,11 @@ local function SetExportFunctions()
   export.Open          = export_Open
 end
 
-local function main()
-  if not _Plugin then
-    _Plugin = Utils.InitPlugin()
-    _Plugin.History = LibHistory.newsettings(nil, "config")
+do
+  if FirstRun then
     _Plugin.Cfg = _Plugin.History:field("config")
     setmetatable(_Plugin.Cfg, {__index = DefaultCfg})
   end
   SetExportFunctions()
   far.ReloadDefaultScript = true
 end
-
-main()
