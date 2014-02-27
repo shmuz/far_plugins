@@ -1513,7 +1513,7 @@ mtime=3511292550
 #_far2_dialog.LoadData(aDialog, aData)
 #_
 #_**Parameters:**
-#_  aDialog : a dialog object created by a NewDialog call
+#_  aDialog : a dialog object created by a `NewDialog` call
 #_  aData   : a table with data to load into *aDialog*
 #_
 #_**Returns:**
@@ -1542,13 +1542,13 @@ mtime=3511292550
 #_    true, it is not loaded.
 #_
 #_**Example:**
-#_  local dlg = far2_dialog.NewDialog()
+#_  local dlg = far2_dialog.`NewDialog`()
 #_  dlg.cbxCase = {"DI_CHECKBOX",10,4,0,0, 0, "","",0, "&Case sensitive"}
 #_  dlg.cbxWord = {"DI_CHECKBOX",10,5,0,0, 0, "","",0, "&Whole words"}
 #_  far2_dialog.LoadData(dlg, {cbxCase=true, cbxWord=false})
 #_
 #_@@@
-#_<lua> Links = { ["NewDialog"]="25.html", } </lua>
+#_[NewDialog]: 25.html
 #_
 </article>
 </node>
@@ -1562,7 +1562,7 @@ mtime=3511292574
 #_far2_dialog.SaveData(aDialog, aData)
 #_
 #_**Parameters:**
-#_  aDialog : a dialog object created by a NewDialog call
+#_  aDialog : a dialog object created by a `NewDialog` call
 #_  aData   : a table to save data in from *aDialog*
 #_
 #_**Returns:**
@@ -1587,7 +1587,7 @@ mtime=3511292574
 #_    true, it is not saved.
 #_
 #_**Example:**
-#_  local dlg = far2_dialog.NewDialog()
+#_  local dlg = far2_dialog.`NewDialog`()
 #_  dlg.cbxCase = {"DI_CHECKBOX",10,4,0,0, 0, "","",0, "&Case sensitive"}
 #_  dlg.cbxWord = {"DI_CHECKBOX",10,5,0,0, 0, "","",0, "&Whole words"}
 #_  -- add other items
@@ -1597,22 +1597,7 @@ mtime=3511292574
 #_  return data
 #_
 #_@@@
-#_<lua> Links = { ["NewDialog"]="25.html", } </lua>
-#_
-#_function SaveData (aDialog, aData)
-#_  for _,item in ipairs(aDialog) do
-#_    if not item._noautosave then
-#_      if CheckItemType(item, "DI_CHECKBOX", "DI_RADIOBUTTON") then
-#_        aData[item.name] = (item[7] ~= 0)
-#_      elseif CheckItemType(item, "DI_EDIT", "DI_FIXEDIT") then
-#_        aData[item.name] = item[10]
-#_      elseif CheckItemType(item, "DI_LISTBOX", "DI_COMBOBOX") then
-#_        aData[item.name] = aData[item.name] or {}
-#_        aData[item.name].SelectIndex = item[7].SelectIndex
-#_      end
-#_    end
-#_  end
-#_end
+#_[NewDialog]: 25.html
 #_
 </article>
 </node>
@@ -1672,12 +1657,13 @@ mtime=3535892712
 #_    the field *Data* of the returned object is an empty table.
 #_
 #_  - The returned history object *hobj* has four methods:
-#_    hobj:field, hobj:setfield, hobj:serialize and hobj:save.
+#_    `hobj:field`, `hobj:setfield`, `hobj:serialize` and `hobj:save`.
 #_
 #_@@@
-#_<lua> Links = { ["hobj:field"]="29.html", ["hobj:save"]="30.html", 
-#_["hobj:setfield"]="58.html", ["hobj:serialize"]="78.html"}
-#_</lua>
+#_[hobj:field]: 29.html
+#_[hobj:serialize]: 78.html
+#_[hobj:setfield]: 58.html
+#_[hobj:save]: 30.html
 #_
 </article>
 </node>
@@ -1718,12 +1704,13 @@ mtime=3535892721
 #_    "key1" under root.
 #_
 #_  - The returned history object *hobj* has four methods:
-#_    hobj:field, hobj:setfield, hobj:serialize and hobj:save.
+#_    `hobj:field`, `hobj:setfield`, `hobj:serialize` and `hobj:save`.
 #_
 #_@@@
-#_<lua> Links = { ["hobj:field"]="29.html", ["hobj:save"]="30.html", 
-#_["hobj:setfield"]="58.html", ["hobj:serialize"]="78.html"}
-#_</lua>
+#_[hobj:field]: 29.html
+#_[hobj:serialize]: 78.html
+#_[hobj:setfield]: 58.html
+#_[hobj:save]: 30.html
 #_
 </article>
 </node>
@@ -1758,8 +1745,6 @@ mtime=3478525904
 #_  elseif From == "p" then hist = _Hist:field ("menu.pluginsmenu")
 #_  else return
 #_
-#_@@@
-#_
 </article>
 </node>
 <node>
@@ -1779,7 +1764,7 @@ nm=hobj:save
 #_**Description:**
 #_  - The method saves (serializes) the "history object" into
 #_    the file whose name was given upon the object creation
-#_    (see new function). If the file exists, its contents is
+#_    (see `new` function). If the file exists, its contents is
 #_    overwritten.
 #_
 #_  - Only "Data" field of the *hobj* is saved.
@@ -1789,11 +1774,7 @@ nm=hobj:save
 #_    - Not saved: metatable relations.
 #_
 #_@@@
-#_<lua> Links = { ["new"]="28.html", }
-#_</lua>
-#_function history:save()
-#_  serial.SaveInFile (self.FileName, "Data", self.Data)
-#_end
+#_[new]: 28.html
 #_
 </article>
 </node>
@@ -1822,8 +1803,6 @@ mtime=3512482383
 #_    - Not saved: functions, coroutines and userdatas.
 #_    - Not saved: metatable relations.
 #_
-#_@@@
-#_
 </article>
 </node>
 <node>
@@ -1849,8 +1828,6 @@ mtime=3499591303
 #_  - If at any stage of retrieving some intermediate nested field
 #_    "keyM", its value is nil, then both that and all subsequent
 #_    fields are created by assigning each of them a new table.
-#_
-#_@@@
 #_
 </article>
 </node>
@@ -2058,13 +2035,12 @@ mtime=3522699929
 #_  -- Adds menu items from *src* table to *trg* table.
 #_  -- If *trg* argument is nil, a new empty table is first created.
 #_  -- The items whose text starts with :: are replaced with items
-#_     with their text converted by *msgtable* (see AddToMenu and
-#_     Utility for localization).
+#_     with their text converted by *msgtable* (see `AddToMenu` and
+#_     `Utility for localization`).
 #_
 #_@@@
-#_<lua> Links = { ["Utility for localization"]="68.html", AddToMenu="13.html",}
-#_</lua>
-#_
+#_[Utility for localization]: 68.html
+#_[AddToMenu]: 13.html
 #_
 </article>
 </node>
@@ -2106,14 +2082,12 @@ mtime=3522701440
 #_  The function does the following:
 #_  -- redirects indexing of strings to *unicode.utf8* table, so that e.g.
 #_     str:len() ends up with *unicode.utf8.len(str)* instead of *string.len(str)*.
-#_  -- adds function unicode.utf8.cfind.
+#_  -- adds function `unicode.utf8.cfind`.
 #_  -- sets up *export.OnError* function.
 #_  -- returns a table with *ModuleDir* field set to plugin's directory.
 #_
 #_@@@
-#_<lua> Links = { ["unicode.utf8.cfind"]="65.html", }
-#_</lua>
-#_
+#_[unicode.utf8.cfind]: 65.html
 #_
 </article>
 </node>
@@ -2145,13 +2119,12 @@ mtime=3522745248
 #_               { EditorInput={},EditorEvent={},ViewerEvent={},ExitScript={} }
 #_
 #_**Description:**
-#_  1. An environment table *env* containing all the Installation functions is created.
-#_  2. env.AddUserFile(FileName) is run.
+#_  1. An environment table *env* containing all the `Installation functions` is created.
+#_  2. env.`AddUserFile`(FileName) is run.
 #_
 #_@@@
-#_<lua> Links = { ["Installation functions"]="36.html", AddUserFile="34.html", }
-#_</lua>
-#_
+#_[AddUserFile]: 34.html
+#_[Installation functions]: 36.html
 #_
 </article>
 </node>
@@ -2176,15 +2149,13 @@ mtime=3577279708
 #_**Description:**
 #_  This function is intended to be called from *export.Open* function.
 #_  The function does arguments processing as described in the section
-#_  Macro calls.
+#_  `Macro calls`.
 #_
 #_  This function should not be called when the plugin creates panels from the command
 #_  line or macro calls.
 #_
 #_@@@
-#_<lua> Links = { ["Macro calls"]="92.html", }
-#_</lua>
-#_
+#_[Macro calls]: 92.html
 #_
 </article>
 </node>
@@ -2209,15 +2180,13 @@ mtime=3577279735
 #_**Description:**
 #_  This function is intended to be called from *export.Open* function.
 #_  The function does arguments processing as described in the section
-#_  Command line calls.
+#_  `Command line calls`.
 #_
 #_  This function should not be called when the plugin creates panels from the command
 #_  line or macro calls.
 #_
 #_@@@
-#_<lua> Links = { ["Command line calls"]="59.html", }
-#_</lua>
-#_
+#_[Command line calls]: 59.html
 #_
 </article>
 </node>
@@ -2279,19 +2248,18 @@ mtime=3577279870
 #_
 #_**Description:**
 #_
-#_  The function runs user's menu item, created as a result of execution of AddToMenu.
+#_  The function runs user's menu item, created as a result of execution of `AddToMenu`.
 #_
 #_  *Item.filename* is a specification for a Lua script to run upon this item activation.
 #_  The exact file name is determined according to the same rules as with `require` function,
 #_  that is, `package.path` is used to search for the file. But contrary to `require`,
 #_  the value returned by the script is not cached in `package.loaded`.
 #_
-#_  For the script's input arguments, see Passing data to installed scripts.
+#_  For the script's input arguments, see `Passing data to installed scripts`.
 #_
 #_@@@
-#_<lua> Links = { AddToMenu="13.html", ["Passing data to installed scripts"]="73.html", }
-#_</lua>
-#_
+#_[Passing data to installed scripts]: 73.html
+#_[AddToMenu]: 13.html
 #_
 </article>
 </node>
