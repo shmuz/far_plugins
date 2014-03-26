@@ -2,6 +2,12 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2014-03-27, v3.5.2
+  PLUGIN:
+      [*] Plugin links to lua51.dll rather than to lua5.1.dll.
+  Multi-Line Replace:
+      [!] Fix error message saying "nil".
+
 2014-02-12, v3.5.1
   PLUGIN:
       [*] Plugin does not rely on LuaFAR anymore to include its path

@@ -29,7 +29,7 @@ LUAEXE = $(PATH_EXE)/lua.exe
 LUAFARDLL = $(FARDIR)\Release.$(DIRBIT).gcc/luafar3.dll
 
 ifeq ($(LUAVERSION),51)
-  LUADLL = $(PATH_EXE)/lua5.1.dll
+  LUADLL = $(PATH_EXE)/lua51.dll
 else
   LUADLL = $(PATH_EXE)/lua52.dll
 endif

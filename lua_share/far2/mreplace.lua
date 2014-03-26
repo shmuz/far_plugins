@@ -38,6 +38,14 @@ local function ReplaceDialog (histData)
       CheckRegexChange(hDlg)
     elseif msg == F.DN_BTNCLICK then
       if param1==Dlg.bRegExpr.id then CheckRegexChange(hDlg) end
+    elseif msg == F.DN_CLOSE then
+      if param1==Dlg.btnReplace.id or param1==Dlg.btnCount.id then
+        if 0 ~= far.SendDlgMessage(hDlg, "DM_GETCHECK", Dlg.bRegExpr.id) then
+          local patt = far.SendDlgMessage(hDlg, "DM_GETTEXT", Dlg.sSearchPat.id)
+          local ok, msg = pcall(regex.new, patt)
+          if not ok then far.Message(msg, AppName, nil, "w"); return 0; end
+        end
+      end
     end
   end
 
@@ -150,7 +158,7 @@ local function ReplaceWithDialog (histData, collect)
         op=="count" and ("%s%d"):format(M.MTotalFound, nFound)
       far.Message(msg, AppName)
     else
-      far.Message(ret, "Error", nil, "w")
+      far.Message(nFound, "Error", nil, "w")
     end
     if collect then collectgarbage("collect") end
   end
