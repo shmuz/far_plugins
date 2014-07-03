@@ -2,6 +2,12 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2014-07-03, v3.5.3
+  PLUGIN:
+      [*] Rebuilt with up-to-date luaplug.c.
+  Lua Expression:
+      [!] The expression could not directly access global variables.
+
 2014-03-27, v3.5.2
   PLUGIN:
       [*] Plugin links to lua51.dll rather than to lua5.1.dll.

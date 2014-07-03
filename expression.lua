@@ -269,8 +269,9 @@ local function LuaExpr (history)
     ErrMsg(msg) return
   end
 
-  local env = { math=math, _G=_G, far=far }
-  setmetatable(env, { __index=math })
+  local env = {}
+  for k,v in pairs(math) do env[k]=v end
+  setmetatable(env, { __index=_G })
   setfenv(func, env)
   local ok, result = pcall(func)
   if not ok then
