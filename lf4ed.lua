@@ -108,12 +108,6 @@ local function fWrap()
   return Utils.RunInternalScript("wrap", arg)
 end
 
-local function fMReplace()
-  local lib = require "far2.mreplace"
-  lib.Init(M)
-  lib.ReplaceWithDialog(_History:field("MultilineReplace"), true)
-end
-
 local function fBlockSum()
   local arg = { "BlockSum", _History:field("BlockSum") }
   return Utils.RunInternalScript("expression", arg)
@@ -145,7 +139,6 @@ end
 local EditorMenuItems = {
   { text = "::MMenuSortLines",        action = fSort },
   { text = "::MMenuWrap",             action = fWrap },
-  { text = "::MMenuMultilineReplace", action = fMReplace },
   { text = "::MMenuBlockSum",         action = fBlockSum },
   { text = "::MMenuExpr",             action = fExpr },
   { text = "::MMenuScript",           action = fScript },

@@ -2,9 +2,6 @@
 #  The target embeds Lua scripts and has dependencies on Lua and LuaFAR DLLs.
 
 #------------------------------------ SETTINGS TO BE CONFIGURED BY THE USER --
-# Lua version
-LUAVERSION = 51
-
 # 32 or 64-bit plugin
 DIRBIT = 32
 
@@ -19,13 +16,13 @@ FARDIR = C:\farmanager\unicode_far
 PATH_LUAFARSRC = $(FARDIR)/../plugins/luamacro/luafar
 
 # Include paths
-INC_LUA = $(WORKDIR)/system/include/lua$(LUAVERSION)
+INC_LUA = $(WORKDIR)/system/include/lua/5.1
 INC_FAR = $(FARDIR)/../plugins/common/unicode
 
 # Location of executable files and DLLs
 PATH_EXE  = c:/exe$(DIRBIT)
 LUAEXE    = $(PATH_EXE)/lua.exe
-LUADLL    = $(PATH_EXE)/lua$(LUAVERSION).dll
+LUADLL    = $(PATH_EXE)/lua51.dll
 LUAFARDLL = $(FARDIR)\Release.$(DIRBIT).gcc/luafar3.dll
 
 ifeq ($(EMBED_METHOD),luajit)

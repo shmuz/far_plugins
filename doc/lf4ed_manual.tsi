@@ -6,7 +6,7 @@ ver=2.7
 id=1
 lv=0
 dt=Text
-nm=LuaFAR for Editor (version 3.3)
+nm=LuaFAR for Editor (version 3.6)
 mtime=3522650788
 <article>
 #_<markdown>
@@ -1290,22 +1290,25 @@ lv=0
 dt=Text
 nm=Macro calls
 ctime=3577277876
-mtime=3587304423
+mtime=3619277892
 <article>
 #_<markdown>
 #_
 #_### Macro call syntax
-#_      Plugin.Call("6F332978-08B8-4919-847A-EFBB6154C99A",
-#_                  <code> | @<file> | *<command> [,<arguments>])
 #_
-#_**code:**<br>
-#_a string containing Lua code
+#_1. `Plugin.Call(guid, "code", <code> [,<arguments>])`<br>
+#_   Execute string containing Lua code `<code>`.
 #_
-#_**file:**<br>
-#_a Lua script file name. Environment variables are expanded.
+#_2. `Plugin.Call(guid, "file", <filename> [,<arguments>])`<br>
+#_   Execute Lua script `<filename>`.<br>
+#_   `<filename>` may contain environment variables.
 #_
-#_**command:**<br>
-#_any command added via [`AddCommand`](57.html) function in *_usermenu.lua*.
+#_3. `Plugin.Call(guid, "command", <command> [,<arguments>])`<br>
+#_   Execute `<command>` (any command added via [`AddCommand`](57.html)
+#_   function in *_usermenu.lua*).
+#_
+#_4. `Plugin.Call(guid, "own", <command> [,<arguments>])`<br>
+#_   Execute own (internal) plugin's command `<command>`.
 #_
 #_----------------------------------------------------------------
 #_
@@ -1313,11 +1316,11 @@ mtime=3587304423
 #_```
 #_    local guid = "6F332978-08B8-4919-847A-EFBB6154C99A"
 #_
-#_    CallPlugin(guid, "return 2+2,3+3")
+#_    Plugin.Call(guid, "code", "return 2+2,3+3")
 #_
-#_    CallPlugin(guid, "@%farprofile%\\tests\\test1.lua", "fulltest")
+#_    Plugin.Call(guid, "file", "%farprofile%\\tests\\test1.lua", "fulltest")
 #_
-#_    CallPlugin(guid, "*calc", "2+2")
+#_    Plugin.Call(guid, "command", "calc", "2+2")
 #_```
 #_
 </article>

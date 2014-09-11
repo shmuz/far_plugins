@@ -28,7 +28,6 @@ modules = \
   $(path_share)*far2\makelang.lua   \
   $(path_share)*far2\message.lua    \
   $(path_share)*far2\searchmenu.lua \
-  $(path_share)*far2\mreplace.lua   \
   $(path_share)*far2\utils.lua
 
 FAR_EXPORTS = \

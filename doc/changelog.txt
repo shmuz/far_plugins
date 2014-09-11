@@ -2,6 +2,12 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2014-09-11, v3.6.0
+  PLUGIN:
+      [*] New syntax for Plugin.Call.
+  Multi-Line Replace:
+      [-] The utility moved to plugin LuaFAR Search.
+
 2014-07-03, v3.5.3
   PLUGIN:
       [*] Rebuilt with up-to-date luaplug.c.
