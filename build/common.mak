@@ -2,14 +2,11 @@
 #  The target embeds Lua scripts and has dependencies on Lua and LuaFAR DLLs.
 
 #------------------------------------ SETTINGS TO BE CONFIGURED BY THE USER --
-# Lua version
-LUAVERSION = 51
-
 # 32 or 64-bit plugin
 DIRBIT = 32
 
 # Root work directory
-WORKDIR = ../../../..
+WORKDIR = S:\progr\work
 path_share = $(WORKDIR)/lua_share
 
 # Location of FAR source directory
@@ -19,20 +16,14 @@ FARDIR = C:\farmanager\unicode_far
 PATH_LUAFARSRC = $(FARDIR)/../plugins/luamacro/luafar
 
 # Include paths
-INC_LUA = $(WORKDIR)/system/include/lua$(LUAVERSION)
+INC_LUA = $(WORKDIR)/system/include/lua/5.1
 INC_FAR = $(FARDIR)/../plugins/common/unicode
 
 # Location of executable files and DLLs
-PATH_EXE = c:/exe$(DIRBIT)
-
-LUAEXE = $(PATH_EXE)/lua.exe
+PATH_EXE  = c:/exe$(DIRBIT)
+LUAEXE    = $(PATH_EXE)/lua.exe
+LUADLL    = $(PATH_EXE)/lua51.dll
 LUAFARDLL = $(FARDIR)\Release.$(DIRBIT).gcc/luafar3.dll
-
-ifeq ($(LUAVERSION),51)
-  LUADLL = $(PATH_EXE)/lua5.1.dll
-else
-  LUADLL = $(PATH_EXE)/lua52.dll
-endif
 
 ifeq ($(EMBED_METHOD),luajit)
   LUAC = $(PATH_EXE)/LuaJIT/luajit.exe
@@ -70,8 +61,11 @@ bootscript4 = $(subst *,\,$(bootscript))
 scripts4    = $(subst *,\,$(scripts))
 modules4    = $(subst *,\,$(modules))
 
-GLOBINFO    = $(path_plugin)\_globalinfo.lua
+ifndef LUAPLUG
 LUAPLUG     = $(PATH_LUAFARSRC)\luaplug.c
+endif
+
+GLOBINFO    = $(path_plugin)\_globalinfo.lua
 C_INIT      = $(T_EMBED)_init.c
 OBJ_INIT    = $(T_EMBED)_init.o
 OBJ_PLUG_N  = $(T_NOEMBED)_plug.o
@@ -82,7 +76,7 @@ EXPORTS = $(addprefix -DEXPORT_,$(FAR_EXPORTS))
 
 OBJ_N    = $(OBJ_PLUG_N) $(OBJ_RC)
 OBJ_E    = $(OBJ_INIT) $(OBJ_PLUG_E) $(OBJ_RC)
-CFLAGS   = -O2 -Wall -I$(INC_LUA) -I$(INC_FAR) $(ARCH) $(EXPORTS)
+CFLAGS   = -O2 -Wall -I$(INC_LUA) -I$(INC_FAR) $(ARCH) $(EXPORTS) $(MYCFLAGS)
 CFLAGS_E = $(CFLAGS) -DFUNC_OPENLIBS=luafar_openlibs
 
 CC = gcc
@@ -117,8 +111,10 @@ $(C_INIT): $(bootscript4) $(scripts4) $(modules4)
 	  ([[$@]], [[$(EMBED_METHOD)]], [[$(LUAC)]],\
 	  $(bootscript3), {$(scripts3)}, {$(modules3)})"
 
+ifndef NO_MACRO_GENERATE
 version.h release.mak $(GLOBINFO) $(HELP) : % : %.mcr define.lua
 	$(LUAEXE) -erequire([[macro]])([[define.lua]],[[$<]],[[$@]])
+endif
 
 ### Release section ##########################################################
 release: release.mak

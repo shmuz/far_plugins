@@ -40,7 +40,7 @@ local function OnError (msg)
                 j = j + 1
                 jumps[j] = { file=file2, line=tonumber(numline) }
                 buttons = buttons .. (j<10 and ";&" or ";") .. j
-                return ("\16[J%d]:%s:%s:%s\n"):format(j, file, numline, space)
+                return ("\16[J%d]:%s:%s:\n"):format(j, file, numline)
               end
             end
           end
@@ -310,7 +310,6 @@ local function CommandSyntaxMessage (tCommands)
   local globalInfo = export.GetGlobalInfo()
   local pluginInfo = export.GetPluginInfo()
   local syn = [[
-
 Command line syntax:
   %s: [<options>] <command>|-r<filename> [<arguments>]
 
@@ -320,8 +319,11 @@ Options:
   -l <lib>    load library <lib>
 
 Macro call syntax:
-  Plugin.Call("%s",
-              <code> | @<file> | *<command> [,<arguments>])
+  (guid = "%s")
+  Plugin.Call(guid, "code",    <code>     [,<arguments>])
+  Plugin.Call(guid, "file",    <filename> [,<arguments>])
+  Plugin.Call(guid, "command", <command>  [,<arguments>])
+  Plugin.Call(guid, "own",     <command>  [,<arguments>])
 
 Available commands:
 ]]
@@ -445,40 +447,41 @@ local function OpenCommandLine (sCommandLine, tCommands, fConfig)
   end
 end
 
-local function OpenMacro (aArgs, aCommandTable, fConfig)
-  if type(aArgs[1]) ~= "string" then return end
-
-  local prefix = aArgs[1]:sub(1,1)
-  if prefix == "*" then -- command
-    local fileobject = aCommandTable[aArgs[1]:sub(2)]
-    if fileobject then
-      local oldConfig = fConfig and fConfig()
-      local map = {
-        [F.MACROAREA_SHELL]  = "panels", [F.MACROAREA_EDITOR] = "editor",
-        [F.MACROAREA_VIEWER] = "viewer", [F.MACROAREA_DIALOG] = "dialog",
-      }
-      local wrapfunc = function()
-        return RunUserItem(fileobject, { From=map[far.MacroGetArea()] }, unpack(aArgs,2,aArgs.n))
+local function OpenMacro (Args, CommandTable, fConfig)
+  local op = Args[1]
+  if op=="command" then
+    if type(Args[2]) == "string" then
+      local fileobject = CommandTable[Args[2]]
+      if fileobject then
+        local oldConfig = fConfig and fConfig()
+        local map = {
+          [F.MACROAREA_SHELL]  = "panels", [F.MACROAREA_EDITOR] = "editor",
+          [F.MACROAREA_VIEWER] = "viewer", [F.MACROAREA_DIALOG] = "dialog",
+        }
+        local wrapfunc = function()
+          return RunUserItem(fileobject, { From=map[far.MacroGetArea()] }, unpack(Args,3,Args.n))
+        end
+        local retfunc = function (ok, ...)
+          if fConfig then fConfig(oldConfig) end
+          if ok then return ... end
+          export.OnError(...)
+          return true
+        end
+        return retfunc(xpcall(wrapfunc, function(msg) return debug.traceback(msg, 3) end))
+      else
+        CommandSyntaxMessage(CommandTable)
       end
-      local retfunc = function (ok, ...)
-        if fConfig then fConfig(oldConfig) end
-        if ok then return ... end
-        export.OnError(...)
-        return true
-      end
-      return retfunc(xpcall(wrapfunc, function(msg) return debug.traceback(msg, 3) end))
-    else
-      CommandSyntaxMessage(aCommandTable)
-      return false
     end
-
-  else
-    local chunk = prefix=="@" and assert(loadfile((aArgs[1]:sub(2):gsub("%%(.-)%%",win.GetEnv))))
-                               or assert(loadstring(aArgs[1]))
-    local env = setmetatable({}, { __index=_G })
-    setfenv(chunk, env)
-    return chunk(unpack(aArgs,2,aArgs.n))
+  elseif op=="code" or op=="file" then
+    if type(Args[2]) == "string" then
+      local chunk = op=="file" and assert(loadfile((Args[2]:gsub("%%(.-)%%",win.GetEnv))))
+                                or assert(loadstring(Args[2]))
+      local env = setmetatable({}, { __index=_G })
+      setfenv(chunk, env)
+      return chunk(unpack(Args,3,Args.n))
+    end
   end
+  return false
 end
 
 -- Add function unicode.utf8.cfind:

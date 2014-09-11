@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2014-09-11, v3.4.0
+  [*] New syntax for Plugin.Call.
+
 2014-02-12, v3.3.2
   [*] Plugin does not rely on LuaFAR anymore to include its path in package.path.
 
