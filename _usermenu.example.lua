@@ -21,9 +21,5 @@ AddToMenu ("evp", "Table View", nil, "far2.tableview")
 -- argument (.lua extension should be omitted).
 AddToMenu ("evp", "Hello, Lua", nil, "scripts/examples/hello")
 
--- Add command to call from the command line, e.g.:
--- lfe:ren
-AddCommand("ren", "scripts/examples/lf_rename")
-
 -- Add another user menu file from the "scripts" subtree.
 AddUserFile ("scripts/examples/_usermenu.lua")

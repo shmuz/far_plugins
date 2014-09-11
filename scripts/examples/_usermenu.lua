@@ -11,7 +11,6 @@ AddToMenu ("e", nil,                "Alt+Shift+I", dir.."shift_selection", true)
 AddToMenu ("e", nil,                "Alt+Shift+U", dir.."shift_selection", false)
 
 -- panels menu
-AddToMenu ("p", "Rename",      nil, dir.."lf_rename", "<"..HelpDir..">Rename")
 AddToMenu ("p", "SelectingEx", nil, dir.."selectingEx")
 
 AddToMenu ("evp", "Plugins control", nil, dir.."plugins")
