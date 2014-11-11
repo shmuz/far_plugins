@@ -32,7 +32,7 @@ static const luaL_Reg lualibs[] = {
   2. Plugin (GetGlobalInfoW): call LF_InitLuaState1(L,FUNC_OPENLIBS)
   3. LuaFAR (LF_InitLuaState1): call FUNC_OPENLIBS unless it is NULL
 */
-LUALIB_API int luafar_openlibs (lua_State *L) {
+LUALIB_API int <$luaopen> (lua_State *L) {
   const luaL_Reg *lib = lualibs;
   for (; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);
@@ -113,13 +113,15 @@ local function addfiles(target, files, method, compiler)
   end
 end
 
-local function create_linit (aScripts, aModules, aBinlibs)
+local function create_linit (aLuaopen, aScripts, aModules, aBinlibs)
   local tinsert = table.insert
-  local result = linit:gsub("<$([^>]+)>",
+  local result = linit:gsub("<%$([^>]+)>",
     function(tag)
       local ret = {}
       --------------------------------------------------------------------------
-      if tag == "declarations" then
+      if tag == "luaopen" then
+        return aLuaopen
+      elseif tag == "declarations" then
         tinsert(ret, "/*---- forward declarations ----*/")
         for _,libname in ipairs(aBinlibs) do
           tinsert(ret, "int luaopen_" .. libname .. " (lua_State*);")
@@ -169,14 +171,15 @@ end
 
 --- Preprocess a file specification.
 -- @target: Output array (table).
--- @arg:    File name containing path (string).
+-- @src:    File name containing path (string).
 --          The function splits it into path and name.
---          If it should be split at a point other than the last (back)slash, use an asterisk to specify where.
--- @boot:   Whether `arg` is the boot script (boolean).
-local function preprocess(target, arg, boot)
-  local path, name = arg:match("(.+)%*(.+)")
-  if path == nil then path, name = arg:match("(.+)[/\\](.+)") end
-  if path == nil then error("Bad argument: "..arg) end
+--          If it should be split at a point other than the last (back)slash, use an asterisk
+--          to specify where.
+-- @boot:   Whether `src` is the boot script (boolean).
+local function preprocess(target, src, boot)
+  local path, name = src:match("(.+)%*(.+)")
+  if path == nil then path, name = src:match("(.+)[/\\](.+)") end
+  if path == nil then error("Bad argument: "..src) end
   table.insert(target,
     { fullname    = path.."\\"..name,
       arrayname   = boot and "boot" or remove_ext(name):gsub("[\\/.]", "_"),
@@ -184,30 +187,99 @@ local function preprocess(target, arg, boot)
     })
 end
 
+local function CollectValues (...)
+  local T = {}
+  local arg = {...}
+  local state
+  for i,v in ipairs(arg) do
+    local prefix = v:sub(1,1)
+    if prefix == "-" then
+      state = v:sub(2)
+      T[state] = T[state] or {}
+    elseif prefix == "@" then
+      local key,val = v:match("^.([^=]+)=(.*)")
+      if not key then error ("invalid argument #"..i) end
+      T[key] = val
+      state = nil
+    elseif state then
+      table.insert(T[state], v)
+    else
+      error("misplaced argument #"..i)
+    end
+  end
+  return T
+end
+
 --------------------------------------------------------------------------------
 --- Embed Lua scripts into a C-file.
--- @target:     Name of the output file
--- @method:     Either of "plain" (default), "strip", "luasrcdiet", "luac", "luajit"
--- @compiler:   Compiler file name (used with "luac" and "luajit" methods)
--- @bootscript: Boot script name
--- @tscripts:   Array of scripts names (optional)
--- @tmodules:   Array of modules names (optional)
--- @tbinlibs:   Array of binary libraries names (optional)
+-- MANDATORY:
+--   @target:     Name of the output file
+--   @method:     Either of "plain" (default), "strip", "luasrcdiet", "luac", "luajit"
+--   @compiler:   Compiler file name (used with "luac" and "luajit" methods)
+--   @bootscript: Boot script name
+--   @luaopen:    Name of the library function
+-- OPTIONAL:
+--   @scripts:    Array of scripts names
+--   @modules:    Array of modules names
+--   @binlibs:    Array of binary libraries names
 --------------------------------------------------------------------------------
-local function embed (target, method, compiler, bootscript, tscripts, tmodules, tbinlibs)
-  assert(bootscript, "Syntax: embed(target, method, compiler, bootscript, tscripts, tmodules, tbinlibs)")
-  local scripts, modules, binlibs = {}, {}, tbinlibs or {}
-  preprocess(scripts, bootscript, true)
-  for _, arg in ipairs(tscripts or {}) do preprocess(scripts, arg, false) end
-  for _, arg in ipairs(tmodules or {}) do preprocess(modules, arg, false) end
+local function embed (...)
+  local T = CollectValues(...)
+  assert(type(T.target)     =="string", "incorrect or missing parameter 'target'")
+  assert(type(T.method)     =="string", "incorrect or missing parameter 'method'")
+  assert(type(T.compiler)   =="string", "incorrect or missing parameter 'compiler'")
+  assert(type(T.bootscript) =="string", "incorrect or missing parameter 'bootscript'")
+  assert(type(T.luaopen)    =="string", "incorrect or missing parameter 'luaopen'")
 
-  local fp = assert(io.open(target, "w"))
-  fp:write(create_linit(scripts, modules, binlibs))
-  addfiles(fp, scripts, method, compiler)
-  addfiles(fp, modules, method, compiler)
+  assert(T.scripts==nil or type(T.scripts)=="table")
+  assert(T.modules==nil or type(T.modules)=="table")
+  assert(T.binlibs==nil or type(T.binlibs)=="table")
+
+  local scripts, modules = {}, {}
+  preprocess(scripts, T.bootscript, true)
+  if T.scripts then
+    for _, src in ipairs(T.scripts) do preprocess(scripts, src, false) end
+  end
+  if T.modules then
+    for _, src in ipairs(T.modules) do preprocess(modules, src, false) end
+  end
+
+  local fp = assert(io.open(T.target, "w"))
+  fp:write(create_linit(T.luaopen, scripts, modules, T.binlibs or {}))
+  addfiles(fp, scripts, T.method, T.compiler)
+  addfiles(fp, modules, T.method, T.compiler)
   add_preloads(fp, scripts)
   add_preloads(fp, modules)
   fp:close()
 end
 
-return embed
+local function openlibs (...)
+  local T = CollectValues(...)
+  assert(type(T.target)  =="string", "incorrect or missing parameter 'target'")
+  assert(type(T.luaopen) =="string", "incorrect or missing parameter 'luaopen'")
+
+  assert(T.funclist==nil or type(T.funclist)=="table")
+  T.funclist = T.funclist or {}
+
+  local fp = assert(io.open(T.target, "w"))
+
+  fp:write("#include <lua.h>\n\n")
+  for _,v in ipairs(T.funclist) do
+    fp:write("int "..v.."(lua_State *L);\n")
+  end
+  fp:write("\n")
+  fp:write("int ", T.luaopen, "(lua_State *L) {\n")
+  for _,v in ipairs(T.funclist) do
+    fp:write("  lua_pushcfunction(L, ", v, ");\n")
+    fp:write("  lua_call(L, 0, 0);\n")
+  end
+  fp:write("  return 0;\n")
+  fp:write("}\n")
+
+  fp:close()
+end
+
+if select(1,...)=="embed" then embed(select(2,...))
+elseif select(1,...)=="openlibs" then openlibs(select(2,...))
+else error("command line: invalid operation")
+end

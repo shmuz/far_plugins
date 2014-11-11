@@ -18,12 +18,47 @@ local F = far.Flags
 local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
 local FarId = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
 
+local cfgView = {
+  PluginHistoryType = "view",
+  FarHistoryType = 2,
+  title = "mTitleView",
+  brkeys = {
+    "F3", "F4", "AltF3", "AltF4",
+    "CtrlEnter", "CtrlNumEnter", "RCtrlEnter", "RCtrlNumEnter",
+    "ShiftEnter", "ShiftNumEnter",
+    "CtrlPgUp", "RCtrlPgUp",
+  },
+  maxItemsKey = "iSizeView",
+}
+
+local cfgCommands = {
+  PluginHistoryType = "commands",
+  FarHistoryType = F.FSSF_HISTORY_CMD,
+  title = "mTitleCommands",
+  brkeys = {
+    "CtrlEnter", "RCtrlEnter", "CtrlNumEnter", "RCtrlNumEnter",
+    "ShiftEnter", "ShiftNumEnter",
+  },
+  maxItemsKey = "iSizeCmd",
+}
+
+local cfgFolders = {
+  PluginHistoryType  = "folders",
+  FarHistoryType = F.FSSF_HISTORY_FOLDER,
+  title = "mTitleFolders",
+  brkeys = {
+    "CtrlEnter", "RCtrlEnter", "CtrlNumEnter", "RCtrlNumEnter",
+    "ShiftEnter", "ShiftNumEnter",
+  },
+  maxItemsKey = "iSizeFold",
+}
+
 local function IsCtrlEnter (key)
   return key=="CtrlEnter" or key=="RCtrlEnter" or key=="CtrlNumEnter" or key=="RCtrlNumEnter"
 end
 
-local function IsCtrlShiftEnter (key)
-  return key=="CtrlShiftEnter" or key=="RCtrlShiftEnter" or key=="CtrlShiftNumEnter" or key=="RCtrlShiftNumEnter"
+local function IsCtrlPgUp (key)
+  return key=="CtrlPgUp" or key=="RCtrlPgUp"
 end
 
 local function ExecuteFromCmdLine(str, newwindow)
@@ -48,7 +83,7 @@ local function GetTimeString (filetime)
   end
 end
 
-local function SetListKeyFunction (list, breakkeys)
+local function SetListKeyFunction (list, HistTypeConfig)
   function list:keyfunction (hDlg, key, Item)
     if key == "F7" then
       if Item then
@@ -70,7 +105,17 @@ local function SetListKeyFunction (list, breakkeys)
       return "done"
     end
 
-    for _,v in ipairs(breakkeys) do
+    if HistTypeConfig==cfgView then
+      if key=="AltF3" then
+        viewer.Viewer(Item.text)
+        return "done"
+      elseif key=="AltF4" then
+        editor.Editor(Item.text)
+        return "done"
+      end
+    end
+
+    for _,v in ipairs(HistTypeConfig.brkeys) do
       if key == v then return "break" end
     end
   end
@@ -97,44 +142,9 @@ local function MakeMenuParams (aCommonConfig, aHistTypeConfig, aHistTypeData, aI
     filterlines   = true,
   }
   local list = custommenu.NewList(listProps, aItems)
-  SetListKeyFunction(list, aHistTypeConfig.brkeys)
+  SetListKeyFunction(list, aHistTypeConfig)
   return menuProps, list
 end
-
-local cfgView = {
-  PluginHistoryType = "view",
-  FarHistoryType = 2,
-  title = "mTitleView",
-  brkeys = {
-    "F3", "F4",
-    "CtrlEnter", "CtrlNumEnter", "RCtrlEnter", "RCtrlNumEnter",
-    "ShiftEnter", "ShiftNumEnter",
-    "CtrlShiftEnter", "CtrlShiftNumEnter", "RCtrlShiftEnter", "RCtrlShiftNumEnter",
-  },
-  maxItemsKey = "iSizeView",
-}
-
-local cfgCommands = {
-  PluginHistoryType = "commands",
-  FarHistoryType = F.FSSF_HISTORY_CMD,
-  title = "mTitleCommands",
-  brkeys = {
-    "CtrlEnter", "RCtrlEnter", "CtrlNumEnter", "RCtrlNumEnter",
-    "ShiftEnter", "ShiftNumEnter",
-  },
-  maxItemsKey = "iSizeCmd",
-}
-
-local cfgFolders = {
-  PluginHistoryType  = "folders",
-  FarHistoryType = F.FSSF_HISTORY_FOLDER,
-  title = "mTitleFolders",
-  brkeys = {
-    "CtrlEnter", "RCtrlEnter", "CtrlNumEnter", "RCtrlNumEnter",
-    "ShiftEnter", "ShiftNumEnter",
-  },
-  maxItemsKey = "iSizeFold",
-}
 
 local function GetMaxItems (aConfig)
   return _Plugin.Cfg[aConfig.maxItemsKey]
@@ -290,7 +300,7 @@ local function view_history()
   if IsCtrlEnter(key) then
     panel.SetCmdLine(nil, data)
 
-  elseif IsCtrlShiftEnter(key) then
+  elseif IsCtrlPgUp(key) then
     if not LocateFile(data) then TellFileNotExist() end
 
   elseif key == nil or shift_enter then

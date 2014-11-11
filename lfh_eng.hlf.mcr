@@ -29,7 +29,7 @@ title. There are 4 switchable filtering methods available:
    #Shift-Del#          Delete item from the history.
    #Ctrl-Del#           Delete all filtered items from the history.
    #Del#                Clear filter.
-   #CtrlAltX#           Apply XLat conversion on filter.
+   #Ctrl-Alt-X#         Apply XLat conversion on filter.
 
  \3BCommands history\-
    #Enter#              Execute.
@@ -38,9 +38,11 @@ title. There are 4 switchable filtering methods available:
  \3BView/Edit history\-
    #F3#                 View.
    #F4#                 Edit.
+   #Alt-F3#             View modally, return to the menu.
+   #Alt-F4#             Edit modally, return to the menu.
    #Enter#              View or edit.
    #Shift-Enter#        View or edit (item position is not changed).
-   #Ctrl-Shift-Enter#   Locate the file in active panel.
+   #Ctrl-PgUp#          Go to the file (in active panel).
 
  \3BFolders history\-
    #Enter#              Change directory (active panel).

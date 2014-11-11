@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2014-11-11, v3.4.1
+  [+] View/Edit history: Alt-F3, Alt-F4: view/edit modally, return to the menu.
+  [*] View/Edit history: Ctrl-PgUp instead of Ctrl-Shift-Enter.
+
 2014-09-11, v3.4.0
   [*] New syntax for Plugin.Call.
 
