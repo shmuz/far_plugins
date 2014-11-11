@@ -72,7 +72,7 @@ local function OnError (msg)
         far.AdvControl("ACTL_COMMIT")
       end
     else
-      editor.Editor(file, nil,nil,nil,nil,nil, {EF_NONMODAL=1,EF_IMMEDIATERETURN=1})
+      editor.Editor(file, nil,nil,nil,nil,nil, {EF_NONMODAL=1,EF_IMMEDIATERETURN=1},line)
     end
   end
 
