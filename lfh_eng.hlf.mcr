@@ -29,7 +29,8 @@ title. There are 4 switchable filtering methods available:
    #Shift-Del#          Delete item from the history.
    #Ctrl-Del#           Delete all filtered items from the history.
    #Del#                Clear filter.
-   #Ctrl-Alt-X#         Apply XLat conversion on filter.
+   #Ctrl-Alt-X#         Apply XLat conversion on filter and also
+                      switch the keyboard layout.
 
  \3BCommands history\-
    #Enter#              Execute.
