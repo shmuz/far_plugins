@@ -776,7 +776,7 @@ function List:Key (hDlg, key)
       self:DeleteFilteredItems(hDlg, true)
 
     elseif key:match("^R?CtrlR?AltX$") then
-      local result = far.XLat(self.pattern, 1, self.pattern:len(), 0)
+      local result = far.XLat(self.pattern, nil, nil, "XLAT_SWITCHKEYBLAYOUT")
       if result then self:ChangePattern(hDlg, result) end
 
     elseif key:len() == 1 then
