@@ -95,6 +95,7 @@ local function NewList (props, items, bkeys, startId)
   self.searchstart = P.searchstart or 1
   self.selalign  = P.selalign or "center" -- top/center/bottom/
   self.selignore = P.selignore
+  self.xlat      = P.xlat
 
   self:SetSize()
   self:SetUpperItem()
@@ -426,21 +427,14 @@ function List:MouseEvent (hDlg, Ev, x, y)
   return 1
 end
 
-local function ProcessSearchMethod (pattern, method)
+local function ProcessSearchMethod (method, pattern)
   local sNeedEscape = "[~!@#$%%^&*()%-+[%]{}\\|:;'\",<.>/?]"
   ----------------------------------------------------------
-  if type(method) == "function" then
-    return method
-  ----------------------------------------------------------
-  elseif method == "regex" then -- pass
-  ----------------------------------------------------------
-  elseif method == "dos" then
+  if method == "dos" then
     pattern = pattern:gsub("%*+", "*"):gsub(sNeedEscape, "\\%1")
                      :gsub("\\[?*]", {["\\?"]=".", ["\\*"]=".*?"})
-  ----------------------------------------------------------
   elseif method == "plain" then
     pattern = pattern:gsub(sNeedEscape, "\\%1")
-  ----------------------------------------------------------
   elseif method == "lua" then
     local map = { l="%a", u="%a", L="%A", U="%A" }
     return function(s, p, init)
@@ -449,10 +443,16 @@ local function ProcessSearchMethod (pattern, method)
       if not fr then return nil end
       return string.sub(s,1,fr-1):len()+1, string.sub(s,1,to):len()
     end
-  ----------------------------------------------------------
-  else error ("invalid search method")
+  elseif method ~= "regex" then
+    error("invalid search method")
   end
-  return pcall(regex.new, pattern, "i")
+  ----------------------------------------------------------
+  local ok, cregex = pcall(regex.new, pattern, "i")
+  if ok then
+    return function (text, pattern, start)
+      return cregex:find(text, start)
+    end
+  end
 end
 
 function List:UpdateSizePos (hDlg)
@@ -481,32 +481,40 @@ function List:ChangePattern (hDlg, pattern)
   local oldsel = self.drawitems[self.sel]
   self.drawitems = {}
 
-  local ok, cregex = ProcessSearchMethod (pattern, self.searchmethod)
-  if ok then
-    local findfunc = type(ok)=="function" and ok
+  local find, find2
+  local pat2 = self.xlat and far.XLat(pattern)
+  if type(self.searchmethod)=="function" then
+    find, find2 = self.searchmethod, self.searchmethod
+  else
+    find = ProcessSearchMethod(self.searchmethod, pattern)
+    find2 = pat2 and ProcessSearchMethod(self.searchmethod, pat2)
+  end
+
+  if find or find2 then
     for i,v in ipairs(self.items) do
       local fr, to
-      if findfunc then ok, fr, to = pcall(findfunc, v.text, pattern, self.searchstart)
-      else ok, fr, to = true, cregex:find(v.text, self.searchstart)
+      if find then
+        fr, to = find(v.text, pattern, self.searchstart)
       end
-      if ok then
-        local vdata = self.idata[v]
-        vdata.fr, vdata.to = fr, to
-        if fr then
-          self.drawitems[#self.drawitems+1] = v
-          if oldsel == v then
-            self.sel = #self.drawitems
-          end
-        else
-          if oldsel == v then self.sel = 1 end
+      if fr==nil and find2 then
+        fr, to = find2(v.text, pat2, self.searchstart)
+      end
+      local vdata = self.idata[v]
+      vdata.fr, vdata.to = fr, to
+      if fr then
+        self.drawitems[#self.drawitems+1] = v
+        if oldsel == v then
+          self.sel = #self.drawitems
         end
+      else
+        if oldsel == v then self.sel = 1 end
       end
     end
   end
   self.fulltitle = (self.pattern == "") and self.title or
-    self.title.." ["..self.pattern.."]"
-  self.bottom = ("%d of %d items [%s]"):format(#self.drawitems, #self.items,
-    self.searchmethod)
+    self.title.." ["..self.pattern.."]" -- .. (pat2 and "["..pat2.."]" or "")
+  self.bottom = ("%d of %d items [%s%s]"):format(#self.drawitems, #self.items,
+    self.searchmethod, self.xlat and ",xlat" or "")
   self:UpdateSizePos(hDlg)
 end
 

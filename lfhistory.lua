@@ -20,7 +20,7 @@ local FarId = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
 
 local cfgView = {
   PluginHistoryType = "view",
-  FarHistoryType = 2,
+  --FarHistoryType = F.FSSF_HISTORY_VIEW,
   title = "mTitleView",
   brkeys = {
     "F3", "F4", "AltF3", "AltF4",
@@ -95,6 +95,12 @@ local function SetListKeyFunction (list, HistTypeConfig)
       return "done"
     end
 
+    if key == "F8" then
+      list.xlat = not list.xlat
+      list:ChangePattern(hDlg, list.pattern)
+      return "done"
+    end
+
     if key=="CtrlDel" or key=="RCtrlDel" or key=="CtrlNumDel" or key=="RCtrlNumDel" then
       if Item then
         if far.Message((M.mDeleteItemsQuery):format(#self.drawitems),
@@ -140,6 +146,7 @@ local function MakeMenuParams (aCommonConfig, aHistTypeConfig, aHistTypeData, aI
     selignore     = true,
     searchmethod  = aHistTypeData.searchmethod or "dos",
     filterlines   = true,
+    xlat          = aHistTypeData.xlat,
   }
   local list = custommenu.NewList(listProps, aItems)
   SetListKeyFunction(list, aHistTypeConfig)
@@ -219,6 +226,7 @@ local function get_history (aConfig)
   local menuProps, list = MakeMenuParams(_Plugin.Cfg, aConfig, settings, menu_items)
   local item, itempos = custommenu.Menu(menuProps, list)
   settings.searchmethod = list.searchmethod
+  settings.xlat = list.xlat
   hst:setfield("items", list.items)
   DelayedSaveHistory(hst, 200)
   if item then

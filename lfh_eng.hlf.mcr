@@ -23,6 +23,8 @@ title. There are 4 switchable filtering methods available:
    #F6#                 In items not fitting into window width:
                       toggle ellipsis between (0,1,2,3)/3 of width.
    #F7#                 Show item in message box.
+   #F8#                 Turn "xlat-filter" on/off
+                      (two patterns are searched simultaneously).
    #Ctrl-Enter#         Copy item to command line.
    #Ctrl-C#, #Ctrl-Ins#   Copy item to clipboard.
    #Ctrl-Shift-Ins#     Copy all filtered items to clipboard.
