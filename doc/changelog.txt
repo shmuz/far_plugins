@@ -1,0 +1,41 @@
+------------------------------------------------------------------
+  Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
+------------------------------------------------------------------
+
+2014-11-13, v3.5.0
+  [+] All histories: new "xlat-filter" mode; controlled by F8.
+
+2014-11-12, v3.4.2
+  [*] All histories: Ctrl-Alt-X switches keyboard layout, in addition to XLat-conversion.
+
+2014-11-11, v3.4.1
+  [+] View/Edit history: Alt-F3, Alt-F4: view/edit modally, return to the menu.
+  [*] View/Edit history: Ctrl-PgUp instead of Ctrl-Shift-Enter.
+
+2014-09-11, v3.4.0
+  [*] New syntax for Plugin.Call.
+
+2014-02-12, v3.3.2
+  [*] Plugin does not rely on LuaFAR anymore to include its path in package.path.
+
+2014-01-27, v3.3.1
+  [!] Faster opening of history windows.
+
+2013-10-07, v3.3.0
+  [*] Syntax of macro calls has changed again (run lfh: to see the syntax).
+
+2013-07-26, v3.2.0
+  [*] Syntax of macro calls has changed:
+      -- The 1-st argument must be string: one of the registered commands.
+      -- There can be arbitrary number of additional arguments.
+      -- There can be arbitrary number of returns.
+
+2013-05-04, v3.1.1 (same version)
+  [*] Rebuild of DLLs, to indicate their actual version.
+
+2013-04-30, v3.1.1
+  [+] Help files extended.
+  [+] Macrofile added.
+
+2013-04-28, v3.1.0
+  [+] First public release.
