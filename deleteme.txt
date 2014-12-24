@@ -1,0 +1,10 @@
+ Volume in drive E is DISK_E
+ Volume Serial Number is 709E-A3DA
+
+ Directory of E:\BB\F\Today\Far\github\1
+
+24/12/2014  17:21    <DIR>          .
+24/12/2014  17:21    <DIR>          ..
+24/12/2014  19:06                 0 deleteme.txt
+               1 File(s)              0 bytes
+               2 Dir(s)  64,772,997,120 bytes free
