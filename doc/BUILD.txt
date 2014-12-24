@@ -1,0 +1,61 @@
+LuaFAR for Editor, building and installation
+=============================================
+
+Prerequisites for building
+---------------------------
+   *  MinGW (Minimalist GNU for Windows)
+   *  Lua 5.1 interpreter and compiler: lua.exe, luac.exe
+   *  FAR 3.0 PluginSDK include files: plugin.hpp, farcolor.hpp
+   *  Lua 5.1 include files (lua.h, ...), or Lua 5.1 source directory
+   *  LuaFAR source directory
+
+
+Make targets
+-------------
+LuaFAR for Editor can be built in either of two ways:
+   *  as a set of Lua files (default)  :  make (or "make noembed")
+   *  as an embedded version           :  make embed
+
+What the target names mean:
+
+   noembed  :  The generic LuaFAR plugin DLL is used.
+               Lua scripts and modules should be copied into appropriate
+               locations on the disk.
+               DLL name: lf4ed.dll.
+
+   embed    :  Lua scripts and modules are merged into the plugin DLL.
+               DLL name: lf4ed_e.dll.
+
+
+Steps required to build
+------------------------
+1. Change to the directory "build".
+2. Edit user's settings in the file "Makefile" (near the top of the file).
+3. Run: make [<target>]. See the description of available targets above.
+
+
+Installation of an embedded version of LuaFAR for Editor
+---------------------------------------------------------
+Copy directory "lf4ed" into %FARHOME%\Plugins.
+
+
+Installation of non-embedded version of LuaFAR for Editor
+----------------------------------------------------------
+1. Copy directory "lf4ed" into %FARHOME%\Plugins.
+
+2. Lua modules directory ("lua_share") should be copied to its final
+   location on the disk. It may be renamed, but its subdirectories may not.
+   So, copy "lua_share" from this distribution to anywhere in your system
+   (e.g. c:\lua_share) and ensure that "c:/lua_share/?.lua"
+   is part of package.path.
+
+   Alternatively, if you already have some directory on your package.path
+   (e.g. c:\lua\module), then the contents of lua_share directory may be
+   copied into it, and the final structure will look like:
+      c:\lua\module\strict.lua
+      c:\lua\module\far2\dialog.lua
+      .....................
+      .....................
+
+
+[END OF FILE]
