@@ -100,7 +100,7 @@ $(OBJ_PLUG_E): $(LUAPLUG)
 $(OBJ_RC): $(RCFILE) version.h
 	windres $< -o $@ $(RESFLAGS)
 
-$(C_EMBED):
+$(C_EMBED): $(bootscript) $(scripts)
 	$(LUAEXE) $(path_run)/embed.lua embed @target=$@ @method=$(EMBED_METHOD) @compiler=$(LUAC) \
     @bootscript=$(bootscript) @luaopen=$(LUAOPEN_EMBED) -scripts $(scripts) -modules $(modules)
 

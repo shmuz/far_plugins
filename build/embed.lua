@@ -187,6 +187,7 @@ local function preprocess(target, src, boot)
     })
 end
 
+-- This function should go to some library.
 local function CollectValues (...)
   local T = {}
   local arg = {...}
@@ -197,9 +198,9 @@ local function CollectValues (...)
       state = v:sub(2)
       T[state] = T[state] or {}
     elseif prefix == "@" then
-      local key,val = v:match("^.([^=]+)=(.*)")
+      local key,equal,val = v:match("^@([^=]+)(=?)(.*)")
       if not key then error ("invalid argument #"..i) end
-      T[key] = val
+      T[key] = equal=="=" and val or true
       state = nil
     elseif state then
       table.insert(T[state], v)
