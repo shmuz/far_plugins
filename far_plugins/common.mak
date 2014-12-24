@@ -17,12 +17,12 @@ FARDIR = C:/farmanager
 PATH_LUAFARSRC = $(FARDIR)/plugins/luamacro/luafar
 
 # Include paths
-INC_LUA = $(WORKDIR)/system/include/lua/5.1
+INC_LUA = $(FARDIR)/plugins/luamacro/luasdk/include
 INC_FAR = $(FARDIR)/plugins/common/unicode
 
 # Location of executable files and DLLs
 PATH_EXE  = C:/EXE$(DIRBIT)
-LUAEXE    = $(PATH_EXE)/lua.exe
+LUAEXE    = $(PATH_EXE)/lua.exe -epackage.path=[[$(path_share)/?.lua]]
 LUADLL    = $(PATH_EXE)/lua51.dll
 LUAFARDLL = $(FARDIR)/unicode_far/Release.$(DIRBIT).gcc/luafar3.dll
 
@@ -89,7 +89,7 @@ $(T_EMBED): $(OBJ_E) $(LIBS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 $(T_MESSAGE): $(addprefix $(path_plugin)/,$(TEMPL))
-	cd $(path_plugin) && $(LUAEXE) -epackage.path='$(path_share)/?.lua' $(TEMPL_SCR) $(TEMPL)
+	cd $(path_plugin) && $(LUAEXE) $(TEMPL_SCR) $(TEMPL)
 
 $(OBJ_PLUG_N): $(LUAPLUG)
 	$(CC) -c $< -o $@ $(CFLAGS)
@@ -100,7 +100,10 @@ $(OBJ_PLUG_E): $(LUAPLUG)
 $(OBJ_RC): $(RCFILE) version.h
 	windres $< -o $@ $(RESFLAGS)
 
-$(C_EMBED): $(bootscript) $(scripts)
+$(C_EMBED):
+ifndef NO_MACRO_GENERATE
+	$(MAKE) -B version.h $(GLOBINFO)
+endif
 	$(LUAEXE) $(path_run)/embed.lua embed @target=$@ @method=$(EMBED_METHOD) @compiler=$(LUAC) \
     @bootscript=$(bootscript) @luaopen=$(LUAOPEN_EMBED) -scripts $(scripts) -modules $(modules)
 
