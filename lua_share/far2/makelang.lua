@@ -24,7 +24,7 @@ Input:
   ... :
     Arbitrary  number  of  "template"  file names  (at least  one file
     should be specified) .
-    
+
     Each template file  contains "message  blocks" delimited  by empty
     lines. A  message block  consists of  an "identifier"  line (first
     non-comment line; unquoted) following by one or more "value" lines
@@ -32,7 +32,7 @@ Input:
     correspond to that in `aDescriptions' argument. No empty lines are
     permitted within a  message block.  Comment lines  (beginning with
     //)   are   permitted;   they   are   ignored   by   the   parser.
-    
+
     "Value"  line  next  to  "identifier"  line is  considered default
     value. If any of the  following values  equals to  "upd:" (without
     quotes)   then   the   default   value  is   substituted  instead.
@@ -64,11 +64,12 @@ local function MakeLang (aModuleFileName, aDescriptions, ...)
     if string.sub(sMessages, 1, 3) == bom_utf8 then
       sMessages = string.sub(sMessages, 4)
     end
-    for block in (sMessages.."\n"):gmatch("(%S.-)\n\n") do
-      local n = 0
-      local dflt
-      for line in block:gmatch("[^\n]+") do
-        if not line:match("^%s*//") then
+
+    local n = 0
+    local dflt
+    for line in (sMessages.."\n\n"):gmatch("([^\n]*)\n") do
+      if not line:match("^%s*//") then
+        if line:match("%S") then
           n = n + 1
           if n > #t_out then
             error("extra line in block: " .. line)
@@ -83,13 +84,15 @@ local function MakeLang (aModuleFileName, aDescriptions, ...)
             table.insert(t_out[n], dflt)
           else
             table.insert(t_out[n],
-                         line:match("^upd:") and dflt or get_quoted(line))
+                         line:match("^upd:") and "// need translation:\n"..dflt or get_quoted(line))
           end
+        elseif n > 0 then
+          if n < #t_out then
+            local t = t_out[1]
+            error("too few lines in block `" .. t[#t] .. "'")
+          end
+          n = 0
         end
-      end
-      if not (n==0 or n==#t_out) then
-        local t = t_out[1]
-        error("too few lines in block `" .. t[#t] .. "'")
       end
     end
   end
