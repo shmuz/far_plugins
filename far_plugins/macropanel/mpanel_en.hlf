@@ -1,0 +1,76 @@
+﻿.Language=English,English (English)
+.PluginContents=Macro Panel
+
+@Contents
+$ #Introduction#
+  This plugin shows currently installed macros and events in Far Manager panels.
+  
+  The plugin can be activated from either: plugins menu, command line
+or folder shortcuts.
+  
+ ~Key combinations in the panel~@KeyCombinations@
+ ~Activation from the command line~@CommandLine@
+
+@KeyCombinations
+$ #Key combinations in the panel#
+  
+  #Ctrl-F3#        sort macros/events by description
+  #Ctrl-F4#        sort macros by area, sort events by group
+  #Ctrl-F5#        sort macros by key
+  #LCtrl-0...9#    set panel mode 0...9
+  #F3#, #NumPad5#    open macrofile containing current item in viewer
+  #F4#             open macrofile containing current item in editor
+  #Ctrl-Q#         quick view (works only with items whose descriptions
+                 are valid file names)
+  #Alt-Shift-F3#   locate macrofile in passive panel
+  #Ctrl-PgUp#      locate macrofile in active panel
+
+@CommandLine
+$ #Command line#
+  (1) #mp:macros [<r1> [<r2> [<r3>]]]#,
+      where <r1> - Far regular expression for description
+            <r2> - Far regular expression for area
+            <r3> - Far regular expression for key
+
+  (2) #mp:events [<r1> [<r2>]]#,
+      where <r1> - Far regular expression for description
+            <r2> - Far regular expression for group
+
+  These optional regular expressions are case insensitive and work
+  in "find" mode. They make possible to display the desired set of
+  macros or events while filtering out the rest.
+
+  #Note:#
+  Commands "macros" and "events" can be abbreviated to "m" and "e"
+  correspondingly, e.g. instead of #mp:macros# one can write #mp:m#.
+  
+  #Example:#
+      #mp:macros . ed|vi f[35]#
+  will display only those macros whose area contains "ed" or "vi"
+  and whose key contains "f3" or "f5".
+
+ ~Useful area abbreviations~@AreaAbbreviations@
+
+@AreaAbbreviations
+$ #Useful area abbreviations#
+  #l$#        Shell
+  #ll#, #sh#    Shell, ShellAutoCompletion
+  #g$#        Dialog
+  #lo#, #ia#    Dialog, DialogAutoCompletion
+  #we#        Viewer
+  #ew#, #vi#    Viewer, QView
+  #ed#        Editor
+  #ea#, #ch#    Search
+  #sk#, #ks#    Disks
+  #nm#, #ma#    MainMenu
+  #nu#, #me#    Menu, MainMenu, UserMenu
+  #lp#        Help
+  #nf#        Info
+  #in#        Info, FindFolder
+  #qv#        QView
+  #ee#, #tr#    Tree
+  #nd#, #ld#    FindFolder
+  #rm#, #us#    UserMenu
+  #la#        ShellAutoCompletion
+  #ga#        DialogAutoCompletion
+  #pl#, #au#    ShellAutoCompletion, DialogAutoCompletion
