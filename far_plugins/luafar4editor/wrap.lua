@@ -110,7 +110,7 @@ local function Wrap (aColumn1, aColumn2, aJustify, aFactor)
   end
 
   -- Put reformatted lines into the editor
-  local Pos = { CurLine = editInfo.BlockStartLine, CurPos = 1 }
+  local Pos = { CurLine=editInfo.BlockStartLine, CurPos=1, TopScreenLine=editInfo.TopScreenLine }
   editor.SetPosition (nil, Pos)
   for i = #lines_out, 1, -1 do
     editor.InsertString()

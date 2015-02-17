@@ -288,7 +288,7 @@ local function LuaExpr (history)
     local line = editor.GetString(nil, numline)
     local pos = (edInfo.BlockType==F.BTYPE_NONE) and line.StringLength or line.SelEnd
     editor.SetPosition(nil, numline, pos+1)
-    editor.InsertText(nil, " = " .. result .. " ; ")
+    editor.InsertText(nil, " = " .. result .. " ;")
     editor.Redraw()
   end
   if history.cbxCopy then
