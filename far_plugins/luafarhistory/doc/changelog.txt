@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2015-03-04, v3.5.1
+  [*] Adaptation to changed FCTL_SETPANELDIRECTORY behavior.
+
 2014-11-13, v3.5.0
   [+] All histories: new "xlat-filter" mode; controlled by F8.
 

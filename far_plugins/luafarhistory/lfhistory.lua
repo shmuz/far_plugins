@@ -127,6 +127,24 @@ local function SetListKeyFunction (list, HistTypeConfig)
   end
 end
 
+local function SetCanCloseFunction (list, HistTypeConfig)
+  function list:CanClose (item, breakkey)
+    if HistTypeConfig == cfgFolders then
+      if item then
+        if IsCtrlEnter(breakkey) then
+          panel.SetCmdLine(nil, item.text)
+        else
+          if not panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, item.text) then
+            far.Message(item.text, M.mPathNotFound, nil, "w")
+            return false
+          end
+        end
+      end
+    end
+    return true
+  end
+end
+
 local function MakeMenuParams (aCommonConfig, aHistTypeConfig, aHistTypeData, aItems)
   local menuProps = {
     DialogId      = win.Uuid("d853e243-6b82-4b84-96cd-e733d77eeaa1"),
@@ -150,6 +168,7 @@ local function MakeMenuParams (aCommonConfig, aHistTypeConfig, aHistTypeData, aI
   }
   local list = custommenu.NewList(listProps, aItems)
   SetListKeyFunction(list, aHistTypeConfig)
+  SetCanCloseFunction(list, aHistTypeConfig)
   return menuProps, list
 end
 
@@ -246,14 +265,7 @@ local function commands_history()
 end
 
 local function folders_history()
-  local item, key = get_history(cfgFolders)
-  if item then
-    if IsCtrlEnter(key) then
-      panel.SetCmdLine(nil, item.text)
-    else
-      panel.SetPanelDirectory(nil, key==nil and 1 or 0, item.text)
-    end
-  end
+  get_history(cfgFolders)
 end
 
 local function LocateFile (fname)

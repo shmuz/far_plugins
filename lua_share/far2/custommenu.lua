@@ -4,7 +4,6 @@
 --]]
 
 local F = far.Flags
-local SendDlgMessage = far.SendDlgMessage
 local min, max, floor, ceil = math.min, math.max, math.floor, math.ceil
 local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
 
@@ -17,7 +16,7 @@ local function GetColor (index)
 end
 
 local function SendRedrawMessage (hDlg)
-  SendDlgMessage(hDlg, "DM_REDRAW", 0, 0)
+  hDlg:send("DM_REDRAW", 0, 0)
 end
 
 local function FlagsToInt (input)
@@ -128,7 +127,7 @@ function List:OnResizeConsole (hDlg, consoleSize)
     self.wmax, self.hmax = max(4, consoleSize.X - 8), max(1, consoleSize.Y - 6)
     self:SetSize()
     self:SetUpperItem()
-    SendDlgMessage(hDlg, "DM_RESIZEDIALOG", 0, {X=self.w + 6, Y=self.h + 4})
+    hDlg:send("DM_RESIZEDIALOG", 0, {X=self.w + 6, Y=self.h + 4})
   end
 end
 
@@ -374,7 +373,7 @@ function List:MouseEvent (hDlg, Ev, x, y)
     if LEFT then
       if MOVED then
         if self.clickX then
-          SendDlgMessage(hDlg, "DM_MOVEDIALOG", 0,
+          hDlg:send("DM_MOVEDIALOG", 0,
             { X = X - self.clickX, Y = Y - self.clickY })
           self.clickX, self.clickY = X, Y
         end
@@ -460,7 +459,7 @@ function List:UpdateSizePos (hDlg)
 
   local dim
   if self.resizeW or self.resizeH then
-    dim = SendDlgMessage(hDlg, "DM_RESIZEDIALOG",
+    dim = hDlg:send("DM_RESIZEDIALOG",
       0, { X=self.w+6, Y=self.h+4 })
     self.w = min (dim.X-6, self.w)
     self.h = min (dim.Y-4, self.h)
@@ -468,10 +467,10 @@ function List:UpdateSizePos (hDlg)
   self:SetUpperItem()
 
   if self.autocenter then
-    SendDlgMessage(hDlg, "DM_MOVEDIALOG", 1, { X=-1, Y=-1 })
+    hDlg:send("DM_MOVEDIALOG", 1, { X=-1, Y=-1 })
   end
   if self.resizeW or self.resizeH then
-    SendDlgMessage(hDlg, "DM_SETITEMPOSITION", self.startId,
+    hDlg:send("DM_SETITEMPOSITION", self.startId,
       { Left=2, Top=1, Right=dim.X-3, Bottom=dim.Y-2 })
   end
 end
@@ -819,7 +818,7 @@ local function Menu (props, list)
   ------------------------------------------------------------------------------
   local function DlgProc (hDlg, msg, param1, param2)
     if msg == F.DN_INITDIALOG then
-      SendDlgMessage(hDlg, F.DM_SETMOUSEEVENTNOTIFY, 1, 0)
+      hDlg:send("DM_SETMOUSEEVENTNOTIFY", 1, 0)
       list:OnInitDialog (hDlg)
 
     elseif msg == F.DN_GETVALUE then
@@ -836,7 +835,7 @@ local function Menu (props, list)
       end
 
     elseif msg == F.DN_DRAWDIALOG then
-      Rect = SendDlgMessage(hDlg, "DM_GETDLGRECT", 0, 0)
+      Rect = hDlg:send("DM_GETDLGRECT", 0, 0)
 
     elseif msg == F.DN_CTLCOLORDIALOG then
       return list.col_text
@@ -855,7 +854,9 @@ local function Menu (props, list)
           local key = far.InputRecordToName(param2)
           ret_item, ret_pos = list:Key(hDlg, key)
           if ret_item then
-            SendDlgMessage(hDlg, "DM_CLOSE")
+            if key~="Enter" and key~="NumEnter" then -- prevent DN_CLOSE from coming twice
+              hDlg:send("DM_CLOSE")
+            end
           else
             SendRedrawMessage(hDlg)
           end
@@ -863,7 +864,7 @@ local function Menu (props, list)
       elseif param2.EventType == F.MOUSE_EVENT then
         local ret
         ret, ret_item, ret_pos = list:MouseEvent(hDlg, param2, Rect.Left, Rect.Top)
-        if ret_item then SendDlgMessage(hDlg, "DM_CLOSE") end
+        if ret_item then hDlg:send("DM_CLOSE") end
         return ret
       end
 
@@ -878,7 +879,14 @@ local function Menu (props, list)
       return 1
 
     elseif msg == F.DN_CLOSE then
-      list:OnDialogClose()
+      local canclose = true
+      if param1 == UId and type(list.CanClose) == "function" and ret_item and ret_pos then
+        canclose = list:CanClose(list.items[ret_pos], ret_item.BreakKey)
+      end
+      if canclose then
+        list:OnDialogClose(); return 1
+      end
+      return 0
 
     end
   end
