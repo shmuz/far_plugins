@@ -25,6 +25,7 @@ title. There are 4 switchable filtering methods available:
    #F7#                 Show item in message box.
    #F8#                 Turn "xlat-filter" on/off
                       (two patterns are searched simultaneously).
+   #F9#                 Set filter to the last used value.
    #Ctrl-Enter#         Copy item to command line.
    #Ctrl-C#, #Ctrl-Ins#   Copy item to clipboard.
    #Ctrl-Shift-Ins#     Copy all filtered items to clipboard.
@@ -50,6 +51,13 @@ title. There are 4 switchable filtering methods available:
  \3BFolders history\-
    #Enter#              Change directory (active panel).
    #Shift-Enter#        Change directory (passive panel).
+
+ \3BLocate file\-
+   #Enter#              Locate file in the active panel.
+   #F3#                 View.
+   #F4#                 Edit.
+   #Alt-F3#             View modally, return to the menu.
+   #Alt-F4#             Edit modally, return to the menu.
 
  Technical topics:
      ~Plugin's Configuration Dialog~@PluginConfig@

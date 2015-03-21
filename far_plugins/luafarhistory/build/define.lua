@@ -1,6 +1,6 @@
 -- Definitions
 
-PLUGINVERSION = { 3, 5, 1 }
+PLUGINVERSION = { 3, 6, 0 }
 MINFARVERSION = "{ 3, 0, 0, 4281 }"
 
 -- Derivative values --

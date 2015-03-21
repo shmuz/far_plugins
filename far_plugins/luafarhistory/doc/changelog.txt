@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2015-03-21, v3.6.0
+  [+] F9: "Set filter to the last used value".
+  [+] "Locate file" menu.
+
 2015-03-04, v3.5.1
   [*] Adaptation to changed FCTL_SETPANELDIRECTORY behavior.
 

@@ -18,6 +18,12 @@
        *  @return:       either value of existing field or a new table
        *  example:       hist:field("mydialog.namelist").width = 120
 
+    *  value = hobj:getfield (name)
+       *  description:   get a field
+       *  @param name:   name (sequence of fields delimitered with dots)
+       *  @return:       value of a field
+       *  example:       local namelist = hist:field("mydialog.namelist")
+
     *  value = hobj:setfield (name, value)
        *  description:   set a field
        *  @param name:   name (sequence of fields delimitered with dots)
@@ -46,6 +52,14 @@ function history:field (fieldname)
   local tb = self.Data
   for v in fieldname:gmatch("[^.]+") do
     tb[v] = tb[v] or {}
+    tb = tb[v]
+  end
+  return tb
+end
+
+function history:getfield (fieldname)
+  local tb = self.Data
+  for v in fieldname:gmatch("[^.]+") do
     tb = tb[v]
   end
   return tb

@@ -729,7 +729,7 @@ function List:Key (hDlg, key)
   if self.keyfunction then
     local ret = self:keyfunction(hDlg, key, Item)
     if ret == "break" then return { BreakKey=key }, Item and self.idata[Item].index end
-    if ret == "done" then return end
+    if ret == "done" then return "done" end
   end
 
   if key == "Home" or key == "Num7" then
@@ -852,8 +852,21 @@ local function Menu (props, list)
       if param2.EventType == F.KEY_EVENT then
         if param1 == UId then
           local key = far.InputRecordToName(param2)
+          -- far.Show(
+          --   "far.InputRecordToName(param2): "..tostring(key),
+          --   param2.EventType,
+          --   param2.KeyDown,
+          --   param2.RepeatCount,
+          --   param2.VirtualKeyCode,
+          --   param2.VirtualScanCode,
+          --   param2.UnicodeChar,
+          --   param2.ControlKeyState
+          -- )
+          if not key then return end
           ret_item, ret_pos = list:Key(hDlg, key)
-          if ret_item then
+          if ret_item == "done" then
+            return true
+          elseif ret_item then
             if key~="Enter" and key~="NumEnter" then -- prevent DN_CLOSE from coming twice
               hDlg:send("DM_CLOSE")
             end

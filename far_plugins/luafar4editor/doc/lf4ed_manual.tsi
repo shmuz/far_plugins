@@ -1751,6 +1751,28 @@ mtime=3478525904
 </article>
 </node>
 <node>
+id=94
+lv=2
+dt=Text
+nm=hobj:getfield
+ctime=3635955162
+mtime=3635955241
+<article>
+#_val = hobj:getfield (name)
+#_
+#_**Parameters:**
+#_  name   : sequence of dot-delimitered fields;
+#_
+#_**Returns:**
+#_  val    : value of the given nested field in history object *hobj*
+#_
+#_**Description:**
+#_  - hobj:field("key1.key2 ... keyN") returns the equivalent of
+#_    hobj["key1"]["key2"]...["keyN"].
+#_
+</article>
+</node>
+<node>
 id=30
 lv=2
 dt=Text

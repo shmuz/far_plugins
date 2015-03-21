@@ -23,7 +23,7 @@ local cfgView = {
   --FarHistoryType = F.FSSF_HISTORY_VIEW,
   title = "mTitleView",
   brkeys = {
-    "F3", "F4", "AltF3", "AltF4",
+    "F3", "F4",
     "CtrlEnter", "CtrlNumEnter", "RCtrlEnter", "RCtrlNumEnter",
     "ShiftEnter", "ShiftNumEnter",
     "CtrlPgUp", "RCtrlPgUp",
@@ -51,6 +51,16 @@ local cfgFolders = {
     "ShiftEnter", "ShiftNumEnter",
   },
   maxItemsKey = "iSizeFold",
+}
+
+local cfgLocateFile = {
+  PluginHistoryType  = "locatefile",
+  title = "mTitleLocateFile",
+  brkeys = {
+    "F3", "F4",
+    "CtrlEnter", "RCtrlEnter", "CtrlNumEnter", "RCtrlNumEnter",
+  },
+  bDynResize = true,
 }
 
 local function IsCtrlEnter (key)
@@ -83,41 +93,84 @@ local function GetTimeString (filetime)
   end
 end
 
-local function SetListKeyFunction (list, HistTypeConfig)
-  function list:keyfunction (hDlg, key, Item)
-    if key == "F7" then
-      if Item then
-        local timestring = GetTimeString(Item.time)
-        if timestring then
-          far.Message(Item.text, timestring, ";Ok")
-        end
-      end
-      return "done"
-    end
+local function TellFileNotExist (fname)
+  far.Message(('%s:\n"%s"'):format(M.mFileNotExist, fname), M.mError, M.mOk, "w")
+end
 
+local function TellFileIsDirectory (fname)
+  far.Message(('%s:\n"%s"'):format(M.mFileIsDirectory, fname), M.mError, M.mOk, "w")
+end
+
+local function SetListKeyFunction (list, HistTypeConfig, HistObject)
+  function list:keyfunction (hDlg, key, Item)
     if key == "F8" then
       list.xlat = not list.xlat
       list:ChangePattern(hDlg, list.pattern)
       return "done"
     end
 
-    if key=="CtrlDel" or key=="RCtrlDel" or key=="CtrlNumDel" or key=="RCtrlNumDel" then
-      if Item then
-        if far.Message((M.mDeleteItemsQuery):format(#self.drawitems),
-                        M.mDeleteItemsTitle, ";YesNo", "w") == 1 then
-          self:DeleteFilteredItems (hDlg, false)
+    if key == "F9" then
+      local s = HistObject:getfield("lastpattern")
+      if s and s ~= "" then list:ChangePattern(hDlg,s) end
+      return "done"
+    end
+
+    if key == "F7" then
+      if HistTypeConfig ~= cfgLocateFile then
+        if Item then
+          local timestring = GetTimeString(Item.time)
+          if timestring then
+            far.Message(Item.text, timestring, ";Ok")
+          end
         end
       end
       return "done"
     end
 
+    if key=="CtrlDel" or key=="RCtrlDel" or key=="CtrlNumDel" or key=="RCtrlNumDel" then
+      if HistTypeConfig ~= cfgLocateFile then
+        if Item then
+          if far.Message((M.mDeleteItemsQuery):format(#self.drawitems),
+                          M.mDeleteItemsTitle, ";YesNo", "w") == 1 then
+            self:DeleteFilteredItems (hDlg, false)
+          end
+        end
+      end
+      return "done"
+    end
+
+    if HistTypeConfig==cfgView or HistTypeConfig==cfgLocateFile then
+      if key=="F3" or key=="F4" or key=="AltF3" or key=="AltF4" then
+        local fname = HistTypeConfig==cfgView and Item.Text or Item.text:sub(2)
+        local attr = win.GetFileAttr(fname)
+        if not attr then
+          TellFileNotExist(fname)
+          return "done"
+        elseif attr:find("d") then
+          TellFileIsDirectory(fname)
+          return "done"
+        elseif key == "AltF3" then
+          viewer.Viewer(fname)
+          far.AdvControl("ACTL_REDRAWALL")
+          return "done"
+        elseif key == "AltF4" then
+          editor.Editor(fname)
+          far.AdvControl("ACTL_REDRAWALL")
+          return "done"
+        end
+      end
+    end
+
     if HistTypeConfig==cfgView then
-      if key=="AltF3" then
-        viewer.Viewer(Item.text)
-        return "done"
-      elseif key=="AltF4" then
-        editor.Editor(Item.text)
-        return "done"
+      if key=="Enter" or key=="NumEnter" or key=="ShiftEnter" or key=="ShiftNumEnter" then
+        local attr = win.GetFileAttr(Item.text)
+        if not attr then
+          TellFileNotExist(Item.text)
+          return "done"
+        elseif attr:find("d") then
+          TellFileIsDirectory(Item.text)
+          return "done"
+        end
       end
     end
 
@@ -145,18 +198,18 @@ local function SetCanCloseFunction (list, HistTypeConfig)
   end
 end
 
-local function MakeMenuParams (aCommonConfig, aHistTypeConfig, aHistTypeData, aItems)
+local function MakeMenuParams (aCommonConfig, aHistTypeConfig, aHistTypeData, aItems, aHistObject)
   local menuProps = {
     DialogId      = win.Uuid("d853e243-6b82-4b84-96cd-e733d77eeaa1"),
-    Flags         = {FMENU_WRAPMODE=1,FMENU_SHOWAMPERSAND=1},
+    Flags         = {FMENU_WRAPMODE=1},
     HelpTopic     = "Contents",
     Title         = M[aHistTypeConfig.title],
     SelectIndex   = #aItems,
   }
   local listProps = {
     autocenter    = aCommonConfig.bAutoCenter,
-    resizeW       = aCommonConfig.bDynResize,
-    resizeH       = aCommonConfig.bDynResize,
+    resizeW       = aHistTypeConfig.bDynResize or aCommonConfig.bDynResize,
+    resizeH       = aHistTypeConfig.bDynResize or aCommonConfig.bDynResize,
     resizeScreen  = true,
     col_highlight = 0x3A,
     col_selectedhighlight = 0x0A,
@@ -167,7 +220,7 @@ local function MakeMenuParams (aCommonConfig, aHistTypeConfig, aHistTypeData, aI
     xlat          = aHistTypeData.xlat,
   }
   local list = custommenu.NewList(listProps, aItems)
-  SetListKeyFunction(list, aHistTypeConfig)
+  SetListKeyFunction(list, aHistTypeConfig, aHistObject)
   SetCanCloseFunction(list, aHistTypeConfig)
   return menuProps, list
 end
@@ -242,11 +295,14 @@ local function get_history (aConfig)
   end
 
   -- execute the menu
-  local menuProps, list = MakeMenuParams(_Plugin.Cfg, aConfig, settings, menu_items)
+  local menuProps, list = MakeMenuParams(_Plugin.Cfg, aConfig, settings, menu_items, hst)
   local item, itempos = custommenu.Menu(menuProps, list)
   settings.searchmethod = list.searchmethod
   settings.xlat = list.xlat
   hst:setfield("items", list.items)
+  if item and list.pattern ~= "" then
+    hst:setfield("lastpattern", list.pattern)
+  end
   DelayedSaveHistory(hst, 200)
   if item then
     return menu_items[itempos], item.BreakKey
@@ -291,45 +347,74 @@ local function LocateFile (fname)
   return false
 end
 
+local function CallViewer (fname, disablehistory)
+  local flags = {VF_NONMODAL=1, VF_IMMEDIATERETURN=1, VF_ENABLE_F6=1, VF_DISABLEHISTORY=disablehistory}
+  viewer.Viewer(fname, nil, nil, nil, nil, nil, flags)
+end
+
+local function CallEditor (fname, disablehistory)
+  local flags = {EF_NONMODAL=1, EF_IMMEDIATERETURN=1, EF_ENABLE_F6=1, EF_DISABLEHISTORY=disablehistory}
+  editor.Editor(fname, nil, nil, nil, nil, nil, flags)
+end
+
 local function view_history()
   local item, key = get_history(cfgView)
   if not item then return end
-  local data = item.text
-
-  local function TellFileNotExist()
-    far.Message(('%s:\n"%s"'):format(M.mFileNotExist, data), M.mError, M.mOk, "w")
-  end
-
-  local attr = win.GetFileAttr(data)
-  if not attr or attr:find"d" then
-    return TellFileNotExist()
-  end
+  local fname = item.text
 
   local shift_enter = (key=="ShiftEnter" or key=="ShiftNumEnter")
 
-  local function CallViewer()
-    local flags = {VF_NONMODAL=1, VF_IMMEDIATERETURN=1, VF_ENABLE_F6=1, VF_DISABLEHISTORY=shift_enter}
-    viewer.Viewer(data, nil, nil, nil, nil, nil, flags)
-  end
-
-  local function CallEditor()
-    local flags = {EF_NONMODAL=1, EF_IMMEDIATERETURN=1, EF_ENABLE_F6=1, EF_DISABLEHISTORY=shift_enter}
-    editor.Editor(data, nil, nil, nil, nil, nil, flags)
-  end
-
   if IsCtrlEnter(key) then
-    panel.SetCmdLine(nil, data)
+    panel.SetCmdLine(nil, fname)
 
   elseif IsCtrlPgUp(key) then
-    if not LocateFile(data) then TellFileNotExist() end
+    if not LocateFile(fname) then TellFileNotExist(fname) end
 
   elseif key == nil or shift_enter then
-    if item.typ == "V" then CallViewer()
-    else CallEditor()
+    if item.typ == "V" then CallViewer(fname, shift_enter)
+    else CallEditor(fname, shift_enter)
     end
 
-  elseif key == "F3" then CallViewer()
-  elseif key == "F4" then CallEditor()
+  elseif key == "F3" then CallViewer(fname, false)
+  elseif key == "F4" then CallEditor(fname, false)
+  end
+end
+
+local function LocateFile2()
+  local info = panel.GetPanelInfo(nil,1)
+  if not info then return end
+
+  local items = {}
+  for k=1,info.ItemsNumber do
+    local v = panel.GetPanelItem(nil,1,k)
+    local prefix = v.FileAttributes:find("d") and "/" or " "
+    items[k] = {text=prefix..v.FileName}
+  end
+
+  local hst = LibHistory.newsettings(nil, cfgLocateFile.PluginHistoryType)
+  local settings = hst:field("settings")
+
+  local menuProps, list = MakeMenuParams(_Plugin.Cfg, cfgLocateFile, settings, items, hst)
+  list.searchstart = 2
+
+  local item, itempos = custommenu.Menu(menuProps, list)
+  settings.searchmethod = list.searchmethod
+  settings.xlat = list.xlat
+  if item and list.pattern ~= "" then
+    hst:setfield("lastpattern", list.pattern)
+  end
+  DelayedSaveHistory(hst, 200)
+
+  if item then
+    if item.BreakKey then
+      local data = items[itempos].text:sub(2)
+      if IsCtrlEnter(item.BreakKey) then panel.SetCmdLine(nil, data)
+      elseif item.BreakKey == "F3" then CallViewer(data)
+      elseif item.BreakKey == "F4" then CallEditor(data)
+      end
+    else
+      panel.RedrawPanel(nil,1,{CurrentItem=itempos})
+    end
   end
 end
 
@@ -369,10 +454,11 @@ local function export_Open (From, Guid, Item)
     }
     local items = {
       { disable = (From ~= F.OPEN_PLUGINSMENU),
-        text=M.mMenuCommands, action=commands_history },
-      { text=M.mMenuView,     action=view_history     },
-      { text=M.mMenuFolders,  action=folders_history  },
-      { text=M.mMenuConfig,   action=export_Configure },
+        text=M.mMenuCommands,   action=commands_history },
+      { text=M.mMenuView,       action=view_history     },
+      { text=M.mMenuFolders,    action=folders_history  },
+      { text=M.mMenuConfig,     action=export_Configure },
+      { text=M.mMenuLocateFile, action=LocateFile2      },
     }
     Utils.AddMenuItems(items,
       From==F.OPEN_PLUGINSMENU and userItems.panels or
