@@ -103,45 +103,10 @@ end
 
 local function SetListKeyFunction (list, HistTypeConfig, HistObject)
   function list:keyfunction (hDlg, key, Item)
-    if key == "F8" then
-      list.xlat = not list.xlat
-      list:ChangePattern(hDlg, list.pattern)
-      return "done"
-    end
-
-    if key == "F9" then
-      local s = HistObject:getfield("lastpattern")
-      if s and s ~= "" then list:ChangePattern(hDlg,s) end
-      return "done"
-    end
-
-    if key == "F7" then
-      if HistTypeConfig ~= cfgLocateFile then
-        if Item then
-          local timestring = GetTimeString(Item.time)
-          if timestring then
-            far.Message(Item.text, timestring, ";Ok")
-          end
-        end
-      end
-      return "done"
-    end
-
-    if key=="CtrlDel" or key=="RCtrlDel" or key=="CtrlNumDel" or key=="RCtrlNumDel" then
-      if HistTypeConfig ~= cfgLocateFile then
-        if Item then
-          if far.Message((M.mDeleteItemsQuery):format(#self.drawitems),
-                          M.mDeleteItemsTitle, ";YesNo", "w") == 1 then
-            self:DeleteFilteredItems (hDlg, false)
-          end
-        end
-      end
-      return "done"
-    end
-
-    if HistTypeConfig==cfgView or HistTypeConfig==cfgLocateFile then
-      if key=="F3" or key=="F4" or key=="AltF3" or key=="AltF4" then
-        local fname = HistTypeConfig==cfgView and Item.Text or Item.text:sub(2)
+    -----------------------------------------------------------------------------------------------
+    if key=="F3" or key=="F4" or key=="AltF3" or key=="AltF4" then
+      if HistTypeConfig==cfgView or HistTypeConfig==cfgLocateFile then
+        local fname = HistTypeConfig==cfgView and Item.text or Item.text:sub(2)
         local attr = win.GetFileAttr(fname)
         if not attr then
           TellFileNotExist(fname)
@@ -159,10 +124,44 @@ local function SetListKeyFunction (list, HistTypeConfig, HistObject)
           return "done"
         end
       end
-    end
-
-    if HistTypeConfig==cfgView then
-      if key=="Enter" or key=="NumEnter" or key=="ShiftEnter" or key=="ShiftNumEnter" then
+    -----------------------------------------------------------------------------------------------
+    elseif key == "F7" then
+      if HistTypeConfig ~= cfgLocateFile then
+        if Item then
+          local timestring = GetTimeString(Item.time)
+          if timestring then
+            far.Message(Item.text, timestring, ";Ok")
+          end
+        end
+      end
+      return "done"
+    -----------------------------------------------------------------------------------------------
+    elseif key == "F8" then
+      self.xlat = not self.xlat
+      self:ChangePattern(hDlg, self.pattern)
+      return "done"
+    -----------------------------------------------------------------------------------------------
+    elseif key == "F9" then
+      local s = HistObject:getfield("lastpattern")
+      if s and s ~= "" then self:ChangePattern(hDlg,s) end
+      return "done"
+    -----------------------------------------------------------------------------------------------
+    elseif key=="CtrlDel" or key=="RCtrlDel" or key=="CtrlNumDel" or key=="RCtrlNumDel" then
+      if HistTypeConfig ~= cfgLocateFile then
+        if Item then
+          if far.Message((M.mDeleteItemsQuery):format(#self.drawitems),
+                          M.mDeleteItemsTitle, ";YesNo", "w") == 1 then
+            self:DeleteFilteredItems (hDlg, false)
+          end
+        end
+      end
+      return "done"
+    -----------------------------------------------------------------------------------------------
+    elseif key=="ShiftDel" or key=="ShiftNumDel" then
+      if HistTypeConfig == cfgLocateFile then return "done" end
+    -----------------------------------------------------------------------------------------------
+    elseif key=="Enter" or key=="NumEnter" or key=="ShiftEnter" or key=="ShiftNumEnter" then
+      if HistTypeConfig==cfgView then
         local attr = win.GetFileAttr(Item.text)
         if not attr then
           TellFileNotExist(Item.text)
@@ -172,6 +171,7 @@ local function SetListKeyFunction (list, HistTypeConfig, HistObject)
           return "done"
         end
       end
+    -----------------------------------------------------------------------------------------------
     end
 
     for _,v in ipairs(HistTypeConfig.brkeys) do
