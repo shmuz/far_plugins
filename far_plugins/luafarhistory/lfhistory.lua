@@ -107,6 +107,14 @@ local function SetListKeyFunction (list, HistTypeConfig, HistObject)
     if key=="F3" or key=="F4" or key=="AltF3" or key=="AltF4" then
       if HistTypeConfig==cfgView or HistTypeConfig==cfgLocateFile then
         local fname = HistTypeConfig==cfgView and Item.text or Item.text:sub(2)
+        if HistTypeConfig==cfgLocateFile then
+          if not fname:find("[\\/]") then
+            local Name = list.items.PanelDirectory and list.items.PanelDirectory.Name
+            if Name and Name ~= "" then
+              fname = Name:find("[\\/]$") and Name..fname or Name.."\\"..fname
+            end
+          end
+        end
         local attr = win.GetFileAttr(fname)
         if not attr then
           TellFileNotExist(fname)
@@ -230,7 +238,10 @@ local function GetMaxItems (aConfig)
 end
 
 local function DelayedSaveHistory (hist, delay)
-  far.Timer(delay, function(h) h:Close(); hist:save(); end)
+  far.Timer(delay, function(h)
+    h:Close()
+    hist:save()
+  end)
 end
 
 local function get_history (aConfig)
@@ -382,9 +393,9 @@ end
 
 local function LocateFile2()
   local info = panel.GetPanelInfo(nil,1)
-  if not info then return end
+  if not (info and info.PanelType==F.PTYPE_FILEPANEL) then return end
 
-  local items = {}
+  local items = { PanelInfo=info; PanelDirectory=panel.GetPanelDirectory(nil,1); }
   for k=1,info.ItemsNumber do
     local v = panel.GetPanelItem(nil,1,k)
     local prefix = v.FileAttributes:find("d") and "/" or " "

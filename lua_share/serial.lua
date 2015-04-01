@@ -19,10 +19,34 @@ local function basicSerialize (value)
 end
 
 
-local function Save (name, value, saved, f_write)
+local function save_table (name, tbl, indent, saved, f_write, opaq, tname)
+  if saved[tbl] then   -- table already saved?
+    f_write(opaq, indent, name, " = ", saved[tbl], "\n") -- use its previous name
+    return
+  end
+  saved[tbl] = name  -- save name for next time
+  f_write(opaq, indent, "do local ", tname, " = {}; ", name, " = ", tname, "\n")
+  local indent2 = indent .. "  "
+  for k,v in pairs(tbl) do    -- save its fields
+    local sKey = basicSerialize(k)
+    if sKey then
+      local sVal, tp = basicSerialize(v)
+      if sVal then
+        f_write(opaq, indent2, tname, "[", sKey, "] = ", sVal, "\n")
+      elseif tp == "table" then
+        local fieldname = name .. "[" .. sKey .. "]"
+        save_table(fieldname, v, indent2, saved, f_write, opaq, tname)
+      end
+    end
+  end
+  f_write(opaq, indent .. "end\n");
+end
+
+
+local function Save (name, value, saved, f_write, opaq)
   local sVal, tp = basicSerialize(value)
   if sVal then
-    f_write(name, " = ", sVal, "\n")
+    f_write(opaq, name, " = ", sVal, "\n")
     return
   end
 
@@ -34,49 +58,25 @@ local function Save (name, value, saved, f_write)
   --   *  improves loadstring performance by approx. 30-40%;
   --   *  makes saved file/string smaller;
   local tname = (name == "t") and "u" or "t" -- prevent collision of name and tname
-
-  -- Upvalues: saved, f_write, tname
-  local function save_table (name, tbl, indent)
-    if saved[tbl] then   -- table already saved?
-      f_write(indent, name, " = ", saved[tbl], "\n") -- use its previous name
-      return
-    end
-    saved[tbl] = name  -- save name for next time
-    f_write(indent, "do local ", tname, " = {}; ", name, " = ", tname, "\n")
-    local indent2 = indent .. "  "
-    for k,v in pairs(tbl) do    -- save its fields
-      local sKey = basicSerialize(k)
-      if sKey then
-        local sVal, tp = basicSerialize(v)
-        if sVal then
-          f_write(indent2, tname, "[", sKey, "] = ", sVal, "\n")
-        elseif tp == "table" then
-          local fieldname = name .. "[" .. sKey .. "]"
-          save_table(fieldname, v, indent2)
-        end
-      end
-    end
-    f_write(indent .. "end\n");
-  end
-  save_table (name, value, "")
+  save_table (name, value, "", saved, f_write, opaq, tname)
 end
 
 
 local function SaveToFile (filename, name, value)
   local fh = assert (io.open (filename, "w"))
-  Save (name, value, {}, function (...) fh:write (...) end)
+  Save (name, value, {}, function (fh, ...) fh:write (...) end, fh)
   fh:close()
 end
 
 
 local function SaveToString (name, value)
-  local arr, n = {}, 0
+  local arr = {}
   Save(name, value, nil,
-    function(...)
+    function (arr, ...)
       for i=1, select("#", ...) do
-        n = n + 1; arr[n] = select(i, ...)
+        arr[#arr+1] = select(i, ...)
       end
-    end)
+    end, arr)
   return table.concat(arr)
 end
 

@@ -3,7 +3,8 @@
 
 local F = far.Flags
 local band = bit64.band
-
+local FARMACRO_KEY_EVENT = 0x8001 -- removed from Far in build 4321 (2015-03-21);
+                                  -- left here for compatibility with older versions;
 -- ControlKeyState.
 local VKey_State = {
   RIGHT_ALT_PRESSED  = 0x0001,
@@ -158,7 +159,7 @@ end -- KeyStateToTable
 
 local function InputRecordToName (Rec, isSeparate)
   -- Keyboard only.
-  if Rec.EventType ~= F.KEY_EVENT and Rec.EventType ~= F.FARMACRO_KEY_EVENT then
+  if Rec.EventType ~= F.KEY_EVENT and Rec.EventType ~= FARMACRO_KEY_EVENT then
     return far.InputRecordToName(Rec, isSeparate)
   end
 
