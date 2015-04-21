@@ -34,6 +34,8 @@ end
 
 local M = require "lf4ed_message"
 local F = far.Flags
+local FARMACRO_KEY_EVENT = 0x8001 -- removed from Far in build 4321 (2015-03-21);
+                                  -- left here for compatibility with older versions;
 local VK = win.GetVirtualKeys()
 local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
 lf4ed = lf4ed or {}
@@ -301,7 +303,7 @@ end
 
 local function export_ProcessEditorInput (Rec)
   local EventType = Rec.EventType
-  if (EventType==F.FARMACRO_KEY_EVENT) or (EventType==F.KEY_EVENT) then
+  if (EventType==FARMACRO_KEY_EVENT) or (EventType==F.KEY_EVENT) then
     local item = _Plugin.HotKeyTable[KeyComb(Rec)]
     if item then
       if Rec.KeyDown then

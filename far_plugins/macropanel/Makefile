@@ -6,8 +6,7 @@ else
   TARGET = mpanel.dll
 endif
 
-FARDIR = C:/farmanager/unicode_far
-PATH_LUAFAR = $(FARDIR)/../plugins/luamacro/luafar
+FARDIR = C:/farmanager
 
 FAR_EXPORTS = \
   CLOSEPANEL        \
@@ -23,9 +22,6 @@ FAR_EXPORTS = \
 
 # ---- end of user's settings ------------------------------------------------
 
-vpath %.h $(PATH_LUAFAR);$(FARDIR)/../plugins/common/unicode
-vpath %.c $(PATH_LUAFAR)
-
-include $(PATH_LUAFAR)\luaplug.mak
+include $(FARDIR)\plugins\luamacro\luafar\luaplug.mak
 
 # (end of Makefile)
