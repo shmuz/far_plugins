@@ -24,6 +24,7 @@ modules = \
 
 FAR_EXPORTS = CONFIGURE OPEN
 
+MYCFLAGS    = -DRUN_LUAFAR_INIT
 TEMPL       = lfh_lang.templ
 TEMPL_SCR   = lfh_lang.lua
 RCFILE      = lfhistory.rc
