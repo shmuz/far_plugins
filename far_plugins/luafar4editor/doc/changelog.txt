@@ -2,6 +2,12 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2015-05-03, v3.7.0
+  PLUGIN:
+      [*] Rebuilt with the new generic plugin source (executes %FARPROFILE%\luafar_init.lua).
+  Reformat Block:
+      [!] Minor fix.
+
 2014-09-11, v3.6.0
   PLUGIN:
       [*] New syntax for Plugin.Call.

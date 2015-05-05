@@ -6,7 +6,7 @@ ver=2.7
 id=1
 lv=0
 dt=Text
-nm=LuaFAR for Editor (version 3.6)
+nm=LuaFAR for Editor (version 3.7)
 mtime=3522650788
 <article>
 #_<markdown>
@@ -1777,6 +1777,7 @@ id=30
 lv=2
 dt=Text
 nm=hobj:save
+mtime=3636985823
 <article>
 #_hobj:save ()
 #_
@@ -1787,10 +1788,9 @@ nm=hobj:save
 #_  nothing
 #_
 #_**Description:**
-#_  - The method saves (serializes) the "history object" into
-#_    the file whose name was given upon the object creation
-#_    (see `new` function). If the file exists, its contents is
-#_    overwritten.
+#_  - The method serializes and saves the "history object". The object is saved either
+#_    into a file (see `newfile`), or into a data base entry (see `newsettings`). If the
+#_    corresponding file (or the data base entry) exist, their contents are overwritten.
 #_
 #_  - Only "Data" field of the *hobj* is saved.
 #_    - Within it, values of the following types are saved:
@@ -1799,7 +1799,8 @@ nm=hobj:save
 #_    - Not saved: metatable relations.
 #_
 #_@@@
-#_[new]: 28.html
+#_[newfile]: 28.html
+#_[newsettings]: 79.html
 #_
 </article>
 </node>
