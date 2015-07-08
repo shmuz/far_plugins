@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2015-??-??, v3.?.?
+  [+] Folders history: when the folder is not found prompt user to jump to the nearest existing one.
+
 2015-04-01, v3.6.2
   [!] Bug fixes.
 

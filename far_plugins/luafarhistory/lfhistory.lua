@@ -189,20 +189,49 @@ local function SetListKeyFunction (list, HistTypeConfig, HistObject)
 end
 
 local function SetCanCloseFunction (list, HistTypeConfig)
+  if HistTypeConfig ~= cfgFolders then
+    list.CanClose = function() return true end
+    return
+  end
+
   function list:CanClose (item, breakkey)
-    if HistTypeConfig == cfgFolders then
-      if item then
-        if IsCtrlEnter(breakkey) then
-          panel.SetCmdLine(nil, item.text)
-        else
-          if not panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, item.text) then
-            far.Message(item.text, M.mPathNotFound, nil, "w")
-            return false
-          end
-        end
-      end
+    ----------------------------------------------------------------------------
+    if not item then
+      return true
     end
-    return true
+    ----------------------------------------------------------------------------
+    if IsCtrlEnter(breakkey) then
+      panel.SetCmdLine(nil, item.text); return true
+    end
+    ----------------------------------------------------------------------------
+    if panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, item.text) then
+      return true
+    end
+    ----------------------------------------------------------------------------
+    local GetNextPath = function(s) return s:match("^(.*[\\/]).+") end
+    if not GetNextPath(item.text) then -- check before asking user
+      far.Message(item.text, M.mPathNotFound, nil, "w")
+      return false
+    end
+    ----------------------------------------------------------------------------
+    if 1 ~= far.Message(item.text.."\n"..M.mJumpToNearestFolder, M.mPathNotFound, ";YesNo", "w") then
+      return false
+    end    
+    ----------------------------------------------------------------------------
+    local path = item.text
+    while true do
+      local nextpath = GetNextPath(path)
+      if nextpath then
+        if panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, nextpath) then
+          return true
+        end
+        path = nextpath
+      else
+        far.Message(path, M.mPathNotFound, nil, "w")
+        return false
+      end
+    end            
+    ----------------------------------------------------------------------------
   end
 end
 
