@@ -50,19 +50,19 @@ local macroCheck = {
 }
 
 local function dlgProc(handle,msg,p1,p2)
-  if msg==F.DN_INITDIALOG then
-    far.SendDlgMessage(handle, F.DM_SETMOUSEEVENTNOTIFY, 1, 0)
-  elseif msg==F.DN_CONTROLINPUT or msg==F.DN_INPUT then
-    local func
-    if p2.EventType==F.KEY_EVENT then
-      local keyname = far.InputRecordToName(p2)
-      if keyname=="CtrlAltF" then return true end -- suppress ListBox filtering.
-      func=keys[keyname]
-    elseif p1==dialog.list.id and p2.EventType==F.MOUSE_EVENT then
-      if p2.EventFlags==F.DOUBLE_CLICK then
-        func=keys.Enter
-      elseif bit64.band(p2.ButtonState, F.RIGHTMOST_BUTTON_PRESSED) ~= 0 then
-        func=keys.BS
+  if msg == F.DN_CONTROLINPUT then
+    local func = nil
+    if p2.EventType == F.KEY_EVENT then
+      local name = far.InputRecordToName(p2)
+      if name == "CtrlAltF" or name == "RAlt" then return true end -- suppress ListBox filtering.
+      func = keys[name]
+    elseif p2.EventType == F.MOUSE_EVENT then
+      if p1 == dialog.list.id then
+        if p2.EventFlags == F.DOUBLE_CLICK then
+          func = keys.Enter
+        elseif bit64.band(p2.ButtonState, F.RIGHTMOST_BUTTON_PRESSED) ~= 0 then
+          func = keys.BS
+        end
       end
     end
     if func then

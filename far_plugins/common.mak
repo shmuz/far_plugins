@@ -24,7 +24,7 @@ INC_FAR = $(FARDIR)/plugins/common/unicode
 PATH_EXE  = C:/EXE$(DIRBIT)
 LUAEXE    = $(PATH_EXE)/lua.exe -epackage.path=[[$(path_share)/?.lua]]
 LUADLL    = $(PATH_EXE)/lua51.dll
-LUAFARDLL = $(FARDIR)/unicode_far/Release.$(DIRBIT).gcc/luafar3.dll
+LUAFARDLL = $(FARDIR)/unicode_far/Release.$(DIRBIT).vc/luafar3.dll
 
 ifeq ($(EMBED_METHOD),luajit)
   LUAC = $(PATH_EXE)/LuaJIT/luajit.exe
@@ -57,9 +57,6 @@ LUAOPEN_MAIN = luaopen_main
 noembed: LUAOPEN_LIST = $(MYLUAOPEN_LIST)
 embed:   LUAOPEN_LIST = $(LUAOPEN_EMBED) $(MYLUAOPEN_LIST)
 
-noembed: ENV_PREFIX = LUAFAR
-noembed: ENV_FLAG = -DENV_PREFIX=L\"$(ENV_PREFIX)\"
-
 GLOBINFO   = $(path_plugin)\_globalinfo.lua
 C_EMBED    = $(T_NOEMBED)_embed.c
 OBJ_EMBED  = $(T_NOEMBED)_embed.o
@@ -74,7 +71,7 @@ EXPORTS = $(addprefix -DEXPORT_,$(FAR_EXPORTS))
 OBJ_N  = $(OBJ_PLUG_N) $(OBJ_MAIN) $(OBJ_RC) $(MYOBJECTS)
 OBJ_E  = $(OBJ_PLUG_E) $(OBJ_MAIN) $(OBJ_RC) $(MYOBJECTS) $(OBJ_EMBED)
 CFLAGS = -O2 -Wall -I$(INC_LUA) -I$(INC_FAR) $(ARCH) $(EXPORTS) $(MYCFLAGS) \
-         -DFUNC_OPENLIBS=$(LUAOPEN_MAIN) $(ENV_FLAG)
+         -DFUNC_OPENLIBS=$(LUAOPEN_MAIN)
 
 CC = gcc
 
