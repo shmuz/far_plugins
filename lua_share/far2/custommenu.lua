@@ -793,7 +793,11 @@ function List:Key (hDlg, key)
       self:ChangePattern(hDlg, self.pattern..ConvertTable[key])
 
     end
-
+  end
+  
+  if self.onlistchange then
+    local CurItem = self.drawitems[self.sel]
+    if CurItem ~= Item then self:onlistchange(hDlg, key, CurItem) end
   end
 end
 
@@ -905,7 +909,12 @@ local function Menu (props, list)
   end
   ----------------------------------------------------------------------------
   local id = props.DialogId or ("\0"):rep(16)
-  local ret = far.Dialog (id,-1,-1,list.w+6,list.h+4,props.HelpTopic,D,0,DlgProc)
+  local X1, Y1, X2, Y2 = -1, -1, list.w+6, list.h+4
+  if props.X and props.Y then
+    X1, Y1 = props.X, props.Y
+    X2, Y2 = X1+X2-1, Y1+Y2-1
+  end
+  local ret = far.Dialog(id, X1, Y1, X2, Y2, props.HelpTopic, D, 0, DlgProc)
   if ret == UId then
     return ret_item, ret_pos
   end

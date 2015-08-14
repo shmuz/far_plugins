@@ -953,7 +953,7 @@ id=57
 lv=2
 dt=Text
 nm=AddCommand
-mtime=3577279999
+mtime=3641203627
 <article>
 #_<markdown>
 #_**`AddCommand (command, file [, ...])`**
@@ -961,7 +961,7 @@ mtime=3577279999
 #_Function `AddCommand` is available to the *_usermenu.lua* script.<br>
 #_It establishes a correspondence between the given `command` and
 #_the specified utility (`file`). This allows to call that utility
-#_from the command line.
+#_from the command line (or a macro).
 #_
 #_### Parameters
 #_
@@ -977,9 +977,8 @@ mtime=3577279999
 #_type.
 #_
 #_### Examples
-#_      AddCommand("calc",  "farscripts.fl_scripts.common.calc")
-#_      AddCommand("umenu", "farscripts.Rh_Scripts.LuaFUM.LuaFUM")
-#_
+#_      AddCommand("calc",  "scripts.fl_scripts.common.calc")
+#_      AddCommand("umenu", "scripts.Rh_Scripts.LuaPUM.LuaPUM")
 #_
 </article>
 </node>
