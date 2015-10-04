@@ -6,7 +6,7 @@ local LibHistory = require "far2.history"
 package.loaded["far2.custommenu"] = nil
 local custommenu = require "far2.custommenu"
 
-local FirstRun = not _Plugin
+local FirstRun = ...
 if FirstRun then
   _Plugin = Utils.InitPlugin()
   _Plugin.History = LibHistory.newsettings(nil, "config")

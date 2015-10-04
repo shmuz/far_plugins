@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2015-08-31, v3.7.1
+  [!] TableView utility was broken since Far 3.0.4353.
+
 2015-05-03, v3.7.0
   PLUGIN:
       [*] Rebuilt with the new generic plugin source (executes %FARPROFILE%\luafar_init.lua).
