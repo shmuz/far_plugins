@@ -284,14 +284,19 @@ Display a two-column table.
 @items: an array of rows (tables); row[1],row[2] = left and right column texts.
         A row can also be a single or double separator line if row.separator is
         1 or 2; a separator can have optional field row.text.
+@flags: 'T' - righT-align the right column.
 --]]
 local function TableBox (items, title, buttons, flags, helptopic, id)
-  local LEN = 0
+  local LEN1, LEN2 = 0, 0
   local out = {}
+  flags = (flags or "") .. "lc"
+  local rightAlign = flags:find("T")
   for _,v in ipairs(items) do
     if not v.separator then
-      local n = v[1]:len()
-      if LEN < n then LEN = n end
+      local v1,v2 = tostring(v[1]),tostring(v[2])
+      local n1,n2 = v1:len(),v2:len()
+      if LEN1 < n1 then LEN1 = n1 end
+      if LEN2 < n2 then LEN2 = n2 end
     end
   end
   local nl = false
@@ -299,14 +304,18 @@ local function TableBox (items, title, buttons, flags, helptopic, id)
     if v.separator then
       out[#out+1], nl = v, false
     else
+      local v1,v2 = tostring(v[1]),tostring(v[2])
       if nl then out[#out+1] = "\n" end
-      out[#out+1] = v[1]
-      out[#out+1] = (" "):rep(LEN+2-v[1]:len())
-      out[#out+1] = tostring(v[2])
+      out[#out+1] = v1
+      if rightAlign then
+        out[#out+1] = (" "):rep(LEN1+2-v1:len()+LEN2-v2:len())
+      else
+        out[#out+1] = (" "):rep(LEN1+2-v1:len())
+      end
+      out[#out+1] = v2
       nl = true
     end
   end
-  flags = (flags or "") .. "lc"
   return Message(out, title, buttons, flags, helptopic, id)
 end
 

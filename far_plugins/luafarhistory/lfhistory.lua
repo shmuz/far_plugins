@@ -6,7 +6,7 @@ local LibHistory = require "far2.history"
 package.loaded["far2.custommenu"] = nil
 local custommenu = require "far2.custommenu"
 
-local FirstRun = ...
+local FirstRun = ... --> this works with Far >= 3.0.4425
 if FirstRun then
   _Plugin = Utils.InitPlugin()
   _Plugin.History = LibHistory.newsettings(nil, "config")
@@ -105,6 +105,9 @@ local function SetListKeyFunction (list, HistTypeConfig, HistObject)
   function list:keyfunction (hDlg, key, Item)
     -----------------------------------------------------------------------------------------------
     if key=="F3" or key=="F4" or key=="AltF3" or key=="AltF4" then
+      if not Item then
+        return "done"
+      end
       if HistTypeConfig==cfgView or HistTypeConfig==cfgLocateFile then
         local fname = HistTypeConfig==cfgView and Item.text or Item.text:sub(2)
         if HistTypeConfig==cfgLocateFile then
@@ -169,6 +172,9 @@ local function SetListKeyFunction (list, HistTypeConfig, HistObject)
       if HistTypeConfig == cfgLocateFile then return "done" end
     -----------------------------------------------------------------------------------------------
     elseif key=="Enter" or key=="NumEnter" or key=="ShiftEnter" or key=="ShiftNumEnter" then
+      if not Item then
+        return "done"
+      end
       if HistTypeConfig==cfgView then
         local attr = win.GetFileAttr(Item.text)
         if not attr then
@@ -216,7 +222,7 @@ local function SetCanCloseFunction (list, HistTypeConfig)
     ----------------------------------------------------------------------------
     if 1 ~= far.Message(item.text.."\n"..M.mJumpToNearestFolder, M.mPathNotFound, ";YesNo", "w") then
       return false
-    end    
+    end
     ----------------------------------------------------------------------------
     local path = item.text
     while true do
@@ -230,7 +236,7 @@ local function SetCanCloseFunction (list, HistTypeConfig)
         far.Message(path, M.mPathNotFound, nil, "w")
         return false
       end
-    end            
+    end
     ----------------------------------------------------------------------------
   end
 end

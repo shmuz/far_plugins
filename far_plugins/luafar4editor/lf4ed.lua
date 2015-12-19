@@ -23,7 +23,7 @@ local DefaultConfig = {
 local Utils = require "far2.utils"
 local LibHistory = require "far2.history"
 
-local FirstRun = ...
+local FirstRun = ... --> this works with Far >= 3.0.4425
 if FirstRun then
   _Plugin = Utils.InitPlugin()
   package.path = _Plugin.ModuleDir.."?.lua;".._Plugin.ModuleDir.."scripts\\?.lua;"..package.path
