@@ -1912,7 +1912,7 @@ lv=2
 dt=Text
 nm=TableBox
 ctime=3535893105
-mtime=3541708540
+mtime=3659707601
 <article>
 #_**result = far2_message.TableBox (items, title, buttons, flags, helptopic, id)**
 #_
@@ -1923,8 +1923,8 @@ mtime=3541708540
 #_         A row can also be a single or double separator line if row.separator is
 #_         1 or 2; a separator can have optional field row.text.
 #_
-#_Other parameters and return value are similar to those of *far.Message*.
-#_
+#_Other parameters and return value are similar to those of *far.Message* except
+#_for an extra flag "T" that means "right align the right column".
 #_
 </article>
 </node>
