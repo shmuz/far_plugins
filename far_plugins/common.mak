@@ -100,7 +100,7 @@ $(OBJ_PLUG_E): $(LUAPLUG)
 $(OBJ_RC): $(RCFILE) version.h
 	windres $< -o $@ $(RESFLAGS)
 
-$(C_EMBED):
+$(C_EMBED): $(T_MESSAGE)
 ifndef NO_MACRO_GENERATE
 	$(MAKE) -B version.h $(GLOBINFO)
 endif
