@@ -288,6 +288,21 @@ function List:Draw (x, y)
 end
 
 function List:MouseEvent (hDlg, Ev, x, y)
+  if Ev.EventFlags == F.MOUSE_WHEELED then
+    local N = #self.drawitems
+    if N > 0 then
+      if Ev.ButtonState < 0x80000000 then
+        self.upper = max(1, self.upper-1)
+        self.sel = max(1, self.sel-1)
+      else
+        self.upper = min(max(1, N-self.h+1), self.upper+1)
+        self.sel = min(N, self.sel+1)
+      end
+      SendRedrawMessage(hDlg)
+    end
+    return
+  end
+
   local X, Y = Ev.MousePositionX, Ev.MousePositionY
   local MOVED = (Ev.EventFlags == F.MOUSE_MOVED)
 
@@ -794,7 +809,7 @@ function List:Key (hDlg, key)
 
     end
   end
-  
+
   if self.onlistchange then
     local CurItem = self.drawitems[self.sel]
     if CurItem ~= Item then self:onlistchange(hDlg, key, CurItem) end

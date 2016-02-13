@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2016-02-13, v3.6.4
+  [+] History windows can be scrolled with the mouse wheel.
+
 2015-12-19, v3.6.3
   [+] Folders history: when the folder is not found prompt user to jump to the nearest existing one.
   [!] Little fixes.

@@ -774,13 +774,13 @@ function Panel:PutOneFile (SrcPath, PanelItem)
     local path = SrcPath=="" and far.GetCurrentDirectory() or SrcPath
     CurName = AddEndSlash(path) .. CurName
   end
-  PanelItem = CheckForCorrect(CurName)
-  if not PanelItem then return false end
+  local outPanelItem = CheckForCorrect(CurName)
+  if not outPanelItem then return false end
 
   local items = self:GetItems()
   items[#items+1] = CurName
 
-  if self.SelectedCopyContents ~= 0 and IsDirectory(PanelItem) then
+  if self.SelectedCopyContents ~= 0 and IsDirectory(outPanelItem) then
     if self.SelectedCopyContents == 2 then
       local res = far.Message(M.MCopyContentsMsg, M.MWarning, ";YesNo", "", "Config")
       self.SelectedCopyContents = (res == 1) and 1 or 0
@@ -797,6 +797,7 @@ function Panel:PutOneFile (SrcPath, PanelItem)
       end
     end
   end
+  PanelItem.Flags = band(PanelItem.Flags, bnot(F.PPIF_SELECTED))
   return true
 end
 
