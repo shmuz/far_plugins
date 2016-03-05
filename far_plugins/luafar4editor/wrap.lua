@@ -128,14 +128,14 @@ local function ExecuteWrapDialog (aData)
   D._           = {"DI_DOUBLEBOX",3,1,72,10,   0, 0, 0, 0, M.MReformatBlock}
   D.cbxReformat = {"DI_CHECKBOX", 5,2, 0, 0,   0, 0, 0, 0, M.MReformatBlock2}
   D.labStart    = {"DI_TEXT",     9,3, 0, 0,   0, 0, 0, 0, M.MStartColumn}
-  D.edtColumn1  = {"DI_FIXEDIT", 22,3,25, 4,   0, 0, 0, 0, "1"}
+  D.edtColumn1  = {"DI_FIXEDIT", 22,3,25, 3,   0, 0, "9999", "DIF_MASKEDIT", "1"}
   D.labEnd      = {"DI_TEXT",    29,3, 0, 0,   0, 0, 0, 0, M.MEndColumn}
-  D.edtColumn2  = {"DI_FIXEDIT", 41,3,44, 4,   0, 0, 0, 0, "70"}
+  D.edtColumn2  = {"DI_FIXEDIT", 41,3,44, 3,   0, 0, "9999", "DIF_MASKEDIT", "70"}
   D.cbxJustify  = {"DI_CHECKBOX", 9,4, 0, 0,   0, 0, 0, 0, M.MJustifyBorder}
   D.sep         = {"DI_TEXT",     5,5, 0, 0,   0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
   D.cbxProcess  = {"DI_CHECKBOX", 5,6, 0, 0,   0, 0, 0, 0, M.MProcessLines}
   D.labExpress  = {"DI_TEXT",     9,7, 0, 0,   0, 0, 0, 0, M.MLineExpr}
-  D.edtExpress  = {"DI_EDIT",    21,7,70, 6,   0, HIST_PROCESS, 0, "DIF_HISTORY", ""}
+  D.edtExpress  = {"DI_EDIT",    21,7,70, 7,   0, HIST_PROCESS, 0, "DIF_HISTORY", ""}
   D.sep         = {"DI_TEXT",     5,8, 0, 0,   0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
   D.btnOk       = {"DI_BUTTON",   0,9, 0, 0,   0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
   D.btnCancel   = {"DI_BUTTON",   0,9, 0, 0,   0, 0, 0, "DIF_CENTERGROUP", M.MCancel}
