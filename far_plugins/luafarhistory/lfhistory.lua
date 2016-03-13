@@ -101,6 +101,15 @@ local function TellFileIsDirectory (fname)
   far.Message(('%s:\n"%s"'):format(M.mFileIsDirectory, fname), M.mError, M.mOk, "w")
 end
 
+-- Баг позиционирования на файл при возвращении в меню из модального редактора;
+-- причина описана здесь: http://forum.farmanager.com/viewtopic.php?p=136358#p136358
+local function RedrawAll_Workaround_b4545 (list)
+  local f = list.OnResizeConsole
+  list.OnResizeConsole = function() end
+  far.AdvControl("ACTL_REDRAWALL")
+  list.OnResizeConsole = f
+end
+
 local function SetListKeyFunction (list, HistTypeConfig, HistObject)
   function list:keyfunction (hDlg, key, Item)
     -----------------------------------------------------------------------------------------------
@@ -127,11 +136,11 @@ local function SetListKeyFunction (list, HistTypeConfig, HistObject)
           return "done"
         elseif key == "AltF3" then
           viewer.Viewer(fname)
-          far.AdvControl("ACTL_REDRAWALL")
+          RedrawAll_Workaround_b4545(self)
           return "done"
         elseif key == "AltF4" then
           editor.Editor(fname)
-          far.AdvControl("ACTL_REDRAWALL")
+          RedrawAll_Workaround_b4545(self)
           return "done"
         end
       end

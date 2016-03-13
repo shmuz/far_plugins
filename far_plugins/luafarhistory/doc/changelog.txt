@@ -2,6 +2,11 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2016-03-13, v3.6.5
+  [!] An ugly workaround that disables processing of DN_RESIZECONSOLE event in plugin's windows
+      during plugin's calls of ACTL_REDRAWALL (when the console is not resized in fact).
+      For the record: DN_RESIZECONSOLE during ACTL_REDRAWALL started to come from Far 3.0.4545.
+
 2016-02-13, v3.6.4
   [+] History windows can be scrolled with the mouse wheel.
 
