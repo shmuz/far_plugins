@@ -127,7 +127,7 @@ local function CheckForCorrect (Name)
   end
 
   if p:find "%S" and not p:find "[?*]" and p ~= "\\" and p ~= ".." then
-    local q = p:gsub("\\$", "")
+    local q = [[\\?\]] .. p:gsub("\\$", "")
     local PanelItem = win.GetFileInfo(q)
     if PanelItem then
       PanelItem.FileName = p
@@ -535,7 +535,7 @@ function Panel:AddList (aList, aReplaceMode)
   end
   local items = self:GetItems()
   for _,v in ipairs(aList) do
-    if v:sub(-1) ~= "." and win.GetFileInfo(v) then
+    if v ~= "." and v ~= ".." and win.GetFileInfo([[\\?\]] .. v) then
       items[#items+1] = v
     end
   end
@@ -746,17 +746,17 @@ end
 
 
 function Panel:PutFiles (Handle, PanelItems, Move, SrcPath, OpMode)
+  local was_error
   self.UpdateNeeded = true
   local hScreen = self:BeginPutFiles()
   for _,v in ipairs (PanelItems) do
     if not self:PutOneFile(SrcPath, v) then
-      self:CommitPutFiles (hScreen)
-      return false
+      was_error = true
     end
   end
   collectgarbage "collect"
   self:CommitPutFiles (hScreen)
-  return true
+  return not was_error
 end
 
 
