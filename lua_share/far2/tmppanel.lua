@@ -602,12 +602,11 @@ end
 
 
 function Panel:SaveListFile (FileName)
-  local hFile = io.open (FileName, "wb")
+  local hFile = io.open (FileName, "w")
   if hFile then
-    local NEWLINE = win.Utf8ToUtf16("\n")
-    hFile:write(BOM_UTF16LE)
+    hFile:write(BOM_UTF8)
     for _,v in ipairs(self:GetItems()) do
-      hFile:write (win.Utf8ToUtf16(v), NEWLINE)
+      hFile:write (v, "\n")
     end
     hFile:close()
   else
