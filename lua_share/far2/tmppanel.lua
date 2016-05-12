@@ -167,11 +167,6 @@ local function GoToFile (Target, PanelNumber)
 end
 
 
-local function SortListCmp (Item1, Item2)
-  return Item1:upper() < Item2:upper()
-end
-
-
 local function ShowMenuFromFile (FileName)
   local list = ListFromFile(FileName)
   local menuitems = {}
@@ -548,7 +543,7 @@ function Panel:UpdateItems (ShowOwners, ShowLinks)
 
   self.LastOwnersRead = ShowOwners
   self.LastLinksRead = ShowLinks
-  self.RemoveTable = {}
+  local RemoveTable = {}
   local PanelItems = {}
   local items = self:GetItems()
   for i,v in ipairs(items) do
@@ -556,10 +551,10 @@ function Panel:UpdateItems (ShowOwners, ShowLinks)
     if panelitem then
       table.insert (PanelItems, panelitem)
     else
-      self.RemoveTable[i] = true
+      RemoveTable[i] = true
     end
   end
-  self:RemoveMarkedItems()
+  self:RemoveMarkedItems(RemoveTable)
 
   if ShowOwners or ShowLinks then
     for _,v in ipairs(PanelItems) do
@@ -724,18 +719,14 @@ end
 
 function Panel:RemoveDuplicates ()
   local items = self:GetItems()
-  local pat = "[\\/ ]+$"
-  for _,v in ipairs(items) do
-    v = v:gsub(pat, "")
-  end
-  table.sort(items, SortListCmp)
-  self.RemoveTable = {}
+  table.sort(items)
+  local RemoveTable = {}
   for i = 1, #items - 1 do
-    if items[i]:upper() == items[i+1]:upper() then
-      self.RemoveTable[i] = true
+    if items[i] == items[i+1] then
+      RemoveTable[i] = true
     end
   end
-  self:RemoveMarkedItems()
+  self:RemoveMarkedItems(RemoveTable)
 end
 
 
@@ -813,15 +804,14 @@ function Panel:GetFindData (Handle, OpMode)
 end
 
 
-function Panel:RemoveMarkedItems()
-  if next(self.RemoveTable) then
+function Panel:RemoveMarkedItems (RemoveTable)
+  if next(RemoveTable) then
     local tb = {}
     local items = self:GetItems()
     for i,v in ipairs(items) do
-      if not self.RemoveTable[i] then table.insert (tb, v) end
+      if not RemoveTable[i] then table.insert(tb, v) end
     end
-    self.RemoveTable = nil
-    self:ReplaceFiles (tb)
+    self:ReplaceFiles(tb)
   end
 end
 
