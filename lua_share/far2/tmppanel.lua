@@ -75,6 +75,8 @@ local function ListFromFile (filename)
         text = strsub(text, 4)
       elseif strsub(text, 1, 2) == BOM_UTF16LE then
         text = win.Utf16ToUtf8(strsub(text, 3))
+      elseif string.find(text, "%z") then
+        text = win.Utf16ToUtf8(text)
       else -- default is UTF-8
         -- do nothing
       end
@@ -719,14 +721,18 @@ end
 
 function Panel:RemoveDuplicates ()
   local items = self:GetItems()
-  table.sort(items)
-  local RemoveTable = {}
-  for i = 1, #items - 1 do
-    if items[i] == items[i+1] then
-      RemoveTable[i] = true
+  if items.NoDuplicates then
+    items.NoDuplicates = nil
+  else
+    table.sort(items)
+    local RemoveTable = {}
+    for i = 1, #items - 1 do
+      if items[i] == items[i+1] then
+        RemoveTable[i] = true
+      end
     end
+    self:RemoveMarkedItems(RemoveTable)
   end
-  self:RemoveMarkedItems(RemoveTable)
 end
 
 

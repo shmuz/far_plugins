@@ -453,8 +453,8 @@ local function ProcessSearchMethod (method, pattern)
     local map = { l="%a", u="%a", L="%A", U="%A" }
     return function(s, p, init)
       p = p:gsub("(%%?)(.)", function(a,b) return a=="" and b:lower() or map[b] end)
-      local fr, to = s:lower():find(p, #(s:sub(1, init-1)) + 1)
-      if not fr then return nil end
+      local ok, fr, to = pcall(("").find, s:lower(), p, #(s:sub(1, init-1)) + 1)
+      if not (ok and fr) then return nil end
       return string.sub(s,1,fr-1):len()+1, string.sub(s,1,to):len()
     end
   elseif method ~= "regex" then
