@@ -13,6 +13,9 @@ path_run   = $(WORKDIR)/lua_run
 # Location of FAR source directory
 FARDIR = C:/farmanager
 
+# Lua interpreter (always 32 bit, not using DIRBIT value)
+LUAEXE = C:/EXE32/lua.exe -epackage.path=[[$(path_share)/?.lua]]
+
 # Location of LuaFAR source directory
 PATH_LUAFARSRC = $(FARDIR)/plugins/luamacro/luafar
 
@@ -22,7 +25,6 @@ INC_FAR = $(FARDIR)/plugins/common/unicode
 
 # Location of executable files and DLLs
 PATH_EXE  = C:/EXE$(DIRBIT)
-LUAEXE    = $(PATH_EXE)/lua.exe -epackage.path=[[$(path_share)/?.lua]]
 LUADLL    = $(PATH_EXE)/lua51.dll
 LUAFARDLL = $(FARDIR)/unicode_far/Release.$(DIRBIT).vc/luafar3.dll
 
