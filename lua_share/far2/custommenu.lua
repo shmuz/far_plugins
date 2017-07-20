@@ -112,6 +112,7 @@ function List:SetSize()
     for _,v in ipairs(self.drawitems) do
       local len = v.text:len() + (v.separator and 1 or 0)
       wd = max(wd, len)
+      if wd > self.wmax then break end -- this check is needed for performance (with big lists && long lines)
     end
     self.w = max(self.margin:len() + wd + self.rmargin, self.fulltitle:len()+2,
                  self.bottom:len() + 2)
@@ -894,10 +895,12 @@ local function Menu (props, list)
           end
         end
       elseif param2.EventType == F.MOUSE_EVENT then
-        local ret
-        ret, ret_item, ret_pos = list:MouseEvent(hDlg, param2, Rect.Left, Rect.Top)
-        if ret_item then hDlg:send("DM_CLOSE") end
-        return ret
+        if param1 ~= -1 then --> -1 = click outside the dialog
+          local ret
+          ret, ret_item, ret_pos = list:MouseEvent(hDlg, param2, Rect.Left, Rect.Top)
+          if ret_item then hDlg:send("DM_CLOSE") end
+          return ret
+        end
       end
 
     elseif msg == F.DN_GOTFOCUS then

@@ -146,15 +146,19 @@ local function SaveData (aDialog, aData)
   end
 end
 
-local function LoadDataDyn (hDlg, aDialog, aData)
+local function LoadDataDyn (hDlg, aDialog, aData, aUseDefaults)
   for _,item in ipairs(aDialog) do
     if not (item._noautoload or item._noauto) then
       local name = item.name
-      if aData[name] ~= nil then
-        if CheckItemType(item, "DI_CHECKBOX", "DI_RADIOBUTTON") then
-          aDialog[name]:SetCheck(hDlg, aData[name])
+      if aData[name]~=nil or item._default~=nil or aUseDefaults then
+        local val = aData[name]                                       -- highest priority
+        if val==nil then val=item._default end                        -- middle priority
+        if CheckItemType(item, "DI_CHECKBOX") then
+          aDialog[name]:SetCheck(hDlg, val==nil and 0 or val)         -- lowest priority (default)
+        elseif CheckItemType(item, "DI_RADIOBUTTON") then
+          if val then aDialog[name]:SetCheck(hDlg, 1) end
         elseif CheckItemType(item, "DI_EDIT", "DI_FIXEDIT") then
-          aDialog[name]:SetText(hDlg, aData[name])
+          aDialog[name]:SetText(hDlg, val==nil and "" or val)         -- lowest priority (default)
         end
       end
     end

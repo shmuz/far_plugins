@@ -16,7 +16,8 @@ end
 local M = require "lfh_message"
 local F = far.Flags
 local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
-local FarId = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+local FarId = ("\0"):rep(16)
+local NetBoxId = win.Uuid("42E4AEB1-A230-44F4-B33C-F195BB654931")
 
 local cfgView = {
   PluginHistoryType = "view",
@@ -219,6 +220,13 @@ local function SetCanCloseFunction (list, HistTypeConfig)
       panel.SetCmdLine(nil, item.text); return true
     end
     ----------------------------------------------------------------------------
+    if item.PluginId then
+---for k,v in pairs(item) do far.Show(k,v) end
+      local s = ("Plugin.Command(%q,%q)"):format(win.Uuid(item.PluginId), item.Param)
+      far.MacroPost(s)
+      return true
+    end
+    ----------------------------------------------------------------------------
     if panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, item.text) then
       return true
     end
@@ -308,18 +316,28 @@ local function get_history (aConfig)
   local last_time = settings.last_time or 0
   local far_settings = assert(far.CreateSettings("far"))
 
+  local function TryAddNetboxItem (trg, src)
+    if src.PluginId == NetBoxId then
+      trg.text     = "NetBox:" .. src.File .. ":" .. src.Name
+      trg.Param    = src.Param:gsub("/\1/", "/")
+      trg.PluginId = src.PluginId
+    end
+  end
+
   local function AddFarItems (aFarHistoryType, aType)
     local far_items = far_settings:Enum(aFarHistoryType)
     for _,v in ipairs(far_items) do
-      if v.PluginId == FarId then -- filter out archive plugins' items
+      if v.PluginId == FarId or v.PluginId == NetBoxId then -- filter out archive plugins' items
         local item = map[v.Name]
         if item then
           if v.Time > item.time then
             item.time = v.Time
             item.typ = aType
+            TryAddNetboxItem(item, v)
           end
         elseif v.Time >= last_time then -- add only new items
           item = { text=v.Name, time=v.Time, typ=aType }
+          TryAddNetboxItem(item, v)
           table.insert(menu_items, item)
           map[v.Name] = item
         end

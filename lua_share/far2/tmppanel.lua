@@ -60,6 +60,17 @@ local function IsDirectory (PanelItem)
   return PanelItem.FileAttributes:find"d" and true
 end
 
+local function NormalizePath (path)
+  return [[\\?\]] .. path:gsub("/", "\\"):gsub("\\+$", "")
+end
+
+local function FileExists (path)
+  return win.GetFileAttr(path) or win.GetFileAttr(NormalizePath(path))
+end
+
+local function GetFileInfoEx (path)
+  return win.GetFileInfo(path) or win.GetFileInfo(NormalizePath(path))
+end
 
 -- File lists are supported in the following formats:
 -- (a) UTF-16LE with BOM, (b) UTF-8 with BOM, (c) OEM.
@@ -129,8 +140,7 @@ local function CheckForCorrect (Name)
   end
 
   if p:find "%S" and not p:find "[?*]" and p ~= "\\" and p ~= ".." then
-    local q = [[\\?\]] .. p:gsub("\\$", "")
-    local PanelItem = win.GetFileInfo(q)
+    local PanelItem = GetFileInfoEx(p)
     if PanelItem then
       PanelItem.FileName = p
       PanelItem.AllocationSize = PanelItem.FileSize
@@ -532,7 +542,7 @@ function Panel:AddList (aList, aReplaceMode)
   end
   local items = self:GetItems()
   for _,v in ipairs(aList) do
-    if v ~= "." and v ~= ".." and win.GetFileInfo([[\\?\]] .. v) then
+    if v ~= "." and v ~= ".." and FileExists(v) then
       items[#items+1] = v
     end
   end
@@ -540,15 +550,14 @@ end
 
 
 function Panel:UpdateItems (ShowOwners, ShowLinks)
-  local hScreen = far.SaveScreen()
-  far.Message(M.MTempUpdate, M.MTempPanel, "")
+  local hScreen = #self:GetItems() >= 1000 and far.SaveScreen()
+  if hScreen then far.Message(M.MTempUpdate, M.MTempPanel, "") end
 
   self.LastOwnersRead = ShowOwners
   self.LastLinksRead = ShowLinks
   local RemoveTable = {}
   local PanelItems = {}
-  local items = self:GetItems()
-  for i,v in ipairs(items) do
+  for i,v in ipairs(self:GetItems()) do
     local panelitem = CheckForCorrect (v)
     if panelitem then
       table.insert (PanelItems, panelitem)
@@ -568,7 +577,7 @@ function Panel:UpdateItems (ShowOwners, ShowLinks)
       end
     end
   end
-  far.RestoreScreen(hScreen)
+  if hScreen then far.RestoreScreen(hScreen) end
   return PanelItems
 end
 

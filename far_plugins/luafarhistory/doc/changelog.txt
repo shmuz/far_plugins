@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2017-07-20, v3.7.0
+  [+] Folders history: initial experimental support of NetBox folders.
+
 2016-03-13, v3.6.5
   [!] An ugly workaround that disables processing of DN_RESIZECONSOLE event in plugin's windows
       during plugin's calls of ACTL_REDRAWALL (when the console is not resized in fact).

@@ -1,20 +1,26 @@
 #  Makefile for a FAR plugin containing embedded Lua modules and/or scripts.
 #  The target embeds Lua scripts and has dependencies on Lua and LuaFAR DLLs.
 
+include $(PATH_SYSTEM)\paths.mak
+
 #------------------------------------ SETTINGS TO BE CONFIGURED BY THE USER --
 # 32 or 64-bit plugin
 DIRBIT = 32
 
+HOME     = C:/Shmuel_Home
+PROGRAMS = $(HOME)/Programs
+EXE32    = $(PROGRAMS)/Exe32
+
 # Root work directory
-WORKDIR = S:/progr/work
-path_share = $(WORKDIR)/lua_share
-path_run   = $(WORKDIR)/lua_run
+workdir    = S:/progr/work
+path_share = $(workdir)/lua_share
+path_run   = $(workdir)/lua_run
 
 # Location of FAR source directory
-FARDIR = C:/farmanager
+FARDIR = $(HOME)/work/farmanager
 
 # Lua interpreter (always 32 bit, not using DIRBIT value)
-LUAEXE = C:/EXE32/lua.exe -epackage.path=[[$(path_share)/?.lua]]
+LUAEXE = $(EXE32)\lua.exe -epackage.path=[[$(path_share)/?.lua]]
 
 # Location of LuaFAR source directory
 PATH_LUAFARSRC = $(FARDIR)/plugins/luamacro/luafar
@@ -24,14 +30,14 @@ INC_LUA = $(FARDIR)/plugins/luamacro/luasdk/include
 INC_FAR = $(FARDIR)/plugins/common/unicode
 
 # Location of executable files and DLLs
-PATH_EXE  = C:/EXE$(DIRBIT)
-LUADLL    = $(PATH_EXE)/lua51.dll
-LUAFARDLL = $(FARDIR)/unicode_far/Release.$(DIRBIT).vc/luafar3.dll
+libdir    = $(PROGRAMS)/Far3-$(DIRBIT)bit
+LUADLL    = $(libdir)/lua51.dll
+LUAFARDLL = $(libdir)/luafar3.dll
 
 ifeq ($(EMBED_METHOD),luajit)
-  LUAC = $(PATH_EXE)/LuaJIT/luajit.exe
+  LUAC = $(PROGRAMS)/Exe$(DIRBIT)/LuaJIT/luajit.exe
 else
-  LUAC = $(PATH_EXE)/luac.exe
+  LUAC = $(PROGRAMS)/Exe$(DIRBIT)/luac.exe
 endif
 #------------------------------------ END OF USER'S SETTINGS -----------------
 
@@ -83,6 +89,7 @@ LDFLAGS = -Wl,--kill-at -shared -s $(ARCH)
 noembed: $(T_NOEMBED) $(T_MESSAGE) $(GLOBINFO) $(HELP)
 embed:   $(T_EMBED) $(T_MESSAGE) $(GLOBINFO) $(HELP)
 all:     noembed embed
+help:    $(HELP)
 
 $(T_NOEMBED): $(OBJ_N) $(LIBS)
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -122,4 +129,4 @@ clean:
 	del *.o *.dll luac.out luajitc.out $(C_EMBED) $(C_MAIN)
 	del version.h
 
-.PHONY: noembed embed clean all
+.PHONY: noembed embed clean all help

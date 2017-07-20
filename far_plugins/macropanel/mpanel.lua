@@ -122,38 +122,38 @@ end
 function export.GetFindData (object, handle, OpMode)
   --if band(OpMode, F.OPM_FIND) ~= 0 then return end
   local sequence = [[
-    local index, kind = ...
+    local idx, kind = ...
     while true do
-      local m = mf.GetMacroCopy(index)
+      local m = mf.GetMacroCopy(idx)
       if not m then return 0 end
       if kind == "macros" then
         if m.area and not m.disabled then
           local startline = m.FileName and m.action and debug.getinfo(m.action,"S").linedefined or 1
-          return index, m.description, m.area, m.key, m.id, m.FileName, startline, m.filemask
+          return idx, m.description, m.area, m.key, m.index, m.FileName, startline, m.filemask
         end
       elseif kind == "events" then
         if m.group and not m.disabled then
           local startline = m.FileName and m.action and debug.getinfo(m.action,"S").linedefined or 1
-          return index, m.description, m.group, m.id, m.FileName, startline, m.filemask
+          return idx, m.description, m.group, m.index, m.FileName, startline, m.filemask
         end
       end
-      index = index+1
+      idx = idx+1
     end
   ]]
   local data = {}
   local objtype = object.type
-  local index = 1
+  local idx = 1
   while true do
-    local t = far.MacroExecute(sequence, nil, index, objtype)
+    local t = far.MacroExecute(sequence, nil, idx, objtype)
     if not t then -- error occured: do not create panel
       far.Message("Can not retrieve "..objtype, Title, nil, "w")
       return
     end
     if t[1]==0 then return data end -- end indicator
     if objtype == "macros" then
-      local description, area, key, id, filename, startline, filemask = unpack(t, 2, t.n)
+      local description, area, key, index, filename, startline, filemask = unpack(t, 2, t.n)
       if description==nil or description=="" then
-        description = ("[id = %d]"):format(id)
+        description = ("[index = %d]"):format(index)
       end
       if  (not object.f1 or object.f1:find(description)) and
           (not object.f2 or object.f2:find(area)) and
@@ -163,9 +163,9 @@ function export.GetFindData (object, handle, OpMode)
         data[#data+1] = { FileName=description, CustomColumnData = { area,key,filename,startline,filemask } }
       end
     elseif objtype == "events" then
-      local description, group, id, filename, startline, filemask = unpack(t, 2, t.n)
+      local description, group, index, filename, startline, filemask = unpack(t, 2, t.n)
       if description==nil or description=="" then
-        description = ("[id = %d]"):format(id)
+        description = ("[index = %d]"):format(index)
       end
       if  (not object.f1 or object.f1:find(description)) and
           (not object.f2 or object.f2:find(group))
@@ -173,7 +173,7 @@ function export.GetFindData (object, handle, OpMode)
         data[#data+1] = { FileName=description, CustomColumnData = { group,"",filename,startline,filemask } }
       end
     end
-    index = t[1] + 1
+    idx = t[1] + 1
   end
 end
 
