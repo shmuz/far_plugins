@@ -233,35 +233,35 @@ function Package.PutExportedFunctions (tab)
 end
 
 
--- Создать новое окружение, или воссоздать из истории /?/
+-- РЎРѕР·РґР°С‚СЊ РЅРѕРІРѕРµ РѕРєСЂСѓР¶РµРЅРёРµ, РёР»Рё РІРѕСЃСЃРѕР·РґР°С‚СЊ РёР· РёСЃС‚РѕСЂРёРё /?/
 function Package.NewEnv (aEnv)
   local self = aEnv or {}
 
-  -- создать или воссоздать опции для окружения
+  -- СЃРѕР·РґР°С‚СЊ РёР»Рё РІРѕСЃСЃРѕР·РґР°С‚СЊ РѕРїС†РёРё РґР»СЏ РѕРєСЂСѓР¶РµРЅРёСЏ
   self.Opt = self.Opt or {}
-  for k,v in pairs(Opt) do -- скопировать отсутствующие опции
+  for k,v in pairs(Opt) do -- СЃРєРѕРїРёСЂРѕРІР°С‚СЊ РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РёРµ РѕРїС†РёРё
     if self.Opt[k]==nil then self.Opt[k]=v end
   end
-  self.OptMeta = { __index = self.Opt } -- метатаблица для будущего наследования
+  self.OptMeta = { __index = self.Opt } -- РјРµС‚Р°С‚Р°Р±Р»РёС†Р° РґР»СЏ Р±СѓРґСѓС‰РµРіРѕ РЅР°СЃР»РµРґРѕРІР°РЅРёСЏ
 
-  -- инициализировать некоторые переменные
+  -- РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°С‚СЊ РЅРµРєРѕС‚РѕСЂС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ
   self.LastSearchResultsPanel = self.LastSearchResultsPanel or 1
   self.StartupOptCommonPanel = self.Opt.CommonPanel
   self.StartupOptFullScreenPanel = self.Opt.FullScreenPanel
 
-  -- если нет "общих" панелей - создать их
+  -- РµСЃР»Рё РЅРµС‚ "РѕР±С‰РёС…" РїР°РЅРµР»РµР№ - СЃРѕР·РґР°С‚СЊ РёС…
   if not self.CommonPanels then
     self.CommonPanels = {}
     for i=1,COMMONPANELSNUMBER do self.CommonPanels[i] = {} end
     self.CurrentCommonPanel = 1
   end
 
-  -- установить наследование функций от базового окружения
+  -- СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РЅР°СЃР»РµРґРѕРІР°РЅРёРµ С„СѓРЅРєС†РёР№ РѕС‚ Р±Р°Р·РѕРІРѕРіРѕ РѕРєСЂСѓР¶РµРЅРёСЏ
   return setmetatable (self, EnvMeta)
 end
 
 
--- Создать новую панель
+-- РЎРѕР·РґР°С‚СЊ РЅРѕРІСѓСЋ РїР°РЅРµР»СЊ
 function Env:NewPanel (aOptions)
   local pan = {
     Env = self,
@@ -270,8 +270,8 @@ function Env:NewPanel (aOptions)
     UpdateNeeded = true
   }
 
-  -- панель наследует опции от своего окружения,
-  -- но переданные опции (аргумент функции) имеют приоритет.
+  -- РїР°РЅРµР»СЊ РЅР°СЃР»РµРґСѓРµС‚ РѕРїС†РёРё РѕС‚ СЃРІРѕРµРіРѕ РѕРєСЂСѓР¶РµРЅРёСЏ,
+  -- РЅРѕ РїРµСЂРµРґР°РЅРЅС‹Рµ РѕРїС†РёРё (Р°СЂРіСѓРјРµРЅС‚ С„СѓРЅРєС†РёРё) РёРјРµСЋС‚ РїСЂРёРѕСЂРёС‚РµС‚.
   pan.Opt = setmetatable({}, self.OptMeta)
   if aOptions then
     for k,v in pairs(aOptions) do pan.Opt[k] = v end
@@ -287,7 +287,7 @@ function Env:NewPanel (aOptions)
     pan.ReplaceFiles = Panel.ReplaceOwnFiles
   end
 
-  -- установить наследование функций от базового класса панели
+  -- СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РЅР°СЃР»РµРґРѕРІР°РЅРёРµ С„СѓРЅРєС†РёР№ РѕС‚ Р±Р°Р·РѕРІРѕРіРѕ РєР»Р°СЃСЃР° РїР°РЅРµР»Рё
   return setmetatable (pan, PanelMeta)
 end
 

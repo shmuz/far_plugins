@@ -102,8 +102,8 @@ local function TellFileIsDirectory (fname)
   far.Message(('%s:\n"%s"'):format(M.mFileIsDirectory, fname), M.mError, M.mOk, "w")
 end
 
--- Баг позиционирования на файл при возвращении в меню из модального редактора;
--- причина описана здесь: http://forum.farmanager.com/viewtopic.php?p=136358#p136358
+-- Р‘Р°Рі РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёСЏ РЅР° С„Р°Р№Р» РїСЂРё РІРѕР·РІСЂР°С‰РµРЅРёРё РІ РјРµРЅСЋ РёР· РјРѕРґР°Р»СЊРЅРѕРіРѕ СЂРµРґР°РєС‚РѕСЂР°;
+-- РїСЂРёС‡РёРЅР° РѕРїРёСЃР°РЅР° Р·РґРµСЃСЊ: http://forum.farmanager.com/viewtopic.php?p=136358#p136358
 local function RedrawAll_Workaround_b4545 (list)
   local f = list.OnResizeConsole
   list.OnResizeConsole = function() end
