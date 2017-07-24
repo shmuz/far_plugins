@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2017-07-24, v3.7.1
+  [!] Support of NetBox folders: fixes.
+
 2017-07-20, v3.7.0
   [+] Folders history: initial experimental support of NetBox folders.
 

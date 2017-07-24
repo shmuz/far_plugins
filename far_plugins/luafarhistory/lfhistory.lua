@@ -1,5 +1,6 @@
+-- coding: UTF-8
 --------------------
--- lf_history.lua --
+-- lfhistory.lua
 --------------------
 local Utils      = require "far2.utils"
 local LibHistory = require "far2.history"
@@ -222,8 +223,9 @@ local function SetCanCloseFunction (list, HistTypeConfig)
     ----------------------------------------------------------------------------
     if item.PluginId then
 ---for k,v in pairs(item) do far.Show(k,v) end
-      local s = ("Plugin.Command(%q,%q)"):format(win.Uuid(item.PluginId), item.Param)
-      far.MacroPost(s)
+      local param = item.Param:gsub("/\1/", "/")
+      local s = ("Plugin.Command(%q,%q)"):format(win.Uuid(item.PluginId), param)
+      far.MacroPost(s, "KMFLAGS_ENABLEOUTPUT")
       return true
     end
     ----------------------------------------------------------------------------
@@ -305,9 +307,10 @@ local function get_history (aConfig)
   local settings = hst:field("settings")
   for _,v in ipairs(plugin_items) do
     if v.text then
-      if not map[v.text] then
+      local index = v.Param or v.text
+      if not map[index] then
         table.insert(menu_items, v)
-        map[v.text] = v
+        map[index] = v
       end
     end
   end
@@ -319,7 +322,7 @@ local function get_history (aConfig)
   local function TryAddNetboxItem (trg, src)
     if src.PluginId == NetBoxId then
       trg.text     = "NetBox:" .. src.File .. ":" .. src.Name
-      trg.Param    = src.Param:gsub("/\1/", "/")
+      trg.Param    = src.Param
       trg.PluginId = src.PluginId
     end
   end
@@ -328,7 +331,8 @@ local function get_history (aConfig)
     local far_items = far_settings:Enum(aFarHistoryType)
     for _,v in ipairs(far_items) do
       if v.PluginId == FarId or v.PluginId == NetBoxId then -- filter out archive plugins' items
-        local item = map[v.Name]
+        local index = (v.PluginId == FarId) and v.Name or v.Param
+        local item = map[index]
         if item then
           if v.Time > item.time then
             item.time = v.Time
@@ -339,7 +343,7 @@ local function get_history (aConfig)
           item = { text=v.Name, time=v.Time, typ=aType }
           TryAddNetboxItem(item, v)
           table.insert(menu_items, item)
-          map[v.Name] = item
+          map[index] = item
         end
       end
     end
