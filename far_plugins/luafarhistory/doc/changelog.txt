@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2017-07-26, v3.7.2
+  [+] Two colors made configurable: "Highlighted text" and "Selected highlighted text".
+
 2017-07-24, v3.7.1
   [!] Support of NetBox folders: fixes.
 
