@@ -11,9 +11,9 @@ require ("far2.makelang") (
   { filename = "lfh_rus.lng",
     line1 = ".Language=Russian,Russian (Русский)",
   },
-  -- { filename = "lfh_cze.lng",
-  --   line1 = ".Language=Czech,Czech (Čeština)",
-  -- },
+  { filename = "lfh_spa.lng",
+    line1 = ".Language=Spanish,Spanish (Español)",
+  },
 },
 
 ---- template file names

@@ -85,3 +85,5 @@ according to amount and content of records in the history.
 
     With this option checked, history window will be shown centered
 in FAR window.
+
+ ~Contents~@Contents@
