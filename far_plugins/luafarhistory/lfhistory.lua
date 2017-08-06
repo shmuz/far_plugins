@@ -1,7 +1,6 @@
 -- coding: UTF-8
---------------------
--- lfhistory.lua
---------------------
+-- luacheck: globals _Plugin
+
 local Utils      = require "far2.utils"
 local LibHistory = require "far2.history"
 package.loaded["far2.custommenu"] = nil
@@ -16,7 +15,7 @@ end
 
 local M = require "lfh_message"
 local F = far.Flags
-local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
+local bor = bit64.bor
 local FarId = ("\0"):rep(16)
 local NetBoxId = win.Uuid("42E4AEB1-A230-44F4-B33C-F195BB654931")
 
@@ -28,7 +27,8 @@ local cfgView = {
     "F3", "F4",
     "CtrlEnter", "CtrlNumEnter", "RCtrlEnter", "RCtrlNumEnter",
     "ShiftEnter", "ShiftNumEnter",
-    "CtrlPgUp", "RCtrlPgUp",
+    "CtrlPgUp", "RCtrlPgUp", "CtrlPgDn", "RCtrlPgDn",
+    "AltF8", "RAltF8", "AltF12", "RAltF12",
   },
   maxItemsKey = "iSizeView",
 }
@@ -40,6 +40,7 @@ local cfgCommands = {
   brkeys = {
     "CtrlEnter", "RCtrlEnter", "CtrlNumEnter", "RCtrlNumEnter",
     "ShiftEnter", "ShiftNumEnter",
+    "AltF11", "RAltF11", "AltF12", "RAltF12",
   },
   maxItemsKey = "iSizeCmd",
 }
@@ -51,6 +52,7 @@ local cfgFolders = {
   brkeys = {
     "CtrlEnter", "RCtrlEnter", "CtrlNumEnter", "RCtrlNumEnter",
     "ShiftEnter", "ShiftNumEnter",
+    "AltF8", "RAltF8", "AltF11", "RAltF11",
   },
   maxItemsKey = "iSizeFold",
 }
@@ -69,9 +71,9 @@ local function IsCtrlEnter (key)
   return key=="CtrlEnter" or key=="RCtrlEnter" or key=="CtrlNumEnter" or key=="RCtrlNumEnter"
 end
 
-local function IsCtrlPgUp (key)
-  return key=="CtrlPgUp" or key=="RCtrlPgUp"
-end
+local function IsCtrlPgUp (key) return key=="CtrlPgUp" or key=="RCtrlPgUp" end
+
+local function IsCtrlPgDn (key) return key=="CtrlPgDn" or key=="RCtrlPgDn" end
 
 local function ExecuteFromCmdLine(str, newwindow)
   panel.SetCmdLine(nil, str)
@@ -81,6 +83,7 @@ end
 local DefaultCfg = {
   bDynResize  = true,
   bAutoCenter = true,
+  bDirectSort = true,
   iSizeCmd    = 1000,
   iSizeView   = 1000,
   iSizeFold   = 1000,
@@ -103,6 +106,29 @@ local function TellFileIsDirectory (fname)
   far.Message(('%s:\n"%s"'):format(M.mFileIsDirectory, fname), M.mError, M.mOk, "w")
 end
 
+local function LocateFile (fname)
+  local attr = win.GetFileAttr(fname)
+  if attr and not attr:find"d" then
+    local dir, name = fname:match("^(.*\\)([^\\]*)$")
+    if panel.SetPanelDirectory(nil, 1, dir) then
+      local pinfo = panel.GetPanelInfo(nil, 1)
+      for i=1, pinfo.ItemsNumber do
+        local item = panel.GetPanelItem(nil, 1, i)
+        if item.FileName == name then
+          local rect = pinfo.PanelRect
+          local hheight = math.floor((rect.bottom - rect.top - 4) / 2)
+          local topitem = pinfo.TopPanelItem
+          panel.RedrawPanel(nil, 1, { CurrentItem = i,
+            TopPanelItem = i>=topitem and i<topitem+hheight and topitem or
+                           i>hheight and i-hheight or 0 })
+          return true
+        end
+      end
+    end
+  end
+  return false
+end
+
 -- Баг позиционирования на файл при возвращении в меню из модального редактора;
 -- причина описана здесь: http://forum.farmanager.com/viewtopic.php?p=136358#p136358
 local function RedrawAll_Workaround_b4545 (list)
@@ -112,10 +138,27 @@ local function RedrawAll_Workaround_b4545 (list)
   list.OnResizeConsole = f
 end
 
-local function SetListKeyFunction (list, HistTypeConfig, HistObject)
-  function list:keyfunction (hDlg, key, Item)
+local function SortListItems (list, bDirectSort, hDlg)
+  _Plugin.Cfg.bDirectSort = bDirectSort
+  if bDirectSort then
+    list.selalign = "bottom"
+    list:Sort(function(a,b) return a.time < b.time end)
+  else
+    list.selalign = "top"
+    list:Sort(function(a,b) return a.time > b.time end)
+  end
+  if hDlg then
+    list:ChangePattern(hDlg, list.pattern)
+  end
+end
+
+local function GetListKeyFunction (HistTypeConfig, HistObject)
+  return function (self, hDlg, key, Item)
     -----------------------------------------------------------------------------------------------
-    if key=="F3" or key=="F4" or key=="AltF3" or key=="AltF4" then
+    if key=="CtrlI" or key=="RCtrlI" then
+      SortListItems(self, not _Plugin.Cfg.bDirectSort, hDlg)
+      return "done"
+    elseif key=="F3" or key=="F4" or key=="AltF3" or key=="AltF4" then
       if not Item then
         return "done"
       end
@@ -123,7 +166,7 @@ local function SetListKeyFunction (list, HistTypeConfig, HistObject)
         local fname = HistTypeConfig==cfgView and Item.text or Item.text:sub(2)
         if HistTypeConfig==cfgLocateFile then
           if not fname:find("[\\/]") then
-            local Name = list.items.PanelDirectory and list.items.PanelDirectory.Name
+            local Name = self.items.PanelDirectory and self.items.PanelDirectory.Name
             if Name and Name ~= "" then
               fname = Name:find("[\\/]$") and Name..fname or Name.."\\"..fname
             end
@@ -205,58 +248,61 @@ local function SetListKeyFunction (list, HistTypeConfig, HistObject)
   end
 end
 
-local function SetCanCloseFunction (list, HistTypeConfig)
-  if HistTypeConfig ~= cfgFolders then
-    list.CanClose = function() return true end
-    return
+local function ViewHistory_CanClose (self, item, breakkey)
+  if item and (IsCtrlPgUp(breakkey) or IsCtrlPgDn(breakkey)) and not LocateFile(item.text) then
+    TellFileNotExist(item.text)
+    return false
   end
+  return true
+end
 
-  function list:CanClose (item, breakkey)
-    ----------------------------------------------------------------------------
-    if not item then
-      return true
-    end
-    ----------------------------------------------------------------------------
-    if IsCtrlEnter(breakkey) then
-      panel.SetCmdLine(nil, item.text); return true
-    end
-    ----------------------------------------------------------------------------
-    if item.PluginId then
----for k,v in pairs(item) do far.Show(k,v) end
-      local param = item.Param:gsub("/\1/", "/")
-      local s = ("Plugin.Command(%q,%q)"):format(win.Uuid(item.PluginId), param)
-      far.MacroPost(s, "KMFLAGS_ENABLEOUTPUT")
-      return true
-    end
-    ----------------------------------------------------------------------------
-    if panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, item.text) then
-      return true
-    end
-    ----------------------------------------------------------------------------
-    local GetNextPath = function(s) return s:match("^(.*[\\/]).+") end
-    if not GetNextPath(item.text) then -- check before asking user
-      far.Message(item.text, M.mPathNotFound, nil, "w")
-      return false
-    end
-    ----------------------------------------------------------------------------
-    if 1 ~= far.Message(item.text.."\n"..M.mJumpToNearestFolder, M.mPathNotFound, ";YesNo", "w") then
-      return false
-    end
-    ----------------------------------------------------------------------------
-    local path = item.text
-    while true do
-      local nextpath = GetNextPath(path)
-      if nextpath then
-        if panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, nextpath) then
-          return true
-        end
-        path = nextpath
-      else
-        far.Message(path, M.mPathNotFound, nil, "w")
-        return false
+local function FoldersHistory_CanClose (self, item, breakkey)
+  if not item then
+    return true
+  end
+  ----------------------------------------------------------------------------
+  if IsCtrlEnter(breakkey) then
+    panel.SetCmdLine(nil, item.text)
+    return true
+  end
+  ----------------------------------------------------------------------------
+  if breakkey=="AltF8" or breakkey=="RAltF8" or breakkey=="AltF11" or breakkey=="RAltF11" then
+    return true
+  end
+  ----------------------------------------------------------------------------
+  if item.PluginId then
+    local param = item.Param:gsub("/\1/", "/")
+    local s = ("Plugin.Command(%q,%q)"):format(win.Uuid(item.PluginId), param)
+    far.MacroPost(s, "KMFLAGS_ENABLEOUTPUT")
+    return true
+  end
+  ----------------------------------------------------------------------------
+  if panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, item.text) then
+    return true
+  end
+  ----------------------------------------------------------------------------
+  local GetNextPath = function(s) return s:match("^(.*[\\/]).+") end
+  if not GetNextPath(item.text) then -- check before asking user
+    far.Message(item.text, M.mPathNotFound, nil, "w")
+    return false
+  end
+  ----------------------------------------------------------------------------
+  if 1 ~= far.Message(item.text.."\n"..M.mJumpToNearestFolder, M.mPathNotFound, ";YesNo", "w") then
+    return false
+  end
+  ----------------------------------------------------------------------------
+  local path = item.text
+  while true do
+    local nextpath = GetNextPath(path)
+    if nextpath then
+      if panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, nextpath) then
+        return true
       end
+      path = nextpath
+    else
+      far.Message(path, M.mPathNotFound, nil, "w")
+      return false
     end
-    ----------------------------------------------------------------------------
   end
 end
 
@@ -282,8 +328,9 @@ local function MakeMenuParams (aCommonConfig, aHistTypeConfig, aHistTypeData, aI
     xlat          = aHistTypeData.xlat,
   }
   local list = custommenu.NewList(listProps, aItems)
-  SetListKeyFunction(list, aHistTypeConfig, aHistObject)
-  SetCanCloseFunction(list, aHistTypeConfig)
+  list.keyfunction = GetListKeyFunction(aHistTypeConfig, aHistObject)
+  list.CanClose = (aHistTypeConfig == cfgFolders) and FoldersHistory_CanClose or
+                  (aHistTypeConfig == cfgView) and ViewHistory_CanClose
   return menuProps, list
 end
 
@@ -295,10 +342,11 @@ local function DelayedSaveHistory (hist, delay)
   far.Timer(delay, function(h)
     h:Close()
     hist:save()
+    _Plugin.History:save() -- _Plugin.Cfg.bDirectSort
   end)
 end
 
-local function get_history (aConfig)
+local function get_history (aConfig, obj)
   local menu_items, map = {}, {}
 
   -- add plugin database items
@@ -359,21 +407,26 @@ local function get_history (aConfig)
   end
   far_settings:Free()
 
-  -- sort menu items: oldest records go first
-  table.sort(menu_items, function(a,b) return a.time < b.time end)
-
-  -- remove excessive items; leave checked items;
-  local i = 1
   local maxitems = GetMaxItems(aConfig)
-  while (#menu_items >= i) and (#menu_items > maxitems) do
-    if menu_items[i].checked then i = i+1 -- leave the item
-    else table.remove(menu_items, i)      -- remove the item
+  if #menu_items > maxitems then
+    -- sort menu items: oldest records go first
+    table.sort(menu_items, function(a,b) return a.time < b.time end)
+
+    -- remove excessive items; leave checked items;
+    local i = 1
+    while (#menu_items >= i) and (#menu_items > maxitems) do
+      if menu_items[i].checked then i = i+1 -- leave the item
+      else table.remove(menu_items, i)      -- remove the item
+      end
     end
   end
 
   -- execute the menu
   local menuProps, list = MakeMenuParams(_Plugin.Cfg, aConfig, settings, menu_items, hst)
+  list.pattern = obj.pattern
+  SortListItems(list, _Plugin.Cfg.bDirectSort, nil)
   local item, itempos = custommenu.Menu(menuProps, list)
+  obj.pattern = list.pattern
   settings.searchmethod = list.searchmethod
   settings.xlat = list.xlat
   hst:setfield("items", list.items)
@@ -386,8 +439,12 @@ local function get_history (aConfig)
   end
 end
 
-local function commands_history()
-  local item, key = get_history(cfgCommands)
+local function commands_history(obj)
+  local item, key = get_history(cfgCommands, obj)
+
+  if key=="AltF11" or key=="RAltF11" then return "view" end
+  if key=="AltF12" or key=="RAltF12" then return "folders" end
+
   if item then
     if IsCtrlEnter(key) then
       panel.SetCmdLine(nil, item.text)
@@ -397,31 +454,11 @@ local function commands_history()
   end
 end
 
-local function folders_history()
-  get_history(cfgFolders)
-end
+local function folders_history(obj)
+  local item, key = get_history(cfgFolders, obj)
 
-local function LocateFile (fname)
-  local attr = win.GetFileAttr(fname)
-  if attr and not attr:find"d" then
-    local dir, name = fname:match("^(.*\\)([^\\]*)$")
-    if panel.SetPanelDirectory(nil, 1, dir) then
-      local pinfo = panel.GetPanelInfo(nil, 1)
-      for i=1, pinfo.ItemsNumber do
-        local item = panel.GetPanelItem(nil, 1, i)
-        if item.FileName == name then
-          local rect = pinfo.PanelRect
-          local hheight = math.floor((rect.bottom - rect.top - 4) / 2)
-          local topitem = pinfo.TopPanelItem
-          panel.RedrawPanel(nil, 1, { CurrentItem = i,
-            TopPanelItem = i>=topitem and i<topitem+hheight and topitem or
-                           i>hheight and i-hheight or 0 })
-          return true
-        end
-      end
-    end
-  end
-  return false
+  if key=="AltF8" or key=="RAltF8" then return "commands" end
+  if key=="AltF11" or key=="RAltF11" then return "view" end
 end
 
 local function CallViewer (fname, disablehistory)
@@ -434,8 +471,12 @@ local function CallEditor (fname, disablehistory)
   editor.Editor(fname, nil, nil, nil, nil, nil, flags)
 end
 
-local function view_history()
-  local item, key = get_history(cfgView)
+local function view_history(obj)
+  local item, key = get_history(cfgView, obj)
+
+  if key=="AltF8" or key=="RAltF8" then return "commands" end
+  if key=="AltF12" or key=="RAltF12" then return "folders" end
+
   if not item then return end
   local fname = item.text
 
@@ -444,10 +485,7 @@ local function view_history()
   if IsCtrlEnter(key) then
     panel.SetCmdLine(nil, fname)
 
-  elseif IsCtrlPgUp(key) then
-    if not LocateFile(fname) then TellFileNotExist(fname) end
-
-  elseif key == nil or shift_enter then
+  elseif key == nil or shift_enter or IsCtrlPgDn(key) then
     if item.typ == "V" then CallViewer(fname, shift_enter)
     else CallEditor(fname, shift_enter)
     end
@@ -455,6 +493,7 @@ local function view_history()
   elseif key == "F3" then CallViewer(fname, false)
   elseif key == "F4" then CallEditor(fname, false)
   end
+  return key
 end
 
 local function LocateFile2()
@@ -515,6 +554,21 @@ local function export_Configure()
   end
 end
 
+local function RunCycle (op)
+
+  local obj_commands = { func=commands_history; pattern=""; }
+  local obj_view     = { func=view_history;     pattern=""; }
+  local obj_folders  = { func=folders_history;  pattern=""; }
+
+  while op do
+    if     op == "commands" then op = obj_commands:func()
+    elseif op == "view"     then op = obj_view:func()
+    elseif op == "folders"  then op = obj_folders:func()
+    else break
+    end
+  end
+end
+
 local function export_Open (From, Guid, Item)
   local userItems, commandTable, hotKeyTable = Utils.LoadUserMenu("_usermenu.lua")
   ------------------------------------------------------------------------------
@@ -531,9 +585,9 @@ local function export_Open (From, Guid, Item)
     }
     local items = {
       { disable = (From ~= F.OPEN_PLUGINSMENU),
-        text=M.mMenuCommands,   action=commands_history },
-      { text=M.mMenuView,       action=view_history     },
-      { text=M.mMenuFolders,    action=folders_history  },
+        text=M.mMenuCommands,   run_cycle=true; param="commands" },
+      { text=M.mMenuView,       run_cycle=true; param="view"     },
+      { text=M.mMenuFolders,    run_cycle=true; param="folders"  },
       { text=M.mMenuConfig,     action=export_Configure },
       { text=M.mMenuLocateFile, action=LocateFile2      },
     }
@@ -544,7 +598,8 @@ local function export_Open (From, Guid, Item)
     ---------------------------------------------------------------------------
     local item = far.Menu(properties, items)
     if item then
-      if item.action then item.action()
+      if item.run_cycle then RunCycle(item.param)
+      elseif item.action then item.action()
       else Utils.RunUserItem(item, item.arg)
       end
     end

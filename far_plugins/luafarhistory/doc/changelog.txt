@@ -2,6 +2,11 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2017-08-06, v3.8.0
+  [+] Switching between histories (commands/view and edit/folders) directly from the dialog.
+  [+] View and Edit history: Ctrl-PgDn: go to the file in active panel and open the file.
+  [+] All histories: Ctrl-I: inverse sort order.
+
 2017-07-26, v3.7.2
   [+] Two colors made configurable: "Highlighted text" and "Selected highlighted text".
 

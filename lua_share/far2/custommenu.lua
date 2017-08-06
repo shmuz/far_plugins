@@ -57,7 +57,7 @@ local function NewList (props, items, bkeys, startId)
   self.items     = items
   self.startId   = startId or 1
   self.title     = P.title or ""
-  self.idata = {}; for i,v in ipairs(items) do  self.idata[v] = { index=i } end
+  self:SetIndexData()
 
   -- Variables
   self.bottom    = P.bottom or ""
@@ -815,6 +815,16 @@ function List:Key (hDlg, key)
     local CurItem = self.drawitems[self.sel]
     if CurItem ~= Item then self:onlistchange(hDlg, key, CurItem) end
   end
+end
+
+function List:SetIndexData()
+  self.idata = {}
+  for i,v in ipairs(self.items) do self.idata[v] = { index=i } end
+end
+
+function List:Sort (fCompare)
+  table.sort(self.items, fCompare)
+  self:SetIndexData()
 end
 
 local function Menu (props, list)
