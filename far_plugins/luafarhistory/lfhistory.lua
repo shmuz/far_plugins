@@ -439,13 +439,19 @@ local function get_history (aConfig, obj)
   end
 end
 
+local function IsCmdLineAvail()
+  local ar = far.MacroGetArea()
+  return ar==F.MACROAREA_SHELL or ar==F.MACROAREA_INFOPANEL or
+         ar==F.MACROAREA_QVIEWPANEL or ar==F.MACROAREA_TREEPANEL
+end
+
 local function commands_history(obj)
   local item, key = get_history(cfgCommands, obj)
 
   if key=="AltF11" or key=="RAltF11" then return "view" end
   if key=="AltF12" or key=="RAltF12" then return "folders" end
 
-  if item then
+  if item and IsCmdLineAvail() then
     if IsCtrlEnter(key) then
       panel.SetCmdLine(nil, item.text)
     else
@@ -584,8 +590,7 @@ local function export_Open (From, Guid, Item)
       Title=M.mPluginTitle, HelpTopic="Contents", Flags="FMENU_WRAPMODE",
     }
     local items = {
-      { disable = (From ~= F.OPEN_PLUGINSMENU),
-        text=M.mMenuCommands,   run_cycle=true; param="commands" },
+      { text=M.mMenuCommands,   run_cycle=true; param="commands" },
       { text=M.mMenuView,       run_cycle=true; param="view"     },
       { text=M.mMenuFolders,    run_cycle=true; param="folders"  },
       { text=M.mMenuConfig,     action=export_Configure },

@@ -2,6 +2,11 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2017-08-07, v3.8.1
+  [*] Commands history dialog made available from Editor and Viewer (an attempt
+      to execute a command would close the dialog and the command wouldn't execute).
+  [*] Macros: a minor change.
+
 2017-08-06, v3.8.0
   [+] Switching between histories (commands/view and edit/folders) directly from the dialog.
   [+] View and Edit history: Ctrl-PgDn: go to the file in active panel and open the file.
