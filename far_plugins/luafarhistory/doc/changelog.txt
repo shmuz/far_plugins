@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2017-09-23, v3.8.2
+  [!] Locate file: was error on Ctrl-I press.
+  [*] Refactoring (mainly in custommenu module).
+
 2017-08-07, v3.8.1
   [*] Commands history dialog made available from Editor and Viewer (an attempt
       to execute a command would close the dialog and the command wouldn't execute).

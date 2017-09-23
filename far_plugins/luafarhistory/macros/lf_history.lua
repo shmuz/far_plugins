@@ -22,6 +22,6 @@ Macro {
 
 Macro {
   description="LuaFAR History: locate file";
-  area="Shell"; key="CtrlShiftSpace";
+  area="Shell"; key="CtrlSpace";
   condition=LFH_exist; action=function() LFH_run"5" end;
 }

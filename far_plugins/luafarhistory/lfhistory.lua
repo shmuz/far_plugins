@@ -156,7 +156,9 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
   return function (self, hDlg, key, Item)
     -----------------------------------------------------------------------------------------------
     if key=="CtrlI" or key=="RCtrlI" then
-      SortListItems(self, not _Plugin.Cfg.bDirectSort, hDlg)
+      if HistTypeConfig==cfgCommands or HistTypeConfig==cfgView or HistTypeConfig==cfgFolders then
+        SortListItems(self, not _Plugin.Cfg.bDirectSort, hDlg)
+      end
       return "done"
     elseif key=="F3" or key=="F4" or key=="AltF3" or key=="AltF4" then
       if not Item then
@@ -199,11 +201,6 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
           end
         end
       end
-      return "done"
-    -----------------------------------------------------------------------------------------------
-    elseif key == "F8" then
-      self.xlat = not self.xlat
-      self:ChangePattern(hDlg, self.pattern)
       return "done"
     -----------------------------------------------------------------------------------------------
     elseif key == "F9" then

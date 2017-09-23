@@ -43,6 +43,14 @@ end
 local List = {}
 local ListMeta = { __index=List }
 
+local function SetParam(trg, src, key, default)
+  if default == nil then
+    trg[key] = src[key]
+  else
+    trg[key] = src[key] or default
+  end
+end
+
 -- new custom list
 local function NewList (props, items, bkeys, startId)
   assert (type(props) == "table")
@@ -56,14 +64,14 @@ local function NewList (props, items, bkeys, startId)
   self.flags     = FlagsToInt(P.flags)
   self.items     = items
   self.startId   = startId or 1
-  self.title     = P.title or ""
+  SetParam(self, P, "title", "")
   self:SetIndexData()
 
   -- Variables
-  self.bottom    = P.bottom or ""
+  SetParam(self, P, "bottom", "")
   self.drawitems = items
   self.fulltitle = self.title
-  self.sel       = P.sel or 1
+  SetParam(self, P, "sel", 1)
   -- fields initialized to nil:
   --   w, h, upper, clickX, clickY
 
@@ -77,24 +85,36 @@ local function NewList (props, items, bkeys, startId)
     self.hmax = max(1, P.hmax or 19)
   end
 
-  self.autocenter= P.autocenter
+  SetParam(self, P, "autocenter")
   self.col_highlight         = P.col_highlight or GetColor(COL_MENUHIGHLIGHT)
   self.col_selectedhighlight = P.col_selectedhighlight or GetColor(COL_MENUSELECTEDHIGHLIGHT)
   self.col_selectedtext      = P.col_selectedtext or GetColor(COL_MENUSELECTEDTEXT)
   self.col_text              = P.col_text or GetColor(COL_MENUTEXT)
   self.ellipsis  = (P.ellipsis or 1) % 4
-  self.filterlines = P.filterlines
-  self.margin    = P.margin or "  "
-  self.pattern   = P.pattern or ""
-  self.resizeH   = P.resizeH
-  self.resizeScreen = P.resizeScreen
-  self.resizeW   = P.resizeW
-  self.rmargin   = 1 -- right margin length
-  self.searchmethod = P.searchmethod or "regex"
-  self.searchstart = P.searchstart or 1
-  self.selalign  = P.selalign or "center" -- top/center/bottom/
-  self.selignore = P.selignore
-  self.xlat      = P.xlat
+  SetParam(self, P, "filterlines")
+  SetParam(self, P, "margin", "  ")
+  SetParam(self, P, "pattern", "")
+  SetParam(self, P, "resizeH")
+  SetParam(self, P, "resizeScreen")
+  SetParam(self, P, "resizeW")
+  self.rmargin = 1 -- right margin length
+  SetParam(self, P, "searchmethod", "regex")
+  SetParam(self, P, "searchstart", 1)
+  SetParam(self, P, "selalign", "center") -- top/center/bottom/
+  SetParam(self, P, "selignore")
+  SetParam(self, P, "xlat")
+
+  SetParam(self, P, "keys_searchmethod",      "F5")
+  SetParam(self, P, "keys_ellipsis",          "F6")
+  SetParam(self, P, "keys_showitem",          "F7")
+  SetParam(self, P, "keys_xlatonoff",         "F8")
+  SetParam(self, P, "keys_clearpattern",      {"Del","NumDel"})
+  SetParam(self, P, "keys_checkitem",         {"Ins","Num0"})
+  SetParam(self, P, "keys_copyitem",          {"CtrlC","CtrlIns","CtrlNum0","RCtrlC","RCtrlIns","RCtrlNum0"})
+  SetParam(self, P, "keys_deleteitem",        {"ShiftDel","ShiftNumDel"})
+  SetParam(self, P, "keys_copyfiltereditems", {"CtrlShiftIns","RCtrlShiftIns","CtrlShiftNum0","RCtrlShiftNum0"})
+  SetParam(self, P, "keys_delfiltereditems",  {"CtrlDel","RCtrlDel","CtrlNumDel","RCtrlNumDel"})
+  SetParam(self, P, "keys_applyxlat",         {"CtrlAltX","RCtrlAltX","CtrlRAltX","RCtrlRAltX"})
 
   self:SetSize()
   self:SetUpperItem()
@@ -528,8 +548,9 @@ function List:ChangePattern (hDlg, pattern)
   end
   self.fulltitle = (self.pattern == "") and self.title or
     self.title.." ["..self.pattern.."]" -- .. (pat2 and "["..pat2.."]" or "")
-  self.bottom = ("%d of %d items [%s%s]"):format(#self.drawitems, #self.items,
-    self.searchmethod, self.xlat and ",xlat" or "")
+  self.bottom = ("%d of %d items [%s:%s, %s:xlat=%s]"):format(#self.drawitems, #self.items,
+    self.keys_searchmethod or "", self.searchmethod,
+    self.keys_xlatonoff or "", self.xlat and "on" or "off")
   self:UpdateSizePos(hDlg)
 end
 
@@ -740,6 +761,15 @@ function List:ToggleSearchMethod (hDlg)
   self:ChangePattern(hDlg, self.pattern)
 end
 
+local function FindKey (t, key)
+  if t == key then return key end
+  if type(t) == "table" then
+    for _,v in ipairs(t) do
+      if v == key then return key end
+    end
+  end
+end
+
 function List:Key (hDlg, key)
   local Item = self.drawitems[self.sel]
   if self.keyfunction then
@@ -764,41 +794,43 @@ function List:Key (hDlg, key)
   elseif key == "Enter" or key == "NumEnter" then
     return Item, Item and self.idata[Item].index
 
-  elseif key == "CtrlC" or key == "CtrlIns" or key == "CtrlNum0" or
-         key == "RCtrlC" or key == "RCtrlIns" or key == "RCtrlNum0" then
+  elseif FindKey(self.keys_copyitem, key) then
     self:CopyItemToClipboard()
 
-  elseif key == "CtrlShiftIns" or key == "RCtrlShiftIns" or
-         key == "CtrlShiftNum0" or key == "RCtrlShiftNum0" then
+  elseif FindKey(self.keys_copyfiltereditems, key) then
     self:CopyFilteredItemsToClipboard()
 
-  elseif key == "Ins" or key == "Num0" then
+  elseif FindKey(self.keys_checkitem, key) then
     if Item then Item.checked = not Item.checked or nil end
 
-  elseif key == "F6" then
+  elseif FindKey(self.keys_ellipsis, key) then
     self.ellipsis = (self.ellipsis + 1) % 4
 
-  elseif key == "F7" then
+  elseif FindKey(self.keys_showitem, key) then
     if Item then far.Message(Item.text:sub(self.searchstart), "Full Item Text", ";Ok") end
 
   elseif self.filterlines then
 
-    if (key == "Del" or key == "NumDel") and self.pattern ~= "" then
+    if FindKey(self.keys_clearpattern, key) and self.pattern ~= "" then
       self:ChangePattern(hDlg, "")
 
     elseif key == "BS" and self.pattern ~= "" then
       self:ChangePattern(hDlg, self.pattern:sub(1,-2))
 
-    elseif key == "F5" then
+    elseif FindKey(self.keys_searchmethod, key) then
       self:ToggleSearchMethod(hDlg)
 
-    elseif key == "ShiftDel" or key == "ShiftNumDel" then
+    elseif FindKey(self.keys_deleteitem, key) then
       self:DeleteCurrentItem(hDlg)
 
-    elseif key=="CtrlDel" or key=="RCtrlDel" or key=="CtrlNumDel" or key=="RCtrlNumDel" then
+    elseif FindKey(self.keys_delfiltereditems, key) then
       self:DeleteFilteredItems(hDlg, true)
 
-    elseif key:match("^R?CtrlR?AltX$") then
+    elseif FindKey(self.keys_xlatonoff, key) then
+      self.xlat = not self.xlat
+      self:ChangePattern(hDlg, self.pattern)
+
+    elseif FindKey(self.keys_applyxlat, key) then
       local result = far.XLat(self.pattern, nil, nil, "XLAT_SWITCHKEYBLAYOUT")
       if result then self:ChangePattern(hDlg, result) end
 

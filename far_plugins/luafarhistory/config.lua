@@ -21,7 +21,7 @@ local function ExecuteDialog (aData, aMsgTitle)
   D.bDynResize   = {"DI_CHECKBOX", 35,3,  0, 0,  0, 0,  0, 0, M.mDynResize}
   D.bAutoCenter  = {"DI_CHECKBOX", 35,4,  0, 0,  0, 0,  0, 0, M.mAutoCenter}
 
-  D.sep                 = {"DI_TEXT",        5, 7, 0, 0,  0, 0, 0,  {DIF_BOXCOLOR=1,DIF_SEPARATOR=1,DIF_CENTERTEXT=1}, M.mSepColors}
+  D.sep                 = {"DI_TEXT",       -1, 7, 0, 0,  0, 0, 0,  {DIF_BOXCOLOR=1,DIF_SEPARATOR=1,DIF_CENTERTEXT=1}, M.mSepColors}
   D.btnHighTextColor    = {"DI_BUTTON",      5, 8, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.mBtnHighTextColor}
   D.labHighTextColor    = {"DI_TEXT",   offset, 8, 0, 0,  0, 0, 0,  0,  M.mTextSample}
   D.btnSelHighTextColor = {"DI_BUTTON",      5, 9, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.mBtnSelHighTextColor}
