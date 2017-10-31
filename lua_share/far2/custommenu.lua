@@ -109,6 +109,7 @@ local function NewList (props, items, bkeys, startId)
   SetParam(self, P, "keys_showitem",          "F7")
   SetParam(self, P, "keys_xlatonoff",         "F8")
   SetParam(self, P, "keys_clearpattern",      {"Del","NumDel"})
+  SetParam(self, P, "keys_insertpattern",     {"CtrlV","RCtrlV","ShiftIns","ShiftNum0"})
   SetParam(self, P, "keys_checkitem",         {"Ins","Num0"})
   SetParam(self, P, "keys_copyitem",          {"CtrlC","CtrlIns","CtrlNum0","RCtrlC","RCtrlIns","RCtrlNum0"})
   SetParam(self, P, "keys_deleteitem",        {"ShiftDel","ShiftNumDel"})
@@ -813,6 +814,13 @@ function List:Key (hDlg, key)
 
     if FindKey(self.keys_clearpattern, key) and self.pattern ~= "" then
       self:ChangePattern(hDlg, "")
+
+    elseif FindKey(self.keys_insertpattern, key) then
+      local str = far.PasteFromClipboard()
+      if str then
+        str = str:gsub("[\r\n].*", "")
+        self:ChangePattern(hDlg, str)
+      end
 
     elseif key == "BS" and self.pattern ~= "" then
       self:ChangePattern(hDlg, self.pattern:sub(1,-2))

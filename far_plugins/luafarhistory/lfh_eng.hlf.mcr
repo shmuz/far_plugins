@@ -32,6 +32,7 @@ title. There are 4 switchable filtering methods available:
    #Shift-Del#          Delete item from the history.
    #Ctrl-Del#           Delete all filtered items from the history.
    #Del#                Clear filter.
+   #Ctrl-V#, #Shift-Ins#  Set filter to clipboard value.
    #Ctrl-Alt-X#         Apply XLat conversion on filter and also
                       switch the keyboard layout.
    #Ctrl-I#             Inverse sort order.

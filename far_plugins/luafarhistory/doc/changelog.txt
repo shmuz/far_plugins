@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2017-10-31, v3.8.3
+  [+] Ctrl-V and Shift-Ins set current filter to value from the clipboard.
+
 2017-09-23, v3.8.2
   [!] Locate file: was error on Ctrl-I press.
   [*] Refactoring (mainly in custommenu module).
