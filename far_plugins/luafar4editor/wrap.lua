@@ -117,6 +117,7 @@ local function Wrap (aColumn1, aColumn2, aJustify, aFactor)
     editor.SetPosition (nil, Pos)
     editor.SetString(nil, nil, lines_out[i])
   end
+  editor.Redraw()
 end
 
 

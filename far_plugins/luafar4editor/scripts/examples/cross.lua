@@ -60,7 +60,7 @@ function ProcessEditorEvent(id,event,param)
   end
   if event==F.EE_REDRAW then
     if scrolllock then
-      local ei=editor.GetInfo(-1)
+      local ei=editor.GetInfo(id)
       ProcessCrest(ei.EditorID,
         function(data)
           data.start=ei.TopScreenLine

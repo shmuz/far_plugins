@@ -182,10 +182,9 @@ local function BlockSum (history)
   if ei.BlockType ~= F.BTYPE_NONE then
     local r = regex.new(pattern)
     for n=ei.BlockStartLine, ei.TotalLines do
-      local s = editor.GetString (nil, n, 1)
+      local s = editor.GetString (nil, n)
       if s.SelEnd == 0 or s.SelStart < 1 then
         blockEndLine = n - 1
-        if s.SelStart < 1 then editor.SetPosition(nil, blockEndLine) end
         break
       end
       local start, fin, sel = r:find( s.StringText:sub(s.SelStart, s.SelEnd) ) -- 'start' in selection
@@ -248,7 +247,7 @@ local function BlockSum (history)
     else
       x_start = (ei.BlockType==F.BTYPE_COLUMN) and s.SelStart or 1
     end
-    editor.SetPosition (nil, y+1, x_start)
+    editor.SetPosition (nil, y+1, x_start, nil, nil, ei.LeftPos)
     editor.InsertText(nil, prefix .. sum)
     editor.Redraw()
   else
