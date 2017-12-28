@@ -73,7 +73,8 @@ while true do
       end
     end
   elseif bItem.command == "info" then
-    far.Message(0~=bit64.band(mItem.info.Flags,F.FPF_LOADED) and "is loaded" or "is not loaded")
+    local loaded = far.IsPluginLoaded(mItem.info.GInfo.Guid)
+    far.Message(loaded and "is loaded" or "is not loaded")
   end
   --far.Message(result and bItem.success or bItem.fail, mItem.text)
 end
