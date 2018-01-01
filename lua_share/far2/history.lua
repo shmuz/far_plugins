@@ -5,10 +5,11 @@
        *  @param filename: file name
        *  @return:       history object
 
-    *  hobj = history.newsettings (subkey, name)
+    *  hobj = history.newsettings (subkey, name [, locat])
        *  description:   create a new history object from Far database
        *  @param subkey: subkey name of the plugin root key; nil for the root
        *  @param name:   name of the value
+       *  @param locat:  database location, either "PSL_ROAMING" (default) or "PSL_LOCAL"
        *  @return:       history object
 
   Methods of history object:
@@ -31,7 +32,8 @@
        *  @return:       value
        *  example:       hist:setfield("mydialog.namelist.width", 120)
 
-    *  hobj:save()
+    *  hobj:save ([locat])
+       *  @param locat:  file name or database location, defaults to value used when object was created
        *  description:   save history object
 
     *  str = hobj:serialize()
@@ -103,25 +105,24 @@ local function GetSubkey (sett, strSubkey)
   return iSubkey
 end
 
-local function newsettings (strSubkey, strName)
-  far.FreeSettings()
-  local sett = far.CreateSettings()
+local function newsettings (strSubkey, strName, flgLocation)
+  flgLocation = flgLocation or "PSL_ROAMING"
+  local sett = far.CreateSettings(nil, flgLocation)
   if sett then
     local iSubkey = strSubkey and GetSubkey(sett, strSubkey) or 0
     local data = sett:Get(iSubkey, strName, "FST_DATA") or ""
     sett:Free()
     local self = new(loadstring(data))
-    self.Subkey, self.Name = strSubkey, strName
+    self.Subkey, self.Name, self.Location = strSubkey, strName, flgLocation
     return self
   end
 end
 
-function history:save()
+function history:save (location)
   if self.FileName then
-    serial.SaveToFile (self.FileName, "Data", self.Data)
+    serial.SaveToFile (location or self.FileName, "Data", self.Data)
   elseif self.Name then
-    far.FreeSettings()
-    local sett = far.CreateSettings()
+    local sett = far.CreateSettings(nil, location or self.Location)
     if sett then
       local iSubkey = self.Subkey and GetSubkey(sett, self.Subkey) or 0
       sett:Set(iSubkey, self.Name, "FST_DATA", self:serialize())

@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-01-01, v3.9.0
+  [*] History items are now kept in the local database file (was: roaming database file).
+
 2017-10-31, v3.8.3
   [+] Ctrl-V and Shift-Ins set current filter to value from the clipboard.
 

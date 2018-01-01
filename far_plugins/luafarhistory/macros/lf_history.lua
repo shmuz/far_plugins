@@ -1,6 +1,6 @@
 local LFHistory = "a745761d-42b5-4e67-83da-f07af367ae86"
 local function LFH_exist() return Plugin.Exist(LFHistory) end
-local function LFH_run(key) Plugin.Menu(LFHistory) Keys(key) end
+local function LFH_run(key) if Plugin.Menu(LFHistory) then Keys(key) end end
 
 Macro {
   description="LuaFAR History: commands";

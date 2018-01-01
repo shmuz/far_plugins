@@ -12,10 +12,10 @@ bootscript = $(path_plugin)\$(PROJECT).lua
 
 scripts = \
   $(path_plugin)\_globalinfo.lua \
+  $(path_plugin)\lfh_message.lua \
   $(path_plugin)\config.lua
 
 modules = \
-  $(path_plugin)*lfh_message.lua     \
   $(path_share)*serial.lua           \
   $(path_share)*far2\history.lua     \
   $(path_share)*far2\custommenu.lua  \

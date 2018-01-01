@@ -817,10 +817,7 @@ function List:Key (hDlg, key)
 
     elseif FindKey(self.keys_insertpattern, key) then
       local str = far.PasteFromClipboard()
-      if str then
-        str = str:gsub("[\r\n].*", "")
-        self:ChangePattern(hDlg, str)
-      end
+      self:ChangePattern(hDlg, str and str:match("^[^\r\n]*") or "")
 
     elseif key == "BS" and self.pattern ~= "" then
       self:ChangePattern(hDlg, self.pattern:sub(1,-2))

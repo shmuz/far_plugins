@@ -2,7 +2,7 @@
 
 local F = far.Flags
 local dialog = require "far2.dialog"
-local M = require "lfh_message"
+local Cfg, M = ...
 
 local Guid1 = win.Uuid("05d16094-0735-426c-a421-62dae2db6b1a")
 local function ExecuteDialog (aData, aMsgTitle)
@@ -64,5 +64,4 @@ local function ExecuteDialog (aData, aMsgTitle)
   end
 end
 
-local Cfg = ...
 return ExecuteDialog(Cfg, M.mPluginTitle .. ": " .. M.mSettings)

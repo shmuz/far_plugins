@@ -1,23 +1,25 @@
 -- coding: UTF-8
 -- luacheck: globals _Plugin
 
+far.ReloadDefaultScript = true
+package.loaded["far2.custommenu"] = nil
+
+local custommenu = require "far2.custommenu"
 local Utils      = require "far2.utils"
 local LibHistory = require "far2.history"
-package.loaded["far2.custommenu"] = nil
-local custommenu = require "far2.custommenu"
+local M          = Utils.RunInternalScript("lfh_message")
+local F          = far.Flags
+local FarId      = ("\0"):rep(16)
+local NetBoxId   = win.Uuid("42E4AEB1-A230-44F4-B33C-F195BB654931")
 
-local FirstRun = ... --> this works with Far >= 3.0.4425
-if FirstRun then
-  _Plugin = Utils.InitPlugin()
-  _Plugin.History = LibHistory.newsettings(nil, "config")
-  package.path = far.PluginStartupInfo().ModuleDir .. "?.lua;" .. package.path
-end
-
-local M = require "lfh_message"
-local F = far.Flags
-local bor = bit64.bor
-local FarId = ("\0"):rep(16)
-local NetBoxId = win.Uuid("42E4AEB1-A230-44F4-B33C-F195BB654931")
+local DefaultCfg = {
+  bDynResize  = true,
+  bAutoCenter = true,
+  bDirectSort = true,
+  iSizeCmd    = 1000,
+  iSizeView   = 1000,
+  iSizeFold   = 1000,
+}
 
 local cfgView = {
   PluginHistoryType = "view",
@@ -79,15 +81,6 @@ local function ExecuteFromCmdLine(str, newwindow)
   panel.SetCmdLine(nil, str)
   far.MacroPost(newwindow and 'Keys"ShiftEnter"' or 'Keys"Enter"')
 end
-
-local DefaultCfg = {
-  bDynResize  = true,
-  bAutoCenter = true,
-  bDirectSort = true,
-  iSizeCmd    = 1000,
-  iSizeView   = 1000,
-  iSizeFold   = 1000,
-}
 
 local function GetTimeString (filetime)
   local ft = win.FileTimeToLocalFileTime(filetime)
@@ -347,7 +340,7 @@ local function get_history (aConfig, obj)
   local menu_items, map = {}, {}
 
   -- add plugin database items
-  local hst = LibHistory.newsettings(nil, aConfig.PluginHistoryType)
+  local hst = LibHistory.newsettings(nil, aConfig.PluginHistoryType, "PSL_LOCAL")
   local plugin_items = hst:field("items")
   local settings = hst:field("settings")
   for _,v in ipairs(plugin_items) do
@@ -510,7 +503,7 @@ local function LocateFile2()
     items[k] = {text=prefix..v.FileName}
   end
 
-  local hst = LibHistory.newsettings(nil, cfgLocateFile.PluginHistoryType)
+  local hst = LibHistory.newsettings(nil, cfgLocateFile.PluginHistoryType, "PSL_ROAMING")
   local settings = hst:field("settings")
 
   local menuProps, list = MakeMenuParams(_Plugin.Cfg, cfgLocateFile, settings, items, hst)
@@ -543,7 +536,7 @@ local PluginConfigGuid1 = win.Uuid("688f9ee4-d0ac-49d0-b66b-8dbaa989f22c")
 local function export_GetPluginInfo()
   return {
     CommandPrefix = "lfh",
-    Flags = bor(F.PF_EDITOR, F.PF_VIEWER),
+    Flags = bit64.bor(F.PF_EDITOR, F.PF_VIEWER),
     PluginConfigGuids   = PluginConfigGuid1.."",
     PluginConfigStrings = { M.mPluginTitle },
     PluginMenuGuids   = PluginMenuGuid1.."",
@@ -552,7 +545,7 @@ local function export_GetPluginInfo()
 end
 
 local function export_Configure()
-  if Utils.RunInternalScript("config", _Plugin.Cfg) then
+  if Utils.RunInternalScript("config", _Plugin.Cfg, M) then
     _Plugin.History:save()
   end
 end
@@ -593,16 +586,20 @@ local function export_Open (From, Guid, Item)
       { text=M.mMenuConfig,     action=export_Configure },
       { text=M.mMenuLocateFile, action=LocateFile2      },
     }
+    local numInternalItems = #items
     Utils.AddMenuItems(items,
       From==F.OPEN_PLUGINSMENU and userItems.panels or
       From==F.OPEN_EDITOR and userItems.editor or
       From==F.OPEN_VIEWER and userItems.viewer, M)
     ---------------------------------------------------------------------------
-    local item = far.Menu(properties, items)
+    local item, pos = far.Menu(properties, items)
     if item then
-      if item.run_cycle then RunCycle(item.param)
-      elseif item.action then item.action()
-      else Utils.RunUserItem(item, item.arg)
+      if pos <= numInternalItems then
+        if item.run_cycle then RunCycle(item.param)
+        elseif item.action then item.action()
+        end
+      else
+        Utils.RunUserItem(item, item.arg)
       end
     end
   end
@@ -615,10 +612,12 @@ local function SetExportFunctions()
 end
 
 do
+  local FirstRun = ... --> this works with Far >= 3.0.4425
   if FirstRun then
+    _Plugin = Utils.InitPlugin()
+    _Plugin.History = LibHistory.newsettings(nil, "config", "PSL_ROAMING")
     _Plugin.Cfg = _Plugin.History:field("config")
     setmetatable(_Plugin.Cfg, {__index = DefaultCfg})
   end
   SetExportFunctions()
-  far.ReloadDefaultScript = true
 end
