@@ -1,0 +1,740 @@
+------------------------------------------------------------------
+  Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
+------------------------------------------------------------------
+
+2017-10-21, v3.39.5
+  [!] Operations from panels: fix handling of empty files.
+  [!] Operations from panels: fix progress indicator for files larger than 2 GiB.
+  [!] Panels (Rename): redraw both panels after the operation.
+
+2017-07-19, v3.39.4
+  [*] Editor ("Repeat" operations):
+      The choice of repeat operation (search or replace) is now per-file based.
+      When a file is just opened in the editor the initial repeat operation is search.
+  [-] Function lfsearch.EditorAction: "sLastOp" parameter is not processed anymore.
+
+2017-07-08, v3.39.3
+  [*] Editor ("Highlight all" option): keep highlighting in Grep results.
+
+2017-07-07, v3.39.2
+  [*] Editor ("Highlight all" option):
+      reset previous highlight in the editor on every next operation started from the dialog.
+
+2017-07-01, v3.39.1
+  [!] Editor ("count" and "replace" operations):
+      if the wrap-around query was rejected by the user, the summary message box was not shown.
+  [*] "Pick search string from editor" setting:
+      if there's no word under cursor then a search string from the history is taken.
+  [+] New macro: "Jump from Grep results to file and position under cursor".
+
+2017-06-07, v3.39.0
+  [!] Panel operations (Find/Replace/Grep):
+        a) avoid infinite cycles in junctions and symlinks
+        b) avoid finding same file multiple times (e.g. both within a junction and its target)
+
+2017-06-02, v3.38.0
+  [*] Rebuild all DLLs with GCC 7.1.0.
+
+2017-06-02, Addon v.1.9
+  [*] Rebuild all DLLs with GCC 7.1.0.
+
+2017-05-29, v3.37.10
+  [!] Editor: interactive replace in selection was finding only the first match and then stopped.
+      (This bug existed since v3.32.1).
+
+2017-05-28, v3.37.9
+  [+] Panels (Rename): log file lists values of all options used in the operation.
+  [*] Editor (replace in selection): restore the selection if no replaces were done.
+
+2017-05-24, v3.37.8
+  [*] "Whole words" search option:
+      word boundary is required only when the pattern starts or ends with a "word" character.
+
+2017-05-22, v3.37.7
+  [!] Editor ("Show All"): mouse button click outside the dialog did not close it immediately.
+
+2017-05-22, v3.37.6
+  [+] Editor ("Show All"): new hotkey F8 closes the Search Results List and reopens the Search Dialog.
+
+2017-04-30, v3.37.5
+  [!] Panel operations: eliminate some situations where the "progress" window disappears,
+      e.g. after closing "Access denied" dialog.
+
+2017-04-08, v3.37.4
+  [*] Minor speed optimizations in replace functions.
+
+2017-04-07, Addon v.1.8
+  [*] Oniguruma : update from v.5.9.6 to 6.1.3
+  [*] PCRE      : update from v.8.36  to 8.40
+
+2017-04-06, v3.37.3
+  [*] Several minor improvements.
+
+2017-04-04, v3.37.2
+  [*] Several minor improvements.
+
+2017-03-24, v3.37.1
+  [!] There were cases when lengthy operations from panel could not be cancelled by pressing Esc.
+
+2017-03-21, v3.37.0
+  [+] Directory filter in panels Search/Replace/Grep.
+
+2017-03-18, v3.36.2
+  [*] Improve layout in some dialogs.
+  [!] Grep: in the latest builds of Far the search results appeared not highlighted
+      until some button (e.g. Up) was pressed.
+
+2017-03-09, v3.36.1
+  [*] Editor (Multi-Line Replace dialog): layout was redesigned.
+  [!] Find from panels ("Multiple patterns" option): minor fixes.
+
+2017-03-07, v3.36.0
+  [+] Find from panels: added "Multiple patterns" option.
+  [-] Find from panels: "Inverse search" checkbox is NOT dynamically enabled/disabled.
+  [*] Some dialogs: layout was redesigned.
+
+2017-02-22, v3.35.1
+  [*] Find from panels: "Inverse search" option:
+      - the initial checkbox state is forced off on first dialog invocation in Far session;
+      - the checkbox is dynamically disabled when the search string becomes empty;
+  [*] Editor ("Show All"): eliminate flashing when pressing cursor keys in the menu.
+
+2017-02-13, v3.35.0
+  [*] Presets: if values for some dialog items are missing from the preset data, the items are now
+      reset to their default values.
+  [*] Presets: the "Delete preset" confirmation dialog now shows the preset's name.
+  [!] Editor: if the user invoked the Find (or Replace) dialog, changed some settings then pressed
+      the "Configuration" button then after returning from the Configuration dialog those changes
+      were gone. (This bug is at least 7 years old).
+
+2017-02-10, v3.34.0
+  [+] Find from panels: added "Inverse search" option.
+
+2017-02-06, v3.33.4
+  [!] Replace from panels: pressing "Cancel current file" button caused in effect skipping further
+      files. (This bug existed since v3.0.0 that means during 5 years).
+
+2017-02-06, v3.33.3
+  [*] Multi-line replace dialog: if a syntax error is detected in a text input field then focus
+      and select text in that field.
+  [!] Find from panels dialog: "File as a line" option was always enabled, even when "Regular
+      expression" option was off.
+
+2016-11-26, v3.33.2
+  [*] "Rename": do not force update/redraw of passive panel after rename.
+
+2016-11-26, v3.33.1
+  [!] "Rename": remove a delay in updating the panels after rename.
+
+2016-11-25, v3.33.0
+  [+] "Rename": add 'Advanced' section to the dialog ('Initial code' and 'Final code' input fields).
+
+2016-11-08, v3.32.4
+  [!] Editor: search/replace in selection: if N lines were fully stream-selected, ^ and $ were found
+      in (N+1)-th line. (This bug existed since v3.29.0).
+
+2016-11-06, v3.32.3
+  [!] Editor: another fix in selection in "Find word under cursor" operation.
+
+2016-11-06, v3.32.2
+  [!] Editor: fix in selection in "Find word under cursor" operation.
+
+2016-11-05, v3.32.1
+  [!] Editor: fixes in selection and cursor position after replace.
+
+2016-11-05, v3.32.0
+  [+] New configuration option for editor: "Select found".
+
+2016-10-27, v3.31.1
+  [*] Improvements in help.
+  [*] Editor ("Show All"): added a dedicated help window.
+
+2016-10-24, v3.31.0
+  [*] Replace (and Rename) in "function mode": if the 1-st return value is a number, it is converted to string.
+  [+] Dialogs: if a syntax error is detected in a text input field then focus and select text in that field.
+
+2016-10-09, v3.30.5
+  [!] Elaboration of v3.30.4.
+
+2016-10-08, v3.30.4
+  [*] Replace operations: the "invalid group number" error is now detected right in the dialog
+      rather than in the run time.
+
+2016-10-02, v3.30.3
+  [!] Editor: minor fixes.
+
+2016-09-21, v3.30.2
+  [*] Editor: "Wrap around" option made 3-state. The 3-rd state means asking the user.
+
+2016-09-17, v3.30.1
+  [*] Editor (replace): "Delete non-matched lines" option now honors "Confirm replacement" option.
+
+2016-09-16, v3.30.0
+  [+] Editor (search/replace): add "Wrap around" option.
+
+2016-07-11, v3.29.2
+  [!] Editor (repeat/reverse repeat): remove dependency on "found/not found" in previous search.
+
+2016-07-10, v3.29.1
+  [!] Editor (search, replace): fix horizontal offset (LeftPos) in repeated searches.
+
+2016-07-01, v3.29.0
+  [!] Editor (replace): fix final cursor position with option "Delete non-matched line".
+  [*] Editor: refactor search and replace functions.
+  [*] Updated Spanish localization (thanks to Mauro72).
+
+2016-06-17, v3.28.1
+  [!] Minor corrections in help and language files.
+
+2016-06-16, v3.28.0
+  [+] Editor (replace): new option "Delete non-matched line".
+
+2016-06-04, v3.27.2
+  [!] Editor (repeat): suppress second error message about invalid regular expression.
+  [*] Editor (search, replace): do not reset the existing highlighting unless "Highlight All" checkbox is checked.
+
+2016-05-22, v3.27.1
+  [!] Fixes in "Preserve contents" option.
+  [*] Panels: faster panel creation.
+
+2016-05-21, v3.27.0
+  [+] Panels: "Panel" menu item.
+  [+] Panels (configuration): "Preserve contents" option.
+  [+] A macro for calling the panel.
+
+2016-05-20, v3.26.4
+  [*] Editor (replace): multiple substitutions are undone all in a single undo operation.
+
+2016-05-13, v3.26.3
+  [*] Search from panels: faster export.GetFindData() processing.
+
+2016-05-12, v3.26.2
+  [+] Search from panels: add "The search is over, please wait..." message box.
+
+2016-05-10, v3.26.1
+  [!] Search from panels: the progress dialog incorrectly displayed number of files at the end of search.
+
+2016-05-10, v3.26.0
+  [*] Panels (search results panel): save list files in (UTF-8 + BOM) format.
+  [+] Search from panels: the search made faster due to updating progress info every 100ms (was: on every file).
+
+2016-05-06, v3.25.2
+  [!] Panels (search results panel): 3 fixes.
+
+2016-04-26, v3.25.1
+  [!] Panels (Grep): fix processing with "Inverse search" option.
+
+2016-03-11, v3.25.0
+  [+] Panels (Grep): added "Inverse search" option.
+  [!] Panels (Replace and Grep): dialog settings were not saved to plugin's database if the dialog was invoked
+      via Plugin.Call().
+  [*] Panels (search results panel): when saving contents to file the default file extension is .temp (was: .tmp2).
+
+2016-03-05, v3.24.0
+  [+] Panels (Grep): it is possible to specify numbers of context lines before and after a matched line.
+  [+] Editor (Grep output): configurable colors for highlighting line numbers, separate for matched lines
+      and context lines.
+  [*] Editor (Grep output): when the context is specified, insert an empty line between contiguous line groups.
+
+2016-02-29, v3.23.1
+  [!] Editor Replace dialog: several dialog items were missing.
+
+2016-02-25, v3.23.0
+  [+] Panels: added a separate Grep dialog.
+      [+] Option to show line numbers.
+      [+] Option to highlight matches.
+      [+] A new macrocommand for calling Grep dialog and a new macro in the included macrofile.
+  [!] Panels: grep showed scrambled text when PCRE library was selected.
+  [!] Panels: temporary files with grep output were placed into Far history.
+
+2016-02-19, v3.22.4
+  [*] Editor: "Reset Highlight" menu item (->off) replaced with "Toggle Highlight" (on->off, off->on).
+      The supplied macro changed accordingly (but one can use the old macro if reset is preferred to toggle).
+
+2016-02-18, v3.22.3
+  [!] Editor: fix endless loop when "Highlight All" option is checked and the matches are empty strings.
+
+2016-02-11, v3.22.2
+  [+] Editor: add a macrocommand for "Reset Highlight" operation. Add a macro to the included macrofile.
+
+2016-02-11, v3.22.1
+  [+] Editor (plugin's menu): add "Reset Highlight" operation.
+
+2016-02-11, v3.22.0
+  [+] Editor (search/replace): add "Highlight all" operation parameter (and a checkbox in dialogs).
+      The color for highlighting can be changed via configuration dialog.
+  [+] Editor ("Show all"): do vertical scrolling with mouse wheel.
+
+2016-02-07, v3.21.0
+  [+] Panels: add "Grep" operation (and a button) to the Replace dialog.
+
+2015-12-19, v3.20.2
+  [*] Editor: improve final messages of replace operations.
+  [!] Panels: file filter functionality was broken since version 3.19.0.
+
+2015-11-29, v3.20.1
+  [+] In most plugin dialogs DI_EDIT fields made editable in the editor by pressing F4.
+  [!] Editor ("Show all"): fix incorrect selection in the editor when Search Scope == selected text.
+  [*] Editor ("Show all"): restore or reset selection after Esc was pressed.
+
+2015-11-23, v3.20.0
+  [+] Editor ("Show all"):
+        CtrlUp, CtrlDown, CtrlHome, CtrlEnd : scroll the editor not closing the list.
+        CtrlNum0 : restore editor position after scrolling.
+  [!] Editor ("Show all"):
+        Make an extra redraw to fix "invisible selection" in modal editors
+        (this is a workaround due to a FAR bug).
+  [*] Editor (replace): try to not cover the found text with the replace prompt dialog.
+  [+] Editor: if the editor is locked then the replace operations prompt to unlock it.
+
+2015-11-03, v3.19.5
+  [*] Editor: exclude time of editor.Redraw() from the total time count of an operation.
+  [*] Editor ("Show all"): restore editor position when Esc was pressed.
+
+2015-08-28, v3.19.4
+  [*] Search from panels: simplify algorithm, unconditionally read files 4 megabyte chunk at a time.
+
+2015-08-26, v3.19.3
+  [!] Search results panel: did not work copying from another temporary panel.
+  [*] Search from panels:
+      Change order of buttons in the user-break dialog. Make "Cancel current file" the default button.
+  [*] Editor ("Show all"): add flag FMENU_WRAPMODE.
+  [!] Editor ("Show all"): fix left mouse button click.
+
+2015-08-14, v3.19.2
+  [*] Maintenance release.
+
+2015-08-04, v3.19.1
+  [+] Editor: "Show all" menu automatically changes its screen position to not cover
+      the line containing the current selected item.
+
+2015-08-02, v3.19.0
+  [!] Editor replace: fix "attempt to perform arithmetic on local 'x1' (a nil value)".
+  [!] Editor: place sSearchPat and sReplacePat in dialog history only if they are valid.
+  [+] Editor: "Show all" menu scrolls the editor text to the current selected item.
+
+2015-05-05, v3.18.0
+  [*] Rebuilt with the new generic plugin source (executes %FARPROFILE%\luafar_init.lua).
+  [!] Fix loading from preset (broken in 3.16.0).
+
+2015-04-29, v3.17.2
+  [!] Lrexlib: fix crash bug in Oniguruma binding.
+
+2015-04-06, v3.17.1
+  [*] Editor: a word under cursor is captured also when the cursor is next to the word's end.
+  [*] "Find word under cursor":
+        - The word under cursor is selected before the search begins.
+        - No message box shown when the previous/next match is not found.
+  [!] Editor: display of the operation progress and the ability to break a long operation
+      did not work since v.3.7.0.
+
+2015-04-04, v3.17.0
+  [*] When Oniguruma or PCRE library can not be loaded an error message is shown
+      and the dialog does not close.
+  [+] Editor: "Find word under cursor" and "Find word under cursor (reverse)".
+  [*] Lrexlib updated: 2.7.2 -> 2.8.0.
+
+2015-01-25, v3.16.3
+  [!] Editor: (PCRE, reverse search): fixed the long-standing bug "error PCRE_ERROR_BADUTF8_OFFSET".
+  [!] Search result panel: panel mode could not be changed via configuration dialog.
+
+2015-01-14, v3.16.2
+  [!] "Pick search string from Editor" did not work when cursor was on the last word character.
+  [!] "Rename": counter (\R) in replace pattern started from 2 in subdirectories.
+
+2015-01-05, v3.16.1
+  [+] Replace pattern can contain more captures ($0, $1-$9 and $A-$Z now supported).
+  [!] "Rename": counter (\R) in replace pattern was broken.
+
+2014-11-28, v3.16.0
+  [+] Editor (dialog history): new configuration option "Process selected text if it exists".
+  [*] Editor (dialog history): store 2 values for "origin", separately for scope==global
+        and scope==selected. Restore "origin" from the corresponding value.
+  [*] Editor (search behavior): if scope==selected && origin==cursor
+        && (cursor is outside of the block) then behave as if origin==scope.
+  [+] Panels (replace dialog): "Advanced", "Initial code" and "Final code" controls added.
+  [+] New configuration dialog: "Settings in editor".
+
+2014-11-23, v3.15.0
+  [!] "Rename": cosmetic fix (double slash in some cases, e.g. D:\\Temp\Scanned).
+  [*] "Multi-line Replace": do not touch editor text if number of replacements is zero.
+  [*] All "function mode" replaces: an undocumented type of the 1-st return value
+      will not throw an error anymore, it will just result in no replacement made.
+  [!] Editor operations: in some error cases the editor status line was not restored.
+  [+] lfsearch.EditorAction got 3-rd parameter "SaveData".
+
+2014-10-10, v3.14.2
+  [!] Replace from panels (function mode): the 2-nd return value was ignored
+      when the 1-st return value equalled true.
+
+2014-10-05, v3.14.1
+  [!] "Rename" was broken.
+
+2014-10-04, v3.14.0
+  [+] Replace from panels (function mode): if the 1-st return value == true,
+      the line (or part of it) is deleted along with its EOL.
+  [+] Replace from panels (function mode): during automatic action (when the
+      confirmation dialog is not invoked), the 2-nd return value, when it is
+      true, breaks the operation.
+  [+] Replace in "function mode": variable `M` contains the number of the
+      current match.
+  [*] Updated Spanish localization (thanks to Mauro72).
+
+2014-10-02, v3.13.0
+  [+] "Rename": added operation indicator; operation breaks by Esc.
+  [+] "Multi-line Replace": added operation indicator; operation breaks by Esc.
+
+2014-09-30, v3.12.0
+  [+] Insertion of current date/time in the replace string: \D{format}.
+  [+] "Rename": log file name can be changed via configuration dialog.
+  [+] Editor (function mode): if the 1-st return value == true, the line
+      is deleted.
+  [+] Editor (function mode): during automatic action (when the confirmation
+      dialog is not invoked), the 2-nd return value, when it is true, breaks
+      the operation.
+  [+] "Multi-line Replace" (function mode): the 2-nd return value, when it is
+      true, breaks the operation.
+
+2014-09-25, v3.11.1
+  [!] "Rename": 6 bugs fixed.
+  [+] "Rename": log file can be used to revert from a rename operation.
+
+2014-09-24, v3.11.0
+  [+] "Rename": extended dialog and capabilities.
+
+2014-09-21, v3.10.2
+  [!] "Rename" was totally broken since v3.10.0.
+
+2014-09-21, v3.10.1
+  [!] Panels: when the replacing function raised an error files were left open.
+
+2014-09-18, v3.10.0
+  [-] "Lua regex" removed from the list of supported libraries.
+  [+] "Multi-line Replace": extended dialog and capabilities.
+
+2014-09-17, v3.9.0
+  [+] Support of named groups (submatches). Only with Oniguruma or PCRE.
+  [!] "Multi-line Replace": a little fix.
+
+2014-09-14, v3.8.2
+  [+] "Rename": added diagnostic messages.
+
+2014-09-13, v3.8.1
+  [!] "Rename": 2 little fixes.
+  [+] "Multi-line Replace": replace pattern has the same syntax
+      and capabilities as in the usual "Replace" dialog.
+
+2014-09-11, v3.8.0
+  [*] PLUGIN: new syntax for Plugin.Call.
+  [*] Editor: boost performance in "replace in selection" mode.
+  [+] Editor: added "Multi-line Replace" utility.
+  [+] Panels: added "Rename" utility.
+
+2014-08-16, v3.7.2
+  [+] Replace in "function mode": variable `R` contains the number of the current replacement.
+  [*] Replace in "function mode": a table containing captured submatches renamed from `t` to `T`.
+  [!] Replace from panels: two critical bugs (data loss) fixed.
+
+2014-08-11, v3.7.1
+  [*] When the plugin is started first time in a Far session, some settings are
+      set to safe defaults rather than to the stored last used values.
+  [*] Lrexlib updated to its current GitHub's state.
+
+2014-08-10, v3.7.0
+  [+] Added Spanish localization (thanks to Mauro72).
+  [*] "Repeat" in the editor: last editor operation no more depends on last
+      panel operation.
+  [!] Info in editor's status line was incorrect during interactive replace.
+
+2014-04-14, v3.6.6
+  [*] Changed navigation order of buttons \ and / in the dialogs.
+  [*] A number of hot keys in the dialogs made the same as in the similar
+      Far dialogs.
+
+2014-04-11, v3.6.5
+  [*] After pressing \ or / button in the dialog, the focus moves
+      to the corresponding edit line.
+  [+] A macrofile added.
+
+2014-04-10, v3.6.4
+  [*] Plugin links to lua51.dll rather than to lua5.1.dll.
+  [!] Panels: ^ and $ in regular expressions did not work for start and end
+      of individual lines.
+
+2014-03-07, v3.6.2
+  [+] Added "escaping" buttons \ and / in the dialogs.
+
+2014-02-12, v3.6.1
+  [*] Plugin does not rely on LuaFAR anymore to include its path in package.path.
+
+2014-01-16, v3.6.0
+  [+] Editor: new operation: "Repeat (reverse search)".
+  [*] Editor: "Show all" operation shows all found matches rather than
+      only the first match in a line.
+  [*] Editor: do not show final message box in "manual" replace operation.
+  [!] Editor: fix operation of `fUserChoiceFunc` in scripts.
+  [!] Panels: memory was not freed due to missing export FreeFindDataW.
+
+2013-11-17, v3.5.3
+  [!] With "Use Far history" option cleared, "Search for" dialog field never
+      picked up the value of sSearchPat used in EditorAction("test:xxx").
+  [!] Panels: incorrect use of file filters with directories.
+
+2013-10-19, v3.5.2
+  [+] Added function lfsearch.SetDebugMode.
+  [!] Panels: option "Search area" == "From the root of X:" did not work.
+
+2013-10-07, v3.5.0
+  [*] Dialog "Editor Settings" renamed to "Common settings".
+
+  [+] Added configuration option "Use Far history".
+
+  [!] Configuration changes were not saved to database when a configuration
+      dialog was invoked from another ("parent") dialog and the latter
+      was cancelled by the user.
+
+2013-10-04, v3.4.3
+  [*] Syntax of macro calls has changed again (run lfs: to see the syntax).
+
+  [*] API change: use lfsearch.EditorAction rather than _G.EditorAction.
+
+  [!] Editor (reported by A.Rakhmatullin): "на длинных строках возникают
+      проблемы: я не вижу контекст, в котором будет производиться замена".
+
+  [!] Editor (reported by A.Rakhmatullin): "не сохранять настройки окон
+      поиска/замены при отмене операции по пресету".
+
+  [!] Editor: internal function `ScrollToPosition` was mostly not adapted
+      to the LuaFAR API changes happened in March-April 2013.
+
+  [!] Editor: plugin history was saved to database even when the user cancelled
+      the operation.
+
+2013-08-27, v3.4.2
+  [!] Editor: fix processing of empty matches with Lua regex and PCRE.
+
+2013-08-22, v3.4.1
+  [*] Editor: UNDO moving "advanced" dialog group to a separate dialog.
+
+2013-08-22, v3.4.0
+  [!] Editor: selection of the last interactive replace string was offset by -1.
+  [*] Editor: "advanced" dialog group moved to a separate dialog.
+  [*] Editor: if during interactive replace the matched string is empty, one
+      character is selected nevertheless in order to show where the match is.
+  [*] Panels: search result panel enables highlighting of files and sort groups.
+
+2013-07-26, v3.3.0
+  [*] Syntax of macro calls has changed:
+      -- The 1-st argument must be string: one of the registered commands.
+      -- There can be arbitrary number of additional arguments.
+      -- There can be arbitrary number of returns.
+  [!] Line numbers shown in the "Search results" of "Show all" operation
+      were offset by 1.
+
+2013-04-02, v3.2.0
+  [*] Adapted for current LuaFAR API.
+
+2012-12-16, v3.1.2
+  [!] Fix centering text in dialog separator.
+
+2012-10-30, v3.1.1
+  [*] Rebuild for current Far plugins API.
+
+2012-09-29, v3.1.0
+  [*] Editor replace, function mode: use 1 variable (table t) for captures,
+      rather than 10 variables c0...c9.
+
+2012-03-24, v3.0.3
+  [!] Fix color of highlighted text in replace confirmation dialogs.
+  [+] Add file filter in panel operations.
+  [+] Panel search: progress window displays number of processed files.
+
+2012-03-08, v3.0.2
+  [*] File masks are processed by Far rather than the plugin.
+  [!] Editor: "replace in selected" worked incorrectly on vertical blocks
+      if the text preceding selection contained tabs.
+  [+] Plugin can work with LuaJIT.
+
+2012-02-15, v3.0.1
+  [!] Two fixes in codepage detection.
+  [!] Fix selection in Editor after replacements using Lua or PCRE library.
+  [-] Option "Ignore spaces" made unavailable when (Regex Library == Lua regex).
+  [+] Option "File as a line" in the panel search dialog.
+  [+] Add configuration menu and function export.Configure.
+  [+] User menu items can be added to and run from the Panel and Configuration menus.
+  [*] lfsearch-addon: use pcre.dll compiled with flag NO_RECURSE.
+
+2012-01-17, v3.0.0
+  [*] Works with Far 3.0 / LuaFAR 3.0.
+  [*] GUID instead of SysId.
+  [*] Plugin uses its own temporary panel in "Find files" operation.
+  [+] Operations with presets from the dialogs.
+  [*] _usermenu.lua: syntax and functionality made the same as
+      in LuaFAR for Editor plugin.
+  [+] Plugin can be called from macros and command line.
+  [+] Editor operations ending with message box display operation time.
+  [+] Highlight matched and replacement strings in confirmation dialogs.
+  [+] "Confirm replacement" checkbox in Editor Replace dialog.
+  [+] Replace operation from panels.
+
+2011-01-28, v2.4.0
+  [*] Removed option "pick search string from plugin history".
+      (Far dialog history is always used).
+  [+] "Find files" from panels.
+  [+] GUIDs added to the editor and panel dialogs.
+  [+] Plugin got a SysId (0x10001) for calling with 'callplugin'
+      (currently this call will only display its 2-nd parameter).
+
+2010-12-26, v2.3.0
+  [*] Search scope of Repeat operation is always "global" and never "block",
+      regardless of the previous operation's search scope.
+  [+] Search string can be picked from Far history (selectable from the
+      configuration dialog).
+  [!] Preset operation data is placed into plugin history, the same way as
+      "usual operation" data. That means Repeat operation will properly work
+      after a preset operation.
+  [+] 64-bit build added (works with 64-bit LuaFAR).
+  [*] Plugin keeps its data in "%APPDATA%\LuaFAR Search" directory
+      (was: in the plugin directory).
+
+
+2010-11-14, v2.2.0
+  [+] Improved performance of search.
+  [+] Improved interactivity during lengthy operations.
+  [+] "Show All" command: matched substrings are highlighted.
+
+
+2010-10-27, v2.1.1
+  [!] rex_onig.dll and rex_pcre.dll renamed to *.dl, in order to avoid their
+      loading/unloading by Far.
+  [!] PCRE library: did not work with PCRE versions older than 8.10.
+  [!] All regex libraries (except Lua) in non-regex searches: pattern |
+      was being "found", even when | was not present in the searched text.
+
+
+2010-08-30, v2.1.0
+  [+] "Ignore spaces" option become available for Lua regexp library.
+  [!] Lua regexp library: patterns starting with ^ worked from any position.
+  [!] Reverse search: patterns ending with $ worked from any position.
+      Note: subpatterns {m,n} can still work incorrectly in reverse search.
+  [+] Self-test operates with all available regexp libraries.
+
+
+2010-07-25, v2.0.1
+  [!] plugin didn't work installed on a non-ASCII path, due to using
+      plain Lua variants of (require, loadfile, io).
+  [+] PCRE: \b, \B, \d, \D, \s, \S, \w, and \W work with Unicode characters
+      (PCRE 8.10 required).
+
+
+2010-06-28, v2.0.0
+  [+] First Unicode version.
+  [*] Far 2.0 + LuaFAR 2.3 are required.
+  [+] User-selectable regular expression library
+      (Far Regex, Lua Regex, Oniguruma (optional), PCRE (optional)).
+  [+] "Scope" and "Origin" for all operations.
+  [+] Search and replace in reverse direction.
+  [+] "Delete empty line" in replace operation.
+  [*] "Repeat" operation now uses own plugin's history rather than
+      "SavedDialogHistory" registry key.
+  [*] Line Filter skips a line when its function returns true
+      (the opposite to what it used to be).
+  [-] "Wrap around" option.
+
+
+2010-02-04, v0.9.1
+  [*] LuaFAR 1.1 is required (was: 1.0).
+  [*] PCRE ver. 8.01 is embedded (was: ver. 8.00)
+  [!] LuaFAR version check was done after the exported functions were
+      already connected (that is, too late).
+
+
+2009-12-24, v0.9
+  [*] LuaFAR 1.0 is required (was: >= 0.8).
+  [*] PCRE built with no recursion: slower but safer.
+  [*] Empty search pattern is not accepted: error message is displayed.
+  [*] Pressing Enter on the dialog containing an invalid field value
+      will display error message without closing the dialog.
+  [!] Replace pattern, sequences of the kind \xhh :
+      -- They were affected by the text case modifiers, such as \u or \L.
+      -- They are still affected by encoding conversions (DOS to Win, etc.)
+         but that appears too hard to fix.
+         [*] For that reason, only values \xhh <= \x7F are allowed.
+  [!] Replace pattern:
+      \x25 was treated as an empty string rather than the percent sign.
+  [+] The plugin's menu made expandable: user scripts can be added.
+      API for access to the plugin internals is provided. This allows
+      to implement presets, automatic operations and other interesting things.
+  [+] Self-test added, as a user script.
+  [*] Line Filter: made function (was: expression).
+  [!] "Repeat" operation under Far 2: search/replace patterns were picked
+      from the registry without the required codepage conversion.
+
+
+2009-11-23, v0.8
+  [*] PCRE built with no UTF-8 support, as the plugin currently
+      does not support UTF-8 search. (This removed 95 KiB from the DLL).
+  [!] Eliminated excessive screen flickering during repetitive replace.
+  [!] Accommodated to the changed dialog history format introduced
+      in Far 2.0.1208 (the correct format is determined at run time).
+  [+] Russian help file added.
+  [*] In 'Function Mode' and in 'Line Filter', the preset variable for
+      the regex library is "rex" (was: "lib").
+
+
+2009-11-12, v0.7
+  [!] \E in replace pattern was treated as $E
+  [*] PCRE ver. 8.00 is embedded (was: ver. 7.8)
+  [*] Lua and LuaFAR libraries are not embedded
+
+
+2009-02-24, v0.6
+  [!] replace prompt dialog covered the line containing a match;
+  [!] top screen line position could change when no match was found;
+  [!] cursor horizontal position was incorrect after a "manual-mode" replace;
+  [+] replace pattern: counter: start value and width can be specified;
+
+
+2009-02-20, v0.5
+  [!] "show all" mode: lines containing binary nuls were displayed truncated;
+  [*] an empty string adjacent to previous match will never be matched:
+      for example, the pattern ".*" will match any line only once;
+  [+] replace pattern: groups can be $0...$9, $A...$F (was: only $0...$9);
+  [+] replace pattern: support for text case manipulation;
+  [+] replace pattern: support for counter;
+
+
+2009-02-11, v0.4
+  [!] super-slow search in blocks due to reselecting block on each line;
+  [!] premature end of search in blocks when replacing text contained \n;
+  [!] "wrap around" mode: "$" pattern was found twice on the initial line;
+  [*] "repeat" mode: use search and replace patterns from FAR history.
+      If either of them was changed by other programs, then "repeat search"
+      is performed, even when the last plugin operation was "replace";
+  [*] show found matches vertically centered on the screen;
+  [*] "show all" mode: show the first match on the line as selected text;
+  [*] scope in replace operation is determined by the user (was: automatic);
+  [+] checkbox "Replace in selection" on Replace dialog;
+
+
+2009-02-06, v0.3
+  [!] "wrap around" mode: a word couldn't be found if the cursor was
+      positioned in the middle of that word;
+  [*] better handling of syntax errors in Search and Replace dialogs;
+  [+] operation and button "Show All";
+  [+] operation and button "Count";
+  [+] button "Configuration" on Search and Replace dialogs;
+
+
+2009-02-01, v0.2
+  [+] indication of operation progress on upper status bar;
+  [+] support for \r, \n in replacing text;
+  [+] support for escape sequences of kind \xhh in replace pattern;
+  [-] option "Backslash escapes";
+  [*] take search and replace patterns from FAR history whenever applicable;
+  [*] use $0 - $9 for groups (rather than %0 - %9) in replace pattern;
+  [!] dialog history is saved even when errors occur;
+
+
+2009-01-24, v0.1
+  [+] first public release;
