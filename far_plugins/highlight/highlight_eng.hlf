@@ -1,0 +1,108 @@
+﻿.Language=English,English
+.PluginContents=Highlight
+.Options CtrlColorChar=\
+
+@Contents
+$ #Highlight - Help Contents#
+ #Highlight# is a simple syntax highlighter for Far Manager editor.
+
+ ~Installation~@Installation@
+ ~Select Syntax menu~@SelectSyntax@
+ ~Highlight Extra~@HighlightExtra@
+ ~Settings dialog~@Settings@
+ ~Macro functions~@MacroFunctions@
+
+@Installation
+$ #Installation#
+
+ This plugin requires an external library #onig.dll# (Oniguruma regular
+expressions) for its work.
+
+ The file is available from the package
+~lfsearch-addon~@http://plugring.farmanager.com/plugin.php?pid=858@.
+ Its bitness (32 or 64 bit) should match the bitness of this plugin.
+
+ #onig.dll# should be placed either in the #%farhome%# directory or in any directory on #%path%#.
+ 
+ ~Contents~@Contents@
+
+@Settings
+$ #Settings dialog#
+
+ #All files#
+ These settings are stored persistently in the plugin's database.
+ They serve only for initialization of the #Current file# settings when
+ a file is opened in the editor. Changing them in the dialog has no
+ immediate effect. They are saved upon pressing the OK button.
+ 
+ #Current file#
+ These settings directly influence a few aspects of the plugin's
+ operation on the currently open editor contents.
+
+ #[x] Highlight#
+ Turn highlighting on/off.
+
+ #[x] Fast rendering#
+ This is an operation mode that begins analyzing editor's text
+ starting from a predefined number of lines above the screen top
+ line, rather than from the very first line of the editor.
+
+ #Lines#
+ Number of lines above the screen top that are analyzed in Fast
+ rendering mode.
+
+ #Color priority#
+ An integral number ranging from 0 to 2^32-1.
+
+ #Benchmark#
+ Press this button to measure the time of the editor redraw. For
+ better accuracy this operation takes at least 1 sec.
+
+ #Debug mode#
+ Reload the startup Lua file of the plugin before the next opening of
+ this dialog.
+
+ \3BNOTE:\-
+ Changing states of checkboxes in the #Current file# group, as well
+ as pressing the #Benchmark# button cause editor redraw.
+ Prior to the redraw, the values of #Lines# and #Color priority# fields
+ are read and become active.
+
+ ~Contents~@Contents@
+
+@SelectSyntax
+$ #Select Syntax menu#
+
+ The menu shows the available syntaxes and allows to select any of
+them for highlighting the editor.
+ If some syntax is currently active in the editor then its name is
+shown checked in the menu.
+
+ ~Contents~@Contents@
+
+@HighlightExtra
+$ #Highlight Extra#
+
+ This dialog is similar to a search dialog in editors.
+It contains settings of a required search.
+
+ Press #Enter# to highlight all pieces of text in the editor that match
+the specified search parameters, in addition to the usual syntax highlighting.
+
+ Press #Reset# to remove that "extra" highlighting from the editor.
+
+ ~Contents~@Contents@
+
+@MacroFunctions
+$ #Macro functions
+
+ #Plugin.Call(Guid, "own", "SelectSyntax")#
+ Shows the ~Select Syntax menu~@SelectSyntax@.
+
+ #Plugin.Call(Guid, "own", "HighlightExtra")#
+ Shows the ~Highlight Extra dialog~@HighlightExtra@.
+
+ #Plugin.Call(Guid, "own", "Settings")#
+ Shows the ~Settings dialog~@Settings@.
+
+ ~Contents~@Contents@

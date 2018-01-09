@@ -1,0 +1,69 @@
+------------------------------------------------------------------
+  Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
+------------------------------------------------------------------
+
+2016-04-20, v0.4.5
+  [+] Syntax Menu: add the item "Highlight OFF" and a separator.
+  [*] Choosing a syntax from Syntax Menu acts as if the file was just open in the editor
+      (discards all changes that might be made to current file settings).
+  [+] Syntax files: the table-parameter to Class() may contain a (number) 'fastlines' parameter
+      that overrides the configuration setting for the given class.
+  [+] Syntax files: add syntax_intel_hex.lua.
+
+2015-05-02, v0.4.4
+  [!] Fix "attempt to index a nil value" error when a highlighted editor was
+      open but not active and ACTL_REDRAWALL was called by another plugin.
+
+2015-04-29, v0.4.3
+  [!] Fix application hanging when the syntax is empty.
+  [!] Lrexlib: fix crash bug in Oniguruma binding.
+
+2015-04-26, v0.4.2
+  "Highlight Extra" dialog:
+    [+] Not closed on invalid regular expression.
+    [+] Settings made persistent (stored in database).
+    [+] Configurable color.
+
+2015-04-25, v0.4.1
+  [!] "Highlight Extra" dialog: help (F1) did not work.
+
+2015-04-25, v0.4
+  [*] Syntax change: bcolor->bgcolor, fcolor->fgcolor.
+  [+] Highlighting of matching brackets: (), [] and {}.
+      Syntax settings: bracketmatch (default=false), bracketcolor (default=0x1C).
+  [+] "Highlight extra" functionality.
+  [+] Syntax file: syntax_batch.lua.
+
+2015-04-21, v0.3
+  [*] Changed regex engine from Far Manager regex to Oniguruma.
+      The former does not allow to specify flags for subexpressions, e.g. "(?i)".
+  [!] In a macro call, if the macro had the "EnableOutput" flag, after selecting syntax via
+      Plugin.Call(Guid,"own","SelectSyntax"), the editor was not redrawn.
+  [!] Multi-line comments of kind {...} were treated incorrectly.
+  [+] Syntax files: syntax_ini.lua, syntax_lng.lua, syntax_pascal.lua.
+
+2014-11-11, v0.2.1
+  [+] Menu "Select syntax".
+  [+] Macro functions "Settings" and "SelectSyntax".
+  [+] Syntax file : syntax_makefile.lua.
+  [+] Macro file  : highlight.lua.
+
+2014-11-04, v0.2
+  [*] Renames in the syntax files: 'Syntax'->'Class', 'elements'->'syntax'.
+  [+] New fields in the syntaxes: 'bcolor', 'fcolor'.
+  [+] Dialog: "Benchmark" button and benchmark result field.
+  [+] Dialog: "Lines" edit controls.
+  [+] Doc files    : changelog.txt, license.txt.
+  [+] Help file    : highlight_eng.hlf.
+  [+] Syntax files : syntax_moonscript.lua, syntax_hlf.lua.
+
+2014-10-23, v0.1.2
+  [*] Rebuild DLL's using embedding source code processed by LuaSrcDiet, instead of LuaJIT 2.0 byte
+      codes (there was a complaint from a user that the plugin would not work with LuaJIT 2.1).
+
+2014-10-22, v0.1.1
+  [!] Two libraries ('serial' and 'far2.history') were not included in v0.1; as the result,
+      the plugin did not work on other people systems.
+
+2014-10-22, v0.1
+  [+] First public release.
