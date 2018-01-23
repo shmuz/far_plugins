@@ -741,6 +741,44 @@ function List:DeleteFilteredItems (hDlg, bConfirm)
   end
 end
 
+-- Delete some items from the currently displayed items
+function List:DeleteNonexistentItems (hDlg, fExist, fConfirm)
+  if self.drawitems[1] then
+    local n = 0
+    local items, idata = self.items, self.idata
+    -- mark nonexistent items
+    for _,v in ipairs(self.drawitems) do
+      if not fExist(v) then
+        idata[v].marked = true
+        n = n + 1
+      end
+    end
+    if n > 0 then
+      if not fConfirm or fConfirm(n) then
+        for k,v in pairs(idata) do
+          if v.marked then
+            items[v.index] = false
+            idata[k] = nil
+          end
+        end
+        local shift = 0
+        for i,v in ipairs(items) do
+          if v == false then
+            shift = shift + 1
+          elseif shift > 0 then
+            items[i-shift] = v
+            idata[v].index = i-shift
+          end
+        end
+        for i=#items,#items-shift+1,-1 do items[i] = nil end
+        self:ChangePattern(hDlg, self.pattern)
+      else
+        for _,v in pairs(idata) do v.marked = nil end
+      end
+    end
+  end
+end
+
 function List:CopyItemToClipboard()
   local Item = self.drawitems[self.sel]
   if Item then far.CopyToClipboard(Item.text:sub(self.searchstart)) end

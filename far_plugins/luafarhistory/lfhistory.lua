@@ -196,6 +196,17 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
       end
       return "done"
     -----------------------------------------------------------------------------------------------
+    elseif key == "CtrlF8" or key == "RCtrlF8" then
+      if HistTypeConfig == cfgFolders or HistTypeConfig == cfgView then
+        far.Message(M.mPleaseWait, "", "")
+        self:DeleteNonexistentItems(hDlg,
+            function(t) return t.text:find("^NetBox:") or win.GetFileAttr(t.text) end,
+            function(n) return 1 == far.Message((M.mDeleteItemsQuery):format(n),
+                        M.mDeleteNonexistentTitle, ";YesNo", "w") end)
+        hDlg:send("DM_REDRAW", 0, 0)
+      end
+      return "done"
+    -----------------------------------------------------------------------------------------------
     elseif key == "F9" then
       local s = HistObject:getfield("lastpattern")
       if s and s ~= "" then self:ChangePattern(hDlg,s) end

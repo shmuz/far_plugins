@@ -36,12 +36,13 @@ title. There are 4 switchable filtering methods available:
    #Ctrl-Alt-X#         Apply XLat conversion on filter and also
                       switch the keyboard layout.
    #Ctrl-I#             Inverse sort order.
+   #Alt-F8#             Switch to Commands history.
+   #Alt-F11#            Switch to View/Edit history.
+   #Alt-F12#            Switch to Folders history.
 
  \3BCommands history\-
    #Enter#              Execute.
    #Shift-Enter#        Execute in a new window.
-   #Alt-F11#            Switch to View/Edit history.
-   #Alt-F12#            Switch to Folders history.
 
  \3BView/Edit history\-
    #F3#                 View.
@@ -52,14 +53,12 @@ title. There are 4 switchable filtering methods available:
    #Shift-Enter#        View or edit (item position is not changed).
    #Ctrl-PgUp#          Go to the file (in active panel).
    #Ctrl-PgDn#          Go to the file (in active panel) and open it.
-   #Alt-F8#             Switch to Commands history.
-   #Alt-F12#            Switch to Folders history.
+   #Ctrl-F8#            Delete non-existent items
 
  \3BFolders history\-
    #Enter#              Change directory (active panel).
    #Shift-Enter#        Change directory (passive panel).
-   #Alt-F8#             Switch to Commands history.
-   #Alt-F11#            Switch to View/Edit history.
+   #Ctrl-F8#            Delete non-existent items
 
  \3BLocate file\-
    #Enter#              Locate file in the active panel.

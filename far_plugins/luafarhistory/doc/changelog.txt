@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-01-23, v3.9.1
+  [+] Ctrl-F8 deletes non-existent items in View/Edit and Folders menus.
+
 2018-01-01, v3.9.0
   [*] History items are now kept in the local database file (was: roaming database file).
 
