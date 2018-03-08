@@ -1,0 +1,38 @@
+﻿.Language=English,English
+
+"Polygon"
+"Polygon"
+"SQLite DDL: "
+"SQLite PRAGMA statements"
+
+"&Add to the panel plugin menu"
+"&Prefix:"
+"&Honor foreign keys"
+
+"Name"
+"Type"
+"Count"
+
+"Reading database..."
+"Executing SQL query..."
+
+"Insert row"
+"Edit row"
+"Drop selected items?"
+"SQLite: Data export"
+"&Export %s to:"
+"File format:"
+"&Text"
+"Export"
+"&Preserve line feeds"
+
+"Unable to open database"
+"Error reading database"
+"Error executing SQL query"
+"Error reading file"
+"Error writing file"
+"Row removal in tables without ROWID is not implemented"
+"Row editing in tables without ROWID is not implemented"
+
+"Save"
+"Cancel"

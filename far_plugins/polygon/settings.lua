@@ -1,0 +1,64 @@
+-- settings.lua
+
+local history = require "far2.history"
+local data
+
+local Params = ...
+local M = Params.M
+local F = far.Flags
+
+local function InitSetting (tbl, key, val)
+  if tbl[key] == nil then tbl[key]=val end
+end
+
+local settings = {}
+
+function settings.load()
+  data = history.newsettings(nil, "root")
+  local hPlugin   = data:field("plugin")
+  local hExporter = data:field("exporter")
+
+  InitSetting(hPlugin,   "prefix",        "polygon")
+  InitSetting(hPlugin,   "add_to_menu",   false)
+  InitSetting(hPlugin,   "foreign_keys",  true)
+
+  InitSetting(hExporter, "format",        "csv")
+  InitSetting(hExporter, "multiline",     true)
+  
+  return data
+end
+
+function settings.configure()
+  data = data or settings.load()
+  local plugdata = data:getfield("plugin") -- plugin-level data
+  local PM = plugdata.add_to_menu  and 1 or 0
+  local FK = plugdata.foreign_keys and 1 or 0
+
+  local dlg_items = {
+    --[[1]]  {"DI_DOUBLEBOX", 3,1,46,7,  0, 0,0,0, M.ps_title },
+    --[[2]]  {"DI_TEXT",      5,2,13,2,  0, 0,0,0, M.ps_cfg_prefix },
+    --[[3]]  {"DI_EDIT",     14,2,44,2,  0, 0,0,0, plugdata.prefix },
+    --[[4]]  {"DI_CHECKBOX",  5,3,46,3,  PM,0,0,0, M.ps_cfg_add_pm },
+    --[[5]]  {"DI_CHECKBOX",  5,4,46,4,  FK,0,0,0, M.ps_cfg_foreign_keys },
+    --[[6]]  {"DI_TEXT",      5,5, 5,5,  0, 0,0,F.DIF_BOXCOLOR+F.DIF_SEPARATOR, "" },
+    --[[7]]  {"DI_BUTTON",    5,6,46,6,  0, 0,0,F.DIF_CENTERGROUP+F.DIF_DEFAULTBUTTON, M.ps_save },
+    --[[8]]  {"DI_BUTTON",    5,6,46,6,  0, 0,0,F.DIF_CENTERGROUP, M.ps_cancel },
+  }
+  local edtPrefix = 3
+  local btnAddToMenu, btnForeignKeys, btnCancel = 4, 5, 8
+
+  local guid = win.Uuid("A8968CEC-B1A3-45C0-AB8C-B39DB7C96B38")
+  local rc = far.Dialog(guid,-1,-1,50,9,nil,dlg_items)
+  if rc >= 1 and rc ~= btnCancel then
+    plugdata.prefix       = dlg_items[edtPrefix     ][10]
+    plugdata.add_to_menu  = dlg_items[btnAddToMenu  ][ 6] ~= 0
+    plugdata.foreign_keys = dlg_items[btnForeignKeys][ 6] ~= 0
+    data:save()
+  end
+end
+
+function settings.save()
+  if data then data:save() end
+end
+
+return settings
