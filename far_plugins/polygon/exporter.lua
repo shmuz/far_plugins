@@ -306,7 +306,7 @@ function exporter.get_text(stmt, idx, multiline)
     if blob_len >= MAX_BLOB_LENGTH then tmp[#tmp+1] = "..."; end
     data = table.concat(tmp)
   else
-    data = tostring(stmt:get_value(idx) or "")
+    data = stmt:get_column_text(idx)
     -- Replace unreadable symbols
     if not multiline then
       data = string.gsub(data, patt_unreadable, " ")
