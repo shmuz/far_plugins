@@ -1,0 +1,23 @@
+﻿.Language=English,English
+.PluginContents=Polygon
+.Options CtrlColorChar=\
+
+@Contents
+$ #Polygon - Help Contents#
+ #Reference of keyboard actions when the plugin's panel is active#
+
+   View       │ Key         │ Action
+   ───────────┼─────────────┼───────────────────────────────────────────────────
+   Any        │ F6          │ Open Editor for editing an "SQLite query"
+              │             │
+   DB View    │ F3          │ View contents of table under cursor
+              │ F4          │ View create statement of table under cursor
+              │ ShiftF4     │ View pragma statements
+              │ F5          │ Invoke "Data export" dialog for table under cursor
+              │             │
+   Table View │ F4, Enter   │ Invoke "Edit row" dialog for row under cursor
+              │ ShiftF4     │ Invoke "Insert row" dialog
+   ───────────┴─────────────┴───────────────────────────────────────────────────
+
+   If command line is not empty then Enter will execute an "SQLite query"
+   from the command line.
