@@ -64,8 +64,7 @@ end
 
 function export.Analyse(info)
   if info.FileName and info.FileName~="" and
-     sqlite.format_supported(info.Buffer, #info.Buffer)
-  then
+        sqlite.format_supported(info.Buffer, #info.Buffer) then
     return info.FileName
   end
 end
@@ -85,9 +84,15 @@ function export.Open(OpenFrom, Guid, Item)
     end
 
   elseif OpenFrom == F.OPEN_PLUGINSMENU then
-    local item = panel.GetCurrentPanelItem(nil, 1)
-    if item then
-      file_name = far.ConvertPath(item.FileName, "CPM_FULL")
+    -- Make sure that current panel item is a real existing file.
+    local info = panel.GetPanelInfo(nil, 1)
+    if info and info.PanelType == F.PTYPE_FILEPANEL and band(info.Flags,F.OPIF_REALNAMES) ~= 0 then
+      local item = panel.GetCurrentPanelItem(nil, 1)
+      if item then
+        local name = far.ConvertPath(item.FileName, "CPM_FULL")
+        local attr = win.GetFileAttr(name)
+        if attr and not attr:find("d") then file_name = name; end
+      end
     end
   end
 

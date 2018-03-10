@@ -1,3 +1,6 @@
+??????
+    1. When invoked from Plugins Menu, the plugin checks if the current panel item is a real file.
+
 2018-03-09, v.0.1.1
     1. Fixed conversion from numbers to text.
     2. Added help files and changelog.
