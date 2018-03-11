@@ -121,33 +121,41 @@ function exporter:export_data(file_name, db_object, fmt, multiline)
   -- Get maximum width for each column
   local columns_width = {}
   if fmt == fmt_text then
-    local query = "select "
+    local query_val, query_len = "select ", "select "
     for i = 1, columns_count do
-      if i > 1 then query = query .. ", "; end
-      query = query .. "max(length([" .. columns_descr[i].name .. "]))"
+      if i > 1 then
+        query_val = query_val .. ", "
+        query_len = query_len .. ", "
+      end
+      query_val = query_val .. "[" .. columns_descr[i].name .. "]"
+      query_len = query_len .. "length([" .. columns_descr[i].name .. "])"
     end
-    query = query .. " from '" .. db_object .. "'"
+    query_val = query_val .. " from '" .. db_object .. "'"
+    query_len = query_len .. " from '" .. db_object .. "'"
 
+    for i = 1, columns_count do
+      columns_width[i] = columns_descr[i].name:len() -- initialize with widths of titles
+    end
     local db = self._db:db()
-    local stmt = db:prepare(query)    
-    if stmt and stmt:step() == sql3.ROW then
-      for i = 1, columns_count do
-        columns_width[i] = stmt:get_value(i-1) or 1
+    local stmt_val = db:prepare(query_val)
+    local stmt_len = db:prepare(query_len)
+    if stmt_val and stmt_len then
+      while stmt_val:step() == sql3.ROW do
+        stmt_len:step()
+        for i = 1, columns_count do
+          local w = stmt_len:get_value(i-1) or 1
+          if stmt_val:get_column_type(i-1) == sql3.BLOB then
+            w = w*2 + #tostring(w) + 5 -- correction for e.g. [24]:0x
+          end
+          columns_width[i] = math.max(columns_width[i], w)
+        end
       end
-    else
-      for i = 1, columns_count do
-        columns_width[i] = 20
-      end
+      stmt_val:finalize()
+      stmt_len:finalize()
     end
     for i = 1, columns_count do
-      if columns_width[i] < columns_descr[i].name:len() then
-        columns_width[i] = columns_descr[i].name:len()
-      end
-      if columns_width[i] > MAX_TEXT_LENGTH then
-        columns_width[i] = MAX_TEXT_LENGTH
-      end
+      columns_width[i] = math.min(columns_width[i], MAX_TEXT_LENGTH)
     end
-    stmt:finalize()
   end
 
   -- Create output file
