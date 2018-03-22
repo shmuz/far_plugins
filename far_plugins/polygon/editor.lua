@@ -13,9 +13,9 @@ local myeditor = {}
 local mt_editor = {__index=myeditor}
 
 
-function myeditor.neweditor(db, table_name, rowid_name)
+function myeditor.neweditor(dbx, table_name, rowid_name)
   local self = setmetatable({}, mt_editor)
-  self._db = db
+  self._dbx = dbx
   self._table_name = table_name or ""
   self._rowid_name = rowid_name
   return self
@@ -32,11 +32,11 @@ function myeditor:update()
   local db_data = {}
   local query = "select * from "..self._table_name.." where "..self._rowid_name.."="..row_id
 
-  local db = self._db:db()
+  local db = self._dbx:db()
   local stmt = db:prepare(query)
   if not stmt or stmt:step() ~= sql3.ROW then
     if stmt then stmt:finalize() end
-    local err_descr = self._db:last_error()
+    local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_read.."\n"..err_descr)
     return
   end
@@ -66,7 +66,8 @@ function myeditor:update()
   end
   stmt:finalize()
 
-  if myeditor.edit(db_data, false) and self:exec_update(row_id, db_data) then
+  local newdata = myeditor.edit(db_data, false)
+  if newdata and self:exec_update(row_id, newdata) then
     panel.UpdatePanel(nil, 1)
     panel.RedrawPanel(nil, 1)
   end
@@ -78,8 +79,8 @@ function myeditor:insert()
 
   -- Get columns description
   local columns_descr = {}
-  if not self._db:read_column_description(self._table_name, columns_descr) then
-    local err_descr = self._db:last_error()
+  if not self._dbx:read_column_description(self._table_name, columns_descr) then
+    local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_read.."\n"..err_descr)
     return
   end
@@ -91,14 +92,15 @@ function myeditor:insert()
     table.insert(db_data, f)
   end
 
-  if myeditor.edit(db_data, true) and self:exec_update(nil, db_data) then
+  local newdata = myeditor.edit(db_data, true)
+  if newdata and self:exec_update(nil, newdata) then
     panel.UpdatePanel(nil, 1)
     panel.RedrawPanel(nil, 1)
   end
 end
 
 
-function myeditor.edit(db_data, create_mode) -- note that 'db_data' is both in and out
+function myeditor.edit(db_data, create_mode)
   -- Calculate dialog's size
   local max_wnd_width = 80
   local rc_far_wnd = far.AdvControl("ACTL_GETFARRECT")
@@ -168,18 +170,18 @@ function myeditor.edit(db_data, create_mode) -- note that 'db_data' is both in a
   end
 
   -- Get changed data
-  for k in pairs(db_data) do db_data[k]=nil end
+  local out = {}
   for _,v in ipairs(editor_fields) do
     if far.SendDlgMessage(dlg, F.DM_EDITUNCHANGEDFLAG, v.index, -1) == 0 then
       local f = { column={} }
       f.column.name = v.colname
       f.value = far.SendDlgMessage(dlg, F.DM_GETTEXT, v.index)
-      table.insert(db_data, f)
+      table.insert(out, f)
     end
   end
 
   far.DialogFree(dlg)
-  return #db_data > 0
+  return #out > 0 and out
 end
 
 
@@ -202,8 +204,8 @@ function myeditor:remove(items, items_count)
       end
       if query then
         query = query .. " " .. items[i].FileName
-        if not self._db:execute_query(query) then
-          local err_descr = self._db:last_error()
+        if not self._dbx:execute_query(query) then
+          local err_descr = self._dbx:last_error()
           ErrMsg(M.ps_err_sql.."\n"..query.."\n"..err_descr)
           break
         end
@@ -217,8 +219,8 @@ function myeditor:remove(items, items_count)
     end
     query = query .. ")"
 
-    if not self._db:execute_query(query) then
-      local err_descr = self._db:last_error()
+    if not self._dbx:execute_query(query) then
+      local err_descr = self._dbx:last_error()
       ErrMsg(M.ps_err_sql.."\n"..query.."\n"..err_descr)
     end
   end
@@ -253,10 +255,10 @@ function myeditor:exec_update(row_id, db_data) -- !!! 'db_data' is in/out !!!
     query = query .. ")"
   end
 
-  local db = self._db:db()
+  local db = self._dbx:db()
   local stmt = db:prepare(query)
   if not stmt then
-    local err_descr = self._db:last_error()
+    local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_sql.."\n"..err_descr)
     return false
   end
@@ -273,14 +275,14 @@ function myeditor:exec_update(row_id, db_data) -- !!! 'db_data' is in/out !!!
     end
     if bind_rc ~= sql3.OK then
       stmt:finalize()
-      local err_descr = self._db:last_error()
+      local err_descr = self._dbx:last_error()
       ErrMsg(M.ps_err_sql.."\n"..err_descr)
       return false
     end
   end
   if stmt:step() ~= sql3.DONE then
     stmt:finalize()
-    local err_descr = self._db:last_error()
+    local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_sql.."\n"..err_descr)
     return false
   end

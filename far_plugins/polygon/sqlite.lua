@@ -221,13 +221,13 @@ function sqlite:get_object_type(object_name)
   if object_name:lower() == SQLITE_MASTER:lower() then
     return sqlite.ot_master
   end
-  local stmt = self._db:prepare("select type from ".. SQLITE_MASTER .." where name=?")
-  if not stmt then return sqlite.ot_unknown; end
-  
-  if stmt:bind(1, object_name) ~= sql3.OK then stmt:finalize(); return sqlite.ot_unknown; end
-  
-  if stmt:step() ~= sql3.ROW then stmt:finalize(); return sqlite.ot_unknown; end
 
+  local stmt = self._db:prepare("select type from ".. SQLITE_MASTER .." where name=?")
+  if not (stmt and stmt:bind(1, object_name)==sql3.OK and stmt:step()==sql3.ROW) then
+    if stmt then stmt:finalize() end
+    return sqlite.ot_unknown
+  end
+  
   local tp = sqlite.object_type_by_name(stmt:get_value(0))
   stmt:finalize()
   return tp

@@ -40,8 +40,8 @@ function mypanel.open(file_name, silent, foreign_keys) -- function, not method
   }
   setmetatable(self, mt_panel)
 
-  self._db = sqlite.newsqlite();
-  if not (self._db:open(file_name, foreign_keys) and self:open_database()) then
+  self._dbx = sqlite.newsqlite();
+  if not (self._dbx:open(file_name, foreign_keys) and self:open_database()) then
     self = nil
     if not silent then
       ErrMsg(M.ps_err_open.."\n"..file_name)
@@ -61,7 +61,7 @@ end
 
 
 function mypanel:open_object(object_name)
-  local tp = self._db:get_object_type(object_name)
+  local tp = self._dbx:get_object_type(object_name)
   if tp==sqlite.ot_master or tp==sqlite.ot_table then
     self._panel_mode = pm_table
   elseif tp==sqlite.ot_view then
@@ -73,8 +73,8 @@ function mypanel:open_object(object_name)
   self._curr_object = object_name
 
   self._column_descr = {}
-  if not self._db:read_column_description(object_name, self._column_descr) then
-    local err_descr = self._db:last_error()
+  if not self._dbx:read_column_description(object_name, self._column_descr) then
+    local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_read.."\n"..err_descr)
     return false
   end
@@ -94,19 +94,19 @@ function mypanel:open_query(query)
   if select_word:lower() ~= "select" then
     -- Update query - just execute without read result
     local prg_wnd = progress.newprogress(M.ps_execsql)
-    if not self._db:execute_query(query) then
+    if not self._dbx:execute_query(query) then
       prg_wnd:hide()
-      local err_descr = self._db:last_error()
+      local err_descr = self._dbx:last_error()
       ErrMsg(M.ps_err_sql.."\n"..query.."\n"..err_descr)
       return false
     end
     prg_wnd:hide()
   else
     -- Get column description
-    local db = self._db:db()
+    local db = self._dbx:db()
     local stmt = db:prepare(query)
     if (not stmt) or (stmt:step() ~= sql3.ROW and stmt.step() ~= sql3.DONE) then
-      local err_descr = self._db:last_error()
+      local err_descr = self._dbx:last_error()
       ErrMsg(M.ps_err_sql.."\n"..query.."\n"..err_descr)
       if stmt then stmt:finalize() end
       return false
@@ -121,7 +121,7 @@ function mypanel:open_query(query)
       local col = {
         name = stmt:get_name(i);
         type = sqlite.ct_text;
-      }  
+      }
       table.insert(self._column_descr, col)
     end
 
@@ -169,9 +169,9 @@ function mypanel:get_panel_list_db()
   local prg_wnd = progress.newprogress(M.ps_reading)
 
   local db_objects = {}
-  if not self._db:get_objects_list(db_objects) then
+  if not self._dbx:get_objects_list(db_objects) then
     prg_wnd:hide()
-    local err_descr = self._db:last_error()
+    local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_read.."\n"..self._file_name.."\n"..err_descr)
     return false
   end
@@ -207,9 +207,9 @@ end
 
 
 function mypanel:get_panel_list_obj()
-  local row_count = self._db:get_row_count(self._curr_object)
+  local row_count = self._dbx:get_row_count(self._curr_object)
   if not row_count then
-    local err_descr = self._db:last_error()
+    local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_read.."\n"..err_descr)
     return false
   end
@@ -229,7 +229,7 @@ function mypanel:get_panel_list_obj()
   dot_item.CustomColumnData = dot_custom_column_data
 
   -- Find a name to use for ROWID (self._rowid_name)
-  local db = self._db:db()
+  local db = self._dbx:db()
   local query = "select * from '"..self._curr_object.."'"
   local stmt = db:prepare(query)
   if not stmt then return false end
@@ -255,7 +255,7 @@ function mypanel:get_panel_list_obj()
       self._has_rowid = false
     else
       prg_wnd:hide()
-      local err_descr = self._db:last_error()
+      local err_descr = self._dbx:last_error()
       ErrMsg(M.ps_err_read.."\n"..err_descr)
       return false
     end
@@ -268,14 +268,14 @@ function mypanel:get_panel_list_obj()
     end
     if stmt:step() ~= sql3.ROW then
       prg_wnd:hide()
-      local err_descr = self._db:last_error()
+      local err_descr = self._dbx:last_error()
       ErrMsg(M.ps_err_read.."\n"..err_descr)
-      stmt:finalize()  
+      stmt:finalize()
       return false
     end
     if progress.aborted() then
       prg_wnd:hide()
-      stmt:finalize()  
+      stmt:finalize()
       return items  -- Show incomplete data
     end
 
@@ -301,7 +301,7 @@ function mypanel:get_panel_list_obj()
   prg_wnd:update(row_count)
 
   prg_wnd:hide()
-  stmt:finalize()  
+  stmt:finalize()
   return items
 end
 
@@ -325,11 +325,11 @@ function mypanel:get_panel_list_query()
   dot_item.CustomColumnData = dot_custom_column_data
   table.insert(buff, dot_item)
 
-  local db = self._db:db()
+  local db = self._dbx:db()
   local stmt = db:prepare(self._curr_object)
   if not stmt then
     prg_wnd:hide()
-    local err_descr = self._db:last_error()
+    local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_read.."\n"..err_descr)
     return false
   end
@@ -357,9 +357,9 @@ function mypanel:get_panel_list_query()
 
   if state ~= sql3.DONE then
     prg_wnd:hide()
-    local err_descr = self._db:last_error()
+    local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_read.."\n"..err_descr)
-    stmt:finalize()  
+    stmt:finalize()
     return false
   end
 
@@ -388,7 +388,7 @@ function mypanel:prepare_panel_info()
   self._panel_info.status_widths = nil
   self._panel_info.title = M.ps_title_short .. ": " .. self._file_name:match("[^\\/]*$")
 
---  sqlite          _db               ///< Database instance
+--  sqlite          _dbx               ///< Database instance
 --  panel_mode      _panel_mode       ///< Current panel mode
 --  sqlite::sq_columns  _column_descr ///< Column description
 --  wstring        _curr_object       ///< Current viewing object name (directory name for Far)
@@ -396,7 +396,7 @@ function mypanel:prepare_panel_info()
 --  wstring        _last_sql_query    ///< Last used user's SQL query
   if self._curr_object=="" or self._curr_object==nil then
     self._panel_info.col_types     = "N,C0,C1"
-    self._panel_info.status_types  = "N,C0,C1"    
+    self._panel_info.status_types  = "N,C0,C1"
     self._panel_info.col_widths    = "0,8,9"
     self._panel_info.status_widths = "0,8,9"
     table.insert(self._panel_info.col_titles, M.ps_pt_name)
@@ -472,7 +472,7 @@ function mypanel:delete_items(items, items_count)
     return false
   end
   if self._panel_mode == pm_table or self._panel_mode == pm_db then
-    local ed = myeditor.neweditor(self._db, self._curr_object, self._rowid_name)
+    local ed = myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name)
     return ed:remove(items, items_count)
   end
   return false
@@ -480,62 +480,66 @@ end
 
 
 function mypanel:handle_keyboard(key_event)
-  local rc = false
-  local cstate = key_event.ControlKeyState
   local vcode  = key_event.VirtualKeyCode
+  local cstate = key_event.ControlKeyState
+  local nomods = cstate == 0
+  local alt    = cstate == F.LEFT_ALT_PRESSED  or cstate == F.RIGHT_ALT_PRESSED
+  local ctrl   = cstate == F.LEFT_CTRL_PRESSED or cstate == F.RIGHT_CTRL_PRESSED
+  local shift  = cstate == F.SHIFT_PRESSED
 
-  -- Ignored keys
-  if (cstate == F.LEFT_CTRL_PRESSED or cstate == F.RIGHT_CTRL_PRESSED) and vcode == ("A"):byte() then
-    rc = true
-  elseif vcode == VK.F7 then
-    rc = true
-  -- F3 (view table/view data)
-  elseif self._panel_mode == pm_db and vcode == VK.F3 then
-    self:view_db_object()
-    rc = true
-  -- F4 (view create statement)
-  elseif self._panel_mode == pm_db and cstate == 0 and vcode == VK.F4 then
-    self:view_db_create_sql()
-    rc = true
-  -- Shift-F4 (view pragma statement)
-  elseif self._panel_mode == pm_db and cstate == F.SHIFT_PRESSED and vcode == VK.F4 then
-    self:view_pragma_statements()
-    rc = true
-  -- F4 (edit row)
-  elseif self._panel_mode == pm_table and cstate == 0 and (vcode == VK.F4 or vcode == VK.RETURN) then
-    local can_be_handled = true
-    if vcode == VK.RETURN then
-      -- Skip for '..'
-      local item = panel.GetCurrentPanelItem(nil, 1)
-      can_be_handled = item and item.FileName ~= ".."
+  -- All modes -----------------------------------------------------------------
+  do
+    if ctrl and vcode == ("A"):byte() then       -- CtrlA: suppress this key
+      return true
+    elseif nomods and vcode == VK.F7 then        -- F7: suppress this key
+      return true
+    elseif nomods and vcode == VK.F6 then        -- F6: edit and execute SQL query
+      self:edit_sql_query()
+      return true
     end
-    if can_be_handled then
-      if self._panel_mode == pm_table and not (self._has_rowid and self._rowid_name) then
-        ErrMsg(M.ps_err_edit_norowid)
-      else
-        local re = myeditor.neweditor(self._db, self._curr_object, self._rowid_name)
-        re:update()
-        rc = true
-      end
-    end
-  -- Shift+F4 (insert row)
-  elseif self._panel_mode == pm_table and cstate == F.SHIFT_PRESSED and vcode == VK.F4 then
-    local re = myeditor.neweditor(self._db, self._curr_object)
-    re:insert()
-    rc = true
-  -- F5 (export table/view data)
-  elseif vcode == VK.F5 then
-    if self._panel_mode == pm_db then
-      local ex = exporter.newexporter(self._db)
-      ex:export_data_with_dialog()
-    end
-    rc = true
-  -- F6 (edit and execute SQL query)
-  elseif vcode == VK.F6 then
-    self:edit_sql_query()
-    rc = true
   end
-  return rc
+
+  -- Database view mode --------------------------------------------------------
+  if self._panel_mode == pm_db then
+    if nomods and vcode == VK.F3 then            -- F3: view table/view data
+      self:view_db_object()
+      return true
+    elseif nomods and vcode == VK.F4 then        -- F4: view create statement
+      self:view_db_create_sql()
+      return true
+    elseif shift and vcode == VK.F4 then         -- ShiftF4: view pragma statement
+      self:view_pragma_statements()
+      return true
+    elseif nomods and vcode == VK.F5 then        -- F5: export table/view data
+      local ex = exporter.newexporter(self._dbx)
+      ex:export_data_with_dialog()
+      return true
+    end
+
+  -- Panel View mode -----------------------------------------------------------
+  elseif self._panel_mode == pm_table then
+    if nomods and (vcode == VK.F4 or vcode == VK.RETURN) then -- F4 or Enter: edit row
+      if vcode == VK.RETURN then
+        local item = panel.GetCurrentPanelItem(nil, 1)
+        if not (item and item.FileName ~= "..") then          -- skip action for ".."
+          return false
+        end
+      end
+      if self._has_rowid and self._rowid_name then
+        myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name):update()
+        return true
+      else
+        ErrMsg(M.ps_err_edit_norowid)
+      end
+    elseif shift and vcode == VK.F4 then         -- ShiftF4: insert row
+      myeditor.neweditor(self._dbx, self._curr_object):insert()
+      return true
+    elseif nomods and vcode == VK.F5 then        -- F5: suppress this key
+      return true
+    end
+
+  -- All done ------------------------------------------------------------------
+  end
 end
 
 
@@ -550,7 +554,7 @@ function mypanel:view_db_object()
 
   -- For unknown types show create sql only
   if not item.FileAttributes:find("d") then
-    local cr_sql = self._db:get_creation_sql(item.FileName)
+    local cr_sql = self._dbx:get_creation_sql(item.FileName)
     if not cr_sql then
       return
     end
@@ -567,11 +571,11 @@ function mypanel:view_db_object()
       return
     end
     file:close()
-  else 
+  else
     -- Export data
-    local ex = exporter.newexporter(self._db)
+    local ex = exporter.newexporter(self._dbx)
     tmp_file_name = exporter.get_temp_file_name("txt")
-    local ok = ex:export_data(tmp_file_name, item.FileName, exporter.fmt_text )
+    local ok = ex:export_data_as_text(tmp_file_name, item.FileName)
     if not ok then return end
   end
   local title = M.ps_title_short .. ": " .. item.FileName
@@ -586,7 +590,7 @@ function mypanel:view_db_create_sql()
   -- Get selected object name
   local item = panel.GetCurrentPanelItem(nil, 1)
   if item and item.FileName ~= ".." then
-    local cr_sql = self._db:get_creation_sql(item.FileName)
+    local cr_sql = self._dbx:get_creation_sql(item.FileName)
     if cr_sql then
       local tmp_path = far.MkTemp()..".sql"
       local file = io.open(tmp_path, "w")
@@ -597,7 +601,7 @@ function mypanel:view_db_create_sql()
       else
         if file then file:close() end
         ErrMsg(M.ps_err_writef.."\n"..tmp_path, "we")
-      end   
+      end
     end
   end
 end
@@ -618,7 +622,7 @@ function mypanel:view_pragma_statements()
   local pragma_values = {}
   for _,v in ipairs(pst) do
     local query = "pragma " .. v
-    local db = self._db:db()
+    local db = self._dbx:db()
     local stmt = db:prepare(query)
     if stmt then
       if stmt:step() == sql3.ROW then
@@ -664,10 +668,10 @@ function mypanel:edit_sql_query()
       if file then file:close() end
       ErrMsg(M.ps_err_writef.."\n"..tmp_file_name, "we")
       return
-    end   
+    end
     file:close()
   end
-    
+
   -- Open query editor
   if editor.Editor(tmp_file_name, "SQLite query", nil, nil, nil, nil, F.EF_DISABLESAVEPOS + F.EF_DISABLEHISTORY,
                    nil, nil, 65001) == F.EEC_MODIFIED then
@@ -681,7 +685,7 @@ function mypanel:edit_sql_query()
     file:close()
     win.DeleteFile(tmp_file_name)
 
-    -- Remove BOM 
+    -- Remove BOM
     local a,b,c,d = string.byte(file_buff, 1, 4)
     if a == 0xef and b == 0xbb and c == 0xbf then  -- UTF-8
       file_buff = string.sub(file_buff, 4)

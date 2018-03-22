@@ -63,10 +63,8 @@ end
 
 
 function export.Analyse(info)
-  if info.FileName and info.FileName~="" and
-        sqlite.format_supported(info.Buffer, #info.Buffer) then
-    return info.FileName
-  end
+  return info.FileName and info.FileName~="" and
+         sqlite.format_supported(info.Buffer, #info.Buffer)
 end
 
 
@@ -74,7 +72,7 @@ function export.Open(OpenFrom, Guid, Item)
   local file_name = nil
 
   if OpenFrom == F.OPEN_ANALYSE then
-    file_name = Item.Handle
+    file_name = Item.FileName
 
   elseif OpenFrom == F.OPEN_COMMANDLINE then
     local str = Item:gsub("\"", ""):gsub("^%s+", ""):gsub("%s+$", "")
@@ -122,7 +120,7 @@ end
 
 
 function export.ClosePanel(object, handle)
-  object._db:close()
+  object._dbx:close()
 end
 
 

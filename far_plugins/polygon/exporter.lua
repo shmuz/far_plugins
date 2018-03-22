@@ -9,24 +9,15 @@ local sqlite   = Params.sqlite
 local progress = Params.progress
 local settings = Params.settings
 
---  enum format {
-local fmt_csv  = 0
-local fmt_text = 1
-
 local MAX_BLOB_LENGTH = 100
 local MAX_TEXT_LENGTH = 1024
 
-local exporter = {
-  fmt_csv = fmt_csv;
-  fmt_text = fmt_text;
-}
+local exporter = {}
 local mt_exporter = {__index=exporter}
 
 
-function exporter.newexporter(db)
-  local self = setmetatable({}, mt_exporter)
-  self._db = db
-  return self
+function exporter.newexporter(dbx)
+  return setmetatable({_dbx=dbx}, mt_exporter)
 end
 
 
@@ -56,7 +47,7 @@ function exporter:export_data_with_dialog()
   --[[05]] {F.DI_TEXT,          5,5,20,0,  0,0,0,0,                  M.ps_exp_fmt},
   --[[06]] {F.DI_RADIOBUTTON,  21,5,29,0,  0,0,0,0,                  "&CSV"},
   --[[07]] {F.DI_RADIOBUTTON,  31,5,40,0,  0,0,0,0,                  M.ps_exp_fmt_text},
-  --[[08]] {F.DI_CHECKBOX   ,  21,6, 0,0,  0,0,0,0,                  M.ps_exp_multiline},
+  --[[08]] {F.DI_CHECKBOX,     21,6, 0,0,  0,0,0,0,                  M.ps_exp_multiline},
   --[[09]] {F.DI_TEXT,          0,7, 0,0,  0,0,0,F.DIF_SEPARATOR,    ""},
   --[[10]] {F.DI_BUTTON,        0,8, 0,0,  0,0,0,FLAG_DFLT,          M.ps_exp_exp},
   --[[11]] {F.DI_BUTTON,        0,8, 0,0,  0,0,0,F.DIF_CENTERGROUP,  M.ps_cancel},
@@ -87,30 +78,33 @@ function exporter:export_data_with_dialog()
   local dlg = far.DialogInit(guid, -1, -1, 60, 11, nil, dlg_items, nil, DlgProc)
 
   local rc = far.DialogRun(dlg)
-  if rc < 1 or rc == btnCancel then
+  if rc >= 1 and rc ~= btnCancel then
+    dst_file_name  = dlg:send(F.DM_GETTEXT, edtFileName)
+    data.format    = dlg:send(F.DM_GETCHECK, btnCSV) ~= 0 and "csv" or "text"
+    data.multiline = dlg:send(F.DM_GETCHECK, btnMultiline) ~= 0
     far.DialogFree(dlg)
-    return false
-  else
-    dst_file_name = far.SendDlgMessage(dlg, F.DM_GETTEXT, edtFileName)
-    local fmt = far.SendDlgMessage(dlg, F.DM_GETCHECK, btnCSV) ~= 0 and fmt_csv or fmt_text
-
-    data.format = fmt==fmt_csv and "csv" or "text"
-    data.multiline = far.SendDlgMessage(dlg, F.DM_GETCHECK, btnMultiline) ~= 0
     settings.save()
 
+    if data.format == "csv" then
+      return self:export_data_as_csv(dst_file_name, db_object_name, data.multiline)
+    else
+      return self:export_data_as_text(dst_file_name, db_object_name)
+    end
+  else
     far.DialogFree(dlg)
-    return self:export_data(dst_file_name, db_object_name, fmt, data.multiline)
+    return false
   end
 end
 
 
-function exporter:export_data(file_name, db_object, fmt, multiline)
+function exporter:export_data_as_text(file_name, db_object)
+  local dbx = self._dbx
   -- Get row count and  columns description
-  local row_count = self._db:get_row_count(db_object)
+  local row_count = dbx:get_row_count(db_object)
   local columns_descr = {}
-  
-  if not row_count or not self._db:read_column_description(db_object, columns_descr) then
-    local err_descr = self._db:last_error()
+
+  if not row_count or not dbx:read_column_description(db_object, columns_descr) then
+    local err_descr = dbx:last_error()
     ErrMsg(M.ps_err_read.."\n"..err_descr)
     return false
   end
@@ -120,42 +114,38 @@ function exporter:export_data(file_name, db_object, fmt, multiline)
 
   -- Get maximum width for each column
   local columns_width = {}
-  if fmt == fmt_text then
-    local query_val, query_len = "select ", "select "
-    for i = 1, columns_count do
-      if i > 1 then
-        query_val = query_val .. ", "
-        query_len = query_len .. ", "
-      end
-      query_val = query_val .. "[" .. columns_descr[i].name .. "]"
-      query_len = query_len .. "length([" .. columns_descr[i].name .. "])"
+  local query_val, query_len = "select ", "select "
+  for i = 1, columns_count do
+    if i > 1 then
+      query_val = query_val .. ", "
+      query_len = query_len .. ", "
     end
-    query_val = query_val .. " from '" .. db_object .. "'"
-    query_len = query_len .. " from '" .. db_object .. "'"
+    query_val = query_val .. "[" .. columns_descr[i].name .. "]"
+    query_len = query_len .. "length([" .. columns_descr[i].name .. "])"
+  end
+  query_val = query_val .. " from '" .. db_object .. "'"
+  query_len = query_len .. " from '" .. db_object .. "'"
 
-    for i = 1, columns_count do
-      columns_width[i] = columns_descr[i].name:len() -- initialize with widths of titles
-    end
-    local db = self._db:db()
-    local stmt_val = db:prepare(query_val)
-    local stmt_len = db:prepare(query_len)
-    if stmt_val and stmt_len then
-      while stmt_val:step() == sql3.ROW do
-        stmt_len:step()
-        for i = 1, columns_count do
-          local w = stmt_len:get_value(i-1) or 1
-          if stmt_val:get_column_type(i-1) == sql3.BLOB then
-            w = w*2 + #tostring(w) + 5 -- correction for e.g. [24]:0x
-          end
-          columns_width[i] = math.max(columns_width[i], w)
+  for i = 1, columns_count do
+    columns_width[i] = columns_descr[i].name:len() -- initialize with widths of titles
+  end
+  local db = dbx:db()
+  local stmt_val = db:prepare(query_val)
+  local stmt_len = db:prepare(query_len)
+  if stmt_val and stmt_len then
+    while stmt_val:step() == sql3.ROW do
+      stmt_len:step()
+      for i = 1, columns_count do
+        local len = stmt_len:get_value(i-1) or 1
+        if stmt_val:get_column_type(i-1) == sql3.BLOB then
+          len = len*2 + #tostring(len) + 5 -- correction for e.g. [24]:0x
         end
+        columns_width[i] = math.max(columns_width[i], len)
+        columns_width[i] = math.min(columns_width[i], MAX_TEXT_LENGTH)
       end
-      stmt_val:finalize()
-      stmt_len:finalize()
     end
-    for i = 1, columns_count do
-      columns_width[i] = math.min(columns_width[i], MAX_TEXT_LENGTH)
-    end
+    stmt_val:finalize()
+    stmt_len:finalize()
   end
 
   -- Create output file
@@ -167,60 +157,143 @@ function exporter:export_data(file_name, db_object, fmt, multiline)
   end
 
   -- Write BOM for text file
-  if fmt == fmt_text then
-    file:write("\239\187\191") -- UTF-8 BOM
-  end
+  file:write("\239\187\191") -- UTF-8 BOM
 
   -- Write header (columns names)
   local out_text = ""
   for i = 1, columns_count do
-    if fmt == fmt_csv then
-      out_text = out_text .. columns_descr[i].name
-      if i ~= columns_count then
-        out_text = out_text .. ';'
-      end
-    else
-      local col_name = ""
-      if i > 1 then col_name = col_name .. ' '; end
-      col_name = col_name .. columns_descr[i].name
-      local n = columns_width[i] + (i > 1 and i < columns_count and 2 or 1)
-      col_name = col_name:resize(n, " ")
-      out_text = out_text .. col_name
-      if i < columns_count then
-        out_text = out_text .. unicode.utf8.char(0x2502)
-      end
+    local col_name = (i==1 and "" or " ") .. columns_descr[i].name
+    local n = columns_width[i] + (i > 1 and i < columns_count and 2 or 1)
+    out_text = out_text .. col_name:resize(n, " ")
+    if i < columns_count then
+      out_text = out_text .. unicode.utf8.char(0x2502)
     end
   end
   out_text = out_text .. "\r\n"
 
   -- Header separator
-  if fmt == fmt_text then
-    for i = 1, #columns_descr do
-      local col_sep = unicode.utf8.char(0x2500):rep(
-        columns_width[i] + (i > 1 and i ~= columns_count and 2 or 1))
-      out_text = out_text .. col_sep
-      if i ~= columns_count then
-        out_text = out_text .. unicode.utf8.char(0x253C)
-      end
+  for i = 1, columns_count do
+    local col_sep = unicode.utf8.char(0x2500):rep(
+      columns_width[i] + (i > 1 and i ~= columns_count and 2 or 1))
+    out_text = out_text .. col_sep
+    if i < columns_count then
+      out_text = out_text .. unicode.utf8.char(0x253C)
     end
-    out_text = out_text .. "\r\n"
   end
-  file:write(out_text)
+  file:write(out_text, "\r\n")
 
   -- Read data
   local query = "select * from '" .. db_object .. "'"
-  local db = self._db:db()
-  local stmt = db:prepare(query)    
+  local db = dbx:db()
+  local stmt = db:prepare(query)
   if not stmt then
     prg_wnd:hide()
     file:close()
-    local err_descr = self._db:last_error()
+    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
+    return false
+  end
+
+  local count = 0
+  local state = sql3.DONE
+  while true do
+    state = stmt:step()
+    if state ~= sql3.ROW then
+      break
+    end
+    count = count + 1
+    if count % 100 == 0 then
+      prg_wnd:update(count)
+    end
+    if progress.aborted() then
+      prg_wnd:hide()
+      stmt:finalize()
+      file:close()
+      return false
+    end
+
+    out_text = ""
+    for i = 1, columns_count do
+      local col_data = exporter.get_text(stmt, i-1, false)
+      if col_data:len() > columns_width[i] then
+        col_data = col_data:sub(1, columns_width[i]-3) .. "..."
+      end
+      if i > 1 then
+        col_data = " " .. col_data
+      end
+      local sz = columns_width[i] + (i > 1 and i < columns_count and 2 or 1)
+      out_text = out_text .. col_data:resize(sz, " ")
+      if i < columns_count then
+        out_text = out_text .. unicode.utf8.char(0x2502)
+      end
+    end
+
+    if not file:write(out_text, "\r\n") then
+      prg_wnd:hide()
+      stmt:finalize()
+      file:close()
+      ErrMsg(M.ps_err_writef.."\n"..file_name, "we")
+      return false
+    end
+  end
+
+  file:close()
+  prg_wnd:hide()
+  stmt:finalize()
+
+  if state == sql3.DONE then
+    return true
+  else
+    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
+    return false
+  end
+end
+
+
+function exporter:export_data_as_csv(file_name, db_object, multiline)
+  -- Get row count and  columns description
+  local row_count = self._dbx:get_row_count(db_object)
+  local columns_descr = {}
+
+  if not row_count or not self._dbx:read_column_description(db_object, columns_descr) then
+    ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
+    return false
+  end
+
+  -- Create output file
+  local file = io.open(file_name, "wb")
+  if not file then
+    ErrMsg(M.ps_err_writef.."\n"..file_name, "we")
+    return false
+  end
+
+  local columns_count = #columns_descr
+  local prg_wnd = progress.newprogress(M.ps_reading, row_count)
+
+  -- Write header (columns names)
+  local out_text = ""
+  for i = 1, columns_count do
+    out_text = out_text .. columns_descr[i].name
+    if i ~= columns_count then
+      out_text = out_text .. ';'
+    end
+  end
+  file:write(out_text, "\r\n")
+
+  -- Read data
+  local query = "select * from '" .. db_object .. "'"
+  local db = self._dbx:db()
+  local stmt = db:prepare(query)
+  if not stmt then
+    prg_wnd:hide()
+    file:close()
+    local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_read.."\n"..err_descr)
     return false
   end
 
   local count = 0
   local state = sql3.OK
+  local ok_write = true
   while true do
     state = stmt:step()
     if state ~= sql3.ROW then
@@ -237,60 +310,38 @@ function exporter:export_data(file_name, db_object, fmt, multiline)
 
     out_text = ""
     for i = 1, columns_count do
-      local col_data = exporter.get_text(stmt, i-1, (fmt == fmt_csv and multiline))
-      if fmt == fmt_csv then
-        local use_quote = col_data:find("[;\"\n\r]")
-        if use_quote then
-          out_text = out_text .. '"'
-          -- Replace quote by double quote
-          col_data = col_data:gsub('"', '""')
-        end
-        out_text = out_text .. col_data
-        if use_quote then
-          out_text = out_text .. '"'
-        end
-        if i < columns_count then
-          out_text = out_text .. ';'
-        end
-      else
-        if i > 1 then
-          col_data = " " .. col_data
-        end
-        local sz = columns_width[i] + (i > 1 and i < columns_count and 2 or 1)
-        col_data = col_data:resize(sz, " ")
-        if col_data:len() > MAX_TEXT_LENGTH then
-          col_data = col_data:sub(1, MAX_TEXT_LENGTH-3) .. "..."
-        end
-        out_text = out_text .. col_data
-        if i < columns_count then
-          out_text = out_text .. unicode.utf8.char(0x2502)
-        end
+      local col_data = exporter.get_text(stmt, i-1, multiline)
+      local use_quote = col_data:find("[;\"\n\r]")
+      if use_quote then
+        out_text = out_text .. '"'
+        -- Replace quote by double quote
+        col_data = col_data:gsub('"', '""')
+      end
+      out_text = out_text .. col_data
+      if use_quote then
+        out_text = out_text .. '"'
+      end
+      if i < columns_count then
+        out_text = out_text .. ';'
       end
     end
-    out_text = out_text .. "\r\n"
 
-    if not file:write(out_text) then
-      prg_wnd:hide()
-      stmt:finalize()
-      file:close()
-      ErrMsg(M.ps_err_writef.."\n"..file_name, "we")
-      return false
-    end
+    ok_write = file:write(out_text, "\r\n")
+    if not ok_write then break end
   end
 
   file:close()
-
-  if state ~= sql3.DONE then
-    prg_wnd:hide()
-    stmt:finalize()
-    local err_descr = self._db:last_error()
-    ErrMsg(M.ps_err_read.."\n"..err_descr)
-    return false
-  end
-
   prg_wnd:hide()
   stmt:finalize()
-  return true
+
+  if state == sql3.DONE and ok_write then
+    return true
+  elseif not ok_write then
+    ErrMsg(M.ps_err_writef.."\n"..file_name, "we")
+  else
+    ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
+  end
+  return false
 end
 
 
