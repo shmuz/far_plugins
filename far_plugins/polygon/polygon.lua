@@ -17,7 +17,7 @@ local M        = RunScript("string_rc")
 local sqlite   = RunScript("sqlite")
 local settings = RunScript("settings", {M=M})
 local progress = RunScript("progress", {M=M})
-local exporter = RunScript("exporter", {M=M, sqlite=sqlite, progress=progress, settings=settings})
+local exporter = RunScript("exporter", {M=M, progress=progress, settings=settings})
 local myeditor = RunScript("editor",   {M=M, sqlite=sqlite, exporter=exporter})
 local mypanel  = RunScript("panel",    {M=M, sqlite=sqlite, progress=progress, exporter=exporter, myeditor=myeditor})
 
@@ -28,12 +28,10 @@ end
 
 -- add a convenience function
 unicode.utf8.resize = function(str, n, char)
-  char = char or "\0"
   local ln = str:len()
-  if     n <  ln then return str:sub(1, n)
-  elseif n == ln then return str
-  else return str .. (char or "\0"):rep(n-ln)
-  end
+  if n <  ln then return str:sub(1, n) end
+  if n == ln then return str end
+  return str .. (char or "\0"):rep(n-ln)
 end
 
 local plugdata = settings.load():getfield("plugin")

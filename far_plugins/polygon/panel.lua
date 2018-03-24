@@ -1,4 +1,5 @@
 -- panel.lua
+-- luacheck: globals ErrMsg
 
 local sql3 = require "lsqlite3"
 local F = far.Flags
@@ -26,18 +27,22 @@ local mt_panel = {__index=mypanel}
 function mypanel.open(file_name, silent, foreign_keys) -- function, not method
   local self = {
     _file_name      = file_name;
-    _last_sql_query = "";
-    _column_descr   = {};
+    _last_sql_query = ""  ;
+    _column_descr   = nil ;
+    _dbx            = nil ;
+    _panel_mode     = nil ;
+    _curr_object    = nil ;
   }
 
   self._panel_info = { -- Panel info description
-    title      = "";
-    col_types  = "";
-    col_widths = "";
-    col_titles = {};
-    modes      = {};
-    key_bar    = {};
+    title      = "" ;
+    col_types  = "" ;
+    col_widths = "" ;
+    col_titles = {} ;
+    modes      = {} ;
+    key_bar    = {} ;
   }
+
   setmetatable(self, mt_panel)
 
   self._dbx = sqlite.newsqlite();
@@ -61,31 +66,29 @@ end
 
 
 function mypanel:open_object(object_name)
-  local tp = self._dbx:get_object_type(object_name)
-  if tp==sqlite.ot_master or tp==sqlite.ot_table then
+  local dbx = self._dbx
+  local tp = dbx:get_object_type(object_name)
+  if tp == sqlite.ot_master or tp == sqlite.ot_table then
     self._panel_mode = pm_table
-  elseif tp==sqlite.ot_view then
+  elseif tp == sqlite.ot_view then
     self._panel_mode = pm_view
   else
     return false
   end
-
   self._curr_object = object_name
-
-  self._column_descr = {}
-  if not self._dbx:read_column_description(object_name, self._column_descr) then
-    local err_descr = self._dbx:last_error()
-    ErrMsg(M.ps_err_read.."\n"..err_descr)
+  self._column_descr = dbx:read_column_description(object_name)
+  if self._column_descr then
+    self:prepare_panel_info()
+    return true
+  else
+    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
     return false
   end
-
-  self:prepare_panel_info()
-  return true
 end
 
 
 function mypanel:open_query(query)
-  if not query or query=="" then return false; end
+  if not (query and query ~= "") then return false; end
 
   self._last_sql_query = query
 
@@ -131,24 +134,21 @@ function mypanel:open_query(query)
 
   panel.UpdatePanel(nil, 1)
   panel.RedrawPanel(nil, 1)
-
   return true
 end
 
 
 function mypanel:get_panel_info()
-  local info = {}
-  info.Flags = bit64.bor(F.OPIF_DISABLESORTGROUPS, F.OPIF_DISABLEFILTER)
-  info.PanelTitle = self._panel_info.title
-  info.CurDir = self._curr_object
-  info.HostFile = self._file_name
-
-  info.StartPanelMode = ("0"):byte()
-  info.PanelModesArray = self._panel_info.modes
-  info.PanelModesNumber = #self._panel_info.modes
-  info.KeyBar = self._panel_info.key_bar
-
-  return info
+  return {
+    CurDir           = self._curr_object;
+    Flags            = bit64.bor(F.OPIF_DISABLESORTGROUPS, F.OPIF_DISABLEFILTER);
+    HostFile         = self._file_name;
+    KeyBar           = self._panel_info.key_bar;
+    PanelModesArray  = self._panel_info.modes;
+    PanelModesNumber = #self._panel_info.modes;
+    PanelTitle       = self._panel_info.title;
+    StartPanelMode   = ("0"):byte();
+  }
 end
 
 
@@ -207,76 +207,73 @@ end
 
 
 function mypanel:get_panel_list_obj()
-  local row_count = self._dbx:get_row_count(self._curr_object)
+  local curr_object = self._curr_object
+  local dbx = self._dbx
+  local db = dbx:db()
+
+  local row_count = dbx:get_row_count(curr_object)
   if not row_count then
-    local err_descr = self._dbx:last_error()
-    ErrMsg(M.ps_err_read.."\n"..err_descr)
+    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
     return false
   end
 
-  local prg_wnd = progress.newprogress(M.ps_reading, row_count)
-
-  local dot_item = {}
-  local items = { dot_item }
-
-  -- All dots (..)
-  dot_item.FileName = ".."
-  local dot_col_num = #self._column_descr
-  local dot_custom_column_data = {}
-  for j = 1, dot_col_num do
-    dot_custom_column_data[j] = ".."
-  end
-  dot_item.CustomColumnData = dot_custom_column_data
-
   -- Find a name to use for ROWID (self._rowid_name)
-  local db = self._dbx:db()
-  local query = "select * from '"..self._curr_object.."'"
+  local query = "select * from '"..curr_object.."'"
   local stmt = db:prepare(query)
-  if not stmt then return false end
+  if not stmt then
+    return false
+  end
   local col_names = stmt:get_names()
   stmt:finalize()
-  for _,v in ipairs(col_names) do col_names[v:lower()]=true; end
+  for _,v in ipairs(col_names) do
+    col_names[v:lower()]=true
+  end
   self._rowid_name = nil
   for _,v in ipairs {"rowid", "oid", "_rowid_"} do
-    if col_names[v] == nil then self._rowid_name = v; break; end
+    if col_names[v] == nil then
+      self._rowid_name = v
+      break
+    end
   end
 
   -- Find if ROWID exists
   self._has_rowid = true
   stmt = nil
   if self._rowid_name then
-    query = "select "..self._rowid_name..",* from '"..self._curr_object.."'"
+    query = "select "..self._rowid_name..",* from '"..curr_object.."'"
     stmt = db:prepare(query)
   end
   if not stmt then
-    query = "select * from '"..self._curr_object.."'"
+    query = "select * from '"..curr_object.."'"
     stmt = db:prepare(query)
     if stmt then
       self._has_rowid = false
     else
-      prg_wnd:hide()
-      local err_descr = self._dbx:last_error()
-      ErrMsg(M.ps_err_read.."\n"..err_descr)
+      ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
       return false
     end
   end
 
-  local col_num = #self._column_descr
+  -- Add a special item with dots (..) in all columns
+  local dot_item = { FileName=".."; CustomColumnData={}; }
+  local items = { dot_item }
+  for i = 1, #self._column_descr do
+    dot_item.CustomColumnData[i] = ".."
+  end
+
+  -- Add real items
+  local prg_wnd = progress.newprogress(M.ps_reading, row_count)
   for row = 1, row_count do
     if (row-1) % 100 == 0 then
       prg_wnd:update(row-1)
     end
     if stmt:step() ~= sql3.ROW then
-      prg_wnd:hide()
-      local err_descr = self._dbx:last_error()
-      ErrMsg(M.ps_err_read.."\n"..err_descr)
-      stmt:finalize()
-      return false
+      ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
+      items = false
+      break
     end
     if progress.aborted() then
-      prg_wnd:hide()
-      stmt:finalize()
-      return items  -- Show incomplete data
+      break -- Show incomplete data
     end
 
     -- Use leftmost column cell as file name, otherwise FAR cannot properly handle selections on the panel
@@ -290,7 +287,7 @@ function mypanel:get_panel_list_obj()
     items[row+1] = item -- shift by 1, as items[1] is dot_item
     local custom_column_data = {}
     local adjust = self._has_rowid and 0 or 1
-    for j = 1, col_num do
+    for j = 1, #self._column_descr do
       custom_column_data[j] = exporter.get_text(stmt, j-adjust)
     end
     if self._has_rowid then
@@ -298,10 +295,11 @@ function mypanel:get_panel_list_obj()
     end
     item.CustomColumnData = custom_column_data
   end
-  prg_wnd:update(row_count)
 
+  prg_wnd:update(row_count)
   prg_wnd:hide()
   stmt:finalize()
+
   return items
 end
 
@@ -334,7 +332,7 @@ function mypanel:get_panel_list_query()
     return false
   end
 
-  local state = sql3.OK
+  local state
   while true do
     state = stmt:step()
     if state ~= sql3.ROW then
@@ -483,7 +481,7 @@ function mypanel:handle_keyboard(key_event)
   local vcode  = key_event.VirtualKeyCode
   local cstate = key_event.ControlKeyState
   local nomods = cstate == 0
-  local alt    = cstate == F.LEFT_ALT_PRESSED  or cstate == F.RIGHT_ALT_PRESSED
+--local alt    = cstate == F.LEFT_ALT_PRESSED  or cstate == F.RIGHT_ALT_PRESSED
   local ctrl   = cstate == F.LEFT_CTRL_PRESSED or cstate == F.RIGHT_CTRL_PRESSED
   local shift  = cstate == F.SHIFT_PRESSED
 
@@ -512,11 +510,14 @@ function mypanel:handle_keyboard(key_event)
       return true
     elseif nomods and vcode == VK.F5 then        -- F5: export table/view data
       local ex = exporter.newexporter(self._dbx)
-      ex:export_data_with_dialog()
+      if ex:export_data_with_dialog() then
+        panel.UpdatePanel(nil,0)
+        panel.RedrawPanel(nil,0)
+      end
       return true
     end
 
-  -- Panel View mode -----------------------------------------------------------
+  -- Panel view mode -----------------------------------------------------------
   elseif self._panel_mode == pm_table then
     if nomods and (vcode == VK.F4 or vcode == VK.RETURN) then -- F4 or Enter: edit row
       if vcode == VK.RETURN then

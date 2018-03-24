@@ -1,4 +1,5 @@
 -- editor.lua
+-- luacheck: globals ErrMsg
 
 local sql3 = require "lsqlite3"
 local F = far.Flags
@@ -78,10 +79,9 @@ function myeditor:insert()
   local db_data = {}
 
   -- Get columns description
-  local columns_descr = {}
-  if not self._dbx:read_column_description(self._table_name, columns_descr) then
-    local err_descr = self._dbx:last_error()
-    ErrMsg(M.ps_err_read.."\n"..err_descr)
+  local columns_descr = self._dbx:read_column_description(self._table_name)
+  if not columns_descr then
+    ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
     return
   end
   for _,v in ipairs(columns_descr) do
@@ -147,7 +147,7 @@ function myeditor.edit(db_data, create_mode)
     y_pos = y_pos + 1
     if i == 1 then
       row_ctl.field[9] = bit64.bor(row_ctl.field[9], F.DIF_FOCUS)
-    end    
+    end
     table.insert(dlg_items, row_ctl.label)
     table.insert(dlg_items, row_ctl.semi)
     table.insert(dlg_items, row_ctl.field)
@@ -160,7 +160,7 @@ function myeditor.edit(db_data, create_mode)
   table.insert(dlg_items, dlg_item)
   dlg_item = {F.DI_BUTTON, 0,dlg_height-3,0,0, 0,0,0,F.DIF_CENTERGROUP,M.ps_cancel}
   table.insert(dlg_items, dlg_item)
-  
+
   local guid = win.Uuid("866927E1-60F1-4C87-A09D-D481D4189534")
   local dlg = far.DialogInit(guid, -1, -1, dlg_width, dlg_height, nil, dlg_items)
   local rc = far.DialogRun(dlg)
@@ -240,7 +240,7 @@ function myeditor:exec_update(row_id, db_data) -- !!! 'db_data' is in/out !!!
       query = query..v.column.name.."=?"
     end
     query = query.." where "..self._rowid_name.."="..row_id
-  else 
+  else
     -- Insert query
     query = "insert into '"..self._table_name.."' ("
     for i,v in ipairs(db_data) do
@@ -265,7 +265,7 @@ function myeditor:exec_update(row_id, db_data) -- !!! 'db_data' is in/out !!!
   local idx = 0
   for _,v in ipairs(db_data) do
     idx = idx + 1
-    local bind_rc = sql3.OK
+    local bind_rc
     if v.column.type == sqlite.ct_float then
       bind_rc = stmt:bind(idx, tonumber(v.value))
     elseif v.column.type == sqlite.ct_integer then

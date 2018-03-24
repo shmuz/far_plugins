@@ -1,11 +1,11 @@
 -- exporter.lua
+-- luacheck: globals ErrMsg
 
 local sql3 = require "lsqlite3"
 local F = far.Flags
 
 local Params = ...
 local M        = Params.M
-local sqlite   = Params.sqlite
 local progress = Params.progress
 local settings = Params.settings
 
@@ -38,7 +38,7 @@ function exporter:export_data_with_dialog()
   end
   dst_file_name = dst_file_name .. db_object_name
 
-  local FLAG_DFLT = bit64.bor(F.DIF_CENTERGROUP, F.DIF_DEFAULTBUTTON, F.DIF_FOCUS)
+  local FLAG_DFLT = bit64.bor(F.DIF_CENTERGROUP, F.DIF_DEFAULTBUTTON)
   local dlg_items = {
   --[[01]] {F.DI_DOUBLEBOX,     3,1,56,9,  0,0,0,0,                  M.ps_exp_title},
   --[[02]] {F.DI_TEXT,          5,2,54,0,  0,0,0,0,                  M.ps_exp_main:format(db_object_name)},
@@ -101,11 +101,9 @@ function exporter:export_data_as_text(file_name, db_object)
   local dbx = self._dbx
   -- Get row count and  columns description
   local row_count = dbx:get_row_count(db_object)
-  local columns_descr = {}
-
-  if not row_count or not dbx:read_column_description(db_object, columns_descr) then
-    local err_descr = dbx:last_error()
-    ErrMsg(M.ps_err_read.."\n"..err_descr)
+  local columns_descr = dbx:read_column_description(db_object)
+  if not (row_count and columns_descr) then
+    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
     return false
   end
 
@@ -194,7 +192,7 @@ function exporter:export_data_as_text(file_name, db_object)
   end
 
   local count = 0
-  local state = sql3.DONE
+  local state
   while true do
     state = stmt:step()
     if state ~= sql3.ROW then
@@ -213,7 +211,7 @@ function exporter:export_data_as_text(file_name, db_object)
 
     out_text = ""
     for i = 1, columns_count do
-      local col_data = exporter.get_text(stmt, i-1, false)
+      local col_data = exporter.get_text(stmt, i-1, false):gsub("%s+", " ")
       if col_data:len() > columns_width[i] then
         col_data = col_data:sub(1, columns_width[i]-3) .. "..."
       end
@@ -252,9 +250,8 @@ end
 function exporter:export_data_as_csv(file_name, db_object, multiline)
   -- Get row count and  columns description
   local row_count = self._dbx:get_row_count(db_object)
-  local columns_descr = {}
-
-  if not row_count or not self._dbx:read_column_description(db_object, columns_descr) then
+  local columns_descr = self._dbx:read_column_description(db_object)
+  if not (row_count and columns_descr) then
     ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
     return false
   end
@@ -292,7 +289,7 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
   end
 
   local count = 0
-  local state = sql3.OK
+  local state
   local ok_write = true
   while true do
     state = stmt:step()
@@ -354,7 +351,7 @@ end
 
 local patt_unreadable = "[%z"..string.char(1).."-"..string.char(0x20-1).."]"
 function exporter.get_text(stmt, idx, multiline)
-  local data = ""
+  local data
   if stmt:get_column_type(idx) == sql3.BLOB then
     local blob_data = stmt:get_value(idx)
     local blob_len = #blob_data
@@ -371,7 +368,7 @@ function exporter.get_text(stmt, idx, multiline)
       data = string.gsub(data, patt_unreadable, " ")
     end
   end
-  return data
+  return data or ""
 end
 
 

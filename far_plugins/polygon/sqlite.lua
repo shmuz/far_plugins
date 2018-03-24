@@ -50,7 +50,7 @@ function sqlite:db()
 end
 
 
-function sqlite.format_supported(file_hdr, file_hdr_len) -- function not method
+function sqlite.format_supported(file_hdr) -- function not method
   return string.find(file_hdr, sqlite_db_hdr, 1, true) == 1
 end
 
@@ -91,7 +91,7 @@ function sqlite:last_error()
       rc = rc.." "..self._db:errmsg()
     end
     return rc
-  else 
+  else
     return "Error: Database not initialized"
   end
 end
@@ -149,39 +149,39 @@ function sqlite:execute_query(query)
 end
 
 
-function sqlite:read_column_description(object_name, columns)
+function sqlite:read_column_description(object_name)
   local query = "pragma table_info('"..object_name.."')"
   local stmt = self._db:prepare(query)
-  if not stmt then
-    return false
-  end
-  while stmt:step() == sql3.ROW do
-    local col = {
-      name = stmt:get_value(1);
-      type = sqlite.ct_text;
-    }
-    local ct = stmt:get_name(2)
-    if ct:find("^INT")       or
-       ct:find("^TINYINT")   or
-       ct:find("^SMALLINT")  or
-       ct:find("^MEDIUMINT") or
-       ct:find("^BIGINT")    or
-       ct:find("^NUMERIC")   or
-       ct:find("^DECIMAL")   or
-       ct:find("^BOOLEAN")
-    then
-      col.type = sqlite.ct_integer
-    elseif ct == "BLOB" then
-      col.type = sqlite.ct_blob
-    elseif ct:find("^REAL") or ct:find("^DOUBLE") or ct:find("^FLOAT") then
-      col.type = sqlite.ct_float
+  if stmt then
+    local columns = {}
+    while stmt:step() == sql3.ROW do
+      local col = {
+        name = stmt:get_value(1);
+        type = sqlite.ct_text;
+      }
+      local ct = stmt:get_value(2):upper()
+      if ct:find("^INT")       or
+         ct:find("^TINYINT")   or
+         ct:find("^SMALLINT")  or
+         ct:find("^MEDIUMINT") or
+         ct:find("^BIGINT")    or
+         ct:find("^NUMERIC")   or
+         ct:find("^DECIMAL")   or
+         ct:find("^BOOLEAN")
+      then
+        col.type = sqlite.ct_integer
+      elseif ct == "BLOB" then
+        col.type = sqlite.ct_blob
+      elseif ct:find("^REAL") or ct:find("^DOUBLE") or ct:find("^FLOAT") then
+        col.type = sqlite.ct_float
+      end
+
+      table.insert(columns, col)
     end
 
-    table.insert(columns, col)
+    stmt:finalize()
+    return columns
   end
-
-  stmt:finalize()
-  return true
 end
 
 
@@ -227,7 +227,7 @@ function sqlite:get_object_type(object_name)
     if stmt then stmt:finalize() end
     return sqlite.ot_unknown
   end
-  
+
   local tp = sqlite.object_type_by_name(stmt:get_value(0))
   stmt:finalize()
   return tp
