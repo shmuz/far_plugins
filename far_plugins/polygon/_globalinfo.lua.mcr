@@ -4,7 +4,7 @@ function export.GetGlobalInfo()
     MinFarVersion = #{MINFARVERSION},
     Guid          = win.Uuid("D4BC5EA7-8229-4FFE-AAC1-5A4F51A0986A"),
     Title         = "Polygon",
-    Description   = "A clone of SQLiteDB plugin (by Artem Senichev)",
+    Description   = "A clone of SQLiteDB plugin",
     Author        = "Shmuel Zeigerman",
   }
 end

@@ -36,6 +36,11 @@ local names = {
 
   "ps_save",
   "ps_cancel",
+  "ps_ok",
+
+  "ps_title_select_columns",
+  "ps_set_columns",
+  "ps_reset_columns",
 }
 
 local indexes = {}

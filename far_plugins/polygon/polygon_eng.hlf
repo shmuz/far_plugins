@@ -12,11 +12,14 @@ $ #Polygon - Help Contents#
               │             │
    DB View    │ F3          │ View contents of table under cursor
               │ F4          │ View create statement of table under cursor
-              │ ShiftF4     │ View pragma statements
-              │ F5          │ Invoke "Data export" dialog for table under cursor
+              │ Shift-F4    │ View pragma statements
+              │ F5          │ Dialog: export data
+              │ F8          │ Dialog: delete selected database elements
               │             │
-   Table View │ F4, Enter   │ Invoke "Edit row" dialog for row under cursor
-              │ ShiftF4     │ Invoke "Insert row" dialog
+   Table View │ F4, Enter   │ Dialog: edit row
+              │ Shift-F4    │ Dialog: insert row
+              │ Shift-F3    │ Dialog: select columns to display
+              │ F8          │ Dialog: delete selected records
    ───────────┴─────────────┴───────────────────────────────────────────────────
 
    If command line is not empty then Enter will execute an "SQLite query"

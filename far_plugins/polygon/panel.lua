@@ -36,9 +36,6 @@ function mypanel.open(file_name, silent, foreign_keys) -- function, not method
 
   self._panel_info = { -- Panel info description
     title      = "" ;
-    col_types  = "" ;
-    col_widths = "" ;
-    col_titles = {} ;
     modes      = {} ;
     key_bar    = {} ;
   }
@@ -276,24 +273,17 @@ function mypanel:get_panel_list_obj()
       break -- Show incomplete data
     end
 
-    -- Use leftmost column cell as file name, otherwise FAR cannot properly handle selections on the panel
-    local FileName = exporter.get_text(stmt,0)
-    if self._has_rowid then
-      -- Prepend zero characters to make sorting by name sort by rowid
-      if #FileName < 10 then FileName = ("0"):rep(10-#FileName)..FileName; end
-    end
-
-    local item = { FileName=FileName; }
+    -- Use index as file name, otherwise FAR cannot properly handle selections on the panel
+    local item = { FileName=("%08d"):format(row); CustomColumnData={}; }
     items[row+1] = item -- shift by 1, as items[1] is dot_item
-    local custom_column_data = {}
+
     local adjust = self._has_rowid and 0 or 1
     for j = 1, #self._column_descr do
-      custom_column_data[j] = exporter.get_text(stmt, j-adjust)
+      item.CustomColumnData[j] = exporter.get_text(stmt, j-adjust)
     end
     if self._has_rowid then
       item.AllocationSize = stmt:get_value(0)  -- This field used as row id
     end
-    item.CustomColumnData = custom_column_data
   end
 
   prg_wnd:update(row_count)
@@ -367,58 +357,97 @@ function mypanel:get_panel_list_query()
 end
 
 
-function mypanel:prepare_panel_info()
---  struct {
---    wstring                 title    ///< Panel title
---    wstring                 col_types
---    wstring                 col_widths
---    vector<const wchar_t*>  col_titles
---    const wchar_t*          status_types
---    const wchar_t*          status_widths
---    vector<PanelMode>       modes
---    vector<KeyBarLabel>     key_bar
---  }    _panel_info    ///< Panel info description
-  self._panel_info.col_types = ""
-  self._panel_info.col_widths = ""
-  self._panel_info.col_titles = {}
-  self._panel_info.key_bar = {}
-  self._panel_info.status_types = nil
-  self._panel_info.status_widths = nil
-  self._panel_info.title = M.ps_title_short .. ": " .. self._file_name:match("[^\\/]*$")
+function mypanel:set_column_mask()
+  -- Build dialog dynamically
+  local col_num = #self._column_descr
+  local FLAG_DFLT = bit64.bor(F.DIF_CENTERGROUP, F.DIF_DEFAULTBUTTON)
+  local FLAG_NOCLOSE = bit64.bor(F.DIF_CENTERGROUP, F.DIF_BTNNOCLOSE)
+  local dlg_items = {
+    {F.DI_DOUBLEBOX, 3,1,56,col_num+4, 0,0,0,0, M.ps_title_select_columns},
+  }
+  local mask = self._col_masks and self._col_masks[self._curr_object]
+  for i = 1,col_num do
+    local check = mask and mask[self._column_descr[i].name] and 1 or 0
+    table.insert(dlg_items, { F.DI_CHECKBOX, 5,1+i,0,0, check,0,0,0, self._column_descr[i].name })
+  end
+  table.insert(dlg_items, {F.DI_TEXT,   0,2+col_num,0,0, 0,0,0,F.DIF_SEPARATOR,   ""})
+  table.insert(dlg_items, {F.DI_BUTTON, 0,3+col_num,0,0, 0,0,0,FLAG_DFLT,         M.ps_ok})
+  table.insert(dlg_items, {F.DI_BUTTON, 0,3+col_num,0,0, 0,0,0,FLAG_NOCLOSE,      M.ps_set_columns})
+  table.insert(dlg_items, {F.DI_BUTTON, 0,3+col_num,0,0, 0,0,0,FLAG_NOCLOSE,      M.ps_reset_columns})
+  table.insert(dlg_items, {F.DI_BUTTON, 0,3+col_num,0,0, 0,0,0,F.DIF_CENTERGROUP, M.ps_cancel})
 
---  sqlite          _dbx               ///< Database instance
---  panel_mode      _panel_mode       ///< Current panel mode
---  sqlite::sq_columns  _column_descr ///< Column description
---  wstring        _curr_object       ///< Current viewing object name (directory name for Far)
---  wstring        _file_name         ///< SQLite db file name
---  wstring        _last_sql_query    ///< Last used user's SQL query
+  local btnSet, btnReset, btnCancel = col_num+4, col_num+5, col_num+6
+
+  local function DlgProc(hDlg, Msg, Param1, Param2)
+    if Msg == F.DN_BTNCLICK then
+      local check = Param1==btnSet and F.BSTATE_CHECKED or Param1==btnReset and F.BSTATE_UNCHECKED
+      if check then
+        hDlg:send(F.DM_ENABLEREDRAW, 0)
+        for pos = 1,col_num do hDlg:send(F.DM_SETCHECK, pos+1, check); end
+        hDlg:send(F.DM_ENABLEREDRAW, 1)
+      end
+    end
+  end
+
+  local guid = win.Uuid("D252C184-9E10-4DE8-BD68-08A8A937E1F8")
+  local res = far.Dialog(guid, -1, -1, 60, 6+col_num, nil, dlg_items, nil, DlgProc)
+  if res > 0 and res ~= btnCancel then
+    mask = {}
+    self._col_masks = self._col_masks or {}
+    self._col_masks[self._curr_object] = mask
+    local all_empty = true
+    for k=1,col_num do
+      if dlg_items[k+1][6] ~= 0 then
+        mask[self._column_descr[k].name] = "0"
+        all_empty = false
+      end
+    end
+    if all_empty and col_num > 0 then -- all columns should not be hidden - show the 1-st column
+      mask[self._column_descr[1].name] = "0"
+    end
+  end
+end
+
+
+function mypanel:prepare_panel_info()
+  local info = self._panel_info
+  local col_types = ""
+  local col_widths = ""
+  local col_titles = {}
+  local status_types = nil
+  local status_widths = nil
+
+  info.key_bar = {}
+  info.title = M.ps_title_short .. ": " .. self._file_name:match("[^\\/]*$")
+
   if self._curr_object=="" or self._curr_object==nil then
-    self._panel_info.col_types     = "N,C0,C1"
-    self._panel_info.status_types  = "N,C0,C1"
-    self._panel_info.col_widths    = "0,8,9"
-    self._panel_info.status_widths = "0,8,9"
-    table.insert(self._panel_info.col_titles, M.ps_pt_name)
-    table.insert(self._panel_info.col_titles, M.ps_pt_type)
-    table.insert(self._panel_info.col_titles, M.ps_pt_count)
+    col_types     = "N,C0,C1"
+    status_types  = "N,C0,C1"
+    col_widths    = "0,8,9"
+    status_widths = "0,8,9"
+    table.insert(col_titles, M.ps_pt_name)
+    table.insert(col_titles, M.ps_pt_type)
+    table.insert(col_titles, M.ps_pt_count)
 
     self:add_keybar_label("DDL", VK.F4)
     self:add_keybar_label("Pragma", VK.F4, F.SHIFT_PRESSED)
     self:add_keybar_label("Export", VK.F5)
   else
-    self._panel_info.title = self._panel_info.title .. " [" .. self._curr_object .. "]"
-
-    local col_num = #self._column_descr
-    for i = 1, col_num do
-      if self._panel_info.col_types ~= "" then
-        self._panel_info.col_types = self._panel_info.col_types .. ","
+    info.title = info.title .. " [" .. self._curr_object .. "]"
+    local mask = self._col_masks and self._col_masks[self._curr_object]
+    for i,descr in ipairs(self._column_descr) do
+      local width = mask and mask[descr.name]
+      if width or not mask then
+        if col_types ~= "" then
+          col_types = col_types .. ","
+        end
+        col_types = col_types .. "C" .. (i-1)
+        if col_widths ~= "" then
+          col_widths = col_widths .. ','
+        end
+        col_widths = col_widths .. (width or "0")
+        table.insert(col_titles, self._column_descr[i].name)
       end
-      self._panel_info.col_types = self._panel_info.col_types .. "C"
-      self._panel_info.col_types = self._panel_info.col_types .. (i-1)
-      if self._panel_info.col_widths.empty ~= "" then
-        self._panel_info.col_widths = self._panel_info.col_widths .. ','
-      end
-      self._panel_info.col_widths = self._panel_info.col_widths .. '0'
-      table.insert(self._panel_info.col_titles, self._column_descr[i].name)
     end
     self:add_keybar_label("Update", VK.F4)
     self:add_keybar_label("Insert", VK.F4, F.SHIFT_PRESSED)
@@ -443,23 +472,25 @@ function mypanel:prepare_panel_info()
   end
 
   -- Configure one panel view for all modes
-  self._panel_info.modes = {}
-  local pm = {}
-  pm.ColumnTypes  = self._panel_info.col_types
-  pm.ColumnWidths = self._panel_info.col_widths
-  pm.ColumnTitles = self._panel_info.col_titles
-  pm.StatusColumnTypes = self._panel_info.status_types
-  pm.StatusColumnWidths = self._panel_info.status_widths
-  for k=1,10 do self._panel_info.modes[k] = pm; end
+  info.modes = {}
+  local pm = {
+    ColumnTypes  = col_types;
+    ColumnWidths = col_widths;
+    ColumnTitles = col_titles;
+    StatusColumnTypes = status_types;
+    StatusColumnWidths = status_widths;
+  }
+  for k=1,10 do info.modes[k] = pm; end
 end
 
 
 function mypanel:add_keybar_label(label, vkc, cks)
-  local kbl = {}
-  kbl.Text = label;
-  kbl.LongText = label;
-  kbl.VirtualKeyCode = vkc
-  kbl.ControlKeyState = cks or 0
+  local kbl = {
+    Text = label;
+    LongText = label;
+    VirtualKeyCode = vkc;
+    ControlKeyState = cks or 0;
+  }
   table.insert(self._panel_info.key_bar, kbl)
 end
 
@@ -536,6 +567,11 @@ function mypanel:handle_keyboard(key_event)
       myeditor.neweditor(self._dbx, self._curr_object):insert()
       return true
     elseif nomods and vcode == VK.F5 then        -- F5: suppress this key
+      return true
+    elseif shift and vcode == VK.F3 then
+      self:set_column_mask()
+      self:prepare_panel_info()
+      panel.RedrawPanel(nil,1)
       return true
     end
 

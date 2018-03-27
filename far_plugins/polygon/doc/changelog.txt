@@ -1,3 +1,10 @@
+2018-03-27, v.0.2.0
+    1. Fix function prepare_panel_info().
+    2. Add a new dialog: "Select columns to display".
+       - the dialog is invoked by pressing Shift-F3 in table view;
+       - the settings are stored individually per DB table;
+       - the settings persist during a plugin session (i.e. until the panel is closed);
+
 2018-03-24, v.0.1.4
     1. Force passive panel redraw after data export.
     2. Fix function read_column_description().
