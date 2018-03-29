@@ -2,6 +2,7 @@
 -- luacheck: globals ErrMsg
 
 local sql3 = require "lsqlite3"
+local hist = require "far2.history"
 local F = far.Flags
 local VK = win.GetVirtualKeys()
 
@@ -43,7 +44,11 @@ function mypanel.open(file_name, silent, foreign_keys) -- function, not method
   setmetatable(self, mt_panel)
 
   self._dbx = sqlite.newsqlite();
-  if not (self._dbx:open(file_name, foreign_keys) and self:open_database()) then
+  if self._dbx:open(file_name, foreign_keys) and self:open_database() then
+    self._hist_obj = hist.newsettings("col_masks", self._file_name:lower(), "PSL_LOCAL")
+    self._col_masks = self._hist_obj:field("masks")
+    self._use_masks = false
+  else
     self = nil
     if not silent then
       ErrMsg(M.ps_err_open.."\n"..file_name)
@@ -367,8 +372,10 @@ function mypanel:set_column_mask()
   }
   local mask = self._col_masks and self._col_masks[self._curr_object]
   for i = 1,col_num do
-    local check = mask and mask[self._column_descr[i].name] and 1 or 0
-    table.insert(dlg_items, { F.DI_CHECKBOX, 5,1+i,0,0, check,0,0,0, self._column_descr[i].name })
+    local text = mask and mask[self._column_descr[i].name]
+    local check = text and 1 or 0
+    table.insert(dlg_items, { F.DI_FIXEDIT,  5,1+i,7,0,     0,0,0,0, text or "0" })
+    table.insert(dlg_items, { F.DI_CHECKBOX, 9,1+i,0,0, check,0,0,0, self._column_descr[i].name })
   end
   table.insert(dlg_items, {F.DI_TEXT,   0,2+col_num,0,0, 0,0,0,F.DIF_SEPARATOR,   ""})
   table.insert(dlg_items, {F.DI_BUTTON, 0,3+col_num,0,0, 0,0,0,FLAG_DFLT,         M.ps_ok})
@@ -376,35 +383,51 @@ function mypanel:set_column_mask()
   table.insert(dlg_items, {F.DI_BUTTON, 0,3+col_num,0,0, 0,0,0,FLAG_NOCLOSE,      M.ps_reset_columns})
   table.insert(dlg_items, {F.DI_BUTTON, 0,3+col_num,0,0, 0,0,0,F.DIF_CENTERGROUP, M.ps_cancel})
 
-  local btnSet, btnReset, btnCancel = col_num+4, col_num+5, col_num+6
+  local btnSet, btnReset, btnCancel = 2*col_num+4, 2*col_num+5, 2*col_num+6
+
+  local function SetEnable(hDlg)
+    hDlg:send(F.DM_ENABLEREDRAW, 0)
+    for pos = 1,col_num do
+      local enab = hDlg:send(F.DM_GETCHECK, 2*pos+1)==F.BSTATE_CHECKED and 1 or 0
+      hDlg:send(F.DM_ENABLE, 2*pos, enab)
+    end
+    hDlg:send(F.DM_ENABLEREDRAW, 1)
+  end
 
   local function DlgProc(hDlg, Msg, Param1, Param2)
-    if Msg == F.DN_BTNCLICK then
+    if Msg == F.DN_INITDIALOG then
+      SetEnable(hDlg)
+      hDlg:send(F.DM_SETFOCUS, 3)
+    elseif Msg == F.DN_BTNCLICK then
       local check = Param1==btnSet and F.BSTATE_CHECKED or Param1==btnReset and F.BSTATE_UNCHECKED
       if check then
         hDlg:send(F.DM_ENABLEREDRAW, 0)
-        for pos = 1,col_num do hDlg:send(F.DM_SETCHECK, pos+1, check); end
+        for pos = 1,col_num do hDlg:send(F.DM_SETCHECK, 2*pos+1, check); end
         hDlg:send(F.DM_ENABLEREDRAW, 1)
       end
+      SetEnable(hDlg)
     end
   end
 
   local guid = win.Uuid("D252C184-9E10-4DE8-BD68-08A8A937E1F8")
-  local res = far.Dialog(guid, -1, -1, 60, 6+col_num, nil, dlg_items, nil, DlgProc)
+  local res = far.Dialog(guid, -1, -1, 60, 6+col_num, "PanelView", dlg_items, nil, DlgProc)
   if res > 0 and res ~= btnCancel then
     mask = {}
     self._col_masks = self._col_masks or {}
     self._col_masks[self._curr_object] = mask
     local all_empty = true
     for k=1,col_num do
-      if dlg_items[k+1][6] ~= 0 then
-        mask[self._column_descr[k].name] = "0"
+      if dlg_items[2*k+1][6] ~= 0 then
+        local txt = dlg_items[2*k][10]
+        mask[self._column_descr[k].name] = txt
         all_empty = false
       end
     end
     if all_empty and col_num > 0 then -- all columns should not be hidden - show the 1-st column
       mask[self._column_descr[1].name] = "0"
     end
+    self._use_masks = true
+    self._hist_obj:save()
   end
 end
 
@@ -434,7 +457,7 @@ function mypanel:prepare_panel_info()
     self:add_keybar_label("Export", VK.F5)
   else
     info.title = info.title .. " [" .. self._curr_object .. "]"
-    local mask = self._col_masks and self._col_masks[self._curr_object]
+    local mask = self._use_masks and self._col_masks and self._col_masks[self._curr_object]
     for i,descr in ipairs(self._column_descr) do
       local width = mask and mask[descr.name]
       if width or not mask then
@@ -570,6 +593,11 @@ function mypanel:handle_keyboard(key_event)
       return true
     elseif shift and vcode == VK.F3 then
       self:set_column_mask()
+      self:prepare_panel_info()
+      panel.RedrawPanel(nil,1)
+      return true
+    elseif ctrl and vcode == VK.F3 then
+      self._use_masks = not self._use_masks
       self:prepare_panel_info()
       panel.RedrawPanel(nil,1)
       return true

@@ -18,9 +18,22 @@ $ #Polygon - Help Contents#
               │             │
    Table View │ F4, Enter   │ Dialog: edit row
               │ Shift-F4    │ Dialog: insert row
-              │ Shift-F3    │ Dialog: select columns to display
+              │ Shift-F3    │ Dialog: custom panel view mode
+              │ Ctrl-F3     │ Toggle panel view mode: full/custom
               │ F8          │ Dialog: delete selected records
    ───────────┴─────────────┴───────────────────────────────────────────────────
 
    If command line is not empty then Enter will execute an "SQLite query"
    from the command line.
+
+@PanelView
+$ #Custom panel view#
+   This dialog allows to choose what columns to display and set their widths.
+Column widths are specified with the same syntax as in panel view dialog of
+~Far Manager~@:PanelViewModes@.
+
+   If the dialog was closed with OK button then the panels will be rearranged
+according to the dialog settings. These settings will also be stored permanently
+in the plugin's local database.
+
+Pressing Ctrl-F3 in the plugin panel will toggle between full and custom views.

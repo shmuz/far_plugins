@@ -1,3 +1,9 @@
+2018-03-29, v.0.2.1
+    1. Rename the dialog: "Select columns to display" -> "Custom panel view".
+    2. Add settings of column widths to this dialog.
+    3. Ctrl-F3 in the panels toggles between full view and custom view.
+    4. Settings of custom panel view are stored permanently in the plugin's local database.
+
 2018-03-27, v.0.2.0
     1. Fix function prepare_panel_info().
     2. Add a new dialog: "Select columns to display".
