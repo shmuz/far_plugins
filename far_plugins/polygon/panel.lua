@@ -177,11 +177,8 @@ function mypanel:get_panel_list_db()
     ErrMsg(M.ps_err_read.."\n"..self._file_name.."\n"..err_descr)
     return false
   end
-  local items = { {} }
 
-  -- All dots (..)
-  items[1].FileName = ".."
-
+  local items = { { FileName=".."; FileAttributes="d"; } }
   for i,obj in ipairs(db_objects) do
     local item = {}
     items[i+1] = item
@@ -257,7 +254,7 @@ function mypanel:get_panel_list_obj()
   end
 
   -- Add a special item with dots (..) in all columns
-  local dot_item = { FileName=".."; CustomColumnData={}; }
+  local dot_item = { FileName=".."; FileAttributes="d"; CustomColumnData={}; }
   local items = { dot_item }
   for i = 1, #self._column_descr do
     dot_item.CustomColumnData[i] = ".."
@@ -306,10 +303,9 @@ function mypanel:get_panel_list_query()
   local buff = {}
 
   -- All dots (..)
-  local dot_item = {}
+  local dot_item = { FileName=".."; FileAttributes="d"; }
 
   -- All dots (..)
-  dot_item.FileName = ".."
   local dot_col_num = #self._column_descr
   local dot_custom_column_data = {}
   for j = 1, dot_col_num do

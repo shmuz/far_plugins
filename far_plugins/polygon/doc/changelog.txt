@@ -1,3 +1,6 @@
+2018-03-30, v.0.2.2
+    1. Add directory attribute to ".." panel items to make happy Far 3.0.5176.
+
 2018-03-29, v.0.2.1
     1. Rename the dialog: "Select columns to display" -> "Custom panel view".
     2. Add settings of column widths to this dialog.
