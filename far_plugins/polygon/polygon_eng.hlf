@@ -3,31 +3,59 @@
 .Options CtrlColorChar=\
 
 @Contents
-$ #Polygon - Help Contents#
- #Reference of keyboard actions when the plugin's panel is active#
+$^ #Polygon - Help Contents#
+ #Polygon# - a Far Manager plugin for viewing and editing SQLite database files.
+ The plugin is based on SQLiteDB plugin by Artem Senichev.
 
-   View       │ Key         │ Action
-   ───────────┼─────────────┼───────────────────────────────────────────────────
-   Any        │ F6          │ Open Editor for editing an "SQLite query"
-              │             │
-   DB View    │ F3          │ View contents of table under cursor
-              │ F4          │ View create statement of table under cursor
-              │ Shift-F4    │ View pragma statements
-              │ F5          │ Dialog: export data
-              │ F8          │ Dialog: delete selected database elements
-              │             │
-   Table View │ F4, Enter   │ Dialog: edit row
-              │ Shift-F4    │ Dialog: insert row
-              │ Shift-F3    │ Dialog: custom panel view mode
-              │ Ctrl-F3     │ Toggle panel view mode: full/custom
-              │ F8          │ Dialog: delete selected records
-   ───────────┴─────────────┴───────────────────────────────────────────────────
+ ~Reference of keyboard actions when the plugin's panel is active~@Keyboard@
+ ~Custom Panel View Dialog~@PanelView@
+ ~Invoking the plugin~@Invoke@
+
+@Invoke
+$^ #Invoking the plugin#
+ The plugin can be invoked the following ways:
+
+   1. From the plugins menu. The plugin opens the file under cursor.
+
+   2. Pressing Enter on the file in panels.
+
+   3. From the command line: #polygon: <filename>#.
+      - If the file <filename> does not exist it will be created.
+      - If no file name is specified then an in-memory database will be opened.
+
+   4. From ~Folder shortcuts~@:FolderShortcuts@.
+
+ ~Contents~@Contents@
+
+@Keyboard
+$^ #Reference of keyboard actions when the plugin's panel is active#
+   View mode     │ Key         │ Action
+   ──────────────┼─────────────┼───────────────────────────────────────────────────
+   Any           │ F6          │ Open Editor for editing an "SQLite query"
+                 │ LCtrl-1     │ Two-panel view mode
+                 │ LCtrl-2     │ One-panel view mode
+                 │             │
+   Database      │ F3          │ Show contents of table under cursor
+                 │ F4          │ Show create statement of table under cursor
+                 │ Shift-F4    │ Show pragma statements
+                 │ F5          │ Dialog: export data
+                 │ F8          │ Dialog: delete selected database elements
+                 │             │
+   Table         │ F4, Enter   │ Dialog: edit row
+                 │ Shift-F4    │ Dialog: insert row
+                 │ F8          │ Dialog: delete selected records
+                 │             │
+   Table or View │ Shift-F3    │ Dialog: custom panel view mode
+                 │ Shift-F5    │ Toggle panel view mode: full/custom
+   ──────────────┴─────────────┴───────────────────────────────────────────────────
 
    If command line is not empty then Enter will execute an "SQLite query"
    from the command line.
 
+ ~Contents~@Contents@
+
 @PanelView
-$ #Custom panel view#
+$^ #Custom panel view dialog#
    This dialog allows to choose what columns to display and set their widths.
 Column widths are specified with the same syntax as in panel view dialog of
 ~Far Manager~@:PanelViewModes@.
@@ -36,4 +64,6 @@ Column widths are specified with the same syntax as in panel view dialog of
 according to the dialog settings. These settings will also be stored permanently
 in the plugin's local database.
 
-Pressing Ctrl-F3 in the plugin panel will toggle between full and custom views.
+   Pressing Ctrl-F3 in the plugin panel will toggle between full and custom views.
+
+ ~Contents~@Contents@

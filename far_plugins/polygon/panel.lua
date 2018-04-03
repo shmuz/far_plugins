@@ -1,61 +1,73 @@
 -- panel.lua
 -- luacheck: globals ErrMsg
 
-local sql3 = require "lsqlite3"
-local hist = require "far2.history"
+local sql3    = require "lsqlite3"
+local history = require "far2.history"
+
 local F = far.Flags
 local VK = win.GetVirtualKeys()
+local win_CompareString = win.CompareString
 
 local Params = ...
 local M        = Params.M
-local sqlite   = Params.sqlite
-local progress = Params.progress
 local exporter = Params.exporter
 local myeditor = Params.myeditor
+local progress = Params.progress
+local sqlite   = Params.sqlite
 
---! Panel modes.
---enum panel_mode {
+-- Panel modes (self._panel_mode)
 local pm_db    = 0
 local pm_table = 1
 local pm_view  = 2
 local pm_query = 3
 
 
+-- This file's module. Could not be called "panel" due to existing LuaFAR global "panel".
 local mypanel = {}
 local mt_panel = {__index=mypanel}
 
 
-function mypanel.open(file_name, silent, foreign_keys) -- function, not method
+function mypanel.open(open_data, silent, foreign_keys) -- function, not method
   local self = {
-    _file_name      = file_name;
-    _last_sql_query = ""  ;
-    _column_descr   = nil ;
-    _dbx            = nil ;
-    _panel_mode     = nil ;
-    _curr_object    = nil ;
+
+  -- Members come from the original plugin SQLiteDB.
+    _file_name       = open_data.FileName;
+    _last_sql_query  = ""  ;
+    _column_descr    = nil ;
+    _curr_object     = nil ;
+    _dbx             = nil ;
+    _panel_mode      = nil ;
+
+  -- Members added since this plugin started.
+    _col_masks       = nil ; -- col_masks table (non-volatile)
+    _col_masks_used  = nil ;
+    _curr_rowid      = nil ;
+    _hist_file       = nil ; -- files[<filename>] in the plugin's non-volatile settings
+    _sort_col_index  = nil ;
+    _sort_started    = nil ;
   }
 
-  self._panel_info = { -- Panel info description
-    title      = "" ;
-    modes      = {} ;
-    key_bar    = {} ;
+  -- Members come from the original plugin SQLiteDB.
+  self._panel_info = {
+    title   = "" ;
+    modes   = {} ;
+    key_bar = {} ;
   }
 
   setmetatable(self, mt_panel)
 
   self._dbx = sqlite.newsqlite();
-  if self._dbx:open(file_name, foreign_keys) and self:open_database() then
-    self._hist_obj = hist.newsettings("col_masks", self._file_name:lower(), "PSL_LOCAL")
-    self._col_masks = self._hist_obj:field("masks")
-    self._use_masks = false
+  if self._dbx:open(self._file_name, foreign_keys) and self:open_database() then
+    self._hist_file = history.newsettings("files", self._file_name:lower(), "PSL_LOCAL")
+    self._col_masks = self._hist_file:field("col_masks")
+    self._col_masks_used = false
+    return self
   else
-    self = nil
     if not silent then
-      ErrMsg(M.ps_err_open.."\n"..file_name)
+      ErrMsg(M.ps_err_open.."\n"..self._file_name)
     end
+    return nil
   end
-
-  return self
 end
 
 
@@ -95,14 +107,12 @@ function mypanel:open_query(query)
   self._last_sql_query = query
 
   -- Check query for select
-  local select_word = query:match("^%s*(%w*)");
-  if select_word:lower() ~= "select" then
+  if query:match("^%s*(%w*)"):lower() ~= "select" then
     -- Update query - just execute without read result
     local prg_wnd = progress.newprogress(M.ps_execsql)
     if not self._dbx:execute_query(query) then
       prg_wnd:hide()
-      local err_descr = self._dbx:last_error()
-      ErrMsg(M.ps_err_sql.."\n"..query.."\n"..err_descr)
+      ErrMsg(M.ps_err_sql.."\n"..query.."\n"..self._dbx:last_error())
       return false
     end
     prg_wnd:hide()
@@ -110,10 +120,8 @@ function mypanel:open_query(query)
     -- Get column description
     local db = self._dbx:db()
     local stmt = db:prepare(query)
-    if (not stmt) or (stmt:step() ~= sql3.ROW and stmt.step() ~= sql3.DONE) then
-      local err_descr = self._dbx:last_error()
-      ErrMsg(M.ps_err_sql.."\n"..query.."\n"..err_descr)
-      if stmt then stmt:finalize() end
+    if not stmt then
+      ErrMsg(M.ps_err_sql.."\n"..query.."\n"..self._dbx:last_error())
       return false
     end
 
@@ -121,13 +129,8 @@ function mypanel:open_query(query)
     self._curr_object = query
 
     self._column_descr = {}
-    local col_count = stmt:columns()
-    for i = 0, col_count-1 do
-      local col = {
-        name = stmt:get_name(i);
-        type = sqlite.ct_text;
-      }
-      table.insert(self._column_descr, col)
+    for i, name in ipairs(stmt:get_names()) do
+      self._column_descr[i] = { name = name; type = sqlite.ct_text; }
     end
 
     stmt:finalize()
@@ -143,13 +146,14 @@ end
 function mypanel:get_panel_info()
   return {
     CurDir           = self._curr_object;
-    Flags            = bit64.bor(F.OPIF_DISABLESORTGROUPS, F.OPIF_DISABLEFILTER);
+    Flags            = bit64.bor(F.OPIF_DISABLESORTGROUPS,F.OPIF_DISABLEFILTER,F.OPIF_SHORTCUT);
     HostFile         = self._file_name;
     KeyBar           = self._panel_info.key_bar;
     PanelModesArray  = self._panel_info.modes;
     PanelModesNumber = #self._panel_info.modes;
     PanelTitle       = self._panel_info.title;
-    StartPanelMode   = ("0"):byte();
+    ShortcutData     = "";
+    StartPanelMode   = ("1"):byte();
   }
 end
 
@@ -216,38 +220,32 @@ function mypanel:get_panel_list_obj()
     return false
   end
 
-  -- Find a name to use for ROWID (self._rowid_name)
-  local query = "select * from '"..curr_object.."'"
-  local stmt = db:prepare(query)
-  if not stmt then
-    return false
-  end
-  local col_names = stmt:get_names()
-  stmt:finalize()
-  for _,v in ipairs(col_names) do
-    col_names[v:lower()]=true
-  end
-  self._rowid_name = nil
-  for _,v in ipairs {"rowid", "oid", "_rowid_"} do
-    if col_names[v] == nil then
-      self._rowid_name = v
-      break
+  -- Find a name to use for ROWID (self._curr_rowid)
+  self._curr_rowid = nil
+  local stmt = db:prepare(("select * from '%s'"):format(curr_object))
+  if stmt then
+    local map = {}
+    for _,colname in ipairs(stmt:get_names()) do map[colname:lower()]=true; end
+    for _,name in ipairs {"rowid", "oid", "_rowid_"} do
+      if map[name] == nil then
+        self._curr_rowid = name
+        break
+      end
     end
+    stmt:finalize()
+  else
+    return false
   end
 
   -- Find if ROWID exists
-  self._has_rowid = true
   stmt = nil
-  if self._rowid_name then
-    query = "select "..self._rowid_name..",* from '"..curr_object.."'"
-    stmt = db:prepare(query)
+  if self._curr_rowid then
+    stmt = db:prepare(("select %s,* from '%s'"):format(self._curr_rowid, curr_object))
+    if not stmt then self._curr_rowid = nil; end
   end
   if not stmt then
-    query = "select * from '"..curr_object.."'"
-    stmt = db:prepare(query)
-    if stmt then
-      self._has_rowid = false
-    else
+    stmt = db:prepare(("select * from '%s'"):format(curr_object))
+    if not stmt then
       ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
       return false
     end
@@ -279,11 +277,11 @@ function mypanel:get_panel_list_obj()
     local item = { FileName=("%08d"):format(row); CustomColumnData={}; }
     items[row+1] = item -- shift by 1, as items[1] is dot_item
 
-    local adjust = self._has_rowid and 0 or 1
+    local adjust = self._curr_rowid and 0 or 1
     for j = 1, #self._column_descr do
       item.CustomColumnData[j] = exporter.get_text(stmt, j-adjust)
     end
-    if self._has_rowid then
+    if self._curr_rowid then
       item.AllocationSize = stmt:get_value(0)  -- This field used as row id
     end
   end
@@ -360,18 +358,24 @@ end
 
 function mypanel:set_column_mask()
   -- Build dialog dynamically
+  local dlg_width = 72
   local col_num = #self._column_descr
   local FLAG_DFLT = bit64.bor(F.DIF_CENTERGROUP, F.DIF_DEFAULTBUTTON)
   local FLAG_NOCLOSE = bit64.bor(F.DIF_CENTERGROUP, F.DIF_BTNNOCLOSE)
   local dlg_items = {
-    {F.DI_DOUBLEBOX, 3,1,56,col_num+4, 0,0,0,0, M.ps_title_select_columns},
+    {F.DI_DOUBLEBOX, 3,1,dlg_width-4,col_num+4, 0,0,0,0, M.ps_title_select_columns},
   }
-  local mask = self._col_masks and self._col_masks[self._curr_object]
+  local mask = self._col_masks[self._curr_object]
   for i = 1,col_num do
     local text = mask and mask[self._column_descr[i].name]
     local check = text and 1 or 0
+    local name = self._column_descr[i].name
+    local name_len = name:len()
+    if name_len > dlg_width-18 then
+      name = name:sub(1,dlg_width-21).."..."
+    end
     table.insert(dlg_items, { F.DI_FIXEDIT,  5,1+i,7,0,     0,0,0,0, text or "0" })
-    table.insert(dlg_items, { F.DI_CHECKBOX, 9,1+i,0,0, check,0,0,0, self._column_descr[i].name })
+    table.insert(dlg_items, { F.DI_CHECKBOX, 9,1+i,0,0, check,0,0,0, name })
   end
   table.insert(dlg_items, {F.DI_TEXT,   0,2+col_num,0,0, 0,0,0,F.DIF_SEPARATOR,   ""})
   table.insert(dlg_items, {F.DI_BUTTON, 0,3+col_num,0,0, 0,0,0,FLAG_DFLT,         M.ps_ok})
@@ -406,25 +410,32 @@ function mypanel:set_column_mask()
   end
 
   local guid = win.Uuid("D252C184-9E10-4DE8-BD68-08A8A937E1F8")
-  local res = far.Dialog(guid, -1, -1, 60, 6+col_num, "PanelView", dlg_items, nil, DlgProc)
+  local res = far.Dialog(guid, -1, -1, dlg_width, 6+col_num, "PanelView", dlg_items, nil, DlgProc)
   if res > 0 and res ~= btnCancel then
     mask = {}
-    self._col_masks = self._col_masks or {}
     self._col_masks[self._curr_object] = mask
     local all_empty = true
     for k=1,col_num do
       if dlg_items[2*k+1][6] ~= 0 then
-        local txt = dlg_items[2*k][10]
-        mask[self._column_descr[k].name] = txt
+        mask[self._column_descr[k].name] = dlg_items[2*k][10]
         all_empty = false
       end
     end
     if all_empty and col_num > 0 then -- all columns should not be hidden - show the 1-st column
       mask[self._column_descr[1].name] = "0"
     end
-    self._use_masks = true
-    self._hist_obj:save()
+    self._col_masks_used = true
+    self._hist_file:save()
+    self:prepare_panel_info()
+    panel.RedrawPanel(nil,1)
   end
+end
+
+
+function mypanel:toggle_column_mask()
+  self._col_masks_used = not self._col_masks_used
+  self:prepare_panel_info()
+  panel.RedrawPanel(nil,1)
 end
 
 
@@ -453,7 +464,7 @@ function mypanel:prepare_panel_info()
     self:add_keybar_label("Export", VK.F5)
   else
     info.title = info.title .. " [" .. self._curr_object .. "]"
-    local mask = self._use_masks and self._col_masks and self._col_masks[self._curr_object]
+    local mask = self._col_masks_used and self._col_masks[self._curr_object]
     for i,descr in ipairs(self._column_descr) do
       local width = mask and mask[descr.name]
       if width or not mask then
@@ -492,14 +503,19 @@ function mypanel:prepare_panel_info()
 
   -- Configure one panel view for all modes
   info.modes = {}
-  local pm = {
+  local pm1 = {
     ColumnTypes  = col_types;
     ColumnWidths = col_widths;
     ColumnTitles = col_titles;
     StatusColumnTypes = status_types;
     StatusColumnWidths = status_widths;
   }
-  for k=1,10 do info.modes[k] = pm; end
+  local pm2 = {}
+  for k,v in pairs(pm1) do pm2[k]=v; end
+  pm2.Flags = F.PMFLAGS_FULLSCREEN
+  for k=1,10 do
+    info.modes[k] = (k%2==1) and pm2 or pm1
+  end
 end
 
 
@@ -515,12 +531,12 @@ end
 
 
 function mypanel:delete_items(items, items_count)
-  if self._panel_mode == pm_table and not (self._has_rowid and self._rowid_name) then
+  if self._panel_mode == pm_table and not self._curr_rowid then
     ErrMsg(M.ps_err_del_norowid)
     return false
   end
   if self._panel_mode == pm_table or self._panel_mode == pm_db then
-    local ed = myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name)
+    local ed = myeditor.neweditor(self._dbx, self._curr_object, self._curr_rowid)
     return ed:remove(items, items_count)
   end
   return false
@@ -547,7 +563,7 @@ function mypanel:handle_keyboard(key_event)
     end
   end
 
-  -- Database view mode --------------------------------------------------------
+  -- Database mode -------------------------------------------------------------
   if self._panel_mode == pm_db then
     if nomods and vcode == VK.F3 then            -- F3: view table/view data
       self:view_db_object()
@@ -567,7 +583,7 @@ function mypanel:handle_keyboard(key_event)
       return true
     end
 
-  -- Panel view mode -----------------------------------------------------------
+  -- Table mode ----------------------------------------------------------------
   elseif self._panel_mode == pm_table then
     if nomods and (vcode == VK.F4 or vcode == VK.RETURN) then -- F4 or Enter: edit row
       if vcode == VK.RETURN then
@@ -576,8 +592,8 @@ function mypanel:handle_keyboard(key_event)
           return false
         end
       end
-      if self._has_rowid and self._rowid_name then
-        myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name):update()
+      if self._curr_rowid then
+        myeditor.neweditor(self._dbx, self._curr_object, self._curr_rowid):update()
         return true
       else
         ErrMsg(M.ps_err_edit_norowid)
@@ -589,13 +605,21 @@ function mypanel:handle_keyboard(key_event)
       return true
     elseif shift and vcode == VK.F3 then
       self:set_column_mask()
-      self:prepare_panel_info()
-      panel.RedrawPanel(nil,1)
       return true
-    elseif ctrl and vcode == VK.F3 then
-      self._use_masks = not self._use_masks
-      self:prepare_panel_info()
-      panel.RedrawPanel(nil,1)
+    elseif shift and vcode == VK.F5 then
+      self:toggle_column_mask()
+      return true
+    end
+
+  -- View mode ----------------------------------------------------------------
+  elseif self._panel_mode == pm_view then
+    if shift and vcode == VK.F4 then             -- ShiftF4: suppress this key
+      return true
+    elseif shift and vcode == VK.F3 then
+      self:set_column_mask()
+      return true
+    elseif shift and vcode == VK.F5 then
+      self:toggle_column_mask()
       return true
     end
 
@@ -765,6 +789,58 @@ function mypanel:edit_sql_query()
 
     self._last_sql_query = string.gsub(file_buff, "\r\n", "\n")
     self:open_query(self._last_sql_query)
+  end
+end
+
+
+local SortMap = {
+  [ F.SM_NAME     ] = 1,
+  [ F.SM_EXT      ] = 2,
+  [ F.SM_MTIME    ] = 3,
+  [ F.SM_SIZE     ] = 4,
+  [ F.SM_UNSORTED ] = 5,
+  [ F.SM_CTIME    ] = 6,
+  [ F.SM_ATIME    ] = 7,
+  [ F.SM_DESCR    ] = 8,
+  [ F.SM_OWNER    ] = 9,
+}
+
+
+function mypanel:change_sort_params()
+  self._sort_started = false
+end
+
+
+function mypanel:init_sort_params(Mode)
+  self._sort_col_index = nil
+  if self._panel_mode==pm_table or self._panel_mode==pm_view then
+    self._sort_started = true
+    local index = 0
+    local pos_from_left = SortMap[Mode]
+    if pos_from_left then
+      for dd in self._panel_info.modes[1].ColumnTypes:gmatch("%d+") do -- ColumnTypes: e.g. C0,C4,C6
+        index = index + 1
+        if index == pos_from_left then
+          self._sort_col_index = tonumber(dd) + 1
+          break
+        end
+      end
+    end
+  end
+end
+
+
+function mypanel:compare(PanelItem1, PanelItem2, Mode)
+  if not self._sort_started then
+    self:init_sort_params(Mode)
+  end
+  local index = self._sort_col_index
+  if index then
+    return win_CompareString(
+      PanelItem1.CustomColumnData[index],
+      PanelItem2.CustomColumnData[index], "u", "cS") or 0
+  else
+    return 0
   end
 end
 

@@ -31,6 +31,7 @@ modules = \
 FAR_EXPORTS = \
   ANALYSE            \
   CLOSEPANEL         \
+  COMPARE            \
   CONFIGURE          \
   DELETEFILES        \
   FREEFINDDATA       \

@@ -67,16 +67,18 @@ end
 
 
 function export.Open(OpenFrom, Guid, Item)
-  local file_name = nil
+  local open_data = nil
 
   if OpenFrom == F.OPEN_ANALYSE then
-    file_name = Item.FileName
+    open_data = Item
 
   elseif OpenFrom == F.OPEN_COMMANDLINE then
     local str = Item:gsub("\"", ""):gsub("^%s+", ""):gsub("%s+$", "")
-    if str ~= "" then
+    if str == "" then
+      open_data = { FileName=":memory:" }
+    elseif str ~= "" then
       str = str:gsub("%%(.-)%%", win.GetEnv) -- expand environment variables
-      file_name = far.ConvertPath(str, "CPM_FULL")
+      open_data = { FileName = far.ConvertPath(str, "CPM_FULL") }
     end
 
   elseif OpenFrom == F.OPEN_PLUGINSMENU then
@@ -87,12 +89,19 @@ function export.Open(OpenFrom, Guid, Item)
       if item then
         local name = far.ConvertPath(item.FileName, "CPM_FULL")
         local attr = win.GetFileAttr(name)
-        if attr and not attr:find("d") then file_name = name; end
+        if attr and not attr:find("d") then
+          open_data = { FileName = name }
+        end
       end
     end
+
+  elseif OpenFrom == F.OPEN_SHORTCUT then
+    Item.FileName = Item.HostFile
+    open_data = Item
+
   end
 
-  return file_name and mypanel.open(file_name, false, plugdata.foreign_keys)
+  return open_data and mypanel.open(open_data, false, plugdata.foreign_keys)
 end
 
 
@@ -137,10 +146,18 @@ function export.ProcessPanelEvent (object, handle, Event, Param)
     object:open_query(Param)
     panel.SetCmdLine(nil, "")
     return true
+  elseif Event == F.FE_CHANGESORTPARAMS then
+    object:change_sort_params(Param)
+    return false
   end
 end
 
 
 function export.Configure()
   settings.configure();
+end
+
+
+function export.Compare(object, handle, PanelItem1, PanelItem2, Mode)
+  return object:compare(PanelItem1, PanelItem2, Mode)
 end

@@ -10,6 +10,7 @@ local sqlite   = Params.sqlite
 local exporter = Params.exporter
 
 
+-- This file's module. Could not be called "editor" due to existing LuaFAR global "editor".
 local myeditor = {}
 local mt_editor = {__index=myeditor}
 
@@ -31,7 +32,7 @@ function myeditor:update()
   local row_id = tostring(item.AllocationSize)
 
   local db_data = {}
-  local query = "select * from "..self._table_name.." where "..self._rowid_name.."="..row_id
+  local query = ("select * from '%s' where %s=%s"):format(self._table_name, self._rowid_name, row_id)
 
   local db = self._dbx:db()
   local stmt = db:prepare(query)
@@ -125,8 +126,8 @@ function myeditor.edit(db_data, create_mode)
   if max_value_length + max_label_length + 12 > max_wnd_width then
     max_value_length = max_wnd_width - max_label_length - 12
   end
-  local dlg_height = 6 + --[[ border, buttons etc ]] #db_data
-  local dlg_width = 12 + --[[ border, buttons etc ]] max_label_length + max_value_length
+  local dlg_height = 6 + #db_data
+  local dlg_width = 12 + max_label_length + max_value_length
   if dlg_width < 30 then
     dlg_width = 30
   end
@@ -142,8 +143,8 @@ function myeditor.edit(db_data, create_mode)
   local y_pos = 2
   for i,v in ipairs(db_data) do
     local val = v.value
-    local row_ctl = myeditor.create_row_control(v.column.name, val, y_pos, max_label_length, max_value_length,
-                                                v.column.type == sqlite.ct_blob)
+    local row_ctl = myeditor.create_row_control(v.column.name, val, y_pos, max_label_length,
+                    max_value_length, v.column.type == sqlite.ct_blob)
     y_pos = y_pos + 1
     if i == 1 then
       row_ctl.field[9] = bit64.bor(row_ctl.field[9], F.DIF_FOCUS)
@@ -212,7 +213,7 @@ function myeditor:remove(items, items_count)
       end
     end
   else
-    local query = "delete from "..self._table_name.." where "..self._rowid_name.." in ("
+    local query = ("delete from '%s' where %s in ("):format(self._table_name, self._rowid_name)
     for i = 1, items_count do
       if i > 1 then query = query .. "," end
       query = query .. items[i].AllocationSize

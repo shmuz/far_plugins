@@ -1,3 +1,13 @@
+2018-04-03, v.0.3.0
+    1. Fix:    operations on tables containing spaces in their names.
+    2. Fix:    function open_query() for empty data sets.
+    3. Change: Shift-F5 toggles between full view and custom view (was: Ctrl-F3).
+    4. Add:    full-screen view (LCtrl-2).
+    5. Add:    "custom panel view" feature for View mode (was: only for Table mode).
+    6. Add:    command line with no filename specified opens in-memory data base.
+    7. Add:    support for Folder Shortcuts.
+    8. Add:    (experimental) sort items by Ctrl-F3 ... Ctrl-F11.
+
 2018-03-30, v.0.2.2
     1. Add directory attribute to ".." panel items to make happy Far 3.0.5176.
 
