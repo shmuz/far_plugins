@@ -1,3 +1,10 @@
+2018-04-06, v.0.4.0
+    1. Fix: correct work with tables and columns whose names contain any allowed characters:
+            spaces, brackets, single and double quotes, etc.
+    2. Add: (experimental) plugin's functionality can be extended by "user modules" written in Lua,
+            that are loaded from %FARPROFILE%\PluginsData\Polygon\*.lua.
+            Currently it is in the very beginning stage and will be documented later.
+
 2018-04-03, v.0.3.0
     1. Fix:    operations on tables containing spaces in their names.
     2. Fix:    function open_query() for empty data sets.

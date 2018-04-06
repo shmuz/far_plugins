@@ -181,7 +181,7 @@ function exporter:export_data_as_text(file_name, db_object)
   file:write(out_text, "\r\n")
 
   -- Read data
-  local query = "select * from '" .. db_object .. "'"
+  local query = "select * from " .. db_object:normalize() .. ";"
   local db = dbx:db()
   local stmt = db:prepare(query)
   if not stmt then
@@ -277,7 +277,7 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
   file:write(out_text, "\r\n")
 
   -- Read data
-  local query = "select * from '" .. db_object .. "'"
+  local query = "select * from " .. db_object:normalize() .. ";"
   local db = self._dbx:db()
   local stmt = db:prepare(query)
   if not stmt then

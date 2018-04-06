@@ -15,36 +15,29 @@ local myeditor = Params.myeditor
 local progress = Params.progress
 local sqlite   = Params.sqlite
 
--- Panel modes (self._panel_mode)
-local pm_db    = 0
-local pm_table = 1
-local pm_view  = 2
-local pm_query = 3
-
-
 -- This file's module. Could not be called "panel" due to existing LuaFAR global "panel".
 local mypanel = {}
 local mt_panel = {__index=mypanel}
 
 
-function mypanel.open(open_data, silent, foreign_keys) -- function, not method
+function mypanel.open(file_name, silent, foreign_keys) -- function, not method
   local self = {
 
   -- Members come from the original plugin SQLiteDB.
-    _file_name       = open_data.FileName;
+    _file_name       = file_name;
     _last_sql_query  = ""  ;
     _column_descr    = nil ;
     _curr_object     = nil ;
     _dbx             = nil ;
-    _panel_mode      = nil ;
+    _panel_mode      = nil ; -- valid values are: "db", "table", "view", "query"
 
   -- Members added since this plugin started.
-    _col_masks       = nil ; -- col_masks table (non-volatile)
-    _col_masks_used  = nil ;
-    _curr_rowid      = nil ;
-    _hist_file       = nil ; -- files[<filename>] in the plugin's non-volatile settings
-    _sort_col_index  = nil ;
-    _sort_started    = nil ;
+    _col_masks      = nil ; -- col_masks table (non-volatile)
+    _col_masks_used = nil ;
+    _rowid_name     = nil ;
+    _hist_file      = nil ; -- files[<filename>] in the plugin's non-volatile settings
+    _sort_col_index = nil ;
+    _sort_started   = nil ;
   }
 
   -- Members come from the original plugin SQLiteDB.
@@ -57,14 +50,14 @@ function mypanel.open(open_data, silent, foreign_keys) -- function, not method
   setmetatable(self, mt_panel)
 
   self._dbx = sqlite.newsqlite();
-  if self._dbx:open(self._file_name, foreign_keys) and self:open_database() then
-    self._hist_file = history.newsettings("files", self._file_name:lower(), "PSL_LOCAL")
+  if self._dbx:open(file_name, foreign_keys) and self:open_database() then
+    self._hist_file = history.newsettings("files", file_name:lower(), "PSL_LOCAL")
     self._col_masks = self._hist_file:field("col_masks")
     self._col_masks_used = false
     return self
   else
     if not silent then
-      ErrMsg(M.ps_err_open.."\n"..self._file_name)
+      ErrMsg(M.ps_err_open.."\n"..file_name)
     end
     return nil
   end
@@ -72,7 +65,7 @@ end
 
 
 function mypanel:open_database()
-  self._panel_mode = pm_db
+  self._panel_mode = "db"
   self._curr_object = ""
   self:prepare_panel_info()
   return true
@@ -83,9 +76,9 @@ function mypanel:open_object(object_name)
   local dbx = self._dbx
   local tp = dbx:get_object_type(object_name)
   if tp == sqlite.ot_master or tp == sqlite.ot_table then
-    self._panel_mode = pm_table
+    self._panel_mode = "table"
   elseif tp == sqlite.ot_view then
-    self._panel_mode = pm_view
+    self._panel_mode = "view"
   else
     return false
   end
@@ -125,7 +118,7 @@ function mypanel:open_query(query)
       return false
     end
 
-    self._panel_mode = pm_query
+    self._panel_mode = "query"
     self._curr_object = query
 
     self._column_descr = {}
@@ -160,11 +153,11 @@ end
 
 function mypanel:get_panel_list()
   local rc = false
-  if self._panel_mode==pm_db then
+  if self._panel_mode=="db" then
     rc = self:get_panel_list_db()
-  elseif self._panel_mode==pm_table or self._panel_mode==pm_view then
+  elseif self._panel_mode=="table" or self._panel_mode=="view" then
     rc = self:get_panel_list_obj()
-  elseif self._panel_mode == pm_query then
+  elseif self._panel_mode == "query" then
     rc = self:get_panel_list_query()
   end
   return rc
@@ -220,15 +213,15 @@ function mypanel:get_panel_list_obj()
     return false
   end
 
-  -- Find a name to use for ROWID (self._curr_rowid)
-  self._curr_rowid = nil
-  local stmt = db:prepare(("select * from '%s'"):format(curr_object))
+  -- Find a name to use for ROWID (self._rowid_name)
+  self._rowid_name = nil
+  local stmt = db:prepare("select * from " .. curr_object:normalize() .. ";")
   if stmt then
     local map = {}
     for _,colname in ipairs(stmt:get_names()) do map[colname:lower()]=true; end
     for _,name in ipairs {"rowid", "oid", "_rowid_"} do
       if map[name] == nil then
-        self._curr_rowid = name
+        self._rowid_name = name
         break
       end
     end
@@ -239,12 +232,12 @@ function mypanel:get_panel_list_obj()
 
   -- Find if ROWID exists
   stmt = nil
-  if self._curr_rowid then
-    stmt = db:prepare(("select %s,* from '%s'"):format(self._curr_rowid, curr_object))
-    if not stmt then self._curr_rowid = nil; end
+  if self._rowid_name then
+    stmt = db:prepare(("select %s,* from %s"):format(self._rowid_name, curr_object:normalize()))
+    if not stmt then self._rowid_name = nil; end
   end
   if not stmt then
-    stmt = db:prepare(("select * from '%s'"):format(curr_object))
+    stmt = db:prepare("select * from " .. curr_object:normalize() .. ";")
     if not stmt then
       ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
       return false
@@ -277,11 +270,11 @@ function mypanel:get_panel_list_obj()
     local item = { FileName=("%08d"):format(row); CustomColumnData={}; }
     items[row+1] = item -- shift by 1, as items[1] is dot_item
 
-    local adjust = self._curr_rowid and 0 or 1
+    local adjust = self._rowid_name and 0 or 1
     for j = 1, #self._column_descr do
       item.CustomColumnData[j] = exporter.get_text(stmt, j-adjust)
     end
-    if self._curr_rowid then
+    if self._rowid_name then
       item.AllocationSize = stmt:get_value(0)  -- This field used as row id
     end
   end
@@ -531,12 +524,12 @@ end
 
 
 function mypanel:delete_items(items, items_count)
-  if self._panel_mode == pm_table and not self._curr_rowid then
+  if self._panel_mode == "table" and not self._rowid_name then
     ErrMsg(M.ps_err_del_norowid)
     return false
   end
-  if self._panel_mode == pm_table or self._panel_mode == pm_db then
-    local ed = myeditor.neweditor(self._dbx, self._curr_object, self._curr_rowid)
+  if self._panel_mode == "table" or self._panel_mode == "db" then
+    local ed = myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name)
     return ed:remove(items, items_count)
   end
   return false
@@ -564,7 +557,7 @@ function mypanel:handle_keyboard(key_event)
   end
 
   -- Database mode -------------------------------------------------------------
-  if self._panel_mode == pm_db then
+  if self._panel_mode == "db" then
     if nomods and vcode == VK.F3 then            -- F3: view table/view data
       self:view_db_object()
       return true
@@ -584,7 +577,7 @@ function mypanel:handle_keyboard(key_event)
     end
 
   -- Table mode ----------------------------------------------------------------
-  elseif self._panel_mode == pm_table then
+  elseif self._panel_mode == "table" then
     if nomods and (vcode == VK.F4 or vcode == VK.RETURN) then -- F4 or Enter: edit row
       if vcode == VK.RETURN then
         local item = panel.GetCurrentPanelItem(nil, 1)
@@ -592,8 +585,8 @@ function mypanel:handle_keyboard(key_event)
           return false
         end
       end
-      if self._curr_rowid then
-        myeditor.neweditor(self._dbx, self._curr_object, self._curr_rowid):update()
+      if self._rowid_name then
+        myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name):update()
         return true
       else
         ErrMsg(M.ps_err_edit_norowid)
@@ -612,7 +605,7 @@ function mypanel:handle_keyboard(key_event)
     end
 
   -- View mode ----------------------------------------------------------------
-  elseif self._panel_mode == pm_view then
+  elseif self._panel_mode == "view" then
     if shift and vcode == VK.F4 then             -- ShiftF4: suppress this key
       return true
     elseif shift and vcode == VK.F3 then
@@ -813,7 +806,7 @@ end
 
 function mypanel:init_sort_params(Mode)
   self._sort_col_index = nil
-  if self._panel_mode==pm_table or self._panel_mode==pm_view then
+  if self._panel_mode=="table" or self._panel_mode=="view" then
     self._sort_started = true
     local index = 0
     local pos_from_left = SortMap[Mode]
@@ -842,6 +835,25 @@ function mypanel:compare(PanelItem1, PanelItem2, Mode)
   else
     return 0
   end
+end
+
+
+function mypanel.get_row_id(PanelItem)
+  local fname = PanelItem and PanelItem.FileName
+  return fname and fname~=".." and PanelItem.AllocationSize
+end
+
+
+function mypanel:get_info()
+  return {
+    file_name   = self._file_name;
+    panel_mode  = self._panel_mode;
+    curr_object = self._curr_object;
+    rowid_name  = self._rowid_name;
+    db          = self._dbx:db();
+    get_row_id  = mypanel.get_row_id;
+    last_error  = function() return self._dbx:last_error() end;
+  }
 end
 
 

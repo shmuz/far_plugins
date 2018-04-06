@@ -32,8 +32,8 @@ function myeditor:update()
   local row_id = tostring(item.AllocationSize)
 
   local db_data = {}
-  local query = ("select * from '%s' where %s=%s"):format(self._table_name, self._rowid_name, row_id)
-
+  local query = ("select * from %s where %s=%s"):format(self._table_name:normalize(),
+                                                        self._rowid_name, row_id)
   local db = self._dbx:db()
   local stmt = db:prepare(query)
   if not stmt or stmt:step() ~= sql3.ROW then
@@ -204,7 +204,7 @@ function myeditor:remove(items, items_count)
       else query = nil
       end
       if query then
-        query = query .. " " .. items[i].FileName
+        query = query .. " " .. items[i].FileName:normalize() .. ";"
         if not self._dbx:execute_query(query) then
           local err_descr = self._dbx:last_error()
           ErrMsg(M.ps_err_sql.."\n"..query.."\n"..err_descr)
@@ -213,7 +213,8 @@ function myeditor:remove(items, items_count)
       end
     end
   else
-    local query = ("delete from '%s' where %s in ("):format(self._table_name, self._rowid_name)
+    local query = ("delete from %s where %s in ("):format(self._table_name:normalize(),
+                                                          self._rowid_name)
     for i = 1, items_count do
       if i > 1 then query = query .. "," end
       query = query .. items[i].AllocationSize
@@ -235,18 +236,18 @@ function myeditor:exec_update(row_id, db_data) -- !!! 'db_data' is in/out !!!
 
   if row_id and row_id ~= "" then
     -- Update query
-    query = "update '"..self._table_name.."' set "
+    query = "update "..self._table_name:normalize().." set "
     for i,v in ipairs(db_data) do
       if i>1 then query = query..',' end
-      query = query..v.column.name.."=?"
+      query = query..v.column.name:normalize().."=?"
     end
     query = query.." where "..self._rowid_name.."="..row_id
   else
     -- Insert query
-    query = "insert into '"..self._table_name.."' ("
+    query = "insert into "..self._table_name:normalize().." ("
     for i,v in ipairs(db_data) do
       if i>1 then query = query.."," end
-      query = query .. v.column.name
+      query = query .. v.column.name:normalize()
     end
     query = query .. ") values ("
     for i = 1, #db_data do

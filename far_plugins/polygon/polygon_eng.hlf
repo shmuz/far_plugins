@@ -64,6 +64,6 @@ Column widths are specified with the same syntax as in panel view dialog of
 according to the dialog settings. These settings will also be stored permanently
 in the plugin's local database.
 
-   Pressing Ctrl-F3 in the plugin panel will toggle between full and custom views.
+   Pressing Shift-F5 in the plugin panel will toggle between full and custom views.
 
  ~Contents~@Contents@

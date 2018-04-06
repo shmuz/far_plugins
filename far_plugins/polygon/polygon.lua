@@ -2,24 +2,28 @@
 
 far.ReloadDefaultScript = true -- for debugging needs
 
+local F = far.Flags
+local band,bor = bit64.band, bit64.bor
+
 if not package.cpath_initialized then -- this is needed for "embed" builds of the plugin
   package.cpath = far.PluginStartupInfo().ModuleDir.."?.dl;"..package.cpath
   package.cpath_initialized = true
 end
 
-local _FPG     = export.GetGlobalInfo().Guid -- plugin GUID
-local F        = far.Flags
-local band,bor = bit64.band, bit64.bor
-local Utils    = require "far2.utils"
-
+local Utils     = require "far2.utils"
 local RunScript = Utils.RunInternalScript
-local M        = RunScript("string_rc")
-local sqlite   = RunScript("sqlite")
-local settings = RunScript("settings", {M=M})
-local progress = RunScript("progress", {M=M})
-local exporter = RunScript("exporter", {M=M, progress=progress, settings=settings})
-local myeditor = RunScript("editor",   {M=M, sqlite=sqlite, exporter=exporter})
-local mypanel  = RunScript("panel",    {M=M, sqlite=sqlite, progress=progress, exporter=exporter, myeditor=myeditor})
+local M         = RunScript("string_rc")
+local sqlite    = RunScript("sqlite")
+local settings  = RunScript("settings", {M=M})
+local progress  = RunScript("progress", {M=M})
+local exporter  = RunScript("exporter", {M=M, progress=progress, settings=settings})
+local myeditor  = RunScript("editor",   {M=M, sqlite=sqlite, exporter=exporter})
+local mypanel   = RunScript("panel",    {M=M, sqlite=sqlite, progress=progress, exporter=exporter, myeditor=myeditor})
+
+local PluginGuid = export.GetGlobalInfo().Guid -- plugin GUID
+local PluginData = settings.load():getfield("plugin")
+local User = {} -- contains table LoadedModules, functions AddModule, LoadOneFile, LoadFiles.
+
 
 -- add a convenience function
 _G.ErrMsg = function(msg, flags)
@@ -34,19 +38,71 @@ unicode.utf8.resize = function(str, n, char)
   return str .. (char or "\0"):rep(n-ln)
 end
 
-local plugdata = settings.load():getfield("plugin")
+
+-- add a convenience function (use for table names and column names)
+unicode.utf8.normalize = function(str)
+  return '"' .. str:gsub('"','""') .. '"'
+end
+
+
+function User.AddModule (srctable, FileName)
+  if  type(srctable) == "table" and type(srctable.Info) == "table" then
+    local guid = srctable.Info.Guid
+    if type(guid) == "string" and #guid == 16 then
+      if not User.LoadedModules[guid] then
+        if FileName then srctable.FileName=FileName; end
+        User.LoadedModules[guid] = srctable
+        table.insert(User.LoadedModules, srctable)
+      end
+    end
+  end
+end
+
+
+function User.LoadOneFile (FindData, FullPath, gmeta)
+  if FindData.FileAttributes:find("d") then return end
+  local f, msg = loadfile(FullPath)
+  if not f then
+    ErrMsg("LOAD: "..FullPath.."\n"..msg)
+    return
+  end
+  local env = {
+    UserModule = function(t) return User.AddModule(t,FullPath) end;
+    NoUserModule = function() end;
+  }
+  setmetatable(env, gmeta)
+  setfenv(f, env)
+  local ok, msg = xpcall(function() return f(FullPath) end, debug.traceback)
+  if ok then
+    env.UserModule, env.NoUserModule = nil
+  else
+    msg = msg:gsub("\n\t","\n   ")
+    ErrMsg("RUN: "..FullPath.."\n"..msg)
+  end
+end
+
+
+function User.LoadFiles()
+  User.LoadedModules = {}
+  local dir = win.GetEnv("FARPROFILE")
+  if dir and dir~="" then
+    dir = dir .. "\\PluginsData\\polygon"
+    far.RecursiveSearch(dir, "*.lua", User.LoadOneFile, F.FRS_RECUR, {__index=_G})
+  end
+end
+
 
 function export.GetPluginInfo()
   local info = { Flags=0 }
-  if plugdata.prefix ~= "" then
-    info.CommandPrefix = plugdata.prefix
+  if PluginData.prefix ~= "" then
+    info.CommandPrefix = PluginData.prefix
   end
 
-  info.PluginConfigGuids = _FPG
+  info.PluginConfigGuids = PluginGuid
   info.PluginConfigStrings = { M.ps_title }
 
-  if plugdata.add_to_menu then
-    info.PluginMenuGuids = _FPG;
+  if PluginData.add_to_menu then
+    info.PluginMenuGuids = PluginGuid;
     info.PluginMenuStrings = { M.ps_title }
   else
     info.Flags = bor(info.Flags, F.PF_DISABLEPANELS)
@@ -67,18 +123,19 @@ end
 
 
 function export.Open(OpenFrom, Guid, Item)
-  local open_data = nil
+  User.LoadFiles()
+  local file_name = nil
 
   if OpenFrom == F.OPEN_ANALYSE then
-    open_data = Item
+    file_name = Item.FileName
 
   elseif OpenFrom == F.OPEN_COMMANDLINE then
     local str = Item:gsub("\"", ""):gsub("^%s+", ""):gsub("%s+$", "")
     if str == "" then
-      open_data = { FileName=":memory:" }
-    elseif str ~= "" then
+      file_name = ":memory:"
+    else
       str = str:gsub("%%(.-)%%", win.GetEnv) -- expand environment variables
-      open_data = { FileName = far.ConvertPath(str, "CPM_FULL") }
+      file_name = far.ConvertPath(str, "CPM_FULL")
     end
 
   elseif OpenFrom == F.OPEN_PLUGINSMENU then
@@ -90,18 +147,17 @@ function export.Open(OpenFrom, Guid, Item)
         local name = far.ConvertPath(item.FileName, "CPM_FULL")
         local attr = win.GetFileAttr(name)
         if attr and not attr:find("d") then
-          open_data = { FileName = name }
+          file_name = name
         end
       end
     end
 
   elseif OpenFrom == F.OPEN_SHORTCUT then
-    Item.FileName = Item.HostFile
-    open_data = Item
+    file_name = Item.HostFile
 
   end
 
-  return open_data and mypanel.open(open_data, false, plugdata.foreign_keys)
+  return file_name and mypanel.open(file_name, false, PluginData.foreign_keys)
 end
 
 
@@ -142,6 +198,13 @@ end
 
 
 function export.ProcessPanelEvent (object, handle, Event, Param)
+  for _,mod in ipairs(User.LoadedModules) do
+    if type(mod.ProcessPanelEvent) == "function" then
+      if mod.ProcessPanelEvent(object:get_info(), Event, Param) then
+        return true
+      end
+    end
+  end
   if Event == F.FE_COMMAND then
     object:open_query(Param)
     panel.SetCmdLine(nil, "")

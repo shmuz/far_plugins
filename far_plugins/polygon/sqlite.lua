@@ -124,7 +124,7 @@ function sqlite:get_objects_list(objects)
   -- Get tables row count
   for _,v in ipairs(objects) do
     if v.type == sqlite.ot_master or v.type == sqlite.ot_table or v.type == sqlite.ot_view then
-      local query = "select count(*) from '" .. v.name .. "'"
+      local query = "select count(*) from " .. v.name:normalize() .. ";"
       local stmt = self._db:prepare(query)
       if stmt then
         if stmt:step() == sql3.ROW then
@@ -150,7 +150,7 @@ end
 
 
 function sqlite:read_column_description(object_name)
-  local query = "pragma table_info('"..object_name.."')"
+  local query = "pragma table_info(" .. object_name:normalize() .. ")"
   local stmt = self._db:prepare(query)
   if stmt then
     local columns = {}
@@ -186,7 +186,7 @@ end
 
 
 function sqlite:get_row_count(object_name)
-  local query = "select count(*) from '".. object_name .. "'";
+  local query = "select count(*) from ".. object_name:normalize() .. ";";
   local stmt = self._db:prepare(query)
   if not stmt then
     return false
