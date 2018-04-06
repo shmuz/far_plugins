@@ -1,6 +1,6 @@
 -- Definitions
 VER_MAJOR = "0"
-VER_MINOR = "3"
+VER_MINOR = "4"
 VER_MICRO = "0"
 
 MINFARVERSION = "{ 3, 0, 0, 4425 }"
