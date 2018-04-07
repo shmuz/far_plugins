@@ -191,7 +191,8 @@ function myeditor:remove(items, items_count)
     return false
   end
 
-  if far.Message(M.ps_drop_question, M.ps_title_short, ";YesNo", "w") ~= 1 then
+  local guid = win.Uuid("4472C7D8-E2B2-46A0-A005-B10B4141EBBD") -- for macros
+  if far.Message(M.ps_drop_question, M.ps_title_short, ";YesNo", "w", nil, guid) ~= 1 then
     return false
   end
 

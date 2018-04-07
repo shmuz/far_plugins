@@ -172,7 +172,7 @@ end
 
 
 function export.SetDirectory(object, handle, Dir, OpMode)
-  if band(OpMode, F.OPM_FIND) == 0 and band(OpMode, F.OPM_SILENT) == 0 and object then
+  if band(OpMode, F.OPM_FIND) == 0 then
     if Dir == ".." or Dir == "/" or Dir == "\\" then
       return object:open_database()
     else

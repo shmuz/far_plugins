@@ -215,10 +215,12 @@ function mypanel:get_panel_list_obj()
 
   -- Find a name to use for ROWID (self._rowid_name)
   self._rowid_name = nil
-  local stmt = db:prepare("select * from " .. curr_object:normalize() .. ";")
+  local stmt = db:prepare("select * from " .. curr_object:normalize())
   if stmt then
     local map = {}
-    for _,colname in ipairs(stmt:get_names()) do map[colname:lower()]=true; end
+    for _,colname in ipairs(stmt:get_names()) do
+      map[colname:lower()] = true
+    end
     for _,name in ipairs {"rowid", "oid", "_rowid_"} do
       if map[name] == nil then
         self._rowid_name = name
@@ -230,25 +232,22 @@ function mypanel:get_panel_list_obj()
     return false
   end
 
-  -- Find if ROWID exists
-  stmt = nil
+  -- If ROWID exists then select it as the leftmost column.
   if self._rowid_name then
     stmt = db:prepare(("select %s,* from %s"):format(self._rowid_name, curr_object:normalize()))
-    if not stmt then self._rowid_name = nil; end
+  else
+    stmt = db:prepare("select * from " .. curr_object:normalize())
   end
   if not stmt then
-    stmt = db:prepare("select * from " .. curr_object:normalize() .. ";")
-    if not stmt then
-      ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
-      return false
-    end
+    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
+    return false
   end
 
-  -- Add a special item with dots (..) in all columns
-  local dot_item = { FileName=".."; FileAttributes="d"; CustomColumnData={}; }
-  local items = { dot_item }
+  -- Add a special item with dots (..) in all columns.
+  local items = {}
+  items[1] = { FileName=".."; FileAttributes="d"; CustomColumnData={}; }
   for i = 1, #self._column_descr do
-    dot_item.CustomColumnData[i] = ".."
+    items[1].CustomColumnData[i] = ".."
   end
 
   -- Add real items
@@ -266,16 +265,23 @@ function mypanel:get_panel_list_obj()
       break -- Show incomplete data
     end
 
-    -- Use index as file name, otherwise FAR cannot properly handle selections on the panel
-    local item = { FileName=("%08d"):format(row); CustomColumnData={}; }
+    local item = { CustomColumnData={}; }
     items[row+1] = item -- shift by 1, as items[1] is dot_item
 
-    local adjust = self._rowid_name and 0 or 1
-    for j = 1, #self._column_descr do
-      item.CustomColumnData[j] = exporter.get_text(stmt, j-adjust)
-    end
     if self._rowid_name then
-      item.AllocationSize = stmt:get_value(0)  -- This field used as row id
+      for i = 1,#self._column_descr do
+        item.CustomColumnData[i] = exporter.get_text(stmt, i)
+      end
+      -- the leftmost column is ROWID (according to the query used)
+      local rowid = stmt:get_value(0)
+      -- this field is used for holding ROWID
+      item.AllocationSize = rowid
+      -- use ROWID as file name, otherwise FAR cannot properly handle selections on the panel
+      item.FileName = ("%010d"):format(rowid)
+    else
+      for i = 1,#self._column_descr do
+        item.CustomColumnData[i] = exporter.get_text(stmt, i-1)
+      end
     end
   end
 

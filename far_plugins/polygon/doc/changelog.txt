@@ -1,3 +1,8 @@
+2018-04-07, v.0.4.1
+    1. Fix: incorrect selection after selected items were deleted (regression bug from v0.2.0).
+    2. Fix: export.SetDirectory() did not work with OPM_SILENT.
+    3. Add: GUID for "Drop selected items?" confirmation dialog.
+
 2018-04-06, v.0.4.0
     1. Fix: correct work with tables and columns whose names contain any allowed characters:
             spaces, brackets, single and double quotes, etc.
