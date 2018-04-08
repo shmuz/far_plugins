@@ -1,3 +1,7 @@
+2018-04-08, v.0.4.3
+    1. Fix: function open_query() could put the program into inconsistent state.
+    2. Fix: error in export.Compare() when changing the panel object to display.
+
 2018-04-08, v.0.4.2
     1. Add: further developing of "user modules" support (to be documented later).
     2. Add: sqlite3.dll can be placed into either of the following locations:

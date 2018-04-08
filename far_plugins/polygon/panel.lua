@@ -95,12 +95,37 @@ end
 
 
 function mypanel:open_query(query)
-  if not (query and query ~= "") then return false; end
-
-  self._last_sql_query = query
+  if not query:find("%S") then return false; end
 
   -- Check query for select
-  if query:match("^%s*(%w*)"):lower() ~= "select" then
+  if query:match("^%s*(%w*)"):lower() == "select" then
+    -- Get column description
+    local db = self._dbx:db()
+    local stmt = db:prepare(query)
+    if not stmt then
+      ErrMsg(M.ps_err_sql.."\n"..query.."\n"..self._dbx:last_error())
+      return false
+    end
+    local state = stmt:step()
+    if state == sql3.ERROR or state == sql3.MISUSE then
+      ErrMsg(M.ps_err_sql.."\n"..query.."\n"..self._dbx:last_error())
+      stmt:finalize()
+      return false
+    end
+
+    self._last_sql_query = query
+    self._panel_mode = "query"
+    self._curr_object = query
+
+    stmt:reset()
+    self._column_descr = {}
+    for i, name in ipairs(stmt:get_names()) do
+      self._column_descr[i] = { name = name; type = sqlite.ct_text; }
+    end
+
+    stmt:finalize()
+    self:prepare_panel_info()
+  else
     -- Update query - just execute without read result
     local prg_wnd = progress.newprogress(M.ps_execsql)
     if not self._dbx:execute_query(query) then
@@ -109,25 +134,6 @@ function mypanel:open_query(query)
       return false
     end
     prg_wnd:hide()
-  else
-    -- Get column description
-    local db = self._dbx:db()
-    local stmt = db:prepare(query)
-    if not stmt then
-      ErrMsg(M.ps_err_sql.."\n"..query.."\n"..self._dbx:last_error())
-      return false
-    end
-
-    self._panel_mode = "query"
-    self._curr_object = query
-
-    self._column_descr = {}
-    for i, name in ipairs(stmt:get_names()) do
-      self._column_descr[i] = { name = name; type = sqlite.ct_text; }
-    end
-
-    stmt:finalize()
-    self:prepare_panel_info()
   end
 
   panel.UpdatePanel(nil, 1)
@@ -153,6 +159,7 @@ end
 
 function mypanel:get_panel_list()
   local rc = false
+  self._sort_started = false
   if self._panel_mode=="db" then
     rc = self:get_panel_list_db()
   elseif self._panel_mode=="table" or self._panel_mode=="view" then
