@@ -5,9 +5,14 @@ far.ReloadDefaultScript = true -- for debugging needs
 local F = far.Flags
 local band,bor = bit64.band, bit64.bor
 
-if not package.cpath_initialized then -- this is needed for "embed" builds of the plugin
+if not package.loaded.lsqlite3 then -- this is needed for "embed" builds of the plugin
+  -- make possible to use lsqlite3.dl residing in the plugin's folder
   package.cpath = far.PluginStartupInfo().ModuleDir.."?.dl;"..package.cpath
-  package.cpath_initialized = true
+  -- make possible to use sqlite3.dll residing in the plugin's folder
+  local oldpath = win.GetEnv("PATH")
+  win.SetEnv("PATH", far.PluginStartupInfo().ModuleDir..";"..oldpath)
+  require "lsqlite3"
+  win.SetEnv("PATH", oldpath)
 end
 
 local Utils     = require "far2.utils"
@@ -182,17 +187,29 @@ function export.SetDirectory(object, handle, Dir, OpMode)
 end
 
 
-function export.ClosePanel(object, handle)
-  object._dbx:close()
-end
-
-
 function export.DeleteFiles(object, handle, PanelItems, OpMode)
   return object:delete_items(PanelItems, #PanelItems)
 end
 
 
+function export.ClosePanel(object, handle)
+  for _,mod in ipairs(User.LoadedModules) do
+    if type(mod.ClosePanel) == "function" then
+      mod.ClosePanel(object:get_info(), handle)
+    end
+  end
+  object._dbx:close()
+end
+
+
 function export.ProcessPanelInput(object, handle, rec)
+  for _,mod in ipairs(User.LoadedModules) do
+    if type(mod.ProcessPanelInput) == "function" then
+      if mod.ProcessPanelInput(object:get_info(), handle, rec) then
+        return true
+      end
+    end
+  end
   return rec.EventType == F.KEY_EVENT and object:handle_keyboard(rec)
 end
 
@@ -200,7 +217,7 @@ end
 function export.ProcessPanelEvent (object, handle, Event, Param)
   for _,mod in ipairs(User.LoadedModules) do
     if type(mod.ProcessPanelEvent) == "function" then
-      if mod.ProcessPanelEvent(object:get_info(), Event, Param) then
+      if mod.ProcessPanelEvent(object:get_info(), handle, Event, Param) then
         return true
       end
     end

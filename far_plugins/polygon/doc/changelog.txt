@@ -1,3 +1,9 @@
+2018-04-08, v.0.4.2
+    1. Add: further developing of "user modules" support (to be documented later).
+    2. Add: sqlite3.dll can be placed into either of the following locations:
+            (1) plugin's directory - added in this version;
+            (2) Far's directory; (3) any directory on PATH.
+
 2018-04-07, v.0.4.1
     1. Fix: incorrect selection after selected items were deleted (regression bug from v0.2.0).
     2. Fix: export.SetDirectory() did not work with OPM_SILENT.
