@@ -27,7 +27,6 @@ local mypanel   = RunScript("panel",    {M=M, sqlite=sqlite, progress=progress, 
 
 local PluginGuid = export.GetGlobalInfo().Guid -- plugin GUID
 local PluginData = settings.load():getfield("plugin")
-local User = {} -- contains table LoadedModules, functions AddModule, LoadOneFile, LoadFiles.
 
 
 -- add a convenience function
@@ -50,21 +49,23 @@ unicode.utf8.normalize = function(str)
 end
 
 
-function User.AddModule (srctable, FileName)
-  if  type(srctable) == "table" and type(srctable.Info) == "table" then
-    local guid = srctable.Info.Guid
-    if type(guid) == "string" and #guid == 16 then
-      if not User.LoadedModules[guid] then
-        if FileName then srctable.FileName=FileName; end
-        User.LoadedModules[guid] = srctable
-        table.insert(User.LoadedModules, srctable)
+local function CreateAddModule (LoadedModules)
+  return function (srctable, FileName)
+    if  type(srctable) == "table" and type(srctable.Info) == "table" then
+      local guid = srctable.Info.Guid
+      if type(guid) == "string" and #guid == 16 then
+        if not LoadedModules[guid] then
+          if FileName then srctable.FileName=FileName; end
+          LoadedModules[guid] = srctable
+          table.insert(LoadedModules, srctable)
+        end
       end
     end
   end
 end
 
 
-function User.LoadOneFile (FindData, FullPath, gmeta)
+local function LoadOneUserFile (FindData, FullPath, AddModule, gmeta)
   if FindData.FileAttributes:find("d") then return end
   local f, msg = loadfile(FullPath)
   if not f then
@@ -72,7 +73,7 @@ function User.LoadOneFile (FindData, FullPath, gmeta)
     return
   end
   local env = {
-    UserModule = function(t) return User.AddModule(t,FullPath) end;
+    UserModule = AddModule;
     NoUserModule = function() end;
   }
   setmetatable(env, gmeta)
@@ -87,13 +88,15 @@ function User.LoadOneFile (FindData, FullPath, gmeta)
 end
 
 
-function User.LoadFiles()
-  User.LoadedModules = {}
+local function LoadUserFiles()
+  local LoadedModules = {}
   local dir = win.GetEnv("FARPROFILE")
   if dir and dir~="" then
+    local AddModule = CreateAddModule(LoadedModules)
     dir = dir .. "\\PluginsData\\polygon"
-    far.RecursiveSearch(dir, "*.lua", User.LoadOneFile, F.FRS_RECUR, {__index=_G})
+    far.RecursiveSearch(dir, "*.lua", LoadOneUserFile, F.FRS_RECUR, AddModule, {__index=_G})
   end
+  return LoadedModules
 end
 
 
@@ -113,10 +116,6 @@ function export.GetPluginInfo()
     info.Flags = bor(info.Flags, F.PF_DISABLEPANELS)
   end
 
-  -- if _DEBUG then
-  --   info.Flags = bor(info.Flags, F.PF_PRELOAD)
-  -- end
-
   return info
 end
 
@@ -128,7 +127,6 @@ end
 
 
 function export.Open(OpenFrom, Guid, Item)
-  User.LoadFiles()
   local file_name = nil
 
   if OpenFrom == F.OPEN_ANALYSE then
@@ -162,7 +160,23 @@ function export.Open(OpenFrom, Guid, Item)
 
   end
 
-  return file_name and mypanel.open(file_name, false, PluginData.foreign_keys)
+  if file_name then
+    local object = mypanel.open(file_name, false, PluginData.foreign_keys)
+    if object then
+      if PluginData.user_modules then
+        object.LoadedModules = LoadUserFiles()
+        for _,mod in ipairs(object.LoadedModules) do
+          if type(mod.OnOpenConnection) == "function" then
+            mod.OnOpenConnection(object:get_info())
+          end
+        end
+      else
+        object.LoadedModules = {}
+      end
+      return object
+    end
+  end
+
 end
 
 
@@ -193,7 +207,7 @@ end
 
 
 function export.ClosePanel(object, handle)
-  for _,mod in ipairs(User.LoadedModules) do
+  for _,mod in ipairs(object.LoadedModules) do
     if type(mod.ClosePanel) == "function" then
       mod.ClosePanel(object:get_info(), handle)
     end
@@ -203,7 +217,7 @@ end
 
 
 function export.ProcessPanelInput(object, handle, rec)
-  for _,mod in ipairs(User.LoadedModules) do
+  for _,mod in ipairs(object.LoadedModules) do
     if type(mod.ProcessPanelInput) == "function" then
       if mod.ProcessPanelInput(object:get_info(), handle, rec) then
         return true
@@ -215,7 +229,7 @@ end
 
 
 function export.ProcessPanelEvent (object, handle, Event, Param)
-  for _,mod in ipairs(User.LoadedModules) do
+  for _,mod in ipairs(object.LoadedModules) do
     if type(mod.ProcessPanelEvent) == "function" then
       if mod.ProcessPanelEvent(object:get_info(), handle, Event, Param) then
         return true
