@@ -12,6 +12,7 @@ $^ #Polygon - Help Contents#
  ~Custom Panel View Dialog~@PanelView@
  ~Invoking the plugin~@Invoke@
  ~Configuration Dialog~@ConfigDialog@
+ ~User modules~@UserModules@
 
 @Invoke
 $^ #Invoking the plugin#
@@ -74,13 +75,48 @@ in the plugin's local database.
 $^ #Configuration Dialog
  The following settings belong to common plugin configuration.
  
- #[ ] Add to plugins menu#     When set, the plugin will appear in Plugins Menu
+ #[ ] Add to plugins menu#     The plugin will appear in Plugins Menu
  #Prefix:#                     Command line prefix of the plugin
 
  The following settings are applied when a new database connection is created.
- Changing these settings does not affect the already opened panels. 
+Changing these settings does not affect the already opened panels. 
 
- #[ ] Load user modules#       When set, user modules will be loaded
- #[ ] Honor foreign keys#      When set, #PRAGMA foreign_keys = ON# is executed
+ #[ ] Load user modules#       User modules will be loaded
+ #[ ] Enable extensions#       Execute #sqlite3_enable_load_extension(db,1)#
+ #[ ] Honor foreign keys#      Execute #PRAGMA foreign_keys = ON#
+
+ ~Contents~@Contents@
+
+@UserModules
+$^ #User Modules
+ User module is a script in Lua programming language contained in a Lua
+table and matching the following requirements:
+
+ 1. Modules are loaded from #*.lua# files that reside in
+#%FARPROFILE%\PluginsData\Polygon# directory or its subdirectories.
+
+ 2. Modules are loaded immediately after a successful connection of the plugin
+to a data base is established.
+
+ 3. A module may contain all or some of the following fields referring to
+functions called by the plugin in various situations:
+#OnOpenConnection#, #ProcessPanelEvent#, #ProcessPanelInput# и #ClosePanel#.
+
+ 4. A module may contain the #Priority# field (a number between 0 and 100).
+If the field is not specified then it defaults to 50.
+Functions of a module with higher priority are called earlier.
+
+ 5. For loading modules the #UserModule# function should be used.
+
+
+ As an example the user module code looks like that:
+
+   #local mod = { Priority=60 }#
+   #mod.OnOpenConnection  = function() ... end#
+   #mod.ProcessPanelEvent = function() ... end#
+   #mod.ProcessPanelInput = function() ... end#
+   #mod.ClosePanel        = function() ... end#
+   #UserModule(mod)#
+
 
  ~Contents~@Contents@

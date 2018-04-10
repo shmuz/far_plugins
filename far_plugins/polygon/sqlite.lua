@@ -55,7 +55,7 @@ function sqlite.format_supported(file_hdr) -- function not method
 end
 
 
-function sqlite:open(file_name, foreign_keys_on)
+function sqlite:open(file_name)
   local db = sql3.open(file_name)
   if db then
     -- since sql3.open() won't fail on a non-DB file, lets work around that with a statement
@@ -63,9 +63,6 @@ function sqlite:open(file_name, foreign_keys_on)
     if stmt then
       stmt:finalize()
       self._db = db
-      if foreign_keys_on then
-        db:exec("PRAGMA foreign_keys = ON;")
-      end
       return true -- and self:prepare_tokenizers() and self:prepare_collations() --> put them aside currently
     else
       db:close()

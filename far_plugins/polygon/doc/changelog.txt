@@ -1,7 +1,12 @@
+2018-04-10, v.0.4.5
+    1. Add: further developing of "user modules" support.
+    2. Add: a help topic for User Modules (to be extended).
+    3. Add: a new configuration setting "Enable extensions".
+
 2018-04-09, v.0.4.4
     1. Add: further developing of "user modules" support (to be documented later).
     2. Add: a new configuration setting "Load user modules".
-    3. Add: help topic for the configuration dialog.
+    3. Add: a help topic for the configuration dialog.
 
 2018-04-08, v.0.4.3
     1. Fix: function open_query() could put the program into inconsistent state.

@@ -6,8 +6,9 @@ local names = {
 
   "ps_cfg_add_pm",
   "ps_cfg_prefix",
-  "ps_cfg_foreign_keys",
   "ps_cfg_user_modules",
+  "ps_cfg_extensions",
+  "ps_cfg_foreign_keys",
 
   "ps_pt_name",
   "ps_pt_type",

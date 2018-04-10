@@ -7,8 +7,9 @@
 
 "&Add to plugins menu"
 "&Prefix:"
-"&Honor foreign keys"
-"&Load user modules"
+"Load &user modules"
+"Enable &extensions"
+"Honor &foreign keys"
 
 "Name"
 "Type"

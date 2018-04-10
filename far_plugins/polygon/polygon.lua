@@ -51,14 +51,11 @@ end
 
 local function CreateAddModule (LoadedModules)
   return function (srctable, FileName)
-    if  type(srctable) == "table" and type(srctable.Info) == "table" then
-      local guid = srctable.Info.Guid
-      if type(guid) == "string" and #guid == 16 then
-        if not LoadedModules[guid] then
-          if FileName then srctable.FileName=FileName; end
-          LoadedModules[guid] = srctable
-          table.insert(LoadedModules, srctable)
-        end
+    if  type(srctable) == "table" then
+      if not LoadedModules[srctable] then
+        LoadedModules[srctable] = true
+        if FileName then srctable.FileName=FileName; end
+        table.insert(LoadedModules, srctable)
       end
     end
   end
@@ -92,9 +89,9 @@ local function LoadUserFiles()
   local LoadedModules = {}
   local dir = win.GetEnv("FARPROFILE")
   if dir and dir~="" then
-    local AddModule = CreateAddModule(LoadedModules)
     dir = dir .. "\\PluginsData\\polygon"
-    far.RecursiveSearch(dir, "*.lua", LoadOneUserFile, F.FRS_RECUR, AddModule, {__index=_G})
+    far.RecursiveSearch(dir, "*.lua", LoadOneUserFile, F.FRS_RECUR,
+                        CreateAddModule(LoadedModules), {__index=_G})
   end
   return LoadedModules
 end
@@ -161,10 +158,18 @@ function export.Open(OpenFrom, Guid, Item)
   end
 
   if file_name then
-    local object = mypanel.open(file_name, false, PluginData.foreign_keys)
+    local object = mypanel.open(file_name, false, PluginData.extensions, PluginData.foreign_keys)
     if object then
       if PluginData.user_modules then
+        -- Load modules
         object.LoadedModules = LoadUserFiles()
+        -- Sort modules
+        for _,mod in ipairs(object.LoadedModules) do
+          if type(mod.Priority) ~= "number" then mod.Priority = 50 end
+          mod.Priority = math.min(100, math.max(mod.Priority, 0))
+        end
+        table.sort(object.LoadedModules, function(a,b) return a.Priority > b.Priority; end)
+        -- Call OnOpenConnection()
         for _,mod in ipairs(object.LoadedModules) do
           if type(mod.OnOpenConnection) == "function" then
             mod.OnOpenConnection(object:get_info())

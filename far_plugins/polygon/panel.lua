@@ -20,7 +20,7 @@ local mypanel = {}
 local mt_panel = {__index=mypanel}
 
 
-function mypanel.open(file_name, silent, foreign_keys) -- function, not method
+function mypanel.open(file_name, silent, extensions, foreign_keys)
   local self = {
 
   -- Members come from the original plugin SQLiteDB.
@@ -49,8 +49,15 @@ function mypanel.open(file_name, silent, foreign_keys) -- function, not method
 
   setmetatable(self, mt_panel)
 
-  self._dbx = sqlite.newsqlite();
-  if self._dbx:open(file_name, foreign_keys) and self:open_database() then
+  self._dbx = sqlite.newsqlite()
+  if self._dbx:open(file_name) and self:open_database() then
+    local db = self._dbx:db()
+    if extensions then
+      db:load_extension("") -- enable extensions
+    end
+    if foreign_keys then
+      db:exec("PRAGMA foreign_keys = ON;")
+    end
     self._hist_file = history.newsettings("files", file_name:lower(), "PSL_LOCAL")
     self._col_masks = self._hist_file:field("col_masks")
     self._col_masks_used = false
@@ -95,10 +102,12 @@ end
 
 
 function mypanel:open_query(query)
-  if not query:find("%S") then return false; end
+  local word1 = query:match("^%s*([%w_]+)")
+  if not word1 then return end
 
   -- Check query for select
-  if query:match("^%s*(%w*)"):lower() == "select" then
+  local word2 = query:match("^%s+([%w_]+)", #word1+1)
+  if word1:lower() == "select" and not (word2 and word2:lower()=="load_extension") then
     -- Get column description
     local db = self._dbx:db()
     local stmt = db:prepare(query)
