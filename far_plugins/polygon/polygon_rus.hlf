@@ -29,6 +29,16 @@ $^ #Вызов плагина#
 
    4. Из ~Ссылок на папки~@:FolderShortcuts@.
 
+   5. Из макроса: #Plugin.Call(<guid>, "open", <filename> [,<flags>])#
+      Открывает SQLite3 файл <filename> в панели.
+        flags:  string, комбинация из 0 или более опций:
+                  #"u"# - загружать модули пользователя
+                  #"e"# - разрешить расширения
+                  #"f"# - учитывать внешние ключи
+                Если параметр <flags> не строкового типа (или опущен),
+                то применяются текущие установки конфигурации плагина.
+
+                
  ~Содержание~@Contents@
 
 @Keyboard
@@ -56,6 +66,7 @@ $^ #Справка по действиям ключей в панели плаг
    Если командная строка не пуста, то по нажатию Enter будет исполнен
    "запрос SQLite" с командной строки.
 
+
  ~Содержание~@Contents@
 
 @PanelView
@@ -70,6 +81,7 @@ $^ #Диалог настройки вида панели#
 
    Нажатие Shift-F5 в панели плагина переключает режим просмотра между "полным"
 и "настроенным".
+
 
  ~Содержание~@Contents@
 
@@ -87,6 +99,7 @@ $^ #Диалог конфигурации
  #[ ] Разрешить расширения#               Исполнять #sqlite3_enable_load_extension(db,1)#
  #[ ] Учитывать внешние ключи#            Исполнять #PRAGMA foreign_keys = ON#
 
+
  ~Содержание~@Contents@
 
 @UserModules
@@ -102,7 +115,8 @@ $^ #Пользовательские модули
 
  3. Модуль может содержать все или некоторые из следующих полей-функций,
 вызываемых плагином в различных ситуациях:
-#OnOpenConnection#, #ProcessPanelEvent#, #ProcessPanelInput# и #ClosePanel#.
+~OnOpenConnection~@OnOpenConnection@, ~ProcessPanelEvent~@ProcessPanelEvent@,
+~ProcessPanelInput~@ProcessPanelInput@ и ~ClosePanel~@ClosePanel@.
 
  4. Модуль может содержать поле #Priority# (число от 0 до 100).
 Если поле не указано, применяется значение по умолчанию 50.
@@ -121,4 +135,97 @@ $^ #Пользовательские модули
    #UserModule(mod)#
 
 
+ ~Содержание~@Contents@
+
+@OnOpenConnection
+$^ #OnOpenConnection
+ #OnOpenConnection(info)#
+
+ #Параметры:#
+   info:   table ~tInfo~@tInfo@
+
+ #Возвращает:#
+   ничего
+
+ #Описание:#
+   Данная функция вызывается сразу после установления соединения с базой данных.
+
+
+ ~Пользовательские модули~@UserModules@
+ ~Содержание~@Contents@
+
+@ProcessPanelEvent
+$^ #ProcessPanelEvent
+ #result = ProcessPanelEvent(info, handle, event, param)#
+
+ #Параметры:#
+   info   :  table ~tInfo~@tInfo@
+   handle :  panel handle
+   event  :  integer
+   param  :  string (для FE_CHANGEVIEWMODE и FE_COMMAND), или nil
+
+ #Возвращает:#
+   result :  boolean
+
+ #Описание:#
+   За исключением 1-го параметра функция аналогична функции export.ProcessPanelEvent
+(см. мануал LuaFAR).
+
+
+ ~Пользовательские модули~@UserModules@
+ ~Содержание~@Contents@
+
+@ProcessPanelInput
+$^ #ProcessPanelInput
+ #result = ProcessPanelInput (info, handle, rec)#
+
+ #Параметры:#
+   info   : table ~tInfo~@tInfo@
+   handle : panel handle
+   rec    : table tInputRecord
+
+ #Возвращает:#
+   result :  boolean
+
+ #Описание:#
+   За исключением 1-го параметра функция аналогична функции export.ProcessPanelInput
+(см. мануал LuaFAR).
+
+
+ ~Пользовательские модули~@UserModules@
+ ~Содержание~@Contents@
+
+@ClosePanel
+$^ #ClosePanel
+ #ClosePanel(info, handle)#
+
+ #Параметры:#
+   info:   table ~tInfo~@tInfo@
+
+ #Возвращает:#
+   ничего
+
+ #Описание:#
+   За исключением 1-го параметра функция аналогична функции export.ClosePanel
+(см. мануал LuaFAR).
+ Данная функция не должна закрывать соединение с базой данных - это делает плагин.
+
+
+ ~Пользовательские модули~@UserModules@
+ ~Содержание~@Contents@
+
+@tInfo
+$^ #Таблица tInfo#
+ Данная таблица имеет следующие поля:
+
+    #db         # : userdata : соединение с базой данных (см. мануал ~LuaSQLite3~@http://lua.sqlite.org/index.cgi/doc/tip/doc/lsqlite3.wiki@)
+    #file_name  # : string   : имя файла базы данных
+    #panel_mode # : string   : "db", "table", "view", "query"
+    #curr_object# : string   : имя текущего отображаемого объекта (родительской папки)
+    #rowid_name # : string   : имя, которое можно использовать в SQL-запросах как ROWID
+    #get_rowid  # : function : вызывается с одним параметром типа #tPanelItem#
+                             (см. мануал LuaFAR); возвращает целое число
+
+
+ ~Пользовательские модули~@UserModules@
  ~Содержание~@Contents@

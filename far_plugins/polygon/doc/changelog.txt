@@ -1,3 +1,7 @@
+2018-04-11, v.0.5.0
+    1. Add: support for Plugin.Call() from macros.
+    2. Add: a help topic for User Modules (finished).
+
 2018-04-10, v.0.4.5
     1. Add: further developing of "user modules" support.
     2. Add: a help topic for User Modules (to be extended).

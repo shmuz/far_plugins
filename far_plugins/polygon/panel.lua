@@ -860,7 +860,7 @@ function mypanel:compare(PanelItem1, PanelItem2, Mode)
 end
 
 
-function mypanel.get_row_id(PanelItem)
+function mypanel.get_rowid(PanelItem)
   local fname = PanelItem and PanelItem.FileName
   return fname and fname~=".." and PanelItem.AllocationSize
 end
@@ -868,13 +868,12 @@ end
 
 function mypanel:get_info()
   return {
+    db          = self._dbx:db();
     file_name   = self._file_name;
     panel_mode  = self._panel_mode;
     curr_object = self._curr_object;
     rowid_name  = self._rowid_name;
-    db          = self._dbx:db();
-    get_row_id  = mypanel.get_row_id;
-    last_error  = function() return self._dbx:last_error() end;
+    get_rowid   = mypanel.get_rowid;
   }
 end
 

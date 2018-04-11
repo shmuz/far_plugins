@@ -124,7 +124,11 @@ end
 
 
 function export.Open(OpenFrom, Guid, Item)
+  -- prepare some values
   local file_name = nil
+  local opt_user_modules = PluginData.user_modules
+  local opt_extensions   = PluginData.extensions
+  local opt_foreign_keys = PluginData.foreign_keys
 
   if OpenFrom == F.OPEN_ANALYSE then
     file_name = Item.FileName
@@ -155,12 +159,23 @@ function export.Open(OpenFrom, Guid, Item)
   elseif OpenFrom == F.OPEN_SHORTCUT then
     file_name = Item.HostFile
 
+  elseif OpenFrom == F.OPEN_FROMMACRO then
+    -- Plugin.Call(<guid>, "open", <filename>[, <flags>])
+    if Item[1] == "open" and type(Item[2]) == "string" then
+      file_name = Item[2]
+      if type(Item[3]) == "string" then
+        opt_user_modules = Item[3]:find("u") and true
+        opt_extensions   = Item[3]:find("e") and true
+        opt_foreign_keys = Item[3]:find("f") and true
+      end
+    end
+
   end
 
   if file_name then
-    local object = mypanel.open(file_name, false, PluginData.extensions, PluginData.foreign_keys)
+    local object = mypanel.open(file_name, false, opt_extensions, opt_foreign_keys)
     if object then
-      if PluginData.user_modules then
+      if opt_user_modules then
         -- Load modules
         object.LoadedModules = LoadUserFiles()
         -- Sort modules
@@ -178,7 +193,11 @@ function export.Open(OpenFrom, Guid, Item)
       else
         object.LoadedModules = {}
       end
-      return object
+      if OpenFrom == F.OPEN_FROMMACRO then
+        return { type="panel", [1]=object }
+      else
+        return object
+      end
     end
   end
 

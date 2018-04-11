@@ -16,7 +16,7 @@ $^ #Polygon - Help Contents#
 
 @Invoke
 $^ #Invoking the plugin#
- The plugin can be invoked the following ways:
+ The plugin can be invoked in the following ways:
 
    1. From the plugins menu. The plugin opens the file under cursor.
 
@@ -27,6 +27,16 @@ $^ #Invoking the plugin#
       - If no file name is specified then an in-memory database will be opened.
 
    4. From ~Folder shortcuts~@:FolderShortcuts@.
+
+   5. From a macro: #Plugin.Call(<guid>, "open", <filename> [,<flags>])#
+      Opens SQLite3 file <filename> in a panel.
+        flags:  string, a combination of zero or more options:
+                  #"u"# - load user modules
+                  #"e"# - enable extensions
+                  #"f"# - honor foreign keys
+                If <flags> is not a string (or omitted) then
+                the plugin's configuration settings are used.
+
 
  ~Contents~@Contents@
 
@@ -100,7 +110,8 @@ to a data base is established.
 
  3. A module may contain all or some of the following fields referring to
 functions called by the plugin in various situations:
-#OnOpenConnection#, #ProcessPanelEvent#, #ProcessPanelInput# и #ClosePanel#.
+~OnOpenConnection~@OnOpenConnection@, ~ProcessPanelEvent~@ProcessPanelEvent@,
+~ProcessPanelInput~@ProcessPanelInput@ and ~ClosePanel~@ClosePanel@.
 
  4. A module may contain the #Priority# field (a number between 0 and 100).
 If the field is not specified then it defaults to 50.
@@ -119,4 +130,97 @@ Functions of a module with higher priority are called earlier.
    #UserModule(mod)#
 
 
+ ~Contents~@Contents@
+
+@OnOpenConnection
+$^ #OnOpenConnection
+ #OnOpenConnection(info)#
+
+ #Parameters:#
+   info:   table ~tInfo~@tInfo@
+
+ #Returns:#
+   nothing
+
+ #Description:#
+   This function is called right after a connection with data base is established.
+
+
+ ~User Modules~@UserModules@
+ ~Contents~@Contents@
+
+@ProcessPanelEvent
+$^ #ProcessPanelEvent
+ #result = ProcessPanelEvent(info, handle, event, param)#
+
+ #Parameters:#
+   info   :  table ~tInfo~@tInfo@
+   handle :  panel handle
+   event  :  integer
+   param  :  string (for FE_CHANGEVIEWMODE and FE_COMMAND), or nil
+
+ #Returns:#
+   result :  boolean
+
+ #Description:#
+   Except for its 1-st parameter, this function is identical to export.ProcessPanelEvent function
+(see LuaFAR manual).
+
+
+ ~User Modules~@UserModules@
+ ~Contents~@Contents@
+
+@ProcessPanelInput
+$^ #ProcessPanelInput
+ #result = ProcessPanelInput (info, handle, rec)#
+
+ #Parameters:#
+   info   : table ~tInfo~@tInfo@
+   handle : panel handle
+   rec    : table tInputRecord
+
+ #Returns:#
+   result :  boolean
+
+ #Description:#
+   Except for its 1-st parameter, this function is identical to export.ProcessPanelInput function
+(see LuaFAR manual).
+
+
+ ~User Modules~@UserModules@
+ ~Contents~@Contents@
+
+@ClosePanel
+$^ #ClosePanel
+ #ClosePanel(info, handle)#
+
+ #Parameters:#
+   info:   table ~tInfo~@tInfo@
+
+ #Returns:#
+   nothing
+
+ #Description:#
+   Except for its 1-st parameter, this function is identical to export.ClosePanel function
+(see LuaFAR manual).
+   This function must not close the database connection as the plugin does that.
+
+
+ ~User Modules~@UserModules@
+ ~Contents~@Contents@
+
+@tInfo
+$^ #Table tInfo#
+ This table has the following fields:
+
+    #db         # : userdata : database connection (see ~LuaSQLite3~@http://lua.sqlite.org/index.cgi/doc/tip/doc/lsqlite3.wiki@ manual)
+    #file_name  # : string   : name of database file
+    #panel_mode # : string   : "db", "table", "view", "query"
+    #curr_object# : string   : name of the current displayed object (parent directory)
+    #rowid_name # : string   : name that can be used in SQL-queries as ROWID
+    #get_rowid  # : function : called with 1 parameter of #tPanelItem# type
+                             (see LuaFAR manual); returns an integer
+
+
+ ~User Modules~@UserModules@
  ~Contents~@Contents@
