@@ -26,7 +26,6 @@ local myeditor  = RunScript("editor",   {M=M, sqlite=sqlite, exporter=exporter})
 local mypanel   = RunScript("panel",    {M=M, sqlite=sqlite, progress=progress, exporter=exporter, myeditor=myeditor})
 
 local PluginGuid = export.GetGlobalInfo().Guid -- plugin GUID
-local PluginData = settings.load():getfield("plugin")
 
 
 -- add a convenience function
@@ -46,6 +45,11 @@ end
 -- add a convenience function (use for table names and column names)
 unicode.utf8.normalize = function(str)
   return '"' .. str:gsub('"','""') .. '"'
+end
+
+
+local function get_plugin_data()
+  return settings.load():getfield("plugin")
 end
 
 
@@ -99,6 +103,8 @@ end
 
 function export.GetPluginInfo()
   local info = { Flags=0 }
+  local PluginData = get_plugin_data()
+
   if PluginData.prefix ~= "" then
     info.CommandPrefix = PluginData.prefix
   end
@@ -126,6 +132,7 @@ end
 function export.Open(OpenFrom, Guid, Item)
   -- prepare some values
   local file_name = nil
+  local PluginData = get_plugin_data()
   local opt_user_modules = PluginData.user_modules
   local opt_extensions   = PluginData.extensions
   local opt_foreign_keys = PluginData.foreign_keys
@@ -216,11 +223,7 @@ end
 
 function export.SetDirectory(object, handle, Dir, OpMode)
   if band(OpMode, F.OPM_FIND) == 0 then
-    if Dir == ".." or Dir == "/" or Dir == "\\" then
-      return object:open_database()
-    else
-      return object:open_object(Dir)
-    end
+    return object:set_directory(Dir)
   end
 end
 
@@ -248,7 +251,7 @@ function export.ProcessPanelInput(object, handle, rec)
       end
     end
   end
-  return rec.EventType == F.KEY_EVENT and object:handle_keyboard(rec)
+  return rec.EventType == F.KEY_EVENT and object:handle_keyboard(handle, rec)
 end
 
 

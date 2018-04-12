@@ -43,6 +43,8 @@ local names = {
   "ps_title_select_columns",
   "ps_set_columns",
   "ps_reset_columns",
+
+  "ps_panel_filter"
 }
 
 local indexes = {}

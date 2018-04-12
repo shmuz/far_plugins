@@ -38,6 +38,8 @@ function mypanel.open(file_name, silent, extensions, foreign_keys)
     _hist_file      = nil ; -- files[<filename>] in the plugin's non-volatile settings
     _sort_col_index = nil ;
     _sort_started   = nil ;
+    _tab_filter     = nil ;
+    _tab_filter_enb = nil ;
   }
 
   -- Members come from the original plugin SQLiteDB.
@@ -67,6 +69,17 @@ function mypanel.open(file_name, silent, extensions, foreign_keys)
       ErrMsg(M.ps_err_open.."\n"..file_name)
     end
     return nil
+  end
+end
+
+
+function mypanel:set_directory(Dir)
+  self._tab_filter = false
+  self._tab_filter_enb = false
+  if Dir == ".." or Dir == "/" or Dir == "\\" then
+    return self:open_database()
+  else
+    return self:open_object(Dir)
   end
 end
 
@@ -223,40 +236,26 @@ function mypanel:get_panel_list_obj()
   local dbx = self._dbx
   local db = dbx:db()
 
-  local row_count = dbx:get_row_count(curr_object)
-  if not row_count then
-    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
-    return false
-  end
-
   -- Find a name to use for ROWID (self._rowid_name)
   self._rowid_name = nil
-  local stmt = db:prepare("select * from " .. curr_object:normalize())
-  if stmt then
-    local map = {}
-    for _,colname in ipairs(stmt:get_names()) do
-      map[colname:lower()] = true
-    end
-    for _,name in ipairs {"rowid", "oid", "_rowid_"} do
-      if map[name] == nil then
-        self._rowid_name = name
-        break
+  if self._panel_mode == "table" then
+    local stmt = db:prepare("select * from " .. curr_object:normalize())
+    if stmt then
+      local map = {}
+      for _,colname in ipairs(stmt:get_names()) do
+        map[colname:lower()] = true
       end
+      for _,name in ipairs {"rowid", "oid", "_rowid_"} do
+        if map[name] == nil then
+          self._rowid_name = name
+          break
+        end
+      end
+      stmt:finalize()
+    else
+      ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
+      return false
     end
-    stmt:finalize()
-  else
-    return false
-  end
-
-  -- If ROWID exists then select it as the leftmost column.
-  if self._rowid_name then
-    stmt = db:prepare(("select %s,* from %s"):format(self._rowid_name, curr_object:normalize()))
-  else
-    stmt = db:prepare("select * from " .. curr_object:normalize())
-  end
-  if not stmt then
-    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
-    return false
   end
 
   -- Add a special item with dots (..) in all columns.
@@ -266,13 +265,38 @@ function mypanel:get_panel_list_obj()
     items[1].CustomColumnData[i] = ".."
   end
 
+  -- If ROWID exists then select it as the leftmost column.
+  local count_query = "select count(*) from " .. curr_object:normalize()
+  local query = self._rowid_name
+    and ("select %s,* from %s"):format(self._rowid_name, curr_object:normalize())
+    or   "select * from " .. curr_object:normalize()
+  if self._tab_filter and self._tab_filter_enb then
+    count_query = count_query .. " where " .. self._tab_filter
+    query       =       query .. " where " .. self._tab_filter
+  end
+
+  local stmt = db:prepare(query)
+  if not stmt then
+    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
+    return items
+  end
+
+  -- Get row count
+  local count_stmt = db:prepare(count_query)
+  count_stmt:step()
+  local row_count = count_stmt:get_value(0)
+  count_stmt:finalize()
+
   -- Add real items
   local prg_wnd = progress.newprogress(M.ps_reading, row_count)
   for row = 1, row_count do
     if (row-1) % 100 == 0 then
       prg_wnd:update(row-1)
     end
-    if stmt:step() ~= sql3.ROW then
+    local res = stmt:step()
+    if res == sql3.DONE then
+      break
+    elseif res ~= sql3.ROW then
       ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
       items = false
       break
@@ -558,7 +582,35 @@ function mypanel:delete_items(items, items_count)
 end
 
 
-function mypanel:handle_keyboard(key_event)
+function mypanel:set_table_filter(handle)
+  local query = "SELECT * FROM "..self._curr_object:normalize().." WHERE "
+  local text = far.InputBox(nil, M.ps_panel_filter, query, "Polygon_PanelFilter")
+                            --, SrcText, DestLength, HelpTopic, Flags)
+  if text then
+    local stmt = self._dbx:db():prepare(query..text)
+    if stmt then -- check syntax
+      stmt:finalize()
+      self._tab_filter = text
+      self._tab_filter_enb = true
+      panel.UpdatePanel(handle)
+      panel.RedrawPanel(handle)
+    else
+      ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
+    end
+  end
+end
+
+
+function mypanel:toggle_table_filter(handle)
+  if self._tab_filter then
+    self._tab_filter_enb = not self._tab_filter_enb
+    panel.UpdatePanel(handle)
+    panel.RedrawPanel(handle)
+  end
+end
+
+
+function mypanel:handle_keyboard(handle, key_event)
   local vcode  = key_event.VirtualKeyCode
   local cstate = key_event.ControlKeyState
   local nomods = cstate == 0
@@ -624,6 +676,12 @@ function mypanel:handle_keyboard(key_event)
     elseif shift and vcode == VK.F5 then
       self:toggle_column_mask()
       return true
+    elseif ctrl and vcode == VK.F then           -- Ctrl-F ("panel filter")
+      self:set_table_filter(handle)
+      return true;
+    elseif ctrl and vcode == VK.G then           -- Ctrl-G ("toggle panel filter")
+      self:toggle_table_filter(handle)
+      return true
     end
 
   -- View mode ----------------------------------------------------------------
@@ -635,6 +693,12 @@ function mypanel:handle_keyboard(key_event)
       return true
     elseif shift and vcode == VK.F5 then
       self:toggle_column_mask()
+      return true
+    elseif ctrl and vcode == VK.F then           -- Ctrl-F ("panel filter")
+      self:set_table_filter(handle)
+      return true;
+    elseif ctrl and vcode == VK.G then           -- Ctrl-G ("toggle panel filter")
+      self:toggle_table_filter(handle)
       return true
     end
 

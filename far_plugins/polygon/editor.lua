@@ -95,7 +95,7 @@ function myeditor:insert()
 
   local newdata = myeditor.edit(db_data, true)
   if newdata and self:exec_update(nil, newdata) then
-    panel.UpdatePanel(nil, 1)
+    panel.UpdatePanel(nil, 1, true)
     panel.RedrawPanel(nil, 1)
   end
 end

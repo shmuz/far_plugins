@@ -60,6 +60,8 @@ $^ #Reference of keyboard actions when the plugin's panel is active#
                  │             │
    Table or View │ Shift-F3    │ Dialog: custom panel view mode
                  │ Shift-F5    │ Toggle panel view mode: full/custom
+                 │ Ctrl-F      │ Dialog: panel filter
+                 │ Ctrl-G      │ Toggle panel filter: on/off
    ──────────────┴─────────────┴───────────────────────────────────────────────────
 
    If command line is not empty then Enter will execute an "SQLite query"
