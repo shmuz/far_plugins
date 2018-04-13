@@ -37,7 +37,7 @@ function mypanel.open(file_name, silent, extensions, foreign_keys)
     _rowid_name     = nil ;
     _hist_file      = nil ; -- files[<filename>] in the plugin's non-volatile settings
     _sort_col_index = nil ;
-    _sort_started   = nil ;
+    _sort_last_mode = nil ;
     _tab_filter     = nil ;
     _tab_filter_enb = nil ;
   }
@@ -181,7 +181,7 @@ end
 
 function mypanel:get_panel_list()
   local rc = false
-  self._sort_started = false
+  self._sort_last_mode = nil
   if self._panel_mode=="db" then
     rc = self:get_panel_list_db()
   elseif self._panel_mode=="table" or self._panel_mode=="view" then
@@ -395,7 +395,7 @@ function mypanel:get_panel_list_query()
 end
 
 
-function mypanel:set_column_mask()
+function mypanel:set_column_mask(handle)
   -- Build dialog dynamically
   local dlg_width = 72
   local col_num = #self._column_descr
@@ -466,15 +466,17 @@ function mypanel:set_column_mask()
     self._col_masks_used = true
     self._hist_file:save()
     self:prepare_panel_info()
-    panel.RedrawPanel(nil,1)
+    panel.UpdatePanel(handle,nil,true)
+    panel.RedrawPanel(handle,nil)
   end
 end
 
 
-function mypanel:toggle_column_mask()
+function mypanel:toggle_column_mask(handle)
   self._col_masks_used = not self._col_masks_used
   self:prepare_panel_info()
-  panel.RedrawPanel(nil,1)
+  panel.UpdatePanel(handle,nil,true)
+  panel.RedrawPanel(handle,nil)
 end
 
 
@@ -671,10 +673,10 @@ function mypanel:handle_keyboard(handle, key_event)
     elseif nomods and vcode == VK.F5 then        -- F5: suppress this key
       return true
     elseif shift and vcode == VK.F3 then
-      self:set_column_mask()
+      self:set_column_mask(handle)
       return true
     elseif shift and vcode == VK.F5 then
-      self:toggle_column_mask()
+      self:toggle_column_mask(handle)
       return true
     elseif ctrl and vcode == VK.F then           -- Ctrl-F ("panel filter")
       self:set_table_filter(handle)
@@ -689,10 +691,10 @@ function mypanel:handle_keyboard(handle, key_event)
     if shift and vcode == VK.F4 then             -- ShiftF4: suppress this key
       return true
     elseif shift and vcode == VK.F3 then
-      self:set_column_mask()
+      self:set_column_mask(handle)
       return true
     elseif shift and vcode == VK.F5 then
-      self:toggle_column_mask()
+      self:toggle_column_mask(handle)
       return true
     elseif ctrl and vcode == VK.F then           -- Ctrl-F ("panel filter")
       self:set_table_filter(handle)
@@ -885,23 +887,15 @@ local SortMap = {
 }
 
 
-function mypanel:change_sort_params()
-  self._sort_started = false
-end
-
-
-function mypanel:init_sort_params(Mode)
-  self._sort_col_index = nil
+function mypanel:get_sort_index(Mode)
   if self._panel_mode=="table" or self._panel_mode=="view" then
-    self._sort_started = true
     local index = 0
     local pos_from_left = SortMap[Mode]
     if pos_from_left then
       for dd in self._panel_info.modes[1].ColumnTypes:gmatch("%d+") do -- ColumnTypes: e.g. C0,C4,C6
         index = index + 1
         if index == pos_from_left then
-          self._sort_col_index = tonumber(dd) + 1
-          break
+          return tonumber(dd) + 1
         end
       end
     end
@@ -910,8 +904,9 @@ end
 
 
 function mypanel:compare(PanelItem1, PanelItem2, Mode)
-  if not self._sort_started then
-    self:init_sort_params(Mode)
+  if self._sort_last_mode ~= Mode then
+    self._sort_last_mode = Mode
+    self._sort_col_index = self:get_sort_index(Mode)
   end
   local index = self._sort_col_index
   if index then

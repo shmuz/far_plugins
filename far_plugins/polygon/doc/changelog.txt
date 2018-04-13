@@ -1,3 +1,7 @@
+2018-04-13, v.0.5.2
+    1. Fix: incorrect sorting after change in sort mode.
+    2. Fix: incorrect sorting after change in custom panel view.
+
 2018-04-13, v.0.5.1
     1. Fix: options worked correctly only in case "far.ReloadDefaultScript = true".
     2. Fix: error on enter in SQLite "view" object (regression bug from v0.4.1).

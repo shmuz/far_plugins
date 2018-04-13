@@ -267,9 +267,6 @@ function export.ProcessPanelEvent (object, handle, Event, Param)
     object:open_query(Param)
     panel.SetCmdLine(nil, "")
     return true
-  elseif Event == F.FE_CHANGESORTPARAMS then
-    object:change_sort_params(Param)
-    return false
   end
 end
 
