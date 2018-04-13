@@ -1,4 +1,4 @@
-2018-0?-??, v.0.?.?
+2018-04-13, v.0.5.1
     1. Fix: options worked correctly only in case "far.ReloadDefaultScript = true".
     2. Fix: error on enter in SQLite "view" object (regression bug from v0.4.1).
     3. Add: panel filter.
