@@ -1,3 +1,8 @@
+2018-04-24, v.0.5.3
+    1. Add help on "panel filter".
+    2. Show characters with hex codes 01 - 1F in panel columns and "edit row" dialog
+       (was: those characters were replaced with a space).
+
 2018-04-13, v.0.5.2
     1. Fix: incorrect sorting after change in sort mode.
     2. Fix: incorrect sorting after change in custom panel view.

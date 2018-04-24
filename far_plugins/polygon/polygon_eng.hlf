@@ -10,6 +10,7 @@ $^ #Polygon - Help Contents#
 
  ~Reference of keyboard actions when the plugin's panel is active~@Keyboard@
  ~Custom Panel View Dialog~@PanelView@
+ ~Panel Filter~@PanelFilter@
  ~Invoking the plugin~@Invoke@
  ~Configuration Dialog~@ConfigDialog@
  ~User modules~@UserModules@
@@ -75,11 +76,27 @@ $^ #Custom panel view dialog#
 Column widths are specified with the same syntax as in panel view dialog of
 ~Far Manager~@:PanelViewModes@.
 
-   If the dialog was closed with OK button then the panels will be rearranged
+   If the dialog was closed with OK button then the panel will be rearranged
 according to the dialog settings. These settings will also be stored permanently
 in the plugin's local database.
 
    Pressing Shift-F5 in the plugin panel will toggle between full and custom views.
+
+ ~Contents~@Contents@
+
+@PanelFilter
+$^ #Panel Filter
+ Panel filter allows to display only records that match the given SQL query.
+
+ #Example:#
+
+   ╔══════════════════ Panel Filter ════════════════════╗
+   ║ SELECT * FROM "Personnel" WHERE                    ║
+   ║ salary between 2000 and 3000                      ↓║
+   ╟────────────────────────────────────────────────────╢
+   ║                 { OK } [ Cancel ]                  ║
+   ╚════════════════════════════════════════════════════╝
+
 
  ~Contents~@Contents@
 

@@ -1,6 +1,6 @@
 1. Description.
    Polygon - a Far Manager plugin based on SQLiteDB plugin by Artem Senichev.
-   https://github.com/shmuz/far_plugins
+   Source code: https://github.com/shmuz/far_plugins/tree/master/far_plugins/polygon
 
 2. License.
     GNU GPL. Because it is a derivative work from a GPL'ed plugin.

@@ -63,7 +63,7 @@ function myeditor:update()
     else                           f.column.type = sqlite.ct_blob
     end
 
-    f.value = exporter.get_text(stmt, i)
+    f.value = exporter.get_text(stmt, i, true)
     table.insert(db_data, f)
   end
   stmt:finalize()

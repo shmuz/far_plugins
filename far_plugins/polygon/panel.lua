@@ -310,7 +310,7 @@ function mypanel:get_panel_list_obj()
 
     if self._rowid_name then
       for i = 1,#self._column_descr do
-        item.CustomColumnData[i] = exporter.get_text(stmt, i)
+        item.CustomColumnData[i] = exporter.get_text(stmt, i, true)
       end
       -- the leftmost column is ROWID (according to the query used)
       local rowid = stmt:get_value(0)
@@ -320,7 +320,7 @@ function mypanel:get_panel_list_obj()
       item.FileName = ("%010d"):format(rowid)
     else
       for i = 1,#self._column_descr do
-        item.CustomColumnData[i] = exporter.get_text(stmt, i-1)
+        item.CustomColumnData[i] = exporter.get_text(stmt, i-1, true)
       end
     end
   end
@@ -375,7 +375,7 @@ function mypanel:get_panel_list_query()
     local col_count = stmt:columns()
     local custom_column_data = {}
     for j = 1, col_count do
-      custom_column_data[j] = exporter.get_text(stmt, j-1)
+      custom_column_data[j] = exporter.get_text(stmt, j-1, true)
     end
     item.CustomColumnData = custom_column_data
     table.insert(buff, item)
@@ -586,8 +586,7 @@ end
 
 function mypanel:set_table_filter(handle)
   local query = "SELECT * FROM "..self._curr_object:normalize().." WHERE "
-  local text = far.InputBox(nil, M.ps_panel_filter, query, "Polygon_PanelFilter")
-                            --, SrcText, DestLength, HelpTopic, Flags)
+  local text = far.InputBox(nil, M.ps_panel_filter, query, "Polygon_PanelFilter", nil, nil, "PanelFilter")
   if text then
     local stmt = self._dbx:db():prepare(query..text)
     if stmt then -- check syntax
