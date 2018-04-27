@@ -5,5 +5,7 @@ VER_MICRO = "1"
 
 MINFARVERSION = "{ 3, 0, 0, 4425 }"
 
+COPYRIGHT = "Shmuel Zeigerman, 2009-2018"
+
 -- Derivative values --
 VER_STRING = VER_MAJOR.."."..VER_MINOR.."."..VER_MICRO
