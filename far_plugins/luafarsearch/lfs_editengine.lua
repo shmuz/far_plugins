@@ -173,7 +173,7 @@ end
 -- @param pos         cursor position in the current line
 -- @param from        start position of selection
 -- @param to          end position of selection
--- @param scroll      extra number of lines to scroll down; "noscroll" means "no scroll"
+-- @param scroll      extra number of lines to scroll; "none"=no scroll; "lazy"=only if necessary;
 --------------------------------------------------------------------------------
 local function ScrollToPosition (row, pos, from, to, scroll)
   local Info = editor.GetInfo()
@@ -191,7 +191,14 @@ local function ScrollToPosition (row, pos, from, to, scroll)
 
   row = row or Info.CurLine
   local TopScreenLine = nil
-  if scroll ~= "noscroll" then
+  if scroll == "none" then
+    -- do nothing
+  elseif (scroll == "+lazy") or (scroll == "-lazy") then
+    if row < Info.TopScreenLine or row >= Info.TopScreenLine + Info.WindowSizeY then
+      scroll = floor(Info.WindowSizeY * (scroll=="+lazy" and 0.25 or 0.75))
+      TopScreenLine = max(1, row - scroll)
+    end
+  else
     scroll = (scroll or 0) + floor(Info.WindowSizeY / 2)
     TopScreenLine = max(1, row - scroll)
   end
@@ -388,9 +395,6 @@ local function GetInvariantTable (tRegex)
 end
 
 local function update_info (nFound, y)
-  if y then
-    editor.SetPosition(nil, y)
-  end
   editor.SetTitle(nil, M.MCurrentlyFound .. nFound)
 end
 
@@ -623,7 +627,7 @@ local function DoSearch (
           -----------------------------------------------------------------------
           if sOperation=="search" or sOperation=="searchword" then
             local X = sOperation=="searchword" and bForward and x>1 and x-1 or x
-            ShowFound(X, fr, to)
+            ShowFound(X, fr, to, bForward and "+lazy" or "-lazy")
             return 1, 0, sChoice, timing:GetElapsedTime()
           -----------------------------------------------------------------------
           elseif sOperation=="count" then
@@ -1092,7 +1096,7 @@ local function DoReplace (
               nReps = nReps + 1
               if tBlockInfo then EditorSelect(tBlockInfo) end
               if bLineDeleted then break end
-              ShowFound(x, fr, to, "noscroll")--THIS SETS CORRECT CURSOR POSITION AFTER FINAL REPLACE IS DONE
+              ShowFound(x, fr, to, "none")--THIS SETS CORRECT CURSOR POSITION AFTER FINAL REPLACE IS DONE
               if tBlockInfo then EditorSelect(tBlockInfo) end -- need this because ShowFound() resets selection
             -----------------------------------------------------------------
             elseif sChoice == "no" then

@@ -14,6 +14,6 @@ Installation
 Note
 -----
 This package works with Far Manager regular expressions library.
-In order to add 2 more libraries (Oniguruma and PCRE),
+In order to add more libraries (Oniguruma, PCRE, PCRE2),
 install "LuaFAR Search add-on" (a separate download).
 
