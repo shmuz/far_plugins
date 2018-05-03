@@ -7,7 +7,7 @@ $ #LuaFAR Search (version #{VER_STRING})#
 ^#FEATURES#
  * Search and replace in the editor.
  * Search and replace from the panels.
- * Regular expressions (3 libraries to choose from).
+ * Regular expressions (4 libraries to choose from).
  * User scripts in Lua language, with access to LuaFAR library,
    the regular expression libraries and to the plugin's API.
  * Plugin menus can be extended with user's items that may include
@@ -40,9 +40,10 @@ $ #LuaFAR Search (version #{VER_STRING})#
  #Lua 5.1#                    : lua51.dll
  #LuaFAR#                     : luafar3.dll
  #Universal Charset Detector# : ucd.dll
- #Lrexlib#                    : rex_onig.dll, rex_pcre.dll (optional)
+ #Lrexlib#                    : rex_onig.dll, rex_pcre.dll, rex_pcre2.dll (optional)
  #Oniguruma#                  : onig.dll (optional)
  #PCRE#                       : pcre.dll (optional)
+ #PCRE2#                      : pcre2.dll (optional)
 
 @EditorMenu
 $ #Plugin's menu in the Editor#

@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-05-04, v3.40.1
+  [+] onig.dll, pcre.dll and pcre2.dll can be placed in the plugin's directory.
+
 2018-04-27, v3.40.0
   [+] Added support for PCRE2 regexp library.
   [*] Editor search: do not do vertical scroll if search result is within the current screen.

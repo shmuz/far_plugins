@@ -173,6 +173,20 @@ local function WrapTfindMethod (tfind)
 end
 
 
+-- Make possible to use <libname>'s dependencies residing in the plugin's directory.
+local function require_ex (libname)
+  if package.loaded[libname] then
+    return package.loaded[libname]
+  end
+  local oldpath = win.GetEnv("PATH")
+  win.SetEnv("PATH", far.PluginStartupInfo().ModuleDir..";"..oldpath)
+  local ok, ret2 = pcall(require, libname)
+  win.SetEnv("PATH", oldpath)
+  if not ok then error(ret2); end
+  return ret2
+end
+
+
 --------------------------------------------------------------------------------
 -- @param lib_name
 --    Either of ("far", "pcre", "pcre2", "oniguruma").
@@ -197,7 +211,7 @@ local function GetRegexLib (lib_name)
     tb_methods.capturecount = function(r) return r:bracketscount() - 1 end
   -----------------------------------------------------------------------------
   elseif lib_name == "pcre" then
-    base = require "rex_pcre"
+    base = require_ex("rex_pcre")
     local ff = base.flags()
     local CFlags = bor(ff.NEWLINE_ANYCRLF, ff.UTF8)
     local v1, v2 = base.version():match("(%d+)%.(%d+)")
@@ -219,7 +233,7 @@ local function GetRegexLib (lib_name)
     tb_methods.capturecount = function(patt) return patt:fullinfo().CAPTURECOUNT end
   -----------------------------------------------------------------------------
   elseif lib_name == "pcre2" then
-    base = require "rex_pcre2"
+    base = require_ex("rex_pcre2")
     local ff = base.flags()
     local CFlags = bor(ff.NEWLINE_ANYCRLF, ff.UTF, ff.UCP)
     local TF = { i=ff.CASELESS, m=ff.MULTILINE, s=ff.DOTALL, x=ff.EXTENDED, U=ff.UNGREEDY }
@@ -236,7 +250,7 @@ local function GetRegexLib (lib_name)
     tb_methods.capturecount = function(patt) return patt:patterninfo().CAPTURECOUNT end
   -----------------------------------------------------------------------------
   elseif lib_name == "oniguruma" then
-    base = require "rex_onig"
+    base = require_ex("rex_onig")
     deriv.new = function (pat, cf) return base.new (Utf16(pat), cf, "UTF16_LE", "PERL_NG") end
     local tb_methods = getmetatable(base.new(".")).__index
     if tb_methods.ufindW == nil then

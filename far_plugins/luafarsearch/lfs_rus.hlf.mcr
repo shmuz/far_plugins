@@ -7,7 +7,7 @@ $ #LuaFAR Search (версия #{VER_STRING})#
 ^#ВОЗМОЖНОСТИ#
  * Поиск и замена в редакторе.
  * Поиск и замена из панелей.
- * Регулярные выражения (3 библиотеки на выбор).
+ * Регулярные выражения (4 библиотеки на выбор).
  * Пользовательские скрипты на языке Lua, с доступом к библиотеке
    LuaFAR, библиотекам регулярных выражений, а также к API плагина.
  * Меню плагина может дополняться пунктами пользователя, которые
@@ -40,10 +40,10 @@ $ #LuaFAR Search (версия #{VER_STRING})#
  #Lua 5.1#                    : lua51.dll
  #LuaFAR#                     : luafar3.dll
  #Universal Charset Detector# : ucd.dll
- #Lrexlib#                    : rex_onig.dll, rex_pcre.dll
-                              (опционально)
+ #Lrexlib#                    : rex_onig.dll, rex_pcre.dll, rex_pcre2.dll (опционально)
  #Oniguruma#                  : onig.dll (опционально)
  #PCRE#                       : pcre.dll (опционально)
+ #PCRE2#                      : pcre2.dll (опционально)
 
 @EditorMenu
 $ #Меню плагина в Редакторе#
