@@ -179,11 +179,12 @@ function mypanel:get_panel_info()
 end
 
 
-function mypanel:get_panel_list()
+function mypanel:get_panel_list(handle)
   local rc = false
   self._sort_last_mode = nil
   if self._panel_mode=="db" then
     rc = self:get_panel_list_db()
+    panel.SetDirectoriesFirst(handle, nil, false)
   elseif self._panel_mode=="table" or self._panel_mode=="view" then
     rc = self:get_panel_list_obj()
   elseif self._panel_mode == "query" then
@@ -217,10 +218,11 @@ function mypanel:get_panel_list_db()
 
     item.CustomColumnData = {}
     local tp = "?"
-    if     obj.type==sqlite.ot_master then tp="metadata"
-    elseif obj.type==sqlite.ot_table  then tp="table"
-    elseif obj.type==sqlite.ot_view   then tp="view"
-    elseif obj.type==sqlite.ot_index  then tp="index"
+    if     obj.type==sqlite.ot_master  then tp="metadata"
+    elseif obj.type==sqlite.ot_table   then tp="table"
+    elseif obj.type==sqlite.ot_view    then tp="view"
+    elseif obj.type==sqlite.ot_index   then tp="index"
+    elseif obj.type==sqlite.ot_trigger then tp="trigger"
     end
     item.CustomColumnData[1] = tp
     item.CustomColumnData[2] = ("% 9d"):format(obj.row_count)
@@ -903,17 +905,29 @@ end
 
 
 function mypanel:compare(PanelItem1, PanelItem2, Mode)
-  if self._sort_last_mode ~= Mode then
-    self._sort_last_mode = Mode
-    self._sort_col_index = self:get_sort_index(Mode)
-  end
-  local index = self._sort_col_index
-  if index then
-    return win_CompareString(
-      PanelItem1.CustomColumnData[index],
-      PanelItem2.CustomColumnData[index], "u", "cS") or 0
+  if self._panel_mode == "db" then
+    if Mode == F.SM_EXT then
+      -- sort by object type
+      return win_CompareString(
+        PanelItem1.CustomColumnData[1],
+        PanelItem2.CustomColumnData[1], "u", "cS") or 0
+    else
+      -- use Far Manager compare function
+      return -2
+    end
   else
-    return 0
+    if self._sort_last_mode ~= Mode then
+      self._sort_last_mode = Mode
+      self._sort_col_index = self:get_sort_index(Mode)
+    end
+    local index = self._sort_col_index
+    if index then
+      return win_CompareString(
+        PanelItem1.CustomColumnData[index],
+        PanelItem2.CustomColumnData[index], "u", "cS") or 0
+    else
+      return 0
+    end
   end
 end
 

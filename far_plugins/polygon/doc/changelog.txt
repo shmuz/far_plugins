@@ -1,3 +1,8 @@
+2018-05-12, v.0.5.4
+    1. Fix:    show triggers in the 'Type' column as 'trigger' (was: '?').
+    2. Change: in database view, items can be sorted by Name (Ctrl-F3), by Type (Ctrl-F4)
+               or by Count (Ctrl-F6). "Show directory first" is automatically turned off.
+
 2018-04-24, v.0.5.3
     1. Add help on "panel filter".
     2. Show characters with hex codes 01 - 1F in panel columns and "edit row" dialog

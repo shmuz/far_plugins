@@ -217,7 +217,7 @@ end
 
 
 function export.GetFindData(object, handle, OpMode)
-  return object:get_panel_list()
+  return object:get_panel_list(handle)
 end
 
 

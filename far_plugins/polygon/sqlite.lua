@@ -28,6 +28,7 @@ local sqlite = {
   ot_table   = 2; -- Table
   ot_view    = 3; -- View
   ot_index   = 4; -- Index
+  ot_trigger = 5; -- Trigger
 
 --! Column types.
   ct_integer = 0;
@@ -232,10 +233,13 @@ end
 
 
 function sqlite.object_type_by_name(type_name)
-  if not type_name or type_name == "" then return sqlite.ot_unknown; end
-  if type_name:lower() == "table"     then return sqlite.ot_table;   end
-  if type_name:lower() == "view"      then return sqlite.ot_view;    end
-  if type_name:lower() == "index"     then return sqlite.ot_index;   end
+  if type(type_name) == "string" then
+    type_name = type_name:lower()
+    if type_name == "table"   then return sqlite.ot_table;   end
+    if type_name == "view"    then return sqlite.ot_view;    end
+    if type_name == "index"   then return sqlite.ot_index;   end
+    if type_name == "trigger" then return sqlite.ot_trigger; end
+  end
   return sqlite.ot_unknown
 end
 
