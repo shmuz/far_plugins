@@ -1,3 +1,8 @@
+2018-05-31, v.0.5.5
+    1. Refactoring.
+    2. Add: support drop trigger via F8 in database view.
+    3. Fix: crash in DeleteFilesW when deleting all rows from a table containing 170000 rows.
+
 2018-05-12, v.0.5.4
     1. Fix:    show triggers in the 'Type' column as 'trigger' (was: '?').
     2. Change: in database view, items can be sorted by Name (Ctrl-F3), by Type (Ctrl-F4)

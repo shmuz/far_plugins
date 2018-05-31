@@ -73,7 +73,7 @@ function mypanel.open(file_name, silent, extensions, foreign_keys)
 end
 
 
-function mypanel:set_directory(Dir)
+function mypanel:set_directory(handle, Dir)
   self._tab_filter = false
   self._tab_filter_enb = false
   if Dir == ".." or Dir == "/" or Dir == "\\" then
@@ -114,7 +114,7 @@ function mypanel:open_object(object_name)
 end
 
 
-function mypanel:open_query(query)
+function mypanel:open_query(handle, query)
   local word1 = query:match("^%s*([%w_]+)")
   if not word1 then return end
 
@@ -146,7 +146,6 @@ function mypanel:open_query(query)
     end
 
     stmt:finalize()
-    self:prepare_panel_info()
   else
     -- Update query - just execute without read result
     local prg_wnd = progress.newprogress(M.ps_execsql)
@@ -158,13 +157,14 @@ function mypanel:open_query(query)
     prg_wnd:hide()
   end
 
-  panel.UpdatePanel(nil, 1)
-  panel.RedrawPanel(nil, 1)
+  self:prepare_panel_info()
+  panel.UpdatePanel(handle, nil, false)
+  panel.RedrawPanel(handle, nil, {CurrentItem=1})
   return true
 end
 
 
-function mypanel:get_panel_info()
+function mypanel:get_panel_info(handle)
   return {
     CurDir           = self._curr_object;
     Flags            = bit64.bor(F.OPIF_DISABLESORTGROUPS,F.OPIF_DISABLEFILTER,F.OPIF_SHORTCUT);
@@ -573,7 +573,7 @@ function mypanel:add_keybar_label(label, vkc, cks)
 end
 
 
-function mypanel:delete_items(items, items_count)
+function mypanel:delete_items(handle, items, items_count)
   if self._panel_mode == "table" and not self._rowid_name then
     ErrMsg(M.ps_err_del_norowid)
     return false
@@ -621,18 +621,6 @@ function mypanel:handle_keyboard(handle, key_event)
   local ctrl   = cstate == F.LEFT_CTRL_PRESSED or cstate == F.RIGHT_CTRL_PRESSED
   local shift  = cstate == F.SHIFT_PRESSED
 
-  -- All modes -----------------------------------------------------------------
-  do
-    if ctrl and vcode == ("A"):byte() then       -- CtrlA: suppress this key
-      return true
-    elseif nomods and vcode == VK.F7 then        -- F7: suppress this key
-      return true
-    elseif nomods and vcode == VK.F6 then        -- F6: edit and execute SQL query
-      self:edit_sql_query()
-      return true
-    end
-  end
-
   -- Database mode -------------------------------------------------------------
   if self._panel_mode == "db" then
     if nomods and vcode == VK.F3 then            -- F3: view table/view data
@@ -671,8 +659,6 @@ function mypanel:handle_keyboard(handle, key_event)
     elseif shift and vcode == VK.F4 then         -- ShiftF4: insert row
       myeditor.neweditor(self._dbx, self._curr_object):insert()
       return true
-    elseif nomods and vcode == VK.F5 then        -- F5: suppress this key
-      return true
     elseif shift and vcode == VK.F3 then
       self:set_column_mask(handle)
       return true
@@ -689,9 +675,7 @@ function mypanel:handle_keyboard(handle, key_event)
 
   -- View mode ----------------------------------------------------------------
   elseif self._panel_mode == "view" then
-    if shift and vcode == VK.F4 then             -- ShiftF4: suppress this key
-      return true
-    elseif shift and vcode == VK.F3 then
+    if shift and vcode == VK.F3 then
       self:set_column_mask(handle)
       return true
     elseif shift and vcode == VK.F5 then
@@ -705,7 +689,24 @@ function mypanel:handle_keyboard(handle, key_event)
       return true
     end
 
-  -- All done ------------------------------------------------------------------
+  -- Query mode ----------------------------------------------------------------
+  elseif self._panel_mode == "query" then
+    -- nothing for the moment
+
+  end
+
+  -- All modes -----------------------------------------------------------------
+  if nomods and vcode == VK.F6 then            -- F6: edit and execute SQL query
+    self:edit_sql_query(handle)
+    return true
+  elseif shift and vcode == VK.F4 then         -- ShiftF4: suppress this key
+    return true
+  elseif nomods and vcode == VK.F5 then        -- F5: suppress this key
+    return true
+  elseif nomods and vcode == VK.F7 then        -- F7: suppress this key
+    return true
+  elseif ctrl and vcode == ("A"):byte() then   -- CtrlA: suppress this key
+    return true
   end
 end
 
@@ -825,7 +826,7 @@ function mypanel:view_pragma_statements()
 end
 
 
-function mypanel:edit_sql_query()
+function mypanel:edit_sql_query(handle)
   local tmp_file_name = exporter.get_temp_file_name("sql")
 
   -- Save last used query
@@ -870,7 +871,7 @@ function mypanel:edit_sql_query()
     if file_buff == "" then return; end
 
     self._last_sql_query = string.gsub(file_buff, "\r\n", "\n")
-    self:open_query(self._last_sql_query)
+    self:open_query(handle, self._last_sql_query)
   end
 end
 

@@ -109,58 +109,38 @@ function myeditor.edit(db_data, create_mode)
     max_wnd_width = rc_far_wnd.Right + 1
   end
   local max_label_length = 0
-  local max_value_length = 0
+  local max_value_length = 40
   for _,v in ipairs(db_data) do
-    local label_len = v.column.name:len()
-    local value_len = v.value:len()
-    if max_label_length < label_len then
-      max_label_length = label_len
-    end
-    if max_value_length < value_len then
-      max_value_length = value_len
-    end
+    max_label_length = math.max(max_label_length, v.column.name:len())
+    max_value_length = math.max(max_value_length, v.value:len())
   end
-  if max_value_length < 40 then
-    max_value_length = 40
-  end
-  if max_value_length + max_label_length + 12 > max_wnd_width then
-    max_value_length = max_wnd_width - max_label_length - 12
-  end
+  max_value_length = math.min(max_value_length, max_wnd_width - max_label_length - 12)
   local dlg_height = 6 + #db_data
-  local dlg_width = 12 + max_label_length + max_value_length
-  if dlg_width < 30 then
-    dlg_width = 30
-  end
+  local dlg_width = math.max(12 + max_label_length + max_value_length, 30)
 
   -- Build dialog
   local dlg_items = {}
 
   local title = create_mode and M.ps_insert_row_title or M.ps_edit_row_title
-  local dlg_item = {F.DI_DOUBLEBOX, 3,1,dlg_width-4,dlg_height-2, 0,0,0,0, title }
-  table.insert(dlg_items, dlg_item)
+  table.insert(dlg_items, {F.DI_DOUBLEBOX, 3,1,dlg_width-4,dlg_height-2, 0,0,0,0, title })
 
   local editor_fields = {}
-  local y_pos = 2
   for i,v in ipairs(db_data) do
     local val = v.value
-    local row_ctl = myeditor.create_row_control(v.column.name, val, y_pos, max_label_length,
-                    max_value_length, v.column.type == sqlite.ct_blob)
-    y_pos = y_pos + 1
+    local label,field = myeditor.create_row_control(v.column.name, val, i+1, max_label_length,
+                        max_value_length, v.column.type == sqlite.ct_blob)
     if i == 1 then
-      row_ctl.field[9] = bit64.bor(row_ctl.field[9], F.DIF_FOCUS)
+      field[9] = bit64.bor(field[9], F.DIF_FOCUS)
     end
-    table.insert(dlg_items, row_ctl.label)
-    table.insert(dlg_items, row_ctl.semi)
-    table.insert(dlg_items, row_ctl.field)
+    table.insert(dlg_items, label)
+    table.insert(dlg_items, field)
     table.insert(editor_fields, { colname=v.column.name, index=#dlg_items })
   end
 
-  dlg_item = {F.DI_TEXT, 0,dlg_height-4,0,0, 0,0,0,F.DIF_SEPARATOR, ""}
-  table.insert(dlg_items, dlg_item)
-  dlg_item = {F.DI_BUTTON, 0,dlg_height-3,0,0, 0,0,0,F.DIF_CENTERGROUP+F.DIF_DEFAULTBUTTON,M.ps_save}
-  table.insert(dlg_items, dlg_item)
-  dlg_item = {F.DI_BUTTON, 0,dlg_height-3,0,0, 0,0,0,F.DIF_CENTERGROUP,M.ps_cancel}
-  table.insert(dlg_items, dlg_item)
+  table.insert(dlg_items, {F.DI_TEXT, 0,dlg_height-4,0,0, 0,0,0,F.DIF_SEPARATOR, ""})
+  table.insert(dlg_items,
+      {F.DI_BUTTON, 0,dlg_height-3,0,0, 0,0,0,F.DIF_CENTERGROUP+F.DIF_DEFAULTBUTTON,M.ps_save})
+  table.insert(dlg_items, {F.DI_BUTTON, 0,dlg_height-3,0,0, 0,0,0,F.DIF_CENTERGROUP,M.ps_cancel})
 
   local guid = win.Uuid("866927E1-60F1-4C87-A09D-D481D4189534")
   local dlg = far.DialogInit(guid, -1, -1, dlg_width, dlg_height, nil, dlg_items)
@@ -199,9 +179,10 @@ function myeditor:remove(items, items_count)
   if self._table_name == "" then
     for i=1, items_count do
       local query = "drop "
-      if     items[i].AllocationSize == sqlite.ot_table then query = query .. "table"
-      elseif items[i].AllocationSize == sqlite.ot_view  then query = query .. "view"
-      elseif items[i].AllocationSize == sqlite.ot_index then query = query .. "index"
+      if     items[i].AllocationSize == sqlite.ot_table   then query = query .. "table"
+      elseif items[i].AllocationSize == sqlite.ot_view    then query = query .. "view"
+      elseif items[i].AllocationSize == sqlite.ot_index   then query = query .. "index"
+      elseif items[i].AllocationSize == sqlite.ot_trigger then query = query .. "trigger"
       else query = nil
       end
       if query then
@@ -216,11 +197,9 @@ function myeditor:remove(items, items_count)
   else
     local query = ("delete from %s where %s in ("):format(self._table_name:normalize(),
                                                           self._rowid_name)
-    for i = 1, items_count do
-      if i > 1 then query = query .. "," end
-      query = query .. items[i].AllocationSize
-    end
-    query = query .. ")"
+    local tt = {}
+    for i = 1, items_count do tt[i] = items[i].AllocationSize; end
+    query = query .. table.concat(tt, ",") .. ")"
 
     if not self._dbx:execute_query(query) then
       local err_descr = self._dbx:last_error()
@@ -295,33 +274,25 @@ end
 
 
 function myeditor.create_row_control(name, value, poz_y, width_name, width_val, ro)
-  local rc = {label={}, semi={}, field={}}
-  for _,v in pairs(rc) do
-    for k=1,10 do v[k]=0 end
-  end
+  local label, field = {}, {}
+  for k=1,10 do label[k],field[k] = 0,0; end
 
-  rc.label[1] = F.DI_TEXT
-  rc.label[2] = 5
-  rc.label[4] = 5 + width_name - 1
-  rc.label[3] = poz_y
-  rc.label[10] = name
+  label[1] = F.DI_TEXT
+  label[2] = 5
+  label[4] = 5 + width_name
+  label[3] = poz_y
+  label[10] = name
 
-  rc.semi[1] = F.DI_TEXT
-  rc.semi[2] = rc.label[4] + 1;
-  rc.semi[4] = rc.semi[2]
-  rc.semi[3] = poz_y
-  rc.semi[10] = ":"
-
-  rc.field[1] = F.DI_EDIT
-  rc.field[2] = rc.semi[2] + 2
-  rc.field[4] = rc.field[2] + width_val - 1
-  rc.field[3] = poz_y
-  rc.field[10] = value
+  field[1] = F.DI_EDIT
+  field[2] = label[4] + 1
+  field[4] = field[2] + width_val
+  field[3] = poz_y
+  field[10] = value
   if ro then
-    rc.field[9] = F.DIF_READONLY
+    field[9] = F.DIF_READONLY
   end
 
-  return rc
+  return label, field
 end
 
 

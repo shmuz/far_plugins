@@ -212,7 +212,7 @@ end
 
 
 function export.GetOpenPanelInfo(object, handle)
-  return object:get_panel_info()
+  return object:get_panel_info(handle)
 end
 
 
@@ -223,13 +223,13 @@ end
 
 function export.SetDirectory(object, handle, Dir, OpMode)
   if band(OpMode, F.OPM_FIND) == 0 then
-    return object:set_directory(Dir)
+    return object:set_directory(handle, Dir)
   end
 end
 
 
 function export.DeleteFiles(object, handle, PanelItems, OpMode)
-  return object:delete_items(PanelItems, #PanelItems)
+  return object:delete_items(handle, PanelItems, #PanelItems)
 end
 
 
@@ -264,7 +264,7 @@ function export.ProcessPanelEvent (object, handle, Event, Param)
     end
   end
   if Event == F.FE_COMMAND then
-    object:open_query(Param)
+    object:open_query(handle, Param)
     panel.SetCmdLine(nil, "")
     return true
   end
