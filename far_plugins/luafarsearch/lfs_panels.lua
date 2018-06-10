@@ -1446,8 +1446,8 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
                 tGrep[#tGrep+1] = qLinesBefore:get(k)
               end
               qLinesBefore:clear()
-              numline_match = numline
             end
+            numline_match = numline
             tGrep[#tGrep+1] = numline
             tGrep[#tGrep+1] = Line
           else

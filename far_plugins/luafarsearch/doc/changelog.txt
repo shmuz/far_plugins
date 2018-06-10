@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-06-10, v3.40.2
+  [!] Grep: "Context Lines After" did not work when "Context Lines Before" was set to 0.
+
 2018-05-04, v3.40.1
   [+] onig.dll, pcre.dll and pcre2.dll can be placed in the plugin's directory.
 
