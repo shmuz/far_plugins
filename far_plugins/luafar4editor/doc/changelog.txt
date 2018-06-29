@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-06-29, v3.8.0
+  [+] Function AddToMenu accepts either a string (file name) or a function as its 4-th parameter.
+  [!] A few fixes in the utilities.
+
 2015-08-31, v3.7.1
   [!] TableView utility was broken since Far 3.0.4353.
 

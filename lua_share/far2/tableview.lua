@@ -381,4 +381,4 @@ local function showDialog(path, tbl)
 end
 
 init()
-showDialog('_G')
+return showDialog

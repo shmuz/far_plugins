@@ -6,7 +6,7 @@ ver=2.7
 id=1
 lv=0
 dt=Text
-nm=LuaFAR for Editor (version 3.7)
+nm=LuaFAR for Editor (version 3.8)
 mtime=3522650788
 <article>
 #_<markdown>
@@ -898,7 +898,7 @@ id=13
 lv=2
 dt=Text
 nm=AddToMenu
-mtime=3522656207
+mtime=3739472365
 <article>
 #_<markdown>
 #_**`AddToMenu (where, text, hotkey, file [, ...])`**
@@ -928,11 +928,18 @@ mtime=3522656207
 #_Supply `nil` if no hot key is needed.<br>
 #_**NOTE:** a hot key assigned this way works **only from Editor**, provided that no macro is assigned to that key.
 #_
-#_1. `file`<br>
-#_A specification for a Lua script to run upon this item activation. The exact file name is determined according to the same rules as with `require` function, that is, `package.path` is used to search for the file. But contrary to `require`, the value returned by the script is not cached in `package.loaded`.
+#_1. `file`
+#_   * If `file` is a string then it is a specification for a Lua script to run
+#_     upon this item activation. The exact file name is determined according
+#_     to the same rules as with `require` function, that is, `package.path`
+#_     is used to search for the file. But contrary to `require`, the value
+#_     returned by the script is not cached in `package.loaded`.
+#_   * If `file` is a function then it will be called upon activation of a menu item
+#_     or upon pressing a hot key.<br><br>
 #_
 #_1. Extra parameters (optional)<br>
-#_Values that will be passed to user script (they are passed to the script in a table). There can be any number of values of any Lua type.
+#_   Values that will be passed to user script (they are passed to the script in a table).
+#_   There can be any number of values of any Lua type.
 #_
 #_### Examples
 #_

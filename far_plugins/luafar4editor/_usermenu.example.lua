@@ -14,7 +14,7 @@ AddToMenu ("e", true, "Alt+6", 6)
 AddToMenu ("e", true, "Alt+7", 7)
 
 -- Utility for viewing and editing Lua variables.
-AddToMenu ("evp", "Table View", nil, "far2.tableview")
+AddToMenu ("evp", "Table View", nil, function() require"far2.tableview"("_G") end)
 
 -- Add a menu item to the plugin menus in Editor, Viewer and Panels ("evp").
 -- Activating this menu item will execute a script, specified in the 4-th

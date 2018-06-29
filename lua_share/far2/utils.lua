@@ -128,7 +128,7 @@ local function RunUserItem (aItem, aProperties, ...)
   assert(aItem.filename, "no file name")
   assert(aItem.env, "no environment")
   -- find and compile the file
-  local chunk = LoadName(aItem.filename)
+  local chunk = type(aItem.filename)=="function" and aItem.filename or LoadName(aItem.filename)
   -- copy "fixed" and append "variable" arguments
   local args = {}
   for k,v in pairs(aProperties) do args[k] = v end
@@ -160,7 +160,7 @@ local function MakeAddToMenu (Items, Env, HotKeyTable)
     if not aWhere:find("[evpdc]") then return end
     ---------------------------------------------------------------------------
     local SepText = type(aItemText)=="string" and aItemText:match("^:sep:(.*)")
-    local bUserItem = SepText or type(aFileName)=="string"
+    local bUserItem = SepText or type(aFileName)=="string" or type(aFileName)=="function"
     if not bUserItem then
       if aItemText~=true or type(aFileName)~="number" then
         return
