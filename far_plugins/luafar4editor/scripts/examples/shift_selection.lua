@@ -43,6 +43,5 @@ local function Shift (Id, forward)
   editor.Redraw(Id)
 end
 
-local arg = ...
-local forward = arg and arg[1]
+local forward = ...
 Shift(nil, forward)

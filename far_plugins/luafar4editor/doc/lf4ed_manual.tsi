@@ -6,7 +6,7 @@ ver=2.7
 id=1
 lv=0
 dt=Text
-nm=LuaFAR for Editor (version 3.8)
+nm=LuaFAR for Editor (version 3.9)
 mtime=3522650788
 <article>
 #_<markdown>
@@ -956,11 +956,32 @@ mtime=3739472365
 </article>
 </node>
 <node>
+id=95
+lv=2
+dt=Text
+nm=AddToMenuEx
+ctime=3739536716
+mtime=3739540537
+<article>
+#_<markdown>
+#_**`AddToMenuEx (where, text, hotkey, file [, ...])`**
+#_
+#_Function `AddToMenuEx` is available to the *_usermenu.lua* script.<br>
+#_It allows to add a specified utility to the plugin's menu and
+#_assign it a hot key.
+#_
+#_This function is almost identical to [`AddToMenu`](13.html).<br>
+#_The only difference is that extra parameters are passed to user script
+#_as they are specified (i.e. vararg expression) rather than being packed into a table.
+#_
+</article>
+</node>
+<node>
 id=57
 lv=2
 dt=Text
 nm=AddCommand
-mtime=3641203627
+mtime=3739537267
 <article>
 #_<markdown>
 #_**`AddCommand (command, file [, ...])`**
@@ -976,7 +997,12 @@ mtime=3641203627
 #_The first command line parameter after the plugin's prefix.
 #_
 #_1. `file`<br>
-#_A specification for a Lua script to run upon this item activation. The exact file name is determined according to the same rules as with `require` function, that is, `package.path` is used to search for the file. But contrary to `require`, the value returned by the script is not cached in `package.loaded`.
+#_   * If `file` is a string then it is a specification for a Lua script to run
+#_     upon command activation. The exact file name is determined according
+#_     to the same rules as with `require` function, that is, `package.path`
+#_     is used to search for the file. But contrary to `require`, the value
+#_     returned by the script is not cached in `package.loaded`.
+#_   * If `file` is a function then it will be called upon command activation.<br><br>
 #_
 #_1. Extra parameters (optional)<br>
 #_Values that will be passed to user script (they are passed to the
@@ -986,6 +1012,28 @@ mtime=3641203627
 #_### Examples
 #_      AddCommand("calc",  "scripts.fl_scripts.common.calc")
 #_      AddCommand("umenu", "scripts.Rh_Scripts.LuaPUM.LuaPUM")
+#_
+</article>
+</node>
+<node>
+id=96
+lv=2
+dt=Text
+nm=AddCommandEx
+ctime=3739537302
+mtime=3739540616
+<article>
+#_<markdown>
+#_**`AddCommandEx (command, file [, ...])`**
+#_
+#_Function `AddCommandEx` is available to the *_usermenu.lua* script.<br>
+#_It establishes a correspondence between the given `command` and
+#_the specified utility (`file`). This allows to call that utility
+#_from the command line (or a macro).
+#_
+#_This function is almost identical to [`AddCommand`](57.html).<br>
+#_The only difference is that extra parameters are passed to user script
+#_as they are specified (i.e. vararg expression) rather than being packed into a table.
 #_
 </article>
 </node>

@@ -76,8 +76,8 @@ end
 
 do
   local data = GetData()
-  local arg1 = ...
-  if type(arg1)=="table" and arg1[1]=="init" then
+  local arg = ...
+  if arg == "init" then
     AutoStart(data)
   else
     local item = CallMenu(data)

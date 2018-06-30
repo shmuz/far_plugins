@@ -127,18 +127,28 @@ end
 local function RunUserItem (aItem, aProperties, ...)
   assert(aItem.filename, "no file name")
   assert(aItem.env, "no environment")
-  -- find and compile the file
+
+  -- Get the chunk. If it is not given directly then find and compile the file.
   local chunk = type(aItem.filename)=="function" and aItem.filename or LoadName(aItem.filename)
-  -- copy "fixed" and append "variable" arguments
-  local args = {}
-  for k,v in pairs(aProperties) do args[k] = v end
-  for i,v in ipairs(aItem.arg)  do args[i] = v end
-  local n, n2 = #args, select("#", ...)
-  args.n = n + n2
-  for i=1,n2 do args[n+i] = select(i, ...) end
-  -- run the chunk
-  setfenv(chunk, aItem.env)
-  return chunk(args)
+
+  -- Set environment. Use pcall since if chunk is not a Lua function an error is thrown.
+  pcall(setfenv, chunk, aItem.env)
+
+  -- Copy "fixed" and append "variable" arguments, then run the chunk.
+  if aItem.unpack then
+    local args = { unpack(aItem.arg, 1, aItem.arg.n) }
+    local n2 = select("#", ...)
+    for k=1,n2 do args[aItem.arg.n + k] = select(k, ...); end
+    return chunk(unpack(args, 1, aItem.arg.n + n2))
+  else
+    local args = {}
+    for k,v in pairs(aProperties) do args[k] = v end
+    for i,v in ipairs(aItem.arg)  do args[i] = v end
+    local n, n2 = #args, select("#", ...)
+    args.n = n + n2
+    for i=1,n2 do args[n+i] = select(i, ...) end
+    return chunk(args)
+  end
 end
 
 local function ConvertUserHotkey(str)
@@ -153,7 +163,7 @@ local function ConvertUserHotkey(str)
   return d
 end
 
-local function MakeAddToMenu (Items, Env, HotKeyTable)
+local function MakeAddToMenu (Items, Env, HotKeyTable, Unpack)
   local function AddToMenu (aWhere, aItemText, aHotKey, aFileName, ...)
     if type(aWhere) ~= "string" then return end
     aWhere = aWhere:lower()
@@ -172,7 +182,8 @@ local function MakeAddToMenu (Items, Env, HotKeyTable)
       if HotKeyTable[key] then
         far.Message(("Key `%s' is already allocated"):format(aHotKey),"AddToMenu",nil,"w")
       elseif bUserItem then
-        HotKeyTable[key] = {filename=aFileName, env=Env, arg={...}}
+        local n = select("#", ...)
+        HotKeyTable[key] = {filename=aFileName, env=Env, arg={n=n, ...}, unpack=Unpack}
       else
         HotKeyTable[key] = aFileName -- menu position of a built-in utility
       end
@@ -183,7 +194,8 @@ local function MakeAddToMenu (Items, Env, HotKeyTable)
       if SepText then
         item = { text=SepText, separator=true }
       else
-        item = { text=tostring(aItemText), filename=aFileName, env=Env, arg={...} }
+        local n = select("#", ...)
+        item = { text=tostring(aItemText), filename=aFileName, env=Env, arg={n=n, ...}, unpack=Unpack }
       end
       if aWhere:find"c" then table.insert(Items.config, item) end
       if aWhere:find"d" then table.insert(Items.dialog, item) end
@@ -195,10 +207,12 @@ local function MakeAddToMenu (Items, Env, HotKeyTable)
   return AddToMenu
 end
 
-local function MakeAddCommand (CommandTable, Env)
+local function MakeAddCommand (CommandTable, Env, Unpack)
   return function (aCommand, aFileName, ...)
-    if type(aCommand)=="string" and type(aFileName)=="string" then
-      CommandTable[aCommand] = { filename=aFileName, env=Env, arg={...} }
+    local fntype = type(aFileName)
+    if type(aCommand)=="string" and (fntype=="string" or fntype=="function") then
+      local n = select("#", ...)
+      CommandTable[aCommand] = { filename=aFileName, env=Env, arg={n=n, ...}, unpack=Unpack }
     end
   end
 end
@@ -279,8 +293,10 @@ local function LoadUserMenu (aFileName)
     end
     local chunk = assert(loadfile(filename))
     uStack[uDepth] = setmetatable({}, uMeta)
-    env.AddToMenu = MakeAddToMenu(userItems, uStack[uDepth], hotKeyTable)
-    env.AddCommand = MakeAddCommand(commandTable, uStack[uDepth])
+    env.AddToMenu    = MakeAddToMenu(userItems, uStack[uDepth], hotKeyTable, false)
+    env.AddToMenuEx  = MakeAddToMenu(userItems, uStack[uDepth], hotKeyTable, true)
+    env.AddCommand   = MakeAddCommand(commandTable, uStack[uDepth], false)
+    env.AddCommandEx = MakeAddCommand(commandTable, uStack[uDepth], true)
     setfenv(chunk, env)()
     uDepth = uDepth - 1
   end
