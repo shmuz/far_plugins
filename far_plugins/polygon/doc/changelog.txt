@@ -1,3 +1,17 @@
+2018-07-26, v.0.6.0
+    1. Edit/insert table row dialog does not close on errors - it gives an opportunity
+       to fix the error and try again.
+    2. Changes in command line processing (when the plugin's panel is active):
+       - "sql <text>" will execute an SQL query <text>.
+       - "lua <text>" will execute a Lua code <text>.
+    3. Plugin creates the table _G.polygon that persists during usual reloads of plugin code.
+    4. Added function polygon.debug().
+    5. Handle NULL's in row editor dialog with Ctrl-N.
+    6. Extending Plugin.Call() operations.
+    7. Add a feature: show/hide columns affinity in panel view.
+    8. Fixes and refactoring.
+    9. Extending help files.
+
 2018-05-31, v.0.5.5
     1. Refactoring.
     2. Add: support drop trigger via F8 in database view.

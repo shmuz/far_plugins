@@ -17,7 +17,8 @@ local sqlite   = Params.sqlite
 
 -- This file's module. Could not be called "panel" due to existing LuaFAR global "panel".
 local mypanel = {}
-local mt_panel = {__index=mypanel}
+local mt_panel = polygon.DEBUG and { __index=function(t,k) LOG(k) return rawget(mypanel,k) end }
+                                or { __index=mypanel }
 
 
 function mypanel.open(file_name, silent, extensions, foreign_keys)
@@ -40,13 +41,14 @@ function mypanel.open(file_name, silent, extensions, foreign_keys)
     _sort_last_mode = nil ;
     _tab_filter     = nil ;
     _tab_filter_enb = nil ;
+    _show_affinity  = nil ;
   }
 
   -- Members come from the original plugin SQLiteDB.
   self._panel_info = {
-    title   = "" ;
-    modes   = {} ;
-    key_bar = {} ;
+    title   = nil;
+    modes   = nil;
+    key_bar = nil;
   }
 
   setmetatable(self, mt_panel)
@@ -114,13 +116,34 @@ function mypanel:open_object(object_name)
 end
 
 
+local function FindFirstTwoWords(query)
+  local num
+  local words = {}
+  for k = 1,2 do
+    repeat
+      query, num = string.gsub(query, "^%s+", "") -- remove white space
+      query, num = string.gsub(query, "^%-%-[^\n]*\n?", "") -- remove a comment
+    until (num == 0)
+
+    local w, q = query:match("([%w_]+)(.*)")
+    if w then words[k], query = w, q
+    else break
+    end
+  end
+  return words[1], words[2]
+end
+
+
 function mypanel:open_query(handle, query)
-  local word1 = query:match("^%s*([%w_]+)")
+  local word1, word2 = FindFirstTwoWords(query)
   if not word1 then return end
+  word1 = word1:lower()
 
   -- Check query for select
-  local word2 = query:match("^%s+([%w_]+)", #word1+1)
-  if word1:lower() == "select" and not (word2 and word2:lower()=="load_extension") then
+  word2 = word2 and word2:lower()
+  if (word1=="select" and word2~="load_extension") or
+     (word1=="pragma" and word2=="database_list")
+  then
     -- Get column description
     local db = self._dbx:db()
     local stmt = db:prepare(query)
@@ -142,7 +165,7 @@ function mypanel:open_query(handle, query)
     stmt:reset()
     self._column_descr = {}
     for i, name in ipairs(stmt:get_names()) do
-      self._column_descr[i] = { name = name; type = sqlite.ct_text; }
+      self._column_descr[i] = { name = name; type = sql3.TEXT; }
     end
 
     stmt:finalize()
@@ -165,14 +188,15 @@ end
 
 
 function mypanel:get_panel_info(handle)
+  local info = self._panel_info
   return {
     CurDir           = self._curr_object;
     Flags            = bit64.bor(F.OPIF_DISABLESORTGROUPS,F.OPIF_DISABLEFILTER,F.OPIF_SHORTCUT);
     HostFile         = self._file_name;
-    KeyBar           = self._panel_info.key_bar;
-    PanelModesArray  = self._panel_info.modes;
-    PanelModesNumber = #self._panel_info.modes;
-    PanelTitle       = self._panel_info.title;
+    KeyBar           = info.key_bar;
+    PanelModesArray  = info.modes;
+    PanelModesNumber = #info.modes;
+    PanelTitle       = info.title;
     ShortcutData     = "";
     StartPanelMode   = ("1"):byte();
   }
@@ -482,16 +506,39 @@ function mypanel:toggle_column_mask(handle)
 end
 
 
+local function add_keybar_label (target, label, vkc, cks)
+  local kbl = {
+    Text = label;
+    LongText = label;
+    VirtualKeyCode = vkc;
+    ControlKeyState = cks or 0;
+  }
+  table.insert(target, kbl)
+end
+
+
+local coltype_map = {
+  [sql3.INTEGER] = " [i]";
+  [sql3.FLOAT  ] = " [f]";
+  [sql3.TEXT   ] = " [t]";
+  [sql3.BLOB   ] = " [b]";
+}
+
+
 function mypanel:prepare_panel_info()
-  local info = self._panel_info
   local col_types = ""
   local col_widths = ""
   local col_titles = {}
   local status_types = nil
   local status_widths = nil
 
-  info.key_bar = {}
-  info.title = M.ps_title_short .. ": " .. self._file_name:match("[^\\/]*$")
+  self._panel_info = {
+    key_bar = {};
+    modes   = {};
+    title   = M.ps_title_short .. ": " .. self._file_name:match("[^\\/]*$");
+  }
+  local info = self._panel_info
+  local key_bar = info.key_bar
 
   if self._curr_object=="" or self._curr_object==nil then
     col_types     = "N,C0,C1"
@@ -502,9 +549,9 @@ function mypanel:prepare_panel_info()
     table.insert(col_titles, M.ps_pt_type)
     table.insert(col_titles, M.ps_pt_count)
 
-    self:add_keybar_label("DDL", VK.F4)
-    self:add_keybar_label("Pragma", VK.F4, F.SHIFT_PRESSED)
-    self:add_keybar_label("Export", VK.F5)
+    add_keybar_label (key_bar, "DDL", VK.F4)
+    add_keybar_label (key_bar, "Pragma", VK.F4, F.SHIFT_PRESSED)
+    add_keybar_label (key_bar, "Export", VK.F5)
   else
     info.title = info.title .. " [" .. self._curr_object .. "]"
     local mask = self._col_masks_used and self._col_masks[self._curr_object]
@@ -519,33 +566,36 @@ function mypanel:prepare_panel_info()
           col_widths = col_widths .. ','
         end
         col_widths = col_widths .. (width or "0")
-        table.insert(col_titles, self._column_descr[i].name)
+        if self._show_affinity and self._panel_mode == "table" then
+          table.insert(col_titles, descr.name..coltype_map[descr.type])
+        else
+          table.insert(col_titles, descr.name)
+        end
       end
     end
-    self:add_keybar_label("Update", VK.F4)
-    self:add_keybar_label("Insert", VK.F4, F.SHIFT_PRESSED)
-    self:add_keybar_label("", VK.F3)
-    self:add_keybar_label("", VK.F3, F.SHIFT_PRESSED)
-    self:add_keybar_label("", VK.F5)
+    add_keybar_label (key_bar, "Update", VK.F4)
+    add_keybar_label (key_bar, "Insert", VK.F4, F.SHIFT_PRESSED)
+    add_keybar_label (key_bar, "", VK.F3)
+    add_keybar_label (key_bar, "", VK.F3, F.SHIFT_PRESSED)
+    add_keybar_label (key_bar, "", VK.F5)
   end
-  self:add_keybar_label("SQL", VK.F6)
-  self:add_keybar_label("", VK.F1, F.SHIFT_PRESSED)
-  self:add_keybar_label("", VK.F2, F.SHIFT_PRESSED)
-  self:add_keybar_label("", VK.F3, F.SHIFT_PRESSED)
-  self:add_keybar_label("", VK.F5, F.SHIFT_PRESSED)
-  self:add_keybar_label("", VK.F6, F.SHIFT_PRESSED)
-  self:add_keybar_label("", VK.F7)
-  self:add_keybar_label("", VK.F3, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
-  self:add_keybar_label("", VK.F4, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
-  self:add_keybar_label("", VK.F5, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
-  self:add_keybar_label("", VK.F6, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
-  self:add_keybar_label("", VK.F7, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
+  add_keybar_label (key_bar, "SQL", VK.F6)
+  add_keybar_label (key_bar, "", VK.F1, F.SHIFT_PRESSED)
+  add_keybar_label (key_bar, "", VK.F2, F.SHIFT_PRESSED)
+  add_keybar_label (key_bar, "", VK.F3, F.SHIFT_PRESSED)
+  add_keybar_label (key_bar, "", VK.F5, F.SHIFT_PRESSED)
+  add_keybar_label (key_bar, "", VK.F6, F.SHIFT_PRESSED)
+  add_keybar_label (key_bar, "", VK.F7)
+  add_keybar_label (key_bar, "", VK.F3, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
+  add_keybar_label (key_bar, "", VK.F4, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
+  add_keybar_label (key_bar, "", VK.F5, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
+  add_keybar_label (key_bar, "", VK.F6, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
+  add_keybar_label (key_bar, "", VK.F7, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
   for i = VK.F1, VK.F12 do
-    self:add_keybar_label("", i, F.LEFT_CTRL_PRESSED + F.RIGHT_CTRL_PRESSED)
+    add_keybar_label (key_bar, "", i, F.LEFT_CTRL_PRESSED + F.RIGHT_CTRL_PRESSED)
   end
 
   -- Configure one panel view for all modes
-  info.modes = {}
   local pm1 = {
     ColumnTypes  = col_types;
     ColumnWidths = col_widths;
@@ -559,17 +609,6 @@ function mypanel:prepare_panel_info()
   for k=1,10 do
     info.modes[k] = (k%2==1) and pm2 or pm1
   end
-end
-
-
-function mypanel:add_keybar_label(label, vkc, cks)
-  local kbl = {
-    Text = label;
-    LongText = label;
-    VirtualKeyCode = vkc;
-    ControlKeyState = cks or 0;
-  }
-  table.insert(self._panel_info.key_bar, kbl)
 end
 
 
@@ -651,13 +690,15 @@ function mypanel:handle_keyboard(handle, key_event)
         end
       end
       if self._rowid_name then
-        myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name):update()
+        local ed = myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name)
+        ed:edit_item(handle)
         return true
       else
         ErrMsg(M.ps_err_edit_norowid)
       end
     elseif shift and vcode == VK.F4 then         -- ShiftF4: insert row
-      myeditor.neweditor(self._dbx, self._curr_object):insert()
+      local ed = myeditor.neweditor(self._dbx, self._curr_object)
+      ed:insert_item(handle)
       return true
     elseif shift and vcode == VK.F3 then
       self:set_column_mask(handle)
@@ -670,6 +711,11 @@ function mypanel:handle_keyboard(handle, key_event)
       return true;
     elseif ctrl and vcode == VK.G then           -- Ctrl-G ("toggle panel filter")
       self:toggle_table_filter(handle)
+      return true
+    elseif ctrl and vcode == VK.A then           -- Ctrl-A ("show/hide columns affinity")
+      self._show_affinity = not self._show_affinity
+      self:prepare_panel_info()
+      panel.RedrawPanel(handle)
       return true
     end
 
@@ -730,12 +776,12 @@ function mypanel:view_db_object()
 
     local file = io.open(tmp_file_name, "wb")
     if not file then
-      ErrMsg(M.ps_err_writef.."\n"..tmp_file_name, "we")
+      ErrMsg(M.ps_err_writef.."\n"..tmp_file_name, nil, "we")
       return
     end
     if not file:write(cr_sql) then
       file:close()
-      ErrMsg(M.ps_err_writef.."\n"..tmp_file_name, "we")
+      ErrMsg(M.ps_err_writef.."\n"..tmp_file_name, nil, "we")
       return
     end
     file:close()
@@ -768,7 +814,7 @@ function mypanel:view_db_create_sql()
           F.VF_ENABLE_F6 + F.VF_DISABLEHISTORY + F.VF_DELETEONLYFILEONCLOSE + F.VF_NONMODAL, 65001)
       else
         if file then file:close() end
-        ErrMsg(M.ps_err_writef.."\n"..tmp_path, "we")
+        ErrMsg(M.ps_err_writef.."\n"..tmp_path, nil, "we")
       end
     end
   end
@@ -834,44 +880,33 @@ function mypanel:edit_sql_query(handle)
     local file = io.open(tmp_file_name, "w")
     if not (file and file:write(self._last_sql_query)) then
       if file then file:close() end
-      ErrMsg(M.ps_err_writef.."\n"..tmp_file_name, "we")
+      ErrMsg(M.ps_err_writef.."\n"..tmp_file_name, nil, "we")
       return
     end
     file:close()
   end
 
   -- Open query editor
-  if editor.Editor(tmp_file_name, "SQLite query", nil, nil, nil, nil, F.EF_DISABLESAVEPOS + F.EF_DISABLEHISTORY,
+  if editor.Editor(tmp_file_name, "SQLite query", nil, nil, nil, nil,
+                   F.EF_DISABLESAVEPOS + F.EF_DISABLEHISTORY,
                    nil, nil, 65001) == F.EEC_MODIFIED then
     -- Read query
     local file = io.open(tmp_file_name, "rb")
     if not file then
-      ErrMsg(M.ps_err_read.."\n"..tmp_file_name, "we")
+      ErrMsg(M.ps_err_read.."\n"..tmp_file_name, nil, "we")
       return
     end
     local file_buff = file:read("*all")
     file:close()
     win.DeleteFile(tmp_file_name)
 
-    -- Remove BOM
-    local a,b,c,d = string.byte(file_buff, 1, 4)
-    if a == 0xef and b == 0xbb and c == 0xbf then  -- UTF-8
-      file_buff = string.sub(file_buff, 4)
-    elseif a == 0xfe and b == 0xff then  -- UTF-16 (BE)
-      file_buff = string.sub(file_buff, 3)
-    elseif a == 0xff and b == 0xfe then  -- UTF-16 (LE)
-      file_buff = string.sub(file_buff, 3)
-    elseif a == 0x00 and b == 0x00 and c == 0xfe and d == 0xff then -- UTF-32 (BE)
-      file_buff = string.sub(file_buff, 5)
-    elseif a == 0x00 and b == 0x00 and c == 0xff and d == 0xfe then -- UTF-32 (LE)
-      file_buff = string.sub(file_buff, 5)
-    elseif a == 0x2b and b == 0x2f then -- UTF-7
-      file_buff = string.sub(file_buff, 5) -- ### suspicious
-    end
-    if file_buff == "" then return; end
+    -- Remove UTF-8 BOM
+    file_buff = string.gsub(file_buff, "^\239\187\191", "")
 
-    self._last_sql_query = string.gsub(file_buff, "\r\n", "\n")
-    self:open_query(handle, self._last_sql_query)
+    if file_buff ~= "" then
+      self._last_sql_query = string.gsub(file_buff, "\r\n", "\n")
+      self:open_query(handle, self._last_sql_query)
+    end
   end
 end
 

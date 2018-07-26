@@ -1,9 +1,5 @@
 local sql3 = require "lsqlite3"
 
---! SQLite db file header ("SQLite format 3")
-local sqlite_db_hdr = string.char(
-  0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00)
-
 ---- Custom tokenizer support
 -- static sqlite3_tokenizer    _tokinizer = { nullptr };
 -- static sqlite3_tokenizer_module  _tokinizer_mod;
@@ -29,12 +25,6 @@ local sqlite = {
   ot_view    = 3; -- View
   ot_index   = 4; -- Index
   ot_trigger = 5; -- Trigger
-
---! Column types.
-  ct_integer = 0;
-  ct_float   = 1;
-  ct_blob    = 2;
-  ct_text    = 3;
 }
 
 local mt_sqlite = { __index=sqlite }
@@ -52,14 +42,14 @@ end
 
 
 function sqlite.format_supported(file_hdr) -- function not method
-  return string.find(file_hdr, sqlite_db_hdr, 1, true) == 1
+  return 1 == string.find(file_hdr, "^SQLite format 3%z")
 end
 
 
 function sqlite:open(file_name)
   local db = sql3.open(file_name)
   if db then
-    -- since sql3.open() won't fail on a non-DB file, lets work around that with a statement
+    -- since sql3.open() won't fail on a non-DB file, let's work around that with a statement
     local stmt = db:prepare("select name from "..SQLITE_MASTER)
     if stmt then
       stmt:finalize()
@@ -137,13 +127,7 @@ end
 
 
 function sqlite:execute_query(query)
-  local stmt = self._db:prepare(query)
-  if stmt then
-    local state = stmt:step()
-    stmt:finalize()
-    return state == sql3.DONE or state == sql3.OK or state == sql3.ROW
-  end
-  return false
+  return self._db:exec(query) == sql3.OK
 end
 
 
@@ -153,28 +137,21 @@ function sqlite:read_column_description(object_name)
   if stmt then
     local columns = {}
     while stmt:step() == sql3.ROW do
-      local col = {
-        name = stmt:get_value(1);
-        type = sqlite.ct_text;
-      }
-      local ct = stmt:get_value(2):upper()
-      if ct:find("^INT")       or
-         ct:find("^TINYINT")   or
-         ct:find("^SMALLINT")  or
-         ct:find("^MEDIUMINT") or
-         ct:find("^BIGINT")    or
-         ct:find("^NUMERIC")   or
-         ct:find("^DECIMAL")   or
-         ct:find("^BOOLEAN")
-      then
-        col.type = sqlite.ct_integer
-      elseif ct == "BLOB" then
-        col.type = sqlite.ct_blob
-      elseif ct:find("^REAL") or ct:find("^DOUBLE") or ct:find("^FLOAT") then
-        col.type = sqlite.ct_float
-      end
-
+      local col = { name = stmt:get_value(1); }
       table.insert(columns, col)
+
+      local ct = stmt:get_value(2):upper()
+      if ct:find("INT") then
+        col.type = sql3.INTEGER
+      elseif ct:find("CHAR") or ct:find("CLOB") or ct:find("TEXT") then
+        col.type = sql3.TEXT
+      elseif ct:find("BLOB") or (ct == "") then
+        col.type = sql3.BLOB
+      elseif ct:find("REAL") or ct:find("FLOA") or ct:find("DOUB") then
+        col.type = sql3.FLOAT
+      else
+        col.type = sql3.INTEGER
+      end
     end
 
     stmt:finalize()
@@ -184,33 +161,26 @@ end
 
 
 function sqlite:get_row_count(object_name)
+  local count = false
   local query = "select count(*) from ".. object_name:normalize() .. ";";
   local stmt = self._db:prepare(query)
-  if not stmt then
-    return false
+  if stmt then
+    count = stmt:step()==sql3.ROW and stmt:get_value(0)
+    stmt:finalize()
   end
-  local count = stmt:step()==sql3.ROW and stmt:get_value(0)
-  stmt:finalize()
   return count
 end
 
 
 function sqlite:get_creation_sql(object_name)
-  if object_name:lower() == SQLITE_MASTER:lower() then
-    return false
+  local txt = false
+  if object_name:lower() ~= SQLITE_MASTER:lower() then
+    local stmt = self._db:prepare("select sql from " .. SQLITE_MASTER .. " where name=?")
+    if stmt then
+      txt = stmt:bind(1,object_name)==sql3.OK and stmt:step()==sql3.ROW and stmt:get_value(0)
+      stmt:finalize()
+    end
   end
-
-  local stmt = self._db:prepare("select sql from " .. SQLITE_MASTER .. " where name=?")
-  if not stmt then
-    return false
-  end
-
-  if stmt:bind(1, object_name) ~= sql3.OK then stmt:finalize(); return false; end
-
-  if stmt:step() ~= sql3.ROW then stmt:finalize(); return false; end
-
-  local txt = stmt:get_value(0)
-  stmt:finalize()
   return txt
 end
 
@@ -232,15 +202,14 @@ function sqlite:get_object_type(object_name)
 end
 
 
+local object_types = {
+  table   = sqlite.ot_table;
+  view    = sqlite.ot_view;
+  index   = sqlite.ot_index;
+  trigger = sqlite.ot_trigger;
+}
 function sqlite.object_type_by_name(type_name)
-  if type(type_name) == "string" then
-    type_name = type_name:lower()
-    if type_name == "table"   then return sqlite.ot_table;   end
-    if type_name == "view"    then return sqlite.ot_view;    end
-    if type_name == "index"   then return sqlite.ot_index;   end
-    if type_name == "trigger" then return sqlite.ot_trigger; end
-  end
-  return sqlite.ot_unknown
+  return object_types[type_name:lower()] or sqlite.ot_unknown
 end
 
 

@@ -14,6 +14,7 @@ $^ #Polygon - Help Contents#
  ~Invoking the plugin~@Invoke@
  ~Configuration Dialog~@ConfigDialog@
  ~User modules~@UserModules@
+ ~Functions of polygon table~@PolygonTable@
 
 @Invoke
 $^ #Invoking the plugin#
@@ -29,14 +30,7 @@ $^ #Invoking the plugin#
 
    4. From ~Folder shortcuts~@:FolderShortcuts@.
 
-   5. From a macro: #Plugin.Call(<guid>, "open", <filename> [,<flags>])#
-      Opens SQLite3 file <filename> in a panel.
-        flags:  string, a combination of zero or more options:
-                  #"u"# - load user modules
-                  #"e"# - enable extensions
-                  #"f"# - honor foreign keys
-                If <flags> is not a string (or omitted) then
-                the plugin's configuration settings are used.
+   5. From a ~macro~@CallFromMacro@.
 
 
  ~Contents~@Contents@
@@ -58,6 +52,8 @@ $^ #Reference of keyboard actions when the plugin's panel is active#
    Table         │ F4, Enter   │ Dialog: edit row
                  │ Shift-F4    │ Dialog: insert row
                  │ F8          │ Dialog: delete selected records
+                 │ Ctrl-A      │ Show/hide columns affinity
+                 │             │   (i=integer, f=float, t=text, b=blob)
                  │             │
    Table or View │ Shift-F3    │ Dialog: custom panel view mode
                  │ Shift-F5    │ Toggle panel view mode: full/custom
@@ -65,8 +61,9 @@ $^ #Reference of keyboard actions when the plugin's panel is active#
                  │ Ctrl-G      │ Toggle panel filter: on/off
    ──────────────┴─────────────┴───────────────────────────────────────────────────
 
-   If command line is not empty then Enter will execute an "SQLite query"
-   from the command line.
+   1. If command line has format #sql <text># then Enter will execute an SQL query <text>.
+   2. If command line has format #lua <text># then Enter will execute a Lua code <text>.
+      The Lua chunk will receive 2 arguments as in ~Plugin.Call(<guid>, "lua")~@CallFromMacro@.
 
  ~Contents~@Contents@
 
@@ -242,4 +239,60 @@ $^ #Table tInfo#
 
 
  ~User Modules~@UserModules@
+ ~Contents~@Contents@
+
+@PolygonTable
+$^ #Functions of polygon table#
+ #polygon.debug (true|false)#
+   Turns debug mode on or off.
+   When debug mode is on the plugin outputs various info via #OutputDebugString()# calls.
+
+
+ ~Contents~@Contents@
+
+@EditInsertRow
+$^ #Edit/Insert Row#
+ This dialog allows to edit either an existing or new table row.
+
+ Each edit field displays its contents as text/numeric, NULL or BLOB.
+   - Text/numeric are editable fields.
+   - NULL fields are displayed as #<NULL># and are read-only.
+   - BLOB fields looks like that #[4]:13E6BC64# and are read-only.
+
+ To toggle a field type between NULL and text/numeric or BLOB, press #Ctrl-N# when that field is focused.
+
+
+ ~Contents~@Contents@
+
+@CallFromMacro
+$^ #Call from a macro#
+ #Plugin.Call(<guid>, "open", <filename> [,<flags>])#
+
+   Opens SQLite3 file <filename> in the active panel.
+     <filename>: file name with full path.
+     <flags>: string, a combination of zero or more options:
+              #"u"# - load user modules
+              #"e"# - enable extensions
+              #"f"# - honor foreign keys
+        If <flags> is not a string (or omitted) then
+        the plugin's configuration settings are used.
+
+ #Plugin.Call(<guid>, "lua", <whatpanel>, <Lua code>)#
+
+   Executes the given Lua code string.
+     <whatpanel> : 0 = active panel, 1 = passive panel.
+                   nil can be passed for panel-unrelated code.
+        If <whatpanel> specifies this plugin's open panel
+        then <Lua code> will be called with 2 arguments:
+            info    :  table ~tInfo~@tInfo@
+            handle  :  panel handle
+     <Lua code>  : Lua code in textual representation
+
+ #Plugin.Call(<guid>, "sql", <whatpanel>, <SQL code>)#
+
+   Executes the given SQL statements.
+     <whatpanel> : 0 = active panel, 1 = passive panel
+     <SQL code>  : one or more SQL statements
+
+
  ~Contents~@Contents@

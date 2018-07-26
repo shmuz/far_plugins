@@ -136,7 +136,7 @@ function exporter:export_data_as_text(file_name, db_object)
       for i = 1, columns_count do
         local len = stmt_len:get_value(i-1) or 1
         if stmt_val:get_column_type(i-1) == sql3.BLOB then
-          len = len*2 + #tostring(len) + 5 -- correction for e.g. [24]:0x
+          len = len*2 + #tostring(len) + 3 -- correction for e.g. [24]:
         end
         columns_width[i] = math.max(columns_width[i], len)
         columns_width[i] = math.min(columns_width[i], MAX_TEXT_LENGTH)
@@ -150,7 +150,7 @@ function exporter:export_data_as_text(file_name, db_object)
   local file = io.open(file_name, "wb")
   if not file then
     prg_wnd:hide()
-    ErrMsg(M.ps_err_writef.."\n"..file_name, "we")
+    ErrMsg(M.ps_err_writef.."\n"..file_name, nil, "we")
     return false
   end
 
@@ -229,7 +229,7 @@ function exporter:export_data_as_text(file_name, db_object)
       prg_wnd:hide()
       stmt:finalize()
       file:close()
-      ErrMsg(M.ps_err_writef.."\n"..file_name, "we")
+      ErrMsg(M.ps_err_writef.."\n"..file_name, nil, "we")
       return false
     end
   end
@@ -259,7 +259,7 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
   -- Create output file
   local file = io.open(file_name, "wb")
   if not file then
-    ErrMsg(M.ps_err_writef.."\n"..file_name, "we")
+    ErrMsg(M.ps_err_writef.."\n"..file_name, nil, "we")
     return false
   end
 
@@ -334,7 +334,7 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
   if state == sql3.DONE and ok_write then
     return true
   elseif not ok_write then
-    ErrMsg(M.ps_err_writef.."\n"..file_name, "we")
+    ErrMsg(M.ps_err_writef.."\n"..file_name, nil, "we")
   else
     ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
   end
@@ -355,7 +355,7 @@ function exporter.get_text(stmt, idx, multiline)
   if stmt:get_column_type(idx) == sql3.BLOB then
     local blob_data = stmt:get_value(idx)
     local blob_len = #blob_data
-    local tmp = { "["..blob_len.."]:0x" }
+    local tmp = { "["..blob_len.."]:" }
     for j = 1, math.min(blob_len, MAX_BLOB_LENGTH) do
       tmp[j+1] = ("%02x"):format(string.byte(blob_data, j))
     end

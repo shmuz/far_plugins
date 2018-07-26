@@ -24,59 +24,46 @@ function myeditor.neweditor(dbx, table_name, rowid_name)
 end
 
 
-function myeditor:update()
+function myeditor:edit_item(handle)
   -- Get edited row id
-  local item = panel.GetCurrentPanelItem(nil, 1)
+  local item = panel.GetCurrentPanelItem(handle)
   if not item or item.FileName == ".." then return; end
 
   local row_id = tostring(item.AllocationSize)
-
-  local db_data = {}
-  local query = ("select * from %s where %s=%s"):format(self._table_name:normalize(),
-                                                        self._rowid_name, row_id)
-  local db = self._dbx:db()
-  local stmt = db:prepare(query)
-  if not stmt or stmt:step() ~= sql3.ROW then
-    if stmt then stmt:finalize() end
-    local err_descr = self._dbx:last_error()
-    ErrMsg(M.ps_err_read.."\n"..err_descr)
-    return
-  end
-
-  -- Read current row data
-     -- struct sq_column {
-     --   wstring name;        ///< Name
-     --   col_type type;        ///< Type
-     -- };
-     ---- struct field {
-     ----   sqlite::sq_column column;
-     ----   wstring value;
-     ---- };
-  local col_num = stmt:columns()
-  for i = 0, col_num-1 do
-    local f = { column={}, value="" }
-    f.column.name = stmt:get_name(i)
-    local tp = stmt:get_column_type(i)
-    if     tp == sql3.INTEGER then f.column.type = sqlite.ct_integer
-    elseif tp == sql3.FLOAT   then f.column.type = sqlite.ct_float
-    elseif tp == sql3.TEXT    then f.column.type = sqlite.ct_text
-    else                           f.column.type = sqlite.ct_blob
+  local query = ("select * from %s where %s=%s"):format(
+                self._table_name:normalize(), self._rowid_name, row_id)
+  local stmt = self._dbx:db():prepare(query)
+  if stmt and stmt:step() == sql3.ROW then
+    -- Read current row data
+    -- struct field { colname=nm; coltype=tp; value=v; }
+    local db_data = {}
+    local col_num = stmt:columns()
+    for i = 0, col_num-1 do
+      local f = { value="" }
+      f.colname = stmt:get_name(i)
+      local tp = stmt:get_column_type(i) -- type of data stored in the cell (1...5)
+    --local tp2 = stmt:get_type(i) -- type of column definition (as it declared in CREATE TABLE)
+    --far.Show(tp,tp2)
+      f.coltype = tp
+      if tp==sql3.NULL then f.value = nil
+      else                  f.value = exporter.get_text(stmt,i,true)
+      end
+      table.insert(db_data, f)
     end
+    stmt:finalize()
 
-    f.value = exporter.get_text(stmt, i, true)
-    table.insert(db_data, f)
-  end
-  stmt:finalize()
-
-  local newdata = myeditor.edit(db_data, false)
-  if newdata and self:exec_update(row_id, newdata) then
-    panel.UpdatePanel(nil, 1)
-    panel.RedrawPanel(nil, 1)
+    if self:dialog(db_data, row_id) then
+      panel.UpdatePanel(handle)
+      panel.RedrawPanel(handle)
+    end
+  else
+    if stmt then stmt:finalize() end
+    ErrMsg(M.ps_err_read .. "\n" .. self._dbx:last_error())
   end
 end
 
 
-function myeditor:insert()
+function myeditor:insert_item(handle)
   local db_data = {}
 
   -- Get columns description
@@ -86,83 +73,117 @@ function myeditor:insert()
     return
   end
   for _,v in ipairs(columns_descr) do
-    local f = { column=v, value="" }
-    if f.column.type == sqlite.ct_blob then
-      f.column.type = sqlite.ct_text  -- Allow edit
+    local f = { colname=v.name, coltype=v.type, value="" }
+    if f.coltype == sql3.BLOB then
+      f.coltype = sql3.TEXT  -- Allow edit
     end
     table.insert(db_data, f)
   end
 
-  local newdata = myeditor.edit(db_data, true)
-  if newdata and self:exec_update(nil, newdata) then
-    panel.UpdatePanel(nil, 1, true)
-    panel.RedrawPanel(nil, 1)
+  if self:dialog(db_data, nil) then
+    panel.UpdatePanel(handle, nil, true)
+    panel.RedrawPanel(handle, nil)
   end
 end
 
 
-function myeditor.edit(db_data, create_mode)
+function myeditor:dialog(db_data, row_id)
   -- Calculate dialog's size
-  local max_wnd_width = 80
-  local rc_far_wnd = far.AdvControl("ACTL_GETFARRECT")
-  if rc_far_wnd then
-    max_wnd_width = rc_far_wnd.Right + 1
-  end
-  local max_label_length = 0
-  local max_value_length = 40
+  local rect = far.AdvControl("ACTL_GETFARRECT")
+  local dlg_maxw   = rect and (rect.Right - rect.Left + 1) or 80
+  local reserved   = 5 -- 2=box + 3=space-delimiters
+  local edge_space = 3 -- horisontal spaces (3 from each side) - do not change (problems with separators)
+  local label_maxw = 0
+  local value_maxw = math.floor(dlg_maxw / 2)
+
   for _,v in ipairs(db_data) do
-    max_label_length = math.max(max_label_length, v.column.name:len())
-    max_value_length = math.max(max_value_length, v.value:len())
+    label_maxw = math.max(label_maxw, v.colname:len())
   end
-  max_value_length = math.min(max_value_length, max_wnd_width - max_label_length - 12)
-  local dlg_height = 6 + #db_data
-  local dlg_width = math.max(12 + max_label_length + max_value_length, 30)
+  label_maxw = math.min(label_maxw, dlg_maxw - value_maxw - reserved)
+
+  local dblbox_width = label_maxw + value_maxw + reserved
+  local dlg_width    = dblbox_width + 2*edge_space
+  local dlg_height   = 6 + #db_data
 
   -- Build dialog
+  local nulltext = "<NULL>"
   local dlg_items = {}
+  local title = row_id and M.ps_edit_row_title or M.ps_insert_row_title
+  table.insert(dlg_items, {F.DI_DOUBLEBOX, edge_space, 1, edge_space+dblbox_width-1, dlg_height-2,
+               0, 0, 0, 0, title })
 
-  local title = create_mode and M.ps_insert_row_title or M.ps_edit_row_title
-  table.insert(dlg_items, {F.DI_DOUBLEBOX, 3,1,dlg_width-4,dlg_height-2, 0,0,0,0, title })
-
-  local editor_fields = {}
   for i,v in ipairs(db_data) do
-    local val = v.value
-    local label,field = myeditor.create_row_control(v.column.name, val, i+1, max_label_length,
-                        max_value_length, v.column.type == sqlite.ct_blob)
-    if i == 1 then
-      field[9] = bit64.bor(field[9], F.DIF_FOCUS)
-    end
+    local readonly = (v.coltype == sql3.BLOB or v.coltype == sql3.NULL)
+    local label, field = myeditor.create_row_control(
+      v.colname, v.value or nulltext, i+1, label_maxw, value_maxw, readonly)
     table.insert(dlg_items, label)
     table.insert(dlg_items, field)
-    table.insert(editor_fields, { colname=v.column.name, index=#dlg_items })
+
+    field.coltype  = v.coltype
+    field.colname  = v.colname
+    field.value    = v.value
+    field.prev     = v.value
+    field.readonly = readonly
   end
 
-  table.insert(dlg_items, {F.DI_TEXT, 0,dlg_height-4,0,0, 0,0,0,F.DIF_SEPARATOR, ""})
-  table.insert(dlg_items,
-      {F.DI_BUTTON, 0,dlg_height-3,0,0, 0,0,0,F.DIF_CENTERGROUP+F.DIF_DEFAULTBUTTON,M.ps_save})
+  table.insert(dlg_items, {F.DI_TEXT,   0,dlg_height-4,0,0, 0,0,0,F.DIF_SEPARATOR, ""})
+  table.insert(dlg_items, {F.DI_BUTTON, 0,dlg_height-3,0,0, 0,0,0,
+                                                F.DIF_CENTERGROUP+F.DIF_DEFAULTBUTTON,M.ps_save})
   table.insert(dlg_items, {F.DI_BUTTON, 0,dlg_height-3,0,0, 0,0,0,F.DIF_CENTERGROUP,M.ps_cancel})
 
-  local guid = win.Uuid("866927E1-60F1-4C87-A09D-D481D4189534")
-  local dlg = far.DialogInit(guid, -1, -1, dlg_width, dlg_height, nil, dlg_items)
-  local rc = far.DialogRun(dlg)
-  if rc < 1 or rc == #dlg_items --[[ cancel ]] then
-    far.DialogFree(dlg)
-    return false
-  end
+  local id_save = #dlg_items-1
 
-  -- Get changed data
-  local out = {}
-  for _,v in ipairs(editor_fields) do
-    if far.SendDlgMessage(dlg, F.DM_EDITUNCHANGEDFLAG, v.index, -1) == 0 then
-      local f = { column={} }
-      f.column.name = v.colname
-      f.value = far.SendDlgMessage(dlg, F.DM_GETTEXT, v.index)
-      table.insert(out, f)
+  local function DlgProc(hDlg, Msg, Param1, Param2)
+    if Msg == F.DN_EDITCHANGE then
+      dlg_items[Param1].modified = true
+
+    elseif Msg == F.DN_CONTROLINPUT and Param2.EventType == F.KEY_EVENT then
+      local id = hDlg:send(F.DM_GETFOCUS)
+      local item = dlg_items[id]
+      if item[1]==F.DI_EDIT and far.InputRecordToName(Param2)=="CtrlN" then
+        if item.value then
+          -- set to NULL
+          item.prev = item.value
+          item.value = nil
+          item[9] = F.DIF_READONLY
+          item[10] = nulltext
+          item.modified = (item.coltype ~= sql3.NULL)
+        else
+          -- restore
+          item.value = item.prev or ""
+          item[9] = item.coltype==sql3.BLOB and F.DIF_READONLY or 0
+          item[10] = item.prev or ""
+          item.prev = nil
+          item.modified = (item.coltype == sql3.NULL)
+        end
+        far.SetDlgItem(hDlg, id, item)
+      end
+
+    elseif Msg == F.DN_CLOSE and Param1 == id_save then
+      local out = {}
+      for index,item in ipairs(dlg_items) do
+        if item[1] == F.DI_EDIT then
+          if (not row_id) or item.modified then
+            table.insert(out, {
+              --coltype = item.coltype;
+              coltype = sql3.TEXT;
+              colname = item.colname;
+              value = item.value and hDlg:send(F.DM_GETTEXT, index)
+            })
+          end
+        end
+      end
+      if not self:exec_update(row_id, out) then
+        return 0
+      end
     end
   end
 
+  local guid = win.Uuid("866927E1-60F1-4C87-A09D-D481D4189534")
+  local dlg = far.DialogInit(guid, -1, -1, dlg_width, dlg_height, "EditInsertRow", dlg_items, nil, DlgProc)
+  local rc = far.DialogRun(dlg)
   far.DialogFree(dlg)
-  return #out > 0 and out
+  return rc == id_save
 end
 
 
@@ -179,10 +200,12 @@ function myeditor:remove(items, items_count)
   if self._table_name == "" then
     for i=1, items_count do
       local query = "drop "
-      if     items[i].AllocationSize == sqlite.ot_table   then query = query .. "table"
-      elseif items[i].AllocationSize == sqlite.ot_view    then query = query .. "view"
-      elseif items[i].AllocationSize == sqlite.ot_index   then query = query .. "index"
-      elseif items[i].AllocationSize == sqlite.ot_trigger then query = query .. "trigger"
+      local tp = items[i].AllocationSize
+      if     tp == sqlite.ot_master  then query = query .. "table"
+      elseif tp == sqlite.ot_table   then query = query .. "table"
+      elseif tp == sqlite.ot_view    then query = query .. "view"
+      elseif tp == sqlite.ot_index   then query = query .. "index"
+      elseif tp == sqlite.ot_trigger then query = query .. "trigger"
       else query = nil
       end
       if query then
@@ -195,39 +218,52 @@ function myeditor:remove(items, items_count)
       end
     end
   else
-    local query = ("delete from %s where %s in ("):format(self._table_name:normalize(),
-                                                          self._rowid_name)
-    local tt = {}
-    for i = 1, items_count do tt[i] = items[i].AllocationSize; end
-    query = query .. table.concat(tt, ",") .. ")"
+    local query_start = ("delete from %s where %s in ("):format(
+                          self._table_name:normalize(), self._rowid_name)
+    local db = self._dbx:db()
 
-    if not self._dbx:execute_query(query) then
-      local err_descr = self._dbx:last_error()
-      ErrMsg(M.ps_err_sql.."\n"..query.."\n"..err_descr)
+    db:exec("BEGIN TRANSACTION;")
+    local cnt = 0
+    while cnt < items_count do
+      local tt = {}
+      local upper = math.min(cnt+1000, items_count) -- process up to 1000 rows at a time
+      for i = cnt+1, upper do tt[i-cnt] = items[i].AllocationSize; end
+      local query = query_start .. table.concat(tt, ",") .. ")"
+
+      if not self._dbx:execute_query(query) then
+        local err_descr = self._dbx:last_error()
+        ErrMsg(M.ps_err_sql.."\n"..query.."\n"..err_descr)
+        break
+      end
+      cnt = upper
     end
+    db:exec("END TRANSACTION;")
   end
 
   return true
 end
 
 
-function myeditor:exec_update(row_id, db_data) -- !!! 'db_data' is in/out !!!
+function myeditor:exec_update(row_id, db_data)
   local query
-
   if row_id and row_id ~= "" then
     -- Update query
+    if db_data[1] == nil then
+      return true -- no changed columns
+    end
     query = "update "..self._table_name:normalize().." set "
     for i,v in ipairs(db_data) do
       if i>1 then query = query..',' end
-      query = query..v.column.name:normalize().."=?"
+      query = query..v.colname:normalize().."=?"
     end
     query = query.." where "..self._rowid_name.."="..row_id
+
   else
     -- Insert query
     query = "insert into "..self._table_name:normalize().." ("
     for i,v in ipairs(db_data) do
       if i>1 then query = query.."," end
-      query = query .. v.column.name:normalize()
+      query = query .. v.colname:normalize()
     end
     query = query .. ") values ("
     for i = 1, #db_data do
@@ -240,32 +276,30 @@ function myeditor:exec_update(row_id, db_data) -- !!! 'db_data' is in/out !!!
   local db = self._dbx:db()
   local stmt = db:prepare(query)
   if not stmt then
-    local err_descr = self._dbx:last_error()
-    ErrMsg(M.ps_err_sql.."\n"..err_descr)
+    ErrMsg(self._dbx:last_error(), M.ps_err_sql)
     return false
   end
-  local idx = 0
-  for _,v in ipairs(db_data) do
-    idx = idx + 1
+
+  for idx,v in ipairs(db_data) do
     local bind_rc
-    if v.column.type == sqlite.ct_float then
-      bind_rc = stmt:bind(idx, tonumber(v.value))
-    elseif v.column.type == sqlite.ct_integer then
-      bind_rc = stmt:bind(idx, tonumber(v.value))
+    if v.value == nil then
+      bind_rc = stmt:bind(idx, nil)
+    elseif v.coltype == sql3.FLOAT then
+      bind_rc = stmt:bind(idx, tonumber(v.value) or v.value)
+    elseif v.coltype == sql3.INTEGER then
+      bind_rc = stmt:bind(idx, tonumber(v.value) or v.value)
     else
       bind_rc = stmt:bind(idx, v.value)
     end
     if bind_rc ~= sql3.OK then
       stmt:finalize()
-      local err_descr = self._dbx:last_error()
-      ErrMsg(M.ps_err_sql.."\n"..err_descr)
+      ErrMsg(self._dbx:last_error(), M.ps_err_sql)
       return false
     end
   end
   if stmt:step() ~= sql3.DONE then
     stmt:finalize()
-    local err_descr = self._dbx:last_error()
-    ErrMsg(M.ps_err_sql.."\n"..err_descr)
+    ErrMsg(self._dbx:last_error(), M.ps_err_sql)
     return false
   end
   stmt:finalize()
@@ -273,24 +307,23 @@ function myeditor:exec_update(row_id, db_data) -- !!! 'db_data' is in/out !!!
 end
 
 
-function myeditor.create_row_control(name, value, poz_y, width_name, width_val, ro)
+function myeditor.create_row_control(name, value, poz_y, width_name, width_val, readonly)
   local label, field = {}, {}
   for k=1,10 do label[k],field[k] = 0,0; end
 
-  label[1] = F.DI_TEXT
-  label[2] = 5
-  label[4] = 5 + width_name
-  label[3] = poz_y
-  label[10] = name
+  local namelen = name:len()
+  label[1]  = F.DI_TEXT
+  label[2]  = 5
+  label[4]  = label[2] + width_name - 1
+  label[3]  = poz_y
+  label[10] = (namelen <= width_name) and name or (name:sub(1,width_name-3) .. "...")
 
-  field[1] = F.DI_EDIT
-  field[2] = label[4] + 1
-  field[4] = field[2] + width_val
-  field[3] = poz_y
+  field[1]  = F.DI_EDIT
+  field[2]  = label[4] + 2
+  field[4]  = field[2] + width_val - 1
+  field[3]  = poz_y
+  field[9]  = readonly and F.DIF_READONLY or 0
   field[10] = value
-  if ro then
-    field[9] = F.DIF_READONLY
-  end
 
   return label, field
 end
