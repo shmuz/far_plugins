@@ -237,7 +237,13 @@ function myeditor:remove(items, items_count)
       end
       cnt = upper
     end
-    db:exec("END TRANSACTION;")
+    if db:exec("END TRANSACTION;") ~= sql3.OK then
+      local msg = M.ps_err_sql.."\n"..self._dbx:last_error()
+      db:exec("ROLLBACK TRANSACTION;")
+      ErrMsg(msg)
+      return false
+    end
+
   end
 
   return true

@@ -1,3 +1,6 @@
+2018-08-02, v.0.6.1
+    1. Fix: DeleteFilesW - refinement of v.0.5.5(3).
+
 2018-07-26, v.0.6.0
     1. Edit/insert table row dialog does not close on errors - it gives an opportunity
        to fix the error and try again.
