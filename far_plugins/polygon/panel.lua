@@ -499,10 +499,12 @@ end
 
 
 function mypanel:toggle_column_mask(handle)
-  self._col_masks_used = not self._col_masks_used
-  self:prepare_panel_info()
-  panel.UpdatePanel(handle,nil,true)
-  panel.RedrawPanel(handle,nil)
+  if self._col_masks[self._curr_object] then
+    self._col_masks_used = not self._col_masks_used
+    self:prepare_panel_info()
+    panel.UpdatePanel(handle,nil,true)
+    panel.RedrawPanel(handle,nil)
+  end
 end
 
 
@@ -655,7 +657,7 @@ end
 function mypanel:handle_keyboard(handle, key_event)
   local vcode  = key_event.VirtualKeyCode
   local cstate = key_event.ControlKeyState
-  local nomods = cstate == 0
+  local nomods = (cstate == 0) or (cstate == F.ENHANCED_KEY)
 --local alt    = cstate == F.LEFT_ALT_PRESSED  or cstate == F.RIGHT_ALT_PRESSED
   local ctrl   = cstate == F.LEFT_CTRL_PRESSED or cstate == F.RIGHT_CTRL_PRESSED
   local shift  = cstate == F.SHIFT_PRESSED
@@ -697,7 +699,7 @@ function mypanel:handle_keyboard(handle, key_event)
         ErrMsg(M.ps_err_edit_norowid)
       end
     elseif shift and vcode == VK.F4 then         -- ShiftF4: insert row
-      local ed = myeditor.neweditor(self._dbx, self._curr_object)
+      local ed = myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name)
       ed:insert_item(handle)
       return true
     elseif shift and vcode == VK.F3 then
@@ -749,7 +751,19 @@ function mypanel:handle_keyboard(handle, key_event)
     return true
   elseif nomods and vcode == VK.F5 then        -- F5: suppress this key
     return true
+  elseif shift and vcode == VK.F6 then         -- ShiftF6: suppress this key
+    return true
   elseif nomods and vcode == VK.F7 then        -- F7: suppress this key
+    return true
+  elseif nomods and vcode == VK.F8 then -- intercept F8 to avoid panel-reread in case of user cancel
+    if panel.GetPanelInfo(handle).SelectedItemsNumber == 0 then
+      return true
+    end
+    local guid = win.Uuid("4472C7D8-E2B2-46A0-A005-B10B4141EBBD") -- for macros
+    if far.Message(M.ps_drop_question, M.ps_title_short, ";YesNo", "w", nil, guid) ~= 1 then
+      return true
+    end
+  elseif shift and vcode == VK.F8 then         -- ShiftF8: suppress this key
     return true
   elseif ctrl and vcode == ("A"):byte() then   -- CtrlA: suppress this key
     return true

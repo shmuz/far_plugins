@@ -13,6 +13,7 @@ $^ #Polygon - Help Contents#
  ~Panel Filter~@PanelFilter@
  ~Invoking the plugin~@Invoke@
  ~Configuration Dialog~@ConfigDialog@
+ ~Edit/Insert Row~@EditInsertRow@
  ~User modules~@UserModules@
  ~Functions of polygon table~@PolygonTable@
 
@@ -254,12 +255,13 @@ $^ #Functions of polygon table#
 $^ #Edit/Insert Row#
  This dialog allows to edit either an existing or new table row.
 
- Each edit field displays its contents as text/numeric, NULL or BLOB.
-   - Text/numeric are editable fields.
-   - NULL fields are displayed as #<NULL># and are read-only.
-   - BLOB fields looks like that #[4]:13E6BC64# and are read-only.
+ Each edit field displays its contents as text, numeric, BLOB or NULL.
+   - Text fields are displayed like     #'some text'#.
+   - Numeric fields are displayed like  #15#, #0.35# or #2.35e6#.
+   - BLOB fields are displayed like     #x'13E6BC64'#.
+   - NULL fields are displayed as       #NULL#.
 
- To toggle a field type between NULL and text/numeric or BLOB, press #Ctrl-N# when that field is focused.
+ To toggle a field between NULL and the initial value, press #Ctrl-N# when that field is focused.
 
 
  ~Contents~@Contents@

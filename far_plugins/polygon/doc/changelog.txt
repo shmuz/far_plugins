@@ -1,3 +1,11 @@
+2018-08-13, v.0.7.0
+    1. A major syntax change in "Edit row" dialog: the values from the dialog are put
+       in an update/insert SQL statement "as is", so the user has control over value types
+       (e.g. 50 versus '50').
+    2. Fix: forcibly update the panel after executing "lua <lua_code>" from the command line.
+    3. Prevent updating the panel in cases it is not needed:
+       Shift-F5 (conditionally), Shift-F6 (always), F8 (conditionally), Shift-F8 (always).
+
 2018-08-02, v.0.6.1
     1. Fix: DeleteFilesW - refinement of v.0.5.5(3).
 

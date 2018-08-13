@@ -8,6 +8,7 @@ local Params = ...
 local M        = Params.M
 local sqlite   = Params.sqlite
 local exporter = Params.exporter
+local NULLTEXT = "NULL"
 
 
 -- This file's module. Could not be called "editor" due to existing LuaFAR global "editor".
@@ -35,18 +36,25 @@ function myeditor:edit_item(handle)
   local stmt = self._dbx:db():prepare(query)
   if stmt and stmt:step() == sql3.ROW then
     -- Read current row data
-    -- struct field { colname=nm; coltype=tp; value=v; }
     local db_data = {}
-    local col_num = stmt:columns()
-    for i = 0, col_num-1 do
-      local f = { value="" }
-      f.colname = stmt:get_name(i)
-      local tp = stmt:get_column_type(i) -- type of data stored in the cell (1...5)
-    --local tp2 = stmt:get_type(i) -- type of column definition (as it declared in CREATE TABLE)
-    --far.Show(tp,tp2)
-      f.coltype = tp
-      if tp==sql3.NULL then f.value = nil
-      else                  f.value = exporter.get_text(stmt,i,true)
+    for i = 0, stmt:columns()-1 do
+      local f = {
+        colname = stmt:get_name(i);
+        coltype = stmt:get_column_type(i);
+        value = nil;
+      }
+      if f.coltype == sql3.NULL then
+        f.value = NULLTEXT
+      elseif f.coltype == sql3.INTEGER or f.coltype == sql3.FLOAT then
+        f.value = stmt:get_column_text(i)
+      elseif f.coltype == sql3.TEXT then
+        f.value = stmt:get_column_text(i):normalize()
+      elseif f.coltype == sql3.BLOB then
+        local s = string.gsub(stmt:get_value(i), ".",
+          function(c)
+            return string.format("%02x", string.byte(c))
+          end)
+        f.value = "x'" .. s .. "'"
       end
       table.insert(db_data, f)
     end
@@ -64,19 +72,19 @@ end
 
 
 function myeditor:insert_item(handle)
-  local db_data = {}
-
-  -- Get columns description
   local columns_descr = self._dbx:read_column_description(self._table_name)
   if not columns_descr then
     ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
     return
   end
+
+  local db_data = {}
   for _,v in ipairs(columns_descr) do
-    local f = { colname=v.name, coltype=v.type, value="" }
-    if f.coltype == sql3.BLOB then
-      f.coltype = sql3.TEXT  -- Allow edit
-    end
+    local f = {
+      colname = v.name;
+      coltype = sql3.NULL;
+      value = NULLTEXT;
+    }
     table.insert(db_data, f)
   end
 
@@ -106,24 +114,19 @@ function myeditor:dialog(db_data, row_id)
   local dlg_height   = 6 + #db_data
 
   -- Build dialog
-  local nulltext = "<NULL>"
   local dlg_items = {}
   local title = row_id and M.ps_edit_row_title or M.ps_insert_row_title
   table.insert(dlg_items, {F.DI_DOUBLEBOX, edge_space, 1, edge_space+dblbox_width-1, dlg_height-2,
                0, 0, 0, 0, title })
 
   for i,v in ipairs(db_data) do
-    local readonly = (v.coltype == sql3.BLOB or v.coltype == sql3.NULL)
     local label, field = myeditor.create_row_control(
-      v.colname, v.value or nulltext, i+1, label_maxw, value_maxw, readonly)
+      v.colname, v.value or NULLTEXT, i+1, label_maxw, value_maxw)
     table.insert(dlg_items, label)
     table.insert(dlg_items, field)
 
-    field.coltype  = v.coltype
-    field.colname  = v.colname
-    field.value    = v.value
-    field.prev     = v.value
-    field.readonly = readonly
+    field.colname = v.colname
+    field.orig    = v.value
   end
 
   table.insert(dlg_items, {F.DI_TEXT,   0,dlg_height-4,0,0, 0,0,0,F.DIF_SEPARATOR, ""})
@@ -134,41 +137,27 @@ function myeditor:dialog(db_data, row_id)
   local id_save = #dlg_items-1
 
   local function DlgProc(hDlg, Msg, Param1, Param2)
-    if Msg == F.DN_EDITCHANGE then
-      dlg_items[Param1].modified = true
-
-    elseif Msg == F.DN_CONTROLINPUT and Param2.EventType == F.KEY_EVENT then
+    if Msg == F.DN_CONTROLINPUT and Param2.EventType == F.KEY_EVENT then
       local id = hDlg:send(F.DM_GETFOCUS)
       local item = dlg_items[id]
-      if item[1]==F.DI_EDIT and far.InputRecordToName(Param2)=="CtrlN" then
-        if item.value then
-          -- set to NULL
-          item.prev = item.value
-          item.value = nil
-          item[9] = F.DIF_READONLY
-          item[10] = nulltext
-          item.modified = (item.coltype ~= sql3.NULL)
+      if item.colname and far.InputRecordToName(Param2)=="CtrlN" then
+        local txt = hDlg:send(F.DM_GETTEXT, id)
+        if txt:upper() ~= NULLTEXT:upper() then
+          hDlg:send(F.DM_SETTEXT, id, NULLTEXT)
         else
-          -- restore
-          item.value = item.prev or ""
-          item[9] = item.coltype==sql3.BLOB and F.DIF_READONLY or 0
-          item[10] = item.prev or ""
-          item.prev = nil
-          item.modified = (item.coltype == sql3.NULL)
+          hDlg:send(F.DM_SETTEXT, id, item.orig or "")
         end
-        far.SetDlgItem(hDlg, id, item)
       end
 
     elseif Msg == F.DN_CLOSE and Param1 == id_save then
       local out = {}
       for index,item in ipairs(dlg_items) do
         if item[1] == F.DI_EDIT then
-          if (not row_id) or item.modified then
+          local txt = hDlg:send(F.DM_GETTEXT, index)
+          if (not row_id) or (txt ~= item.orig) then
             table.insert(out, {
-              --coltype = item.coltype;
-              coltype = sql3.TEXT;
               colname = item.colname;
-              value = item.value and hDlg:send(F.DM_GETTEXT, index)
+              value = txt;
             })
           end
         end
@@ -180,20 +169,13 @@ function myeditor:dialog(db_data, row_id)
   end
 
   local guid = win.Uuid("866927E1-60F1-4C87-A09D-D481D4189534")
-  local dlg = far.DialogInit(guid, -1, -1, dlg_width, dlg_height, "EditInsertRow", dlg_items, nil, DlgProc)
-  local rc = far.DialogRun(dlg)
-  far.DialogFree(dlg)
+  local rc = far.Dialog(guid, -1, -1, dlg_width, dlg_height, "EditInsertRow", dlg_items, nil, DlgProc)
   return rc == id_save
 end
 
 
 function myeditor:remove(items, items_count)
   if items_count == 1 and items[1].FileName == ".." then
-    return false
-  end
-
-  local guid = win.Uuid("4472C7D8-E2B2-46A0-A005-B10B4141EBBD") -- for macros
-  if far.Message(M.ps_drop_question, M.ps_title_short, ";YesNo", "w", nil, guid) ~= 1 then
     return false
   end
 
@@ -260,7 +242,7 @@ function myeditor:exec_update(row_id, db_data)
     query = "update "..self._table_name:normalize().." set "
     for i,v in ipairs(db_data) do
       if i>1 then query = query..',' end
-      query = query..v.colname:normalize().."=?"
+      query = query..v.colname:normalize().."="..v.value
     end
     query = query.." where "..self._rowid_name.."="..row_id
 
@@ -272,48 +254,24 @@ function myeditor:exec_update(row_id, db_data)
       query = query .. v.colname:normalize()
     end
     query = query .. ") values ("
-    for i = 1, #db_data do
+    for i,v in ipairs(db_data) do
       if i>1 then query = query.."," end
-      query = query .. "?"
+      query = query .. v.value
     end
     query = query .. ")"
+
   end
 
-  local db = self._dbx:db()
-  local stmt = db:prepare(query)
-  if not stmt then
+  if self._dbx:db():exec(query) == sql3.OK then
+    return true
+  else
     ErrMsg(self._dbx:last_error(), M.ps_err_sql)
     return false
   end
-
-  for idx,v in ipairs(db_data) do
-    local bind_rc
-    if v.value == nil then
-      bind_rc = stmt:bind(idx, nil)
-    elseif v.coltype == sql3.FLOAT then
-      bind_rc = stmt:bind(idx, tonumber(v.value) or v.value)
-    elseif v.coltype == sql3.INTEGER then
-      bind_rc = stmt:bind(idx, tonumber(v.value) or v.value)
-    else
-      bind_rc = stmt:bind(idx, v.value)
-    end
-    if bind_rc ~= sql3.OK then
-      stmt:finalize()
-      ErrMsg(self._dbx:last_error(), M.ps_err_sql)
-      return false
-    end
-  end
-  if stmt:step() ~= sql3.DONE then
-    stmt:finalize()
-    ErrMsg(self._dbx:last_error(), M.ps_err_sql)
-    return false
-  end
-  stmt:finalize()
-  return true
 end
 
 
-function myeditor.create_row_control(name, value, poz_y, width_name, width_val, readonly)
+function myeditor.create_row_control(name, value, poz_y, width_name, width_val)
   local label, field = {}, {}
   for k=1,10 do label[k],field[k] = 0,0; end
 
@@ -328,7 +286,6 @@ function myeditor.create_row_control(name, value, poz_y, width_name, width_val, 
   field[2]  = label[4] + 2
   field[4]  = field[2] + width_val - 1
   field[3]  = poz_y
-  field[9]  = readonly and F.DIF_READONLY or 0
   field[10] = value
 
   return label, field

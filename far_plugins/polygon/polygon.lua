@@ -84,7 +84,7 @@ end
 
 -- add a convenience function (use for table names and column names)
 unicode.utf8.normalize = function(str)
-  return '"' .. str:gsub('"','""') .. '"'
+  return "'" .. str:gsub("'","''") .. "'"
 end
 
 
@@ -369,6 +369,7 @@ function MyExport.ProcessPanelEvent (object, handle, Event, Param)
     command = command and command:lower() or ""
     if command == "lua" then
       ExecuteLuaCode(text, 1)
+      panel.UpdatePanel(handle)
     elseif command == "sql" then
       object:open_query(handle, text)
     elseif not command:find("%S") then
