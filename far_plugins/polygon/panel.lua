@@ -21,7 +21,7 @@ local mt_panel = polygon.DEBUG and { __index=function(t,k) LOG(k) return rawget(
                                 or { __index=mypanel }
 
 
-function mypanel.open(file_name, silent, extensions, foreign_keys)
+function mypanel.open(file_name, extensions, foreign_keys)
   local self = {
 
   -- Members come from the original plugin SQLiteDB.
@@ -67,28 +67,26 @@ function mypanel.open(file_name, silent, extensions, foreign_keys)
     self._col_masks_used = false
     return self
   else
-    if not silent then
-      ErrMsg(M.ps_err_open.."\n"..file_name)
-    end
+    ErrMsg(M.ps_err_open.."\n"..file_name)
     return nil
   end
 end
 
 
-function mypanel:set_directory(handle, Dir)
+function mypanel:set_directory(handle, Dir, UserData)
   self._tab_filter = false
   self._tab_filter_enb = false
   if Dir == ".." or Dir == "/" or Dir == "\\" then
     return self:open_database()
   else
-    return self:open_object(Dir)
+    return self:open_object(Params.DecodeDirName(Dir, UserData))
   end
 end
 
 
 function mypanel:open_database()
   self._panel_mode = "db"
-  self._curr_object = ""
+  self._curr_object = nil
   self:prepare_panel_info()
   return true
 end
@@ -190,7 +188,7 @@ end
 function mypanel:get_panel_info(handle)
   local info = self._panel_info
   return {
-    CurDir           = self._curr_object;
+    CurDir           = Params.EncodeDirName(self._curr_object);
     Flags            = bit64.bor(F.OPIF_DISABLESORTGROUPS,F.OPIF_DISABLEFILTER,F.OPIF_SHORTCUT);
     HostFile         = self._file_name;
     KeyBar           = info.key_bar;
@@ -237,7 +235,7 @@ function mypanel:get_panel_list_db()
     if obj.type == sqlite.ot_master or obj.type == sqlite.ot_table or obj.type == sqlite.ot_view then
       item.FileAttributes = "d"
     end
-    item.FileName = obj.name
+    Params.EncodeDirNameToItem(obj.name, item)
     item.AllocationSize = obj.type  -- This field used as type id
 
     item.CustomColumnData = {}
@@ -542,7 +540,7 @@ function mypanel:prepare_panel_info()
   local info = self._panel_info
   local key_bar = info.key_bar
 
-  if self._curr_object=="" or self._curr_object==nil then
+  if self._panel_mode == "db" then
     col_types     = "N,C0,C1"
     status_types  = "N,C0,C1"
     col_widths    = "0,8,9"
@@ -614,14 +612,14 @@ function mypanel:prepare_panel_info()
 end
 
 
-function mypanel:delete_items(handle, items, items_count)
+function mypanel:delete_items(handle, items)
   if self._panel_mode == "table" and not self._rowid_name then
     ErrMsg(M.ps_err_del_norowid)
     return false
   end
   if self._panel_mode == "table" or self._panel_mode == "db" then
     local ed = myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name)
-    return ed:remove(items, items_count)
+    return ed:remove(items)
   end
   return false
 end
@@ -779,6 +777,7 @@ function mypanel:view_db_object()
   end
 
   local tmp_file_name
+  local RealItemName = Params.DecodeItemName(item)
 
   -- For unknown types show create sql only
   if not item.FileAttributes:find("d") then
@@ -803,10 +802,10 @@ function mypanel:view_db_object()
     -- Export data
     local ex = exporter.newexporter(self._dbx)
     tmp_file_name = exporter.get_temp_file_name("txt")
-    local ok = ex:export_data_as_text(tmp_file_name, item.FileName)
+    local ok = ex:export_data_as_text(tmp_file_name, RealItemName)
     if not ok then return end
   end
-  local title = M.ps_title_short .. ": " .. item.FileName
+  local title = M.ps_title_short .. ": " .. RealItemName
   viewer.Viewer(tmp_file_name, title, 0, 0, -1, -1, bit64.bor(
     F.VF_ENABLE_F6, F.VF_DISABLEHISTORY, F.VF_DELETEONLYFILEONCLOSE, F.VF_IMMEDIATERETURN, F.VF_NONMODAL), 65001)
   viewer.SetMode(nil, { Type=F.VSMT_WRAP,     iParam=0,          Flags=0 })
@@ -818,13 +817,14 @@ function mypanel:view_db_create_sql()
   -- Get selected object name
   local item = panel.GetCurrentPanelItem(nil, 1)
   if item and item.FileName ~= ".." then
-    local cr_sql = self._dbx:get_creation_sql(item.FileName)
+    local RealItemName = Params.DecodeItemName(item)
+    local cr_sql = self._dbx:get_creation_sql(RealItemName)
     if cr_sql then
       local tmp_path = far.MkTemp()..".sql"
       local file = io.open(tmp_path, "w")
       if file and file:write(cr_sql) then
         file:close()
-        viewer.Viewer(tmp_path, item.FileName, nil, nil, nil, nil,
+        viewer.Viewer(tmp_path, RealItemName, nil, nil, nil, nil,
           F.VF_ENABLE_F6 + F.VF_DISABLEHISTORY + F.VF_DELETEONLYFILEONCLOSE + F.VF_NONMODAL, 65001)
       else
         if file then file:close() end

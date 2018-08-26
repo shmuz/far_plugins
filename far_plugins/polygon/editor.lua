@@ -8,6 +8,7 @@ local Params = ...
 local M        = Params.M
 local sqlite   = Params.sqlite
 local exporter = Params.exporter
+local DecodeItemName = Params.DecodeItemName
 local NULLTEXT = "NULL"
 
 
@@ -19,7 +20,7 @@ local mt_editor = {__index=myeditor}
 function myeditor.neweditor(dbx, table_name, rowid_name)
   local self = setmetatable({}, mt_editor)
   self._dbx = dbx
-  self._table_name = table_name or ""
+  self._table_name = table_name
   self._rowid_name = rowid_name
   return self
 end
@@ -174,15 +175,16 @@ function myeditor:dialog(db_data, row_id)
 end
 
 
-function myeditor:remove(items, items_count)
+function myeditor:remove(items)
+  local items_count = #items
   if items_count == 1 and items[1].FileName == ".." then
     return false
   end
 
-  if self._table_name == "" then
-    for i=1, items_count do
+  if not self._table_name then
+    for _,item in ipairs(items) do
       local query = "drop "
-      local tp = items[i].AllocationSize
+      local tp = item.AllocationSize
       if     tp == sqlite.ot_master  then query = query .. "table"
       elseif tp == sqlite.ot_table   then query = query .. "table"
       elseif tp == sqlite.ot_view    then query = query .. "view"
@@ -191,7 +193,8 @@ function myeditor:remove(items, items_count)
       else query = nil
       end
       if query then
-        query = query .. " " .. items[i].FileName:normalize() .. ";"
+        local Name = DecodeItemName(item)
+        query = query .. " " .. Name:normalize() .. ";"
         if not self._dbx:execute_query(query) then
           local err_descr = self._dbx:last_error()
           ErrMsg(M.ps_err_sql.."\n"..query.."\n"..err_descr)

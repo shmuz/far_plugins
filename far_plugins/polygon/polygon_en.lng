@@ -21,6 +21,7 @@
 "Insert row"
 "Edit row"
 "Drop selected items?"
+
 "SQLite: Data export"
 "&Export %s to:"
 "File format:"

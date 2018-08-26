@@ -1,3 +1,9 @@
+2018-08-26, v.0.7.1
+    1. Fixes for correct work with a table whose name is an empty string.
+    2. A new method for handling table names that have special meaning for Far Manager: "..", "\", "/", "".
+       These names are placed in item.FileName being encoded while the original names
+       are placed in item.UserData verbatim.
+
 2018-08-13, v.0.7.0
     1. A major syntax change in "Edit row" dialog: the values from the dialog are put
        in an update/insert SQL statement "as is", so the user has control over value types

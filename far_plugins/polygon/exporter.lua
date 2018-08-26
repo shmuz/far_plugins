@@ -29,7 +29,7 @@ function exporter:export_data_with_dialog()
   if not (item and item.FileName~=".." and item.FileAttributes:find("d")) then
     return false
   end
-  local db_object_name = item.FileName
+  local db_object_name = Params.DecodeItemName(item)
 
   -- Get destination path
   local dst_file_name = panel.GetPanelDirectory(nil, 0).Name
@@ -58,15 +58,13 @@ function exporter:export_data_with_dialog()
   ------------------------------------------------------------------------------
   local function DlgProc(hDlg, Msg, Param1, Param2)
     if Msg == F.DN_INITDIALOG then
-      hDlg:send(F.DM_SETTEXT, edtFileName, dst_file_name)
       hDlg:send(F.DM_SETCHECK, (data.format=="csv" and btnCSV or btnText), 1)
       hDlg:send(F.DM_SETCHECK, btnMultiline, data.multiline and 1 or 0)
 
     elseif Msg == F.DN_BTNCLICK then
       if Param1 == btnCSV or Param1 == btnText then
         local csv   = hDlg:send(F.DM_GETCHECK, btnCSV) == F.BSTATE_CHECKED
-        local ext   = csv and ".csv" or ".txt"
-        local fname = hDlg:send(F.DM_GETTEXT, edtFileName):gsub("%.[^.]*$", "") .. ext
+        local fname = dst_file_name .. (csv and ".csv" or ".txt")
         hDlg:send(F.DM_SETTEXT, edtFileName, fname)
         hDlg:send(F.DM_ENABLE, btnMultiline, csv and 1 or 0)
       end
@@ -79,16 +77,16 @@ function exporter:export_data_with_dialog()
 
   local rc = far.DialogRun(dlg)
   if rc >= 1 and rc ~= btnCancel then
-    dst_file_name  = dlg:send(F.DM_GETTEXT, edtFileName)
-    data.format    = dlg:send(F.DM_GETCHECK, btnCSV) ~= 0 and "csv" or "text"
-    data.multiline = dlg:send(F.DM_GETCHECK, btnMultiline) ~= 0
+    local file_name  = dlg:send(F.DM_GETTEXT, edtFileName)
+    data.format      = dlg:send(F.DM_GETCHECK, btnCSV) ~= 0 and "csv" or "text"
+    data.multiline   = dlg:send(F.DM_GETCHECK, btnMultiline) ~= 0
     far.DialogFree(dlg)
     settings.save()
 
     if data.format == "csv" then
-      return self:export_data_as_csv(dst_file_name, db_object_name, data.multiline)
+      return self:export_data_as_csv(file_name, db_object_name, data.multiline)
     else
-      return self:export_data_as_text(dst_file_name, db_object_name)
+      return self:export_data_as_text(file_name, db_object_name)
     end
   else
     far.DialogFree(dlg)

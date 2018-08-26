@@ -16,6 +16,7 @@ $^ #Polygon - Help Contents#
  ~Edit/Insert Row~@EditInsertRow@
  ~User modules~@UserModules@
  ~Functions of polygon table~@PolygonTable@
+ ~Misc~@Misc@
 
 @Invoke
 $^ #Invoking the plugin#
@@ -256,10 +257,10 @@ $^ #Edit/Insert Row#
  This dialog allows to edit either an existing or new table row.
 
  Each edit field displays its contents as text, numeric, BLOB or NULL.
-   - Text fields are displayed like     #'some text'#.
-   - Numeric fields are displayed like  #15#, #0.35# or #2.35e6#.
-   - BLOB fields are displayed like     #x'13E6BC64'#.
-   - NULL fields are displayed as       #NULL#.
+   - Text values are displayed like     #'some text'#
+   - Numeric values are displayed like  #15#, #0.35# or #2.35e6#
+   - BLOB values are displayed like     #x'13E6BC64'#
+   - NULL values are displayed as       #NULL#
 
  To toggle a field between NULL and the initial value, press #Ctrl-N# when that field is focused.
 
@@ -295,6 +296,19 @@ $^ #Call from a macro#
    Executes the given SQL statements.
      <whatpanel> : 0 = active panel, 1 = passive panel
      <SQL code>  : one or more SQL statements
+
+
+ ~Contents~@Contents@
+
+@Misc
+$^Misc
+^#Special names handling#
+ Far Manager treats several directory names as special: #".."#, #"\"#, #"/"#, #""#.
+ It can not properly work with a directory that has one of those names.
+ Since SQLite tables can have such names the plugin passes them to Far Manager in the form of:
+ #_fixed(..)#, #_fixed(\)#,  #_fixed(/)# and  #_fixed()#.
+ These modified names are what the user sees in the plugin's panel but internally the plugin
+knows the real names and uses them in its operations.
 
 
  ~Contents~@Contents@

@@ -48,6 +48,39 @@ if not package.loaded.lsqlite3 then -- this is needed for "embed" builds of the 
 end
 
 local Params = {}
+
+do
+  local FixedNames = {
+    [""  ] = "_fixed()";
+    [".."] = "_fixed(..)";
+    ["\\"] = "_fixed(\\)";
+    ["/" ] = "_fixed(/)";
+  }
+
+  function Params.EncodeDirName(Dir)
+    return FixedNames[Dir] or Dir
+  end
+
+  function Params.EncodeDirNameToItem(Dir, item)
+    local fixed = FixedNames[Dir]
+    if fixed then
+      item.FileName = fixed
+      item.UserData = { Dir=Dir }
+    else
+      item.FileName = Dir
+    end
+  end
+
+  function Params.DecodeItemName(item)
+    local ud = item.UserData
+    return ud and ud.Dir or item.FileName
+  end
+
+  function Params.DecodeDirName(Dir, UserData)
+    return UserData and UserData.Dir or Dir
+  end
+end
+
 do
   local run = (require "far2.utils").RunInternalScript
   -- the order of calls here is important!
@@ -276,7 +309,7 @@ function MyExport.Open(OpenFrom, Guid, Item)
 
   if file_name then
     Opt = Opt or get_plugin_data()
-    local object = mypanel.open(file_name, false, Opt.extensions, Opt.foreign_keys)
+    local object = mypanel.open(file_name, Opt.extensions, Opt.foreign_keys)
     if object then
       object.LoadedModules = Opt.user_modules and LoadModules(object) or {}
       if OpenFrom == F.OPEN_FROMMACRO then
@@ -299,18 +332,18 @@ function MyExport.GetFindData(object, handle, OpMode)
 end
 
 
-function MyExport.SetDirectory(object, handle, Dir, OpMode)
+function MyExport.SetDirectory(object, handle, Dir, OpMode, UserData)
   if polygon.DEBUG then
     LOG("export.SetDirectory: "..tostring(Dir))
   end
   if band(OpMode, F.OPM_FIND) == 0 then
-    return object:set_directory(handle, Dir)
+    return object:set_directory(handle, Dir, UserData)
   end
 end
 
 
 function MyExport.DeleteFiles(object, handle, PanelItems, OpMode)
-  return object:delete_items(handle, PanelItems, #PanelItems)
+  return object:delete_items(handle, PanelItems)
 end
 
 
