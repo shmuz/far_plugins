@@ -28,6 +28,13 @@ local names = {
   "ps_exp_exp",
   "ps_exp_multiline",
 
+  "ps_dump_title",
+  "ps_dump_main",
+  "ps_dump_dump",
+  "ps_dump_dumpall",
+  "ps_dump_rowids",
+  "ps_dump_newlines",
+
   "ps_err_open",
   "ps_err_read",
   "ps_err_sql",
@@ -35,10 +42,14 @@ local names = {
   "ps_err_writef",
   "ps_err_del_norowid",
   "ps_err_edit_norowid",
+  "ps_err_openfile",
 
+  "ps_warning",
   "ps_save",
   "ps_cancel",
   "ps_ok",
+  "ps_overwrite",
+  "ps_already_exists",
 
   "ps_title_select_columns",
   "ps_set_columns",

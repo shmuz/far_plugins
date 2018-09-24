@@ -16,8 +16,8 @@ local exporter = {}
 local mt_exporter = {__index=exporter}
 
 
-function exporter.newexporter(dbx)
-  return setmetatable({_dbx=dbx}, mt_exporter)
+function exporter.newexporter(dbx, filename)
+  return setmetatable({_dbx=dbx; _file_name=filename}, mt_exporter)
 end
 
 
@@ -40,9 +40,9 @@ function exporter:export_data_with_dialog()
 
   local FLAG_DFLT = bit64.bor(F.DIF_CENTERGROUP, F.DIF_DEFAULTBUTTON)
   local dlg_items = {
-  --[[01]] {F.DI_DOUBLEBOX,     3,1,56,9,  0,0,0,0,                  M.ps_exp_title},
-  --[[02]] {F.DI_TEXT,          5,2,54,0,  0,0,0,0,                  M.ps_exp_main:format(db_object_name)},
-  --[[03]] {F.DI_EDIT,          5,3,54,0,  0,0,0,0,                  ""},
+  --[[01]] {F.DI_DOUBLEBOX,     3,1,68,9,  0,0,0,0,                  M.ps_exp_title},
+  --[[02]] {F.DI_TEXT,          5,2,66,0,  0,0,0,0,                  M.ps_exp_main:format(db_object_name)},
+  --[[03]] {F.DI_EDIT,          5,3,66,0,  0,0,0,0,                  ""},
   --[[04]] {F.DI_TEXT,          0,4, 0,0,  0,0,0,F.DIF_SEPARATOR,    ""},
   --[[05]] {F.DI_TEXT,          5,5,20,0,  0,0,0,0,                  M.ps_exp_fmt},
   --[[06]] {F.DI_RADIOBUTTON,  21,5,29,0,  0,0,0,0,                  "&CSV"},
@@ -73,13 +73,13 @@ function exporter:export_data_with_dialog()
   ------------------------------------------------------------------------------
 
   local guid = win.Uuid("E9F91B4F-82B2-4B36-9C4B-240D7EE7BF59")
-  local dlg = far.DialogInit(guid, -1, -1, 60, 11, nil, dlg_items, nil, DlgProc)
+  local dlg = far.DialogInit(guid, -1, -1, 72, 11, nil, dlg_items, nil, DlgProc)
 
   local rc = far.DialogRun(dlg)
   if rc >= 1 and rc ~= btnCancel then
     local file_name  = dlg:send(F.DM_GETTEXT, edtFileName)
-    data.format      = dlg:send(F.DM_GETCHECK, btnCSV) ~= 0 and "csv" or "text"
-    data.multiline   = dlg:send(F.DM_GETCHECK, btnMultiline) ~= 0
+    data.format      = 0 ~= dlg:send(F.DM_GETCHECK, btnCSV) and "csv" or "text"
+    data.multiline   = 0 ~= dlg:send(F.DM_GETCHECK, btnMultiline)
     far.DialogFree(dlg)
     settings.save()
 
@@ -88,6 +88,103 @@ function exporter:export_data_with_dialog()
     else
       return self:export_data_as_text(file_name, db_object_name)
     end
+  else
+    far.DialogFree(dlg)
+    return false
+  end
+end
+
+
+function exporter:dump_data_with_dialog()
+  local data = settings.load():getfield("exporter")
+
+  -- Collect selected items for dump
+  local t_selected = {}
+  local p_info = panel.GetPanelInfo(nil,1)
+  for i=1,p_info.SelectedItemsNumber do
+    local item = panel.GetSelectedPanelItem(nil, 1, i)
+    if item
+       and item.FileName ~= ".."
+       and item.FileAttributes:find("d")
+       and item.CustomColumnData[1] ~= "metadata" -- exclude sqlite_master
+    then
+      item.FileName = Params.DecodeItemName(item)
+      table.insert(t_selected, item)
+    end
+  end
+
+  -- Get destination path
+  local dst_file_name = panel.GetPanelDirectory(nil, 0).Name
+  if not (dst_file_name == "" or dst_file_name:find("\\$")) then
+    dst_file_name = dst_file_name .. "\\"
+  end
+  dst_file_name = dst_file_name .. "dump1.dump"
+
+  local FLAG_DFLT = bit64.bor(F.DIF_CENTERGROUP, F.DIF_DEFAULTBUTTON)
+  local dlg_items = {
+  --[[01]] {F.DI_DOUBLEBOX,     3,1,68,10,  0,0,0,0,                  M.ps_dump_title},
+  --[[02]] {F.DI_TEXT,          5,2,66, 0,  0,0,0,0,                  M.ps_dump_main},
+  --[[03]] {F.DI_EDIT,          5,3,66, 0,  0,0,0,0,                  ""},
+  --[[04]] {F.DI_TEXT,          0,4, 0, 0,  0,0,0,F.DIF_SEPARATOR,    ""},
+  --[[05]] {F.DI_CHECKBOX,      5,5, 0, 0,  0,0,0,0,                  M.ps_dump_dumpall},
+  --[[06]] {F.DI_CHECKBOX,      5,6, 0, 0,  0,0,0,0,                  M.ps_dump_rowids},
+  --[[07]] {F.DI_CHECKBOX,      5,7, 0, 0,  0,0,0,0,                  M.ps_dump_newlines},
+  --[[08]] {F.DI_TEXT,          0,8, 0, 0,  0,0,0,F.DIF_SEPARATOR,    ""},
+  --[[09]] {F.DI_BUTTON,        0,9, 0, 0,  0,0,0,FLAG_DFLT,          M.ps_dump_dump},
+  --[[10]] {F.DI_BUTTON,        0,9, 0, 0,  0,0,0,F.DIF_CENTERGROUP,  M.ps_cancel},
+  }
+  local edtFileName = 3
+  local btn_dumpall, btn_rowids, btn_newline, btnExport, btnCancel = 5, 6, 7, 9, 10
+
+  ------------------------------------------------------------------------------
+  local function DlgProc(hDlg, Msg, Param1, Param2)
+    if Msg == F.DN_INITDIALOG then
+      hDlg:send(F.DM_SETTEXT,  edtFileName, dst_file_name)
+      hDlg:send(F.DM_SETCHECK, btn_dumpall, data.dump_dumpall and 1 or 0)
+      hDlg:send(F.DM_SETCHECK, btn_rowids, data.dump_rowids and 1 or 0)
+      hDlg:send(F.DM_SETCHECK, btn_newline, data.dump_newline and 1 or 0)
+      if t_selected[1] == nil then
+        hDlg:send(F.DM_SETCHECK, btn_dumpall, 1)
+        hDlg:send(F.DM_ENABLE, btn_dumpall, 0)
+      end
+
+    elseif Msg == F.DN_BTNCLICK then
+
+    elseif Msg == F.DN_CLOSE and Param1 == btnExport then
+      -- check if the output file already exists
+      local fname = hDlg:send(F.DM_GETTEXT, edtFileName)
+      if win.GetFileAttr(fname) then
+        local r = far.Message(M.ps_already_exists..":\n"..fname, M.ps_warning,
+                              M.ps_overwrite..";"..M.ps_cancel, "w")
+        if r~=1 then return 0; end
+      end
+      -- check that the output file can be created
+      local fp = io.open(fname, "w")
+      if fp then fp:close(); win.DeleteFile(fname)
+      else ErrMsg(M.ps_err_openfile..":\n"..fname); return 0
+      end
+    end
+  end
+  ------------------------------------------------------------------------------
+
+  local guid = win.Uuid("B6EBFACA-232D-42FA-887E-66C7B03DB65D")
+  local dlg = far.DialogInit(guid, -1, -1, 72, 12, "Dump", dlg_items, nil, DlgProc)
+
+  local rc = far.DialogRun(dlg)
+  if rc >= 1 and rc ~= btnCancel then
+    local file_name = dlg:send(F.DM_GETTEXT,  edtFileName)
+    data.dump_dumpall = 0 ~= dlg:send(F.DM_GETCHECK, btn_dumpall)
+    data.dump_rowids  = 0 ~= dlg:send(F.DM_GETCHECK, btn_rowids)
+    data.dump_newline = 0 ~= dlg:send(F.DM_GETCHECK, btn_newline)
+    far.DialogFree(dlg)
+    settings.save()
+    return self:export_data_as_dump {
+        file_name = file_name;
+        items     = t_selected;
+        dumpall   = data.dump_dumpall;
+        rowids    = data.dump_rowids;
+        newline   = data.dump_newline;
+      }
   else
     far.DialogFree(dlg)
     return false
@@ -340,10 +437,34 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
 end
 
 
-function exporter.get_temp_file_name(ext)
-  if ext then return far.MkTemp() .. "." .. ext
-  else return far.MkTemp()
+function exporter:export_data_as_dump(Params)
+  local s1 = ".dump"
+  if Params.rowids  then s1 = s1 .. " --preserve-rowids"; end
+  if Params.newline then s1 = s1 .. " --newlines"; end
+
+  local t = { [1]='"'..self._file_name..'"'; }
+  if Params.dumpall then
+    t[2] = '"'..s1..'"'
+  else
+    for i,item in ipairs(Params.items) do
+      t[i+1] = '"'..s1..' '..item.FileName:normalize()..'"'
+    end
   end
+  t[#t+1] = '1>"'..Params.file_name..'" 2>NUL'
+  local cmd = table.concat(t, " ")
+  ------------------------
+  far.Message("Please wait...", "", "")
+  local t_execs = { far.PluginStartupInfo().ModuleDir.."sqlite3.exe", "sqlite3.exe" }
+  for _, exec in ipairs(t_execs) do
+    -- use win.system because win.ShellExecute wouldn't reuse Far console.
+    if 0 == win.system('""'..exec..'" '..cmd..'"') then break; end
+  end
+  ------------------------
+  panel.RedrawPanel(nil,1)
+  panel.RedrawPanel(nil,0)
+  ------------------------
+  panel.UpdatePanel(nil,0)
+  panel.RedrawPanel(nil,0)
 end
 
 

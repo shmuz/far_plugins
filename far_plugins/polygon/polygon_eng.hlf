@@ -14,6 +14,7 @@ $^ #Polygon - Help Contents#
  ~Invoking the plugin~@Invoke@
  ~Configuration Dialog~@ConfigDialog@
  ~Edit/Insert Row~@EditInsertRow@
+ ~Data Dump Dialog~@Dump@
  ~User modules~@UserModules@
  ~Functions of polygon table~@PolygonTable@
  ~Misc~@Misc@
@@ -45,17 +46,18 @@ $^ #Reference of keyboard actions when the plugin's panel is active#
                  │ LCtrl-1     │ Two-panel view mode
                  │ LCtrl-2     │ One-panel view mode
                  │             │
-   Database      │ F3          │ Show contents of table under cursor
-                 │ F4          │ Show create statement of table under cursor
+   Database      │ F3          │ Show contents of an item under cursor
+                 │ F4          │ Show create statement of an item under cursor
                  │ Shift-F4    │ Show pragma statements
-                 │ F5          │ Dialog: export data
-                 │ F8          │ Dialog: delete selected database elements
+                 │ F5          │ Dialog: export data of an item under cursor
+                 │ Ctrl-D      │ Dialog: make data dump
+                 │ F8          │ Dialog: delete selected database items
                  │             │
-   Table         │ F4, Enter   │ Dialog: edit row
-                 │ Shift-F4    │ Dialog: insert row
-                 │ F8          │ Dialog: delete selected records
+   Table         │ F4, Enter   │ Dialog: edit a row
+                 │ Shift-F4    │ Dialog: insert a row
+                 │ F8          │ Dialog: delete selected rows
                  │ Ctrl-A      │ Show/hide columns affinity
-                 │             │   (i=integer, f=float, t=text, b=blob)
+                 │             │   (i=integer, t=text, b=blob, r=real, n=numeric)
                  │             │
    Table or View │ Shift-F3    │ Dialog: custom panel view mode
                  │ Shift-F5    │ Toggle panel view mode: full/custom
@@ -301,7 +303,7 @@ $^ #Call from a macro#
  ~Contents~@Contents@
 
 @Misc
-$^Misc
+$^ #Misc#
 ^#Special names handling#
  Far Manager treats several directory names as special: #".."#, #"\"#, #"/"#, #""#.
  It can not properly work with a directory that has one of those names.
@@ -309,6 +311,27 @@ $^Misc
  #_fixed(..)#, #_fixed(\)#,  #_fixed(/)# and  #_fixed()#.
  These modified names are what the user sees in the plugin's panel but internally the plugin
 knows the real names and uses them in its operations.
+
+
+ ~Contents~@Contents@
+
+@Dump
+$^ #Data Dump Dialog#
+  #IMPORTANT NOTE:#
+  The plugin requires #sqlite3.exe# for making dumps.
+  sqlite3.exe should be placed either on the PATH or in the plugin's directory.
+  
+
+  #[x] Dump all#
+  If checked:    make dump of the entire database.
+  If unchecked:  make dump of selected items only.
+
+  #[x] Preserve rowids#
+  If checked:    preserve rowids.
+
+  #[x] Preserve new lines#
+  If checked:    new line characters are preserved and a row may span on multiple lines.  
+  If unchecked:  the text is encoded in such a way that every row takes only one line.
 
 
  ~Contents~@Contents@

@@ -1,3 +1,7 @@
+2018-09-24, v.0.8.0
+   1. A new dialog: "Data dump".
+      An external file sqlite3.exe is required for this functionality.
+
 2018-08-26, v.0.7.1
     1. Fixes for correct work with a table whose name is an empty string.
     2. A new method for handling table names that have special meaning for Far Manager: "..", "\", "/", "".

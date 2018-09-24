@@ -140,17 +140,17 @@ function sqlite:read_column_description(object_name)
       local col = { name = stmt:get_value(1); }
       table.insert(columns, col)
 
-      local ct = stmt:get_value(2):upper()
-      if ct:find("INT") then
-        col.type = sql3.INTEGER
-      elseif ct:find("CHAR") or ct:find("CLOB") or ct:find("TEXT") then
-        col.type = sql3.TEXT
-      elseif ct:find("BLOB") or (ct == "") then
-        col.type = sql3.BLOB
-      elseif ct:find("REAL") or ct:find("FLOA") or ct:find("DOUB") then
-        col.type = sql3.FLOAT
+      local ct = stmt:get_value(2):lower()
+      if ct:find("int") then
+        col.affinity = "INTEGER"
+      elseif ct:find("char") or ct:find("clob") or ct:find("text") then
+        col.affinity = "TEXT"
+      elseif ct:find("blob") or (ct == "") then
+        col.affinity = "BLOB"
+      elseif ct:find("real") or ct:find("floa") or ct:find("doub") then
+        col.affinity = "REAL"
       else
-        col.type = sql3.INTEGER
+        col.affinity = "NUMERIC"
       end
     end
 

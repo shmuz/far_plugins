@@ -29,6 +29,13 @@
 "Export"
 "&Preserve line feeds"
 
+"SQLite: Data dump"
+"&Save dump as:"
+"Dump"
+"Dump &all"
+"Preserve &rowids"
+"Preserve &new lines"
+
 "Unable to open database"
 "Error reading database"
 "Error executing SQL query"
@@ -36,10 +43,14 @@
 "Error writing file"
 "Row removal in tables without ROWID is not implemented"
 "Row editing in tables without ROWID is not implemented"
+"Cannot open the file"
 
+"Warning"
 "Save"
 "Cancel"
 "OK"
+"Overwrite"
+"The file already exists"
 
 "Custom panel view"
 "&Set"

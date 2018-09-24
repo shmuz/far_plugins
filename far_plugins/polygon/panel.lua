@@ -15,6 +15,10 @@ local myeditor = Params.myeditor
 local progress = Params.progress
 local sqlite   = Params.sqlite
 
+local function get_temp_file_name(ext)
+  return far.MkTemp() .. (ext and "."..ext or "")
+end
+
 -- This file's module. Could not be called "panel" due to existing LuaFAR global "panel".
 local mypanel = {}
 local mt_panel = polygon.DEBUG and { __index=function(t,k) LOG(k) return rawget(mypanel,k) end }
@@ -26,7 +30,7 @@ function mypanel.open(file_name, extensions, foreign_keys)
 
   -- Members come from the original plugin SQLiteDB.
     _file_name       = file_name;
-    _last_sql_query  = ""  ;
+    _last_sql_query  = nil ;
     _column_descr    = nil ;
     _curr_object     = nil ;
     _dbx             = nil ;
@@ -163,7 +167,7 @@ function mypanel:open_query(handle, query)
     stmt:reset()
     self._column_descr = {}
     for i, name in ipairs(stmt:get_names()) do
-      self._column_descr[i] = { name = name; type = sql3.TEXT; }
+      self._column_descr[i] = { name = name; }
     end
 
     stmt:finalize()
@@ -517,11 +521,12 @@ local function add_keybar_label (target, label, vkc, cks)
 end
 
 
-local coltype_map = {
-  [sql3.INTEGER] = " [i]";
-  [sql3.FLOAT  ] = " [f]";
-  [sql3.TEXT   ] = " [t]";
-  [sql3.BLOB   ] = " [b]";
+local affinity_map = {
+  INTEGER = " [i]";
+  TEXT    = " [t]";
+  BLOB    = " [b]";
+  REAL    = " [r]";
+  NUMERIC = " [n]";
 }
 
 
@@ -567,7 +572,7 @@ function mypanel:prepare_panel_info()
         end
         col_widths = col_widths .. (width or "0")
         if self._show_affinity and self._panel_mode == "table" then
-          table.insert(col_titles, descr.name..coltype_map[descr.type])
+          table.insert(col_titles, descr.name..affinity_map[descr.affinity])
         else
           table.insert(col_titles, descr.name)
         end
@@ -672,11 +677,15 @@ function mypanel:handle_keyboard(handle, key_event)
       self:view_pragma_statements()
       return true
     elseif nomods and vcode == VK.F5 then        -- F5: export table/view data
-      local ex = exporter.newexporter(self._dbx)
+      local ex = exporter.newexporter(self._dbx, self._file_name)
       if ex:export_data_with_dialog() then
         panel.UpdatePanel(nil,0)
         panel.RedrawPanel(nil,0)
       end
+      return true
+    elseif ctrl and vcode == VK.D then
+      local ex = exporter.newexporter(self._dbx, self._file_name)
+      ex:dump_data_with_dialog()
       return true
     end
 
@@ -754,6 +763,9 @@ function mypanel:handle_keyboard(handle, key_event)
   elseif nomods and vcode == VK.F7 then        -- F7: suppress this key
     return true
   elseif nomods and vcode == VK.F8 then -- intercept F8 to avoid panel-reread in case of user cancel
+    if self._panel_mode == "view" then
+      return true
+    end
     if panel.GetPanelInfo(handle).SelectedItemsNumber == 0 then
       return true
     end
@@ -785,7 +797,7 @@ function mypanel:view_db_object()
     if not cr_sql then
       return
     end
-    tmp_file_name = exporter.get_temp_file_name("sql")
+    tmp_file_name = get_temp_file_name("sql")
 
     local file = io.open(tmp_file_name, "wb")
     if not file then
@@ -800,8 +812,8 @@ function mypanel:view_db_object()
     file:close()
   else
     -- Export data
-    local ex = exporter.newexporter(self._dbx)
-    tmp_file_name = exporter.get_temp_file_name("txt")
+    local ex = exporter.newexporter(self._dbx, self._file_name)
+    tmp_file_name = get_temp_file_name("txt")
     local ok = ex:export_data_as_text(tmp_file_name, RealItemName)
     if not ok then return end
   end
@@ -847,7 +859,7 @@ function mypanel:view_pragma_statements()
     "schema_version", "secure_delete", "synchronous", "temp_store",
     "user_version", "wal_autocheckpoint", "wal_checkpoint"
   }
-  local pragma_values = {}
+  local list_items = {}
   for _,v in ipairs(pst) do
     local query = "pragma " .. v
     local db = self._dbx:db()
@@ -859,69 +871,62 @@ function mypanel:view_pragma_statements()
           pv = pv:resize(28, ' ')
         end
         pv = pv .. stmt:get_value(0)
-        table.insert(pragma_values, pv)
+        table.insert(list_items, { Text=pv })
       end
       stmt:finalize()
     end
   end
-  if pragma_values[1] == nil then return end
 
-  local list_items = {}
-  for i,v in ipairs(pragma_values) do
-    list_items[i] = { Text=v }
+  if list_items[1] then
+    local guid = win.Uuid("FF769EE0-2643-48F1-A8A2-239CD3C6691F")
+    local list_flags = F.DIF_LISTNOBOX + F.DIF_LISTNOAMPERSAND + F.DIF_FOCUS
+    local btn_flags = F.DIF_CENTERGROUP + F.DIF_DEFAULTBUTTON
+    local dlg_items = {
+      {"DI_DOUBLEBOX", 3, 1,56,18,          0, 0, 0, 0,               M.ps_title_pragma},
+      {"DI_LISTBOX",   4, 2,55,15, list_items, 0, 0, list_flags,      ""},
+      {"DI_TEXT",      0,16, 0,16,          0, 0, 0, F.DIF_SEPARATOR, ""},
+      {"DI_BUTTON",   60,17, 0, 0,          0, 0, 0, btn_flags,       M.ps_ok}
+    }
+    far.Dialog(guid, -1, -1, 60, 20, nil, dlg_items)
   end
-  list_items[1].Flags = F.LIF_SELECTED
-  local list_flags = F.DIF_LISTNOBOX + F.DIF_LISTNOAMPERSAND + F.DIF_FOCUS
-  local btn_flags = F.DIF_CENTERGROUP + F.DIF_DEFAULTBUTTON
-
-  local dlg_items = {
-    {"DI_DOUBLEBOX", 3, 1,56,18,          0, 0, 0, 0,               M.ps_title_pragma},
-    {"DI_LISTBOX",   4, 2,55,15, list_items, 0, 0, list_flags,      ""},
-    {"DI_TEXT",      0,16, 0,16,          0, 0, 0, F.DIF_SEPARATOR, ""},
-    {"DI_BUTTON",   60,17, 0, 0,          0, 0, 0, btn_flags,       M.ps_cancel}
-  }
-
-  local guid = win.Uuid("FF769EE0-2643-48F1-A8A2-239CD3C6691F")
-  far.Dialog(guid, -1, -1, 60, 20, nil, dlg_items, F.FDLG_NONE)
 end
 
 
 function mypanel:edit_sql_query(handle)
-  local tmp_file_name = exporter.get_temp_file_name("sql")
-
-  -- Save last used query
-  if self._last_sql_query ~= "" then
-    local file = io.open(tmp_file_name, "w")
-    if not (file and file:write(self._last_sql_query)) then
-      if file then file:close() end
-      ErrMsg(M.ps_err_writef.."\n"..tmp_file_name, nil, "we")
-      return
+  -- Create a file and save the last used query if any.
+  local tmp_name = get_temp_file_name("sql")
+  local fp = io.open(tmp_name, "w")
+  if fp then
+    if self._last_sql_query then
+      fp:write(self._last_sql_query)
     end
-    file:close()
+    fp:close()
+  else
+    ErrMsg(M.ps_err_writef.."\n"..tmp_name, nil, "we")
+    return
   end
 
-  -- Open query editor
-  if editor.Editor(tmp_file_name, "SQLite query", nil, nil, nil, nil,
-                   F.EF_DISABLESAVEPOS + F.EF_DISABLEHISTORY,
-                   nil, nil, 65001) == F.EEC_MODIFIED then
-    -- Read query
-    local file = io.open(tmp_file_name, "rb")
-    if not file then
-      ErrMsg(M.ps_err_read.."\n"..tmp_file_name, nil, "we")
-      return
-    end
-    local file_buff = file:read("*all")
-    file:close()
-    win.DeleteFile(tmp_file_name)
-
-    -- Remove UTF-8 BOM
-    file_buff = string.gsub(file_buff, "^\239\187\191", "")
-
-    if file_buff ~= "" then
-      self._last_sql_query = string.gsub(file_buff, "\r\n", "\n")
-      self:open_query(handle, self._last_sql_query)
+  -- Open query editor.
+  if F.EEC_MODIFIED == editor.Editor(tmp_name, "SQLite query", nil, nil, nil, nil,
+                       F.EF_DISABLESAVEPOS + F.EF_DISABLEHISTORY, nil, nil, 65001)
+  then
+    fp = io.open(tmp_name, "rb")
+    if fp then
+      local query = fp:read("*all")
+      query = string.gsub(query, "^\239\187\191", "") -- remove UTF-8 BOM
+      query = string.gsub(query, "\r\n", "\n")
+      fp:close()
+      if query:find("%S") then
+        self._last_sql_query = query
+        self:open_query(handle, query)
+      end
+    else
+      ErrMsg(M.ps_err_read.."\n"..tmp_name, nil, "we")
     end
   end
+
+  -- Delete the file.
+  win.DeleteFile(tmp_name)
 end
 
 
