@@ -1166,7 +1166,7 @@ end
 local modname = ...
 if type(modname) == "table" then
   selftest.test_all()
-  far.Message("All tests OK", "LuaFAR Search")
+  --far.Message("All tests OK", "LuaFAR Search")
 end
 
 return selftest

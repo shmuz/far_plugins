@@ -87,11 +87,13 @@ otherwise as a literal string.
 
  #Regexp. Library#
  Select a regular expression library that will perform the search.
-One library (#Far regex#) is embedded in LuaFAR and thus always available.
-The libraries #Oniguruma# and #PCRE# need additionally the following files
-to be present in the system:
-   Oniguruma : onig.dll (either on %PATH% or %FARHOME%)
-        PCRE : pcre.dll (either on %PATH% or %FARHOME%)
+ One library (~Far regex~@:RegExp@) is embedded in Far Manager and is always available.
+ The other libraries (~Oniguruma~@Oniguruma@, ~PCRE~@PCRE@ and #PCRE2#)
+ need the following files to be present (either on %PATH% or on %FARHOME%):
+
+   Oniguruma  : onig.dll
+        PCRE  : pcre.dll
+        PCRE2 : pcre2.dll
 
  #[x] Whole words#
  Search for whole words.

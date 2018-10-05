@@ -317,6 +317,14 @@ local function UserDialog (aData, aList, aDlgTitle)
       end
     end
     Dlg.edtAfter:SetText(hDlg, text)
+    -- Workaround Far glitch:
+    --   when the previous value was longer than DM_EDIT length and the new value is short,
+    --   Far incorrectly calculates LeftPos and the new value may either not show at all
+    --   or show only a few of its last characters.
+    local len = text:len()
+    local p = hDlg:send("DM_GETITEMPOSITION", Dlg.edtAfter.id)
+    hDlg:send("DM_SETEDITPOSITION", Dlg.edtAfter.id,
+      { LeftPos=math.max(1, len+1-(p.Right-p.Left)); CurPos=len+1; CurTabPos=len+1 })
   end
 
   local function UpdateSearchPat (hDlg)

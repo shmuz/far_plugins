@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-10-05, v3.40.3
+  [!] Panels (Rename): in some cases the field "After" displayed its text partially (or not at all),
+                       due to incorrectly calculated LeftPos in Far Manager.
+
 2018-06-10, v3.40.2
   [!] Grep: "Context Lines After" did not work when "Context Lines Before" was set to 0.
 
