@@ -398,7 +398,7 @@ local function ProcessMultiPatterns (aData, rex)
 end
 
 
-local function ProcessDialogData (aData, bReplace, bInEditor, bUseMultiPatterns)
+local function ProcessDialogData (aData, bReplace, bInEditor, bUseMultiPatterns, bSkip)
   local params = {}
   params.bFileAsLine = aData.bFileAsLine
   params.bInverseSearch = aData.bInverseSearch
@@ -434,9 +434,22 @@ local function ProcessDialogData (aData, bReplace, bInEditor, bUseMultiPatterns)
     local SearchPat = ProcessSinglePattern(rex, aData.sSearchPat, aData)
     local cflags = GetCFlags(aData, bInEditor)
     local ok, ret = pcall(rex.new, SearchPat, cflags)
-    if ok then params.Regex = ret
-    else ErrorMsg(ret, M.MSearchPattern..": "..M.MSyntaxError); return nil,"sSearchPat"
+    if not ok then
+      ErrorMsg(ret, M.MSearchPattern..": "..M.MSyntaxError)
+      return nil,"sSearchPat"
     end
+    if bSkip then
+      local SkipPat = ProcessSinglePattern(rex, aData.sSkipPat, aData)
+      ok, ret = pcall(rex.new, SkipPat, cflags)
+      if not ok then
+        ErrorMsg(ret, M.MSkipPattern..": "..M.MSyntaxError)
+        return nil,"sSkipPat"
+        end
+      local Pat = "("..SearchPat..")" .. "|" .. "(?:"..SkipPat..")"
+      ret = assert(rex.new(Pat, cflags), "invalid combined reqular expression")
+      params.bSkip = true
+    end
+    params.Regex = ret
   end
   ---------------------------------------------------------------------------
   if bReplace then
@@ -519,6 +532,14 @@ function SRFrame:InsertInDialog (aPanelsDialog, Y, aOp)
   Y = Y + 1
   Dlg.sSearchPat  = {"DI_EDIT",   5,Y, 65, Y, 0, GetDialogHistoryKey("SearchText"), 0, hstflags, ""}
   local bSearchEsc ={"DI_BUTTON",67,Y,  0, Y, 0, "", 0, F.DIF_BTNNOCLOSE, "&\\"}
+  ------------------------------------------------------------------------------
+  if aPanelsDialog and aOp == "grep" then
+    Y = Y + 1
+    Dlg.lab       = {"DI_TEXT",   5,Y,  0, Y, 0, 0, 0, 0, M.MDlgSkipPat}
+    Y = Y + 1
+    Dlg.sSkipPat  = {"DI_EDIT",   5,Y, 65, Y, 0, GetDialogHistoryKey("SkipText"), 0, hstflags, ""}
+    Dlg.bSkipEsc  = {"DI_BUTTON",67,Y,  0, Y, 0, "", 0, F.DIF_BTNNOCLOSE, "&/"}
+  end
   ------------------------------------------------------------------------------
   if aOp == "replace" then
     Y = Y + 1
@@ -733,6 +754,7 @@ function SRFrame:SaveDataDyn (hDlg, Data)
     Dlg.bSearchSymLinks:SaveCheck(hDlg, Data)
     Data.sSearchArea = IndexToSearchArea(Dlg.cmbSearchArea:GetListCurPos(hDlg))
     if Dlg.bGrepHighlight then -- Grep dialog
+      Dlg.sSkipPat:SaveText(hDlg, Data)
       Dlg.bGrepShowLineNumbers:SaveCheck(hDlg, Data)
       Dlg.bGrepHighlight:SaveCheck(hDlg, Data)
       Dlg.bGrepInverseSearch:SaveCheck(hDlg, Data)
@@ -780,6 +802,13 @@ function SRFrame:DlgProc (hDlg, msg, param1, param2)
         Dlg.sSearchPat:SetText(hDlg, txt)
         hDlg:send("DM_SETFOCUS", Dlg.sSearchPat.id)
       end
+    elseif Dlg.bSkipEsc and param1==Dlg.bSkipEsc.id then
+      local txt = Dlg.sSkipPat:GetText(hDlg)
+      if #txt < 1e6 then -- protect against memory exhaustion
+        txt = EscapeSearchPattern(txt)
+        Dlg.sSkipPat:SetText(hDlg, txt)
+        hDlg:send("DM_SETFOCUS", Dlg.sSkipPat.id)
+      end
     elseif Dlg.bReplaceEsc and param1==Dlg.bReplaceEsc.id then
       local txt = Dlg.sReplacePat:GetText(hDlg)
       if #txt < 1e6 then -- protect against memory exhaustion
@@ -814,11 +843,13 @@ function SRFrame:DlgProc (hDlg, msg, param1, param2)
       local tmpdata, msg = {}, nil
       for k,v in pairs(Data) do tmpdata[k]=v end
       self:SaveDataDyn(hDlg, tmpdata)
-      self.close_params, msg = ProcessDialogData(tmpdata, bReplace, bInEditor, Dlg.bMultiPatterns)
+      local bSkip = Dlg.sSkipPat and tmpdata.sSkipPat ~= ""
+      self.close_params, msg = ProcessDialogData(tmpdata, bReplace, bInEditor, Dlg.bMultiPatterns, bSkip)
       if self.close_params then
         for k,v in pairs(tmpdata) do Data[k]=v end
         hDlg:send("DM_ADDHISTORY", Dlg.sSearchPat.id, Data.sSearchPat)
         if Dlg.sReplacePat then hDlg:send("DM_ADDHISTORY", Dlg.sReplacePat.id, Data.sReplacePat) end
+        if Dlg.sSkipPat    then hDlg:send("DM_ADDHISTORY", Dlg.sSkipPat.id,    Data.sSkipPat)    end
         if Dlg.bHighlight then
           local checked = Dlg.bHighlight:GetCheck(hDlg)
           if not checked and Libs.EditMain.IsHighlightGrep() then
@@ -829,7 +860,8 @@ function SRFrame:DlgProc (hDlg, msg, param1, param2)
           end
         end
       else
-        if msg=="sSearchPat" or msg=="sReplacePat" or msg=="sFilterFunc" or msg=="sInitFunc" or msg=="sFinalFunc" then
+        if msg=="sSearchPat" or msg=="sReplacePat" or msg=="sFilterFunc" or msg=="sInitFunc"
+        or msg=="sFinalFunc" or msg=="sSkipPat" then
           if Dlg[msg] then GotoEditField(hDlg, Dlg[msg].id) end
         end
         return 0 -- do not close the dialog

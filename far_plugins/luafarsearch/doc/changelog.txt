@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-10-12, v3.41.0
+  [+] Panels (Grep dialog): add field "Skip" that specifies what text to skip during the operation.
+
+
 2018-10-05, v3.40.3
   [!] Panels (Rename): in some cases the field "After" displayed its text partially (or not at all),
                        due to incorrectly calculated LeftPos in Far Manager.

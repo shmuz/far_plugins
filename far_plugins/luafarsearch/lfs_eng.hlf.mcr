@@ -391,13 +391,8 @@ $ #lfsearch.SetDebugMode#
    call.
  - Function #require# works without cache.
 
- ~Contents~@Contents@
 
-1. Find
-2. Replace
-3. Grep
-4. Rename
-5. Panel
+ ~Contents~@Contents@
 
 @PanelMenu
 $ #Plugin's menu in Panels#
@@ -1452,6 +1447,12 @@ The file is automatically opened in the editor after the search is finished.
 
  The dialog elements listed below are specific for this dialog:
 
+ #Skip#
+ This is a pattern that specifies what text to skip during the operation.
+ E.g.: we want to find the word #new# in the C++ code but not in comments like this: #//...new...#.
+ To achieve that we specify pattern #\bnew\b# as the search pattern
+and pattern #\/\/.*# as the skip pattern.
+ 
  #[x] Show line numbers#
  Each output line contains line number it has in the searched file.
 

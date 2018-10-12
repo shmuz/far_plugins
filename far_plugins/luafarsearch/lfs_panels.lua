@@ -1434,11 +1434,17 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
       local x = 1
       local linelen = len(Line)
       while true do
-        local fr, to = ufind_method(Regex, Line, x)
-        if fr then nMatches = nMatches+1 end
+        local bFound
+        local fr, to, collect = ufind_method(Regex, Line, x)
+        if fr then
+          if cdata.sOp ~= "grep" or not cdata.tGrep.bSkip or collect[1] then
+            bFound = true
+            nMatches = nMatches+1
+          end
+        end
         ----------------------------------------------------------------------
         if cdata.sOp == "grep" then
-          if (not fr) == grepInverse then -- 'not' needed for conversion to boolean
+          if (not bFound) == grepInverse then -- 'not' needed for conversion to boolean
             if qLinesBefore then
               local size = qLinesBefore:size()
               for k=1, size do
@@ -1540,6 +1546,7 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
       nBefore = tonumber(aData.sGrepLinesBefore) or 0;
       nAfter  = tonumber(aData.sGrepLinesAfter) or 0;
       bInverse = aData.bGrepInverseSearch;
+      bSkip = tParams.bSkip;
     },
   }
 
@@ -1654,7 +1661,7 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
       local flags = {EF_DELETEONLYFILEONCLOSE=1,EF_NONMODAL=1,EF_IMMEDIATERETURN=1,EF_DISABLEHISTORY=1}
       if editor.Editor(fname,nil,nil,nil,nil,nil,flags,nil,nil,65001) == F.EEC_MODIFIED then
         if aData.bGrepHighlight then
-          Libs.EditMain.SetHighlightPattern(tParams.Regex, true, aData.bGrepShowLineNumbers)
+          Libs.EditMain.SetHighlightPattern(tParams.Regex, true, aData.bGrepShowLineNumbers, tParams.bSkip)
           Libs.EditMain.ActivateHighlight(true)
         end
       end

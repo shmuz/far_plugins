@@ -62,7 +62,7 @@ local function ActivateHighlight (On)
   end
 end
 
-local function SetHighlightPattern (pattern, is_grep, line_numbers)
+local function SetHighlightPattern (pattern, is_grep, line_numbers, bSkip)
   local info = editor.GetInfo()
   if info then
     local state = Editors[info.EditorID]
@@ -70,6 +70,7 @@ local function SetHighlightPattern (pattern, is_grep, line_numbers)
       state.pattern = pattern
       if is_grep then state.is_grep = true; end -- can be only set
       state.line_numbers = line_numbers and true
+      state.bSkip = bSkip
     end
   end
 end
@@ -97,7 +98,7 @@ end
 -- @param ProcessLineNumbers: (used with Grep) locate line numbers at the beginning of lines
 --                            and highlight them separately from regular editor text
 ---------------------------------------------------------------------------------------------------
-local function RedrawHighlightPattern (EI, Pattern, Priority, ProcessLineNumbers)
+local function RedrawHighlightPattern (EI, Pattern, Priority, ProcessLineNumbers, bSkip)
   local config = _Plugin.History:field("config")
   local Color = config.EditorHighlightColor
   local ID = EI.EditorID
@@ -129,11 +130,13 @@ local function RedrawHighlightPattern (EI, Pattern, Priority, ProcessLineNumbers
       local maxstart = min(str.StringLength+1, EI.LeftPos+EI.WindowSizeX-1) - offset
 
       while start <= maxstart do
-        local from, to = ufind(Pattern, text, start)
+        local from, to, collect = ufind(Pattern, text, start)
         if not from then break end
         start = to>=from and to+1 or from+1
-        if to >= from and to+offset >= EI.LeftPos then
-          editor.AddColor(ID, y, offset+from, offset+to, ColorFlags, Color, Priority, ColorOwner)
+        if not bSkip or collect[1] then
+          if to >= from and to+offset >= EI.LeftPos then
+            editor.AddColor(ID, y, offset+from, offset+to, ColorFlags, Color, Priority, ColorOwner)
+          end
         end
       end
     end
@@ -152,7 +155,7 @@ function export.ProcessEditorEvent (id, event, param)
     if state.active and state.pattern then
       local ei = editor.GetInfo(id)
       if ei then
-        RedrawHighlightPattern(ei, state.pattern, ColorPriority, state.line_numbers)
+        RedrawHighlightPattern(ei, state.pattern, ColorPriority, state.line_numbers, state.bSkip)
       end
     end
   end
