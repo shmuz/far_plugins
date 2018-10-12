@@ -1437,7 +1437,7 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
         local bFound
         local fr, to, collect = ufind_method(Regex, Line, x)
         if fr then
-          if cdata.sOp ~= "grep" or not cdata.tGrep.bSkip or collect[1] then
+          if not (cdata.sOp == "grep" and cdata.tGrep.bSkip and collect[1]) then
             bFound = true
             nMatches = nMatches+1
           end

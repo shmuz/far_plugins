@@ -445,7 +445,7 @@ local function ProcessDialogData (aData, bReplace, bInEditor, bUseMultiPatterns,
         ErrorMsg(ret, M.MSkipPattern..": "..M.MSyntaxError)
         return nil,"sSkipPat"
         end
-      local Pat = "("..SearchPat..")" .. "|" .. "(?:"..SkipPat..")"
+      local Pat = "("..SkipPat..")" .. "|" .. "(?:"..SearchPat..")" -- SkipPat has priority over SearchPat
       ret = assert(rex.new(Pat, cflags), "invalid combined reqular expression")
       params.bSkip = true
     end

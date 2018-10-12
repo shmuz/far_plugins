@@ -268,13 +268,16 @@ $ #Скрипты пользователя#
   #ФУНКЦИИ:#
    ~lfsearch.EditorAction~@FuncEditorAction@
    ~lfsearch.MReplaceEditorAction~@FuncMReplaceEditorAction@
+   ~lfsearch.SearchFromPanel~@FuncSearchFromPanel@
+   ~lfsearch.ReplaceFromPanel~@FuncReplaceFromPanel@
    ~lfsearch.SetDebugMode~@FuncSetDebugMode@
+
 
  ~Содержание~@Contents@
 
 @FuncEditorAction
 $ #lfsearch.EditorAction#
-^#nFound, nReps = lfsearch.EditorAction (Operation, Data, SaveData)#
+ #nFound, nReps = lfsearch.EditorAction (Operation, Data, SaveData)#
 
  #Operation# - одна из предопределённых операций.
  Следующие операции соответствуют пунктам меню плагина:
@@ -303,8 +306,8 @@ $ #lfsearch.EditorAction#
        "sSearchPat"      : образец поиска
        "sReplacePat"     : образец замены
        "sRegexLib"       : библиотека регулярных выражений:
-                           "far" (по умолчанию), "oniguruma" или
-                           "pcre"
+                           "far" (по умолчанию), "oniguruma",
+                           "pcre" или "pcre2"
        "sScope"          : область поиска: "global" (по умолчанию)
                            или "block"
        "sOrigin"         : начало поиска: "cursor" (по умолчанию)
@@ -354,7 +357,7 @@ $ #lfsearch.EditorAction#
 
 @FuncMReplaceEditorAction
 $ #lfsearch.MReplaceEditorAction#
-^#nFound, nReps = lfsearch.MReplaceEditorAction (Operation, Data)#
+ #nFound, nReps = lfsearch.MReplaceEditorAction (Operation, Data)#
 
  #Operation# - одна из предопределённых операций.
 
@@ -370,8 +373,8 @@ $ #lfsearch.MReplaceEditorAction#
        "sSearchPat"      : образец поиска
        "sReplacePat"     : образец замены
        "sRegexLib"       : библиотека регулярных выражений:
-                           "far" (по умолчанию), "oniguruma" или
-                           "pcre"
+                           "far" (по умолчанию), "oniguruma",
+                           "pcre" или "pcre2"
 
        "bCaseSens"       : регистрозависимый поиск
        "bRegExpr"        : режим регулярных выражений
@@ -393,6 +396,84 @@ $ #lfsearch.MReplaceEditorAction#
  #nFound, nReps# - количество найденных вхождений и произведённых
                  замен, соответственно.
 
+ ~Содержание~@Contents@
+
+@FuncSearchFromPanel
+$ #lfsearch.SearchFromPanel
+ #tFound = lfsearch.SearchFromPanel (Data, bWithDialog)#
+
+ #Data# - Таблица с предопределёнными полями. Если какое-либо поле
+        отсутствует, применяется значение по умолчанию для данного
+        поля. Для булевых переменных это - `false'; для строк -
+        пустая строка. Тип переменной может быть определён по 1-й
+        букве её имени: b=boolean; f=function; n=number; s=string.
+
+       "sFileMask"       : маска файла
+       "sSearchPat"      : образец поиска
+       "sRegexLib"       : библиотека регулярных выражений:
+                           "far" (по умолчанию), "oniguruma",
+                           "pcre" или "pcre2"
+
+       "bRegExpr"        : режим регулярных выражений
+       "bCaseSens"       : регистрозависимый поиск
+       "bWholeWords"     : искать только целые слова
+       "bMultiPatterns"  : режим нескольких выражений
+       "bExtended"       : игнорировать пробелы в рег.выражениях
+       "bFileAsLine"     : файл как строка
+       "bInverseSearch"  : инверсный поиск
+       "bSearchFolders"  : искать папки
+       "bSearchSymLinks" : искать в символических ссылках
+
+       "sSearchArea"     : одно из: "FromCurrFolder", "OnlyCurrFolder",
+                           "SelectedItems", "RootFolder", "NonRemovDrives",
+                           "LocalDrives", "PathFolders"
+
+ #bWithDialog# - нужно ли вызывать диалог.
+ 
+ #tFound# - таблица (массив) с именами найденных файлов.
+
+ 
+ ~Содержание~@Contents@
+
+@FuncReplaceFromPanel
+$ #lfsearch.ReplaceFromPanel
+ #nFound, nReps = lfsearch.ReplaceFromPanel (Data, bWithDialog)#
+
+ #Data# - Таблица с предопределёнными полями. Если какое-либо поле
+        отсутствует, применяется значение по умолчанию для данного
+        поля. Для булевых переменных это - `false'; для строк -
+        пустая строка. Тип переменной может быть определён по 1-й
+        букве её имени: b=boolean; f=function; n=number; s=string.
+
+       "sFileMask"       : маска файла
+       "sSearchPat"      : образец поиска
+       "sReplacePat"     : образец замены
+       "sRegexLib"       : библиотека регулярных выражений:
+                           "far" (по умолчанию), "oniguruma",
+                           "pcre" или "pcre2"
+
+       "bRepIsFunc"      : режим функции
+       "bMakeBackupCopy" : сохранять копию
+       "bConfirmReplace" : подтверждать замену
+       "bRegExpr"        : режим регулярных выражений
+       "bCaseSens"       : регистрозависимый поиск
+       "bWholeWords"     : искать только целые слова
+       "bExtended"       : игнорировать пробелы в рег.выражениях
+       "bSearchSymLinks" : искать в символических ссылках
+
+       "sSearchArea"     : одно из: "FromCurrFolder", "OnlyCurrFolder",
+                           "SelectedItems", "RootFolder", "NonRemovDrives",
+                           "LocalDrives", "PathFolders"
+
+       "bAdvanced"       : включить начальную функцию и конечную функцию
+       "sInitFunc"       : начальная функция
+       "sFinalFunc"      : конечная функция
+
+ #bWithDialog# - нужно ли вызывать диалог.
+ 
+ #возвращает:# ничего.
+
+ 
  ~Содержание~@Contents@
 
 @FuncSetDebugMode

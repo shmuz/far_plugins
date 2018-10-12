@@ -133,7 +133,7 @@ local function RedrawHighlightPattern (EI, Pattern, Priority, ProcessLineNumbers
         local from, to, collect = ufind(Pattern, text, start)
         if not from then break end
         start = to>=from and to+1 or from+1
-        if not bSkip or collect[1] then
+        if not (bSkip and collect[1]) then
           if to >= from and to+offset >= EI.LeftPos then
             editor.AddColor(ID, y, offset+from, offset+to, ColorFlags, Color, Priority, ColorOwner)
           end

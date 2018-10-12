@@ -258,13 +258,16 @@ $ #User Scripts#
   #FUNCTIONS:#
    ~lfsearch.EditorAction~@FuncEditorAction@
    ~lfsearch.MReplaceEditorAction~@FuncMReplaceEditorAction@
+   ~lfsearch.SearchFromPanel~@FuncSearchFromPanel@
+   ~lfsearch.ReplaceFromPanel~@FuncReplaceFromPanel@
    ~lfsearch.SetDebugMode~@FuncSetDebugMode@
+
 
  ~Contents~@Contents@
 
 @FuncEditorAction
 $ #lfsearch.EditorAction#
-^#nFound, nReps = lfsearch.EditorAction (Operation, Data, SaveData)#
+ #nFound, nReps = lfsearch.EditorAction (Operation, Data, SaveData)#
 
  #Operation# - one of predefined strings.
  The following operations correspond to the plugin menu items:
@@ -293,7 +296,7 @@ $ #lfsearch.EditorAction#
        "sSearchPat"      : search pattern
        "sReplacePat"     : replace pattern
        "sRegexLib"       : regular expression library, either of:
-                           "far" (default), "oniguruma" or "pcre"
+                           "far" (default), "oniguruma", "pcre" or "pcre2"
        "sScope"          : search scope: "global" (default) or
                            "block"
        "sOrigin"         : search origin: "cursor" (default) or
@@ -343,7 +346,7 @@ $ #lfsearch.EditorAction#
 
 @FuncMReplaceEditorAction
 $ #lfsearch.MReplaceEditorAction#
-^#nFound, nReps = lfsearch.MReplaceEditorAction (Operation, Data)#
+ #nFound, nReps = lfsearch.MReplaceEditorAction (Operation, Data)#
 
  #Operation# - one of predefined strings.
 
@@ -359,7 +362,7 @@ $ #lfsearch.MReplaceEditorAction#
        "sSearchPat"      : search pattern
        "sReplacePat"     : replace pattern
        "sRegexLib"       : regular expression library, either of:
-                           "far" (default), "oniguruma" or "pcre"
+                           "far" (default), "oniguruma", "pcre" or "pcre2"
 
        "bCaseSens"       : case sensitive search
        "bRegExpr"        : regular expression mode
@@ -379,6 +382,82 @@ $ #lfsearch.MReplaceEditorAction#
  #nFound, nReps# - numbers of matches found and replacements made,
                  respectively.
 
+ ~Contents~@Contents@
+
+@FuncSearchFromPanel
+$ #lfsearch.SearchFromPanel
+ #tFound = lfsearch.SearchFromPanel (Data, bWithDialog)#
+
+ #Data# - a table with predefined fields. If a field is not present,
+        its default value is used. The default value for booleans is
+        `false'; for strings - an empty string. The value type can be
+        deduced by from the 1-st letter of its name: b=boolean;
+        f=function; n=number; s=string.
+
+       "sFileMask"       : file mask
+       "sSearchPat"      : search pattern
+       "sRegexLib"       : regular expression library, either of:
+                           "far" (default), "oniguruma", "pcre" or "pcre2"
+
+       "bRegExpr"        : regular expression mode
+       "bCaseSens"       : case sensitive search
+       "bWholeWords"     : whole word search
+       "bMultiPatterns"  : multiple patterns mode
+       "bExtended"       : ignore whitespace in regexp
+       "bFileAsLine"     : file as a line
+       "bInverseSearch"  : inverse search       
+       "bSearchFolders"  : search for folders
+       "bSearchSymLinks" : search in symbolic links
+
+       "sSearchArea"     : either of: "FromCurrFolder", "OnlyCurrFolder",
+                           "SelectedItems", "RootFolder", "NonRemovDrives",
+                           "LocalDrives", "PathFolders"
+
+ #bWithDialog# - whether the dialog should be invoked. 
+ 
+ #tFound# - a table (array) with names of the found files.
+
+ 
+ ~Contents~@Contents@
+
+@FuncReplaceFromPanel
+$ #lfsearch.ReplaceFromPanel
+ #lfsearch.ReplaceFromPanel (Data, bWithDialog)#
+
+ #Data# - a table with predefined fields. If a field is not present,
+        its default value is used. The default value for booleans is
+        `false'; for strings - an empty string. The value type can be
+        deduced by from the 1-st letter of its name: b=boolean;
+        f=function; n=number; s=string.
+
+       "sFileMask"       : file mask
+       "sSearchPat"      : search pattern
+       "sReplacePat"     : replace pattern
+       "sRegexLib"       : regular expression library, either of:
+                           "far" (default), "oniguruma", "pcre" or "pcre2"
+
+       "bRepIsFunc"      : function mode
+       "bMakeBackupCopy" : make backup copy
+       "bConfirmReplace" : confirm replacement
+       "bRegExpr"        : regular expression mode
+       "bCaseSens"       : case sensitive search
+       "bWholeWords"     : whole word search
+       "bExtended"       : ignore whitespace in regexp
+       "bSearchSymLinks" : search in symbolic links
+
+       "sSearchArea"     : either of: "FromCurrFolder", "OnlyCurrFolder",
+                           "SelectedItems", "RootFolder", "NonRemovDrives",
+                           "LocalDrives", "PathFolders"
+
+       "bAdvanced"       : Enable Initial function and Final function
+       "sInitFunc"       : Initial function
+       "sFinalFunc"      : Final function
+
+ #bWithDialog# - whether the dialog should be invoked. 
+ 
+ #returns:# nothing.
+
+ 
  ~Contents~@Contents@
 
 @FuncSetDebugMode
