@@ -2,6 +2,15 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-10-20, v3.42.0
+  [+] Panels (Find): > 3.5 times speed increase in searching files by name,
+      provided those names are already in Windows cache.
+      This is mainly due to using finder.Files() instead of far.RecursiveSearch().
+  [-] Panels: filters by "change time" and "more than one hardlink" currently do not work.
+      This is the consequence of using finder.Files().
+  [*] Minimal required Far Manager build changed from 4425 to 4878 after some testing.
+      The reason: FSF.GetReparsePointInfo() did not work in the range of builds [4425-4876].
+
 2018-10-13, v3.41.1
   [*] Panels (Grep dialog): give "Skip" field priority over "Search for" field
       in such the cases when both patterns match the text from the same offset.

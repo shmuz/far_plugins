@@ -5,6 +5,9 @@ PROJECT = lfsearch
 path_plugin = ..
 COMMON_MAK = $(path_plugin)\..\common.mak
 
+MYOBJECTS = lfsearch.o
+MYLUAOPEN_LIST = luaopen_lfsearch
+
 T_MESSAGE = $(path_plugin)\lfsearch_message.lua
 EMBED_METHOD = luasrcdiet
 
@@ -45,7 +48,7 @@ FAR_EXPORTS =       \
   PUTFILES          \
   SETDIRECTORY
 
-MYCFLAGS  = -DRUN_LUAFAR_INIT
+MYCFLAGS  = -I$(PATH_LUAFARSRC) -DRUN_LUAFAR_INIT
 RCFILE    = lfsearch.rc
 TEMPL     = lfs_lang.templ tmpp_lang2.templ
 TEMPL_SCR = lfs_lang.lua

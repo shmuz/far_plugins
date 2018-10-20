@@ -1,9 +1,9 @@
 -- Definitions
 VER_MAJOR = "3"
-VER_MINOR = "41"
-VER_MICRO = "1"
+VER_MINOR = "42"
+VER_MICRO = "0"
 
-MINFARVERSION = "{ 3, 0, 0, 4425 }"
+MINFARVERSION = "{ 3, 0, 0, 4878 }"
 
 COPYRIGHT = "Shmuel Zeigerman, 2007-2018"
 

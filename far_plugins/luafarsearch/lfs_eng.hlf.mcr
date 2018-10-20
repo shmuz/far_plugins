@@ -1528,7 +1528,9 @@ The file is automatically opened in the editor after the search is finished.
 
  #Skip#
  This is a pattern that specifies what text to skip during the operation.
- E.g.: we want to find the word #new# in the C++ code but not in comments like this: #//...new...#.
+ This feature is turned off when the field is empty.
+     For example:
+ We want to find the word #new# in the C++ code but not in comments like this: #//...new...#.
  To achieve that we specify pattern #\bnew\b# as the search pattern
 and pattern #\/\/.*# as the skip pattern.
  

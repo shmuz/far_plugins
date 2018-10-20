@@ -28,7 +28,9 @@ if FirstRun then
     History = libHistory.newsettings(nil, "alldata"),
     Repeat = {},
     FileList = nil,
+    Finder = _G._finder,
   }
+  _G._finder = nil
   NormDataOnFirstRun(_Plugin.History:field("main"))
   libUtils.AddCfindFunction()
   export.OnError = libUtils.OnError

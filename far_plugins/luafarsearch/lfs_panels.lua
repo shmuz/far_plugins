@@ -131,7 +131,7 @@ function TUserBreak:ConfirmEscape (in_file)
 end
 
 function TUserBreak:fInterrupt()
-  local c = self:ConfirmEscape(true)
+  local c = self:ConfirmEscape("in_file")
   self.cancel = c
   return c
 end
@@ -237,52 +237,57 @@ end
 
 
 ----------------------------------------------------------------------------------------------------
--- @param InitDir    : starting directory to search its contents recursively
--- @param UserFunc   : function to call when a file/subdirectory is found
--- @param flags      : table that can have boolean fields 'symlinks' and 'recurse'
--- @param FileFilter : userdata object having a method 'IsFileInFilter'
--- @param fFileMask  : function that checks the current item's name
--- @param fDirMask   : function that determines whether to search in a given directory
--- @param fDirExMask : function that determines whether to skip a directory with all its subtree
--- @param userbreak  : give the user chance to break the operation
+-- @param InitDir       : starting directory to search its contents recursively
+-- @param UserFunc      : function to call when a file/subdirectory is found
+-- @param flags         : table that can have boolean fields 'symlinks' and 'recurse'
+-- @param FileFilter    : userdata object having a method 'IsFileInFilter'
+-- @param fFileMask     : function that checks the current item's name
+-- @param fDirMask      : function that determines whether to search in a given directory
+-- @param fDirExMask    : function that determines whether to skip a directory with all its subtree
+-- @param tRecurseGuard : table (set) for preventing repeated scanning of the same directories
 ----------------------------------------------------------------------------------------------------
+local FileIterator = _Plugin.Finder.Files
 local function RecursiveSearch (InitDir, UserFunc, flags, FileFilter, fFileMask, fDirMask,
-                                fDirExMask, userbreak, tRecurseGuard)
+                                fDirExMask, tRecurseGuard)
+
   local bSymLinks = flags and flags.symlinks
   local bRecurse = flags and flags.recurse
-  local fullbreak
 
   local function Recurse (InitDir)
-    if fullbreak then return end
     local bSearchInThisDir = fDirMask(InitDir)
+    local SearchHandle
+    local Ret
 
-    far.RecursiveSearch(InitDir, "*",
-      function (fdata, fullname)
+    for fdata, hndl in FileIterator( [[\\?\]]..InitDir..[[\*]] ) do
+      SearchHandle = hndl
+      if fdata.FileName ~= "." and fdata.FileName ~= ".." then
+        local fullname = InitDir .. "\\" .. fdata.FileName
         if not FileFilter or FileFilter:IsFileInFilter(fdata) then
           if bSearchInThisDir and fFileMask(fdata.FileName) then
-            if UserFunc(fdata, fullname, false) == "break" then
-              fullbreak = true; return true;
+            if UserFunc(fdata, fullname) == "break" then
+              Ret = true; break
             end
           else
-            userbreak:ConfirmEscape(false)
-            if userbreak.fullcancel then
-              fullbreak = true; return true;
-            end
-            UserFunc(fdata, fullname, true)
+            UserFunc("display_state", fullname)
           end
           if bRecurse and fdata.FileAttributes:find("d") and not fDirExMask(fullname) then
             local realDir = far.GetReparsePointInfo(fullname) or fullname
             if not tRecurseGuard[realDir] then
               if bSymLinks or not fdata.FileAttributes:find("e") then
                 tRecurseGuard[realDir] = true
-                Recurse(realDir)
+                Ret = Recurse(realDir)
+                if Ret then break end
               end
             end
           end
         else
-          UserFunc(fdata, fullname, true)
+          UserFunc("display_state", fullname)
         end
-      end, 0)
+      end
+    end
+
+    if SearchHandle then SearchHandle:FindClose() end
+    return Ret
   end
 
   InitDir = InitDir:gsub("[/\\]+$", "\\")
@@ -758,7 +763,7 @@ local DisplaySearchState do
   local lastclock = 0
   local WID, W1 = 60, 3
   local W2 = WID - W1 - 3
-  DisplaySearchState = function (fullname, cntFound, cntTotal, ratio)
+  DisplaySearchState = function (fullname, cntFound, cntTotal, ratio, userbreak)
     local newclock = far.FarClock()
     if newclock >= lastclock then
       lastclock = newclock + 2e5 -- period = 0.2 sec
@@ -768,6 +773,7 @@ local DisplaySearchState do
       far.Message(
         (s.."\n") .. (set_progress(W2, ratio).."\n") .. (M.MFilesFound..cntFound.."/"..cntTotal),
         M.MTitleSearching, "")
+      return userbreak and userbreak:ConfirmEscape()
     end
   end
 end
@@ -789,11 +795,12 @@ local DisplayListState do
   local lastclock = 0
   local WIDTH = 60
   local s = (" "):rep(WIDTH).."\n" -- preserve constant width of the message box
-  DisplayListState = function (cnt)
+  DisplayListState = function (cnt, userbreak)
     local newclock = far.FarClock()
     if newclock >= lastclock then
       lastclock = newclock + 2e5 -- period = 0.2 sec
       far.Message(s..cnt..M.MPanelFilelistText, M.MPanelFilelistTitle, "")
+      return userbreak and userbreak:ConfirmEscape()
     end
   end
 end
@@ -844,32 +851,27 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
   local Regex = tParams.Regex
   local Find = Regex.findW or Regex.find
   local bTextSearch = (tParams.tMultiPatterns and tParams.tMultiPatterns.NumPatterns > 0) or
-                  (not tParams.tMultiPatterns and tParams.sSearchPat ~= "")
-  local bFoldersOK = aData.bSearchFolders and not bTextSearch
-  local reader do
-    if bTextSearch then
-      local size = 4*1024*1024 -- (default = 4 MiB)
-      reader = assert(libReader.new(size))
-    end
-  end
+                      (not tParams.tMultiPatterns and tParams.sSearchPat ~= "")
+  local bNoTextSearch = not bTextSearch
+  local bNoFolders = bTextSearch or not aData.bSearchFolders
+  local reader = bTextSearch and assert(libReader.new(4*1024*1024)) -- (default = 4 MiB)
 
-  local function Search_ProcessFile (fdata, fullname, only_display_state)
-    if only_display_state then
-      DisplaySearchState(fullname, #tFoundFiles, nTotalFiles, 0)
-      return
+  local function Search_ProcessFile (fdata, fullname)
+    if fdata == "display_state" then
+      return DisplaySearchState(fullname, #tFoundFiles, nTotalFiles, 0, userbreak) and "break"
     end
-    if userbreak:ConfirmEscape(false) then return "break" end
     ---------------------------------------------------------------------------
     local isFolder = fdata.FileAttributes:find("d")
-    if isFolder and not bFoldersOK then return end
+    if isFolder and bNoFolders then return end
     ---------------------------------------------------------------------------
     nTotalFiles = nTotalFiles + 1
-    if isFolder or not bTextSearch then
+    if isFolder or bNoTextSearch then
       tFoundFiles[#tFoundFiles+1] = fullname
-      DisplaySearchState(fullname, #tFoundFiles, nTotalFiles, 0)
-      return
+      return DisplaySearchState(fullname, #tFoundFiles, nTotalFiles, 0, userbreak) and "break"
     end
-    DisplaySearchState(fullname, #tFoundFiles, nTotalFiles, 0)
+    if DisplaySearchState(fullname, #tFoundFiles, nTotalFiles, 0, userbreak) then
+      return "break"
+    end
     ---------------------------------------------------------------------------
     if not reader:openfile(Utf16(fullname)) then return end
     local str = reader:get_next_overlapped_chunk()
@@ -889,8 +891,9 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
     end
 
     while str do
-      if userbreak:ConfirmEscape(true) then
-        reader:closefile(); return userbreak.fullcancel and "break"
+      if userbreak:ConfirmEscape("in_file") then
+        reader:closefile()
+        return userbreak.fullcancel and "break"
       end
       for _, cp in ipairs(currCodePages) do
         local s = (cp == 1200 or cp == 65001) and str or
@@ -974,7 +977,7 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
       end
       if not isFile and not (area == "OnlyCurrFolder" and bPlugin) then
         RecursiveSearch(item, Search_ProcessFile, flags, FileFilter, fFileMask, fDirMask,
-                        fDirExMask, userbreak, tRecurseGuard)
+                        fDirExMask, tRecurseGuard)
       end
       ---------------------------------------------------------------------------
       if userbreak.fullcancel then break end
@@ -1031,19 +1034,19 @@ local function CollectAllItems (aData, tParams, fFileMask, fDirMask, fDirExMask,
     end
     if not isFile and not (area == "OnlyCurrFolder" and bPlugin) then
       RecursiveSearch(item,
-        function(fdata, fullname, only_display_state)
-          if only_display_state then
-            DisplayListState(#fileList/2)
-            return
+        function(fdata, fullname)
+          if fdata == "display_state" then
+            return DisplayListState(#fileList/2, userbreak)
           end
-          if userbreak:ConfirmEscape(false) then return "break" end
           if not fdata.FileAttributes:find("d") then
             local n = #fileList
-            if n%20 == 0 then DisplayListState(n/2) end
             fileList[n+1] = fdata
             fileList[n+2] = fullname
+            if n%20 == 0 then
+              if DisplayListState(n/2, userbreak) then return "break"; end
+            end
           end
-        end, flags, FileFilter, fFileMask, fDirMask, fDirExMask, userbreak, tRecurseGuard)
+        end, flags, FileFilter, fFileMask, fDirMask, fDirExMask, tRecurseGuard)
     end
     if userbreak.fullcancel then break end
   end
@@ -1558,7 +1561,7 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
   local sProcessReadonly
   DisplayReplaceState("", 0, 0)
   for k=1,#fileList,2 do
-    if userbreak:ConfirmEscape(false) then break end
+    if userbreak:ConfirmEscape() then break end
     local fdata, fullname = fileList[k], fileList[k+1]
     local bCanProcess = true
     if sOp == "replace" and fdata.FileAttributes:find("r") then
