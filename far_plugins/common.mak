@@ -84,7 +84,7 @@ CFLAGS = -O2 -Wall -I$(INC_LUA) -I$(INC_FAR) $(ARCH) $(EXPORTS) $(MYCFLAGS) \
 CC = gcc
 
 LIBS    = $(LUADLL) $(LUAFARDLL)
-LDFLAGS = -Wl,--kill-at -shared -s $(ARCH)
+LDFLAGS = -Wl,--kill-at -shared -s $(ARCH) -static-libgcc
 
 noembed: $(T_NOEMBED) $(T_MESSAGE) $(GLOBINFO) $(HELP)
 embed:   $(T_EMBED) $(T_MESSAGE) $(GLOBINFO) $(HELP)
