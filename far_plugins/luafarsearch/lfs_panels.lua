@@ -1237,7 +1237,8 @@ end
 
 
 local function Replace_ProcessFile (fdata, fullname, cdata)
-  local fp = io.open(fullname, "rb")
+  local ExtendedName = [[\\?\]] .. fullname
+  local fp = io.open(ExtendedName, "rb")
   if not fp then
     MsgCannotOpenFile(fullname)
     return
@@ -1316,7 +1317,7 @@ local function Replace_ProcessFile (fdata, fullname, cdata)
               nReps = nReps + 1
               bDeleteLine = sRepFinal==true
               if not fout then
-                fout, tmpname = Replace_CreateOutputFile(fullname, numline-1, nCodePage, sBom, userbreak)
+                fout, tmpname = Replace_CreateOutputFile(ExtendedName, numline-1, nCodePage, sBom, userbreak)
                 if not fout or userbreak.cancel then
                   cdata.nMatchesTotal = cdata.nMatchesTotal + nMatches
                   cdata.nFilesWithMatches = cdata.nFilesWithMatches + 1
@@ -1325,7 +1326,8 @@ local function Replace_ProcessFile (fdata, fullname, cdata)
                     fout:close()
                     win.DeleteFile(tmpname)
                   end
-                  return -- error message here?
+                  far.Message("Could not create output file",nil,nil,"w") --### add localization
+                  return
                 end
                 if not bDeleteLine then
                   fout:write(Reconvert(sub(Line, 1, x-1)))
@@ -1375,19 +1377,19 @@ local function Replace_ProcessFile (fdata, fullname, cdata)
       win.DeleteFile(tmpname)
     else
       if cdata.bMakeBackupCopy then
-        local name, num = regex.match(fullname, [[^(.*)\.(\d+)\.bak$]], nil, "i")
-        if not name then name, num = fullname, 0 end
+        local name, num = regex.match(ExtendedName, [[^(.*)\.(\d+)\.bak$]], nil, "i")
+        if not name then name, num = ExtendedName, 0 end
         num = tonumber(num)
         for k = num+1, 999 do
           local bakname = ("%s.%03d.bak"):format(name, k)
-          if win.RenameFile(fullname, bakname) then break end
+          if win.RenameFile(ExtendedName, bakname) then break end
         end
       else
-        win.SetFileAttr(fullname, "")
-        win.DeleteFile(fullname)
+        win.SetFileAttr(ExtendedName, "")
+        win.DeleteFile(ExtendedName)
       end
-      win.RenameFile(tmpname, fullname)
-      win.SetFileAttr(fullname, fdata.FileAttributes)
+      win.RenameFile(tmpname, ExtendedName)
+      win.SetFileAttr(ExtendedName, fdata.FileAttributes)
       cdata.nFilesModified = cdata.nFilesModified + 1
       cdata.nRepsTotal = cdata.nRepsTotal + nReps
     end
@@ -1397,7 +1399,7 @@ end
 
 -- cdata.sOp: operation - either "grep" or "count"
 local function Grep_ProcessFile (fdata, fullname, cdata)
-  local fp = io.open(fullname, "rb")
+  local fp = io.open(fullname,"rb") or io.open([[\\?\]]..fullname,"rb")
   if not fp then
     MsgCannotOpenFile(fullname)
     return

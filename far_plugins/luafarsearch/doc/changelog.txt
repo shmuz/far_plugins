@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-10-22, v3.43.0
+  [+] Panels: 3 file attributes (encrypted, not indexed, virtual) were not supported by File Filter.
+  [+] Panels (Grep, Replace, Rename): these functions now support paths > 255 characters.
+
 2018-10-21, v3.42.1
   [!] Added link-stage flag: -static-libgcc.
       Without this flag the plugin required LIBGCC_S_SJLJ-1.DLL on Far x86.

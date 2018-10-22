@@ -514,12 +514,15 @@ local function DoAction (Params, aDir, aLog)
       end
       if sChoice ~= "no" then
         local newfullpath = path .. newname
-        local res, err = win.RenameFile(fullpath, newfullpath)
+        local ExtPath = [[\\?\]] .. path
+        local ExtFullpath = [[\\?\]] .. fullpath
+        local ExtNewfullpath  = [[\\?\]] .. newfullpath
+        local res, err = win.RenameFile(ExtFullpath, ExtNewfullpath)
         if err then
           err = err:gsub("[\r\n]+", " ")
-          aLog:AddItem(("--%q, %q, %q, --ERROR: %s"):format(path,oldname,newname,err))
+          aLog:AddItem(("--%q, %q, %q, --ERROR: %s"):format(ExtPath,oldname,newname,err))
         else
-          aLog:AddItem(("  %q, %q, %q,"):format(path,oldname,newname))
+          aLog:AddItem(("  %q, %q, %q,"):format(ExtPath,oldname,newname))
         end
         if res then
           nReps = nReps + 1

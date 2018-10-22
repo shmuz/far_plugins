@@ -55,17 +55,20 @@ static double L64toDouble (unsigned low, unsigned high)
 
 static void PushAttrString(lua_State *L, int attr)
 {
-  char buf[16], *p = buf;
-  if(attr & FILE_ATTRIBUTE_ARCHIVE)       *p++ = 'a';
-  if(attr & FILE_ATTRIBUTE_READONLY)      *p++ = 'r';
-  if(attr & FILE_ATTRIBUTE_HIDDEN)        *p++ = 'h';
-  if(attr & FILE_ATTRIBUTE_SYSTEM)        *p++ = 's';
-  if(attr & FILE_ATTRIBUTE_DIRECTORY)     *p++ = 'd';
-  if(attr & FILE_ATTRIBUTE_COMPRESSED)    *p++ = 'c';
-  if(attr & FILE_ATTRIBUTE_OFFLINE)       *p++ = 'o';
-  if(attr & FILE_ATTRIBUTE_TEMPORARY)     *p++ = 't';
-  if(attr & FILE_ATTRIBUTE_SPARSE_FILE)   *p++ = 'p';
-  if(attr & FILE_ATTRIBUTE_REPARSE_POINT) *p++ = 'e';
+  char buf[32], *p = buf;
+  if (attr & FILE_ATTRIBUTE_ARCHIVE)             *p++ = 'a';
+  if (attr & FILE_ATTRIBUTE_COMPRESSED)          *p++ = 'c';
+  if (attr & FILE_ATTRIBUTE_DIRECTORY)           *p++ = 'd';
+  if (attr & FILE_ATTRIBUTE_REPARSE_POINT)       *p++ = 'e';
+  if (attr & FILE_ATTRIBUTE_HIDDEN)              *p++ = 'h';
+  if (attr & FILE_ATTRIBUTE_NOT_CONTENT_INDEXED) *p++ = 'i';
+  if (attr & FILE_ATTRIBUTE_ENCRYPTED)           *p++ = 'n';
+  if (attr & FILE_ATTRIBUTE_OFFLINE)             *p++ = 'o';
+  if (attr & FILE_ATTRIBUTE_SPARSE_FILE)         *p++ = 'p';
+  if (attr & FILE_ATTRIBUTE_READONLY)            *p++ = 'r';
+  if (attr & FILE_ATTRIBUTE_SYSTEM)              *p++ = 's';
+  if (attr & FILE_ATTRIBUTE_TEMPORARY)           *p++ = 't';
+  if (attr & FILE_ATTRIBUTE_VIRTUAL)             *p++ = 'v';
   lua_pushlstring(L, buf, p-buf);
 }
 
@@ -75,26 +78,32 @@ static void SetAttrWords(const char* str, DWORD* incl, DWORD* excl)
   for (; *str; str++) {
     char c = *str;
     if      (c == 'a')  *incl |= FILE_ATTRIBUTE_ARCHIVE;
-    else if (c == 'r')  *incl |= FILE_ATTRIBUTE_READONLY;
-    else if (c == 'h')  *incl |= FILE_ATTRIBUTE_HIDDEN;
-    else if (c == 's')  *incl |= FILE_ATTRIBUTE_SYSTEM;
-    else if (c == 'd')  *incl |= FILE_ATTRIBUTE_DIRECTORY;
     else if (c == 'c')  *incl |= FILE_ATTRIBUTE_COMPRESSED;
-    else if (c == 'o')  *incl |= FILE_ATTRIBUTE_OFFLINE;
-    else if (c == 't')  *incl |= FILE_ATTRIBUTE_TEMPORARY;
-    else if (c == 'p')  *incl |= FILE_ATTRIBUTE_SPARSE_FILE;
+    else if (c == 'd')  *incl |= FILE_ATTRIBUTE_DIRECTORY;
     else if (c == 'e')  *incl |= FILE_ATTRIBUTE_REPARSE_POINT;
+    else if (c == 'h')  *incl |= FILE_ATTRIBUTE_HIDDEN;
+    else if (c == 'i')  *incl |= FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+    else if (c == 'n')  *incl |= FILE_ATTRIBUTE_ENCRYPTED;
+    else if (c == 'o')  *incl |= FILE_ATTRIBUTE_OFFLINE;
+    else if (c == 'p')  *incl |= FILE_ATTRIBUTE_SPARSE_FILE;
+    else if (c == 'r')  *incl |= FILE_ATTRIBUTE_READONLY;
+    else if (c == 's')  *incl |= FILE_ATTRIBUTE_SYSTEM;
+    else if (c == 't')  *incl |= FILE_ATTRIBUTE_TEMPORARY;
+    else if (c == 'v')  *incl |= FILE_ATTRIBUTE_VIRTUAL;
 
     else if (c == 'A')  *excl |= FILE_ATTRIBUTE_ARCHIVE;
-    else if (c == 'R')  *excl |= FILE_ATTRIBUTE_READONLY;
-    else if (c == 'H')  *excl |= FILE_ATTRIBUTE_HIDDEN;
-    else if (c == 'S')  *excl |= FILE_ATTRIBUTE_SYSTEM;
-    else if (c == 'D')  *excl |= FILE_ATTRIBUTE_DIRECTORY;
     else if (c == 'C')  *excl |= FILE_ATTRIBUTE_COMPRESSED;
-    else if (c == 'O')  *excl |= FILE_ATTRIBUTE_OFFLINE;
-    else if (c == 'T')  *excl |= FILE_ATTRIBUTE_TEMPORARY;
-    else if (c == 'P')  *excl |= FILE_ATTRIBUTE_SPARSE_FILE;
+    else if (c == 'D')  *excl |= FILE_ATTRIBUTE_DIRECTORY;
     else if (c == 'E')  *excl |= FILE_ATTRIBUTE_REPARSE_POINT;
+    else if (c == 'H')  *excl |= FILE_ATTRIBUTE_HIDDEN;
+    else if (c == 'I')  *excl |= FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+    else if (c == 'N')  *excl |= FILE_ATTRIBUTE_ENCRYPTED;
+    else if (c == 'O')  *excl |= FILE_ATTRIBUTE_OFFLINE;
+    else if (c == 'P')  *excl |= FILE_ATTRIBUTE_SPARSE_FILE;
+    else if (c == 'R')  *excl |= FILE_ATTRIBUTE_READONLY;
+    else if (c == 'S')  *excl |= FILE_ATTRIBUTE_SYSTEM;
+    else if (c == 'T')  *excl |= FILE_ATTRIBUTE_TEMPORARY;
+    else if (c == 'V')  *excl |= FILE_ATTRIBUTE_VIRTUAL;
   }
 }
 
