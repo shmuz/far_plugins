@@ -239,7 +239,7 @@ end
 ----------------------------------------------------------------------------------------------------
 -- @param InitDir       : starting directory to search its contents recursively
 -- @param UserFunc      : function to call when a file/subdirectory is found
--- @param flags         : table that can have boolean fields 'symlinks' and 'recurse'
+-- @param Flags         : table that can have boolean fields 'symlinks' and 'recurse'
 -- @param FileFilter    : userdata object having a method 'IsFileInFilter'
 -- @param fFileMask     : function that checks the current item's name
 -- @param fDirMask      : function that determines whether to search in a given directory
@@ -247,47 +247,42 @@ end
 -- @param tRecurseGuard : table (set) for preventing repeated scanning of the same directories
 ----------------------------------------------------------------------------------------------------
 local FileIterator = _Plugin.Finder.Files
-local function RecursiveSearch (InitDir, UserFunc, flags, FileFilter, fFileMask, fDirMask,
-                                fDirExMask, tRecurseGuard)
+local function RecursiveSearch (InitDir, UserFunc, Flags, FileFilter,
+                                fFileMask, fDirMask, fDirExMask, tRecurseGuard)
 
-  local bSymLinks = flags and flags.symlinks
-  local bRecurse = flags and flags.recurse
+  local bSymLinks = Flags and Flags.symlinks
+  local bRecurse = Flags and Flags.recurse
 
   local function Recurse (InitDir)
     local bSearchInThisDir = fDirMask(InitDir)
-    local SearchHandle
-    local Ret
 
     for fdata, hndl in FileIterator( [[\\?\]]..InitDir..[[\*]] ) do
-      SearchHandle = hndl
       if fdata.FileName ~= "." and fdata.FileName ~= ".." then
         local fullname = InitDir .. "\\" .. fdata.FileName
         if not FileFilter or FileFilter:IsFileInFilter(fdata) then
-          if bSearchInThisDir and fFileMask(fdata.FileName) then
-            if UserFunc(fdata, fullname) == "break" then
-              Ret = true; break
-            end
-          else
-            UserFunc("display_state", fullname)
+          local param = bSearchInThisDir and fFileMask(fdata.FileName) and fdata or "display_state"
+          if UserFunc(param,fullname) == "break" then
+            hndl:FindClose(); return true
           end
           if bRecurse and fdata.FileAttributes:find("d") and not fDirExMask(fullname) then
             local realDir = far.GetReparsePointInfo(fullname) or fullname
             if not tRecurseGuard[realDir] then
               if bSymLinks or not fdata.FileAttributes:find("e") then
                 tRecurseGuard[realDir] = true
-                Ret = Recurse(realDir)
-                if Ret then break end
+                if Recurse(realDir) then
+                  hndl:FindClose(); return true
+                end
               end
             end
           end
         else
-          UserFunc("display_state", fullname)
+          if UserFunc("display_state",fullname) == "break" then
+            hndl:FindClose(); return true
+          end
         end
       end
     end
-
-    if SearchHandle then SearchHandle:FindClose() end
-    return Ret
+    return false
   end
 
   InitDir = InitDir:gsub("[/\\]+$", "\\")

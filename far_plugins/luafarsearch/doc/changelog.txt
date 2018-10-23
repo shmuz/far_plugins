@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-10-23, v3.43.1
+  [!] Panels (Find): the operation was resuming after user confirmation of its cancelling.
+  [+] Panels: a file attribute (no scrub data) was not supported by File Filter.
+
 2018-10-22, v3.43.0
   [+] Panels: 3 file attributes (encrypted, not indexed, virtual) were not supported by File Filter.
   [+] Panels (Grep, Replace, Rename): these functions now support paths > 255 characters.
@@ -14,7 +18,7 @@
   [+] Panels (Find): > 3.5 times speed increase in searching files by name,
       provided those names are already in Windows cache.
       This is mainly due to using finder.Files() instead of far.RecursiveSearch().
-  [-] Panels: filters by "change time" and "more than one hardlink" currently do not work.
+  [-] Panels (Find): filters by "change time" and "more than one hardlink" currently do not work.
       This is the consequence of using finder.Files().
   [*] Minimal required Far Manager build changed from 4425 to 4878 after some testing.
       The reason: FSF.GetReparsePointInfo() did not work in the range of builds [4425-4876].

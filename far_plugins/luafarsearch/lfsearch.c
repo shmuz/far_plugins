@@ -3,6 +3,10 @@
 #include <lua.h>
 #include <luafar.h>
 
+#ifndef FILE_ATTRIBUTE_NO_SCRUB_DATA
+#define FILE_ATTRIBUTE_NO_SCRUB_DATA 0x20000
+#endif
+
 #ifdef _MSC_VER
 #define LUAPLUG WINAPI
 #else
@@ -53,7 +57,7 @@ static double L64toDouble (unsigned low, unsigned high)
   return result;
 }
 
-static void PushAttrString(lua_State *L, int attr)
+void PushAttrString(lua_State *L, int attr)
 {
   char buf[32], *p = buf;
   if (attr & FILE_ATTRIBUTE_ARCHIVE)             *p++ = 'a';
@@ -68,6 +72,7 @@ static void PushAttrString(lua_State *L, int attr)
   if (attr & FILE_ATTRIBUTE_READONLY)            *p++ = 'r';
   if (attr & FILE_ATTRIBUTE_SYSTEM)              *p++ = 's';
   if (attr & FILE_ATTRIBUTE_TEMPORARY)           *p++ = 't';
+  if (attr & FILE_ATTRIBUTE_NO_SCRUB_DATA)       *p++ = 'u';
   if (attr & FILE_ATTRIBUTE_VIRTUAL)             *p++ = 'v';
   lua_pushlstring(L, buf, p-buf);
 }
@@ -89,6 +94,7 @@ static void SetAttrWords(const char* str, DWORD* incl, DWORD* excl)
     else if (c == 'r')  *incl |= FILE_ATTRIBUTE_READONLY;
     else if (c == 's')  *incl |= FILE_ATTRIBUTE_SYSTEM;
     else if (c == 't')  *incl |= FILE_ATTRIBUTE_TEMPORARY;
+    else if (c == 'u')  *incl |= FILE_ATTRIBUTE_NO_SCRUB_DATA;
     else if (c == 'v')  *incl |= FILE_ATTRIBUTE_VIRTUAL;
 
     else if (c == 'A')  *excl |= FILE_ATTRIBUTE_ARCHIVE;
@@ -103,6 +109,7 @@ static void SetAttrWords(const char* str, DWORD* incl, DWORD* excl)
     else if (c == 'R')  *excl |= FILE_ATTRIBUTE_READONLY;
     else if (c == 'S')  *excl |= FILE_ATTRIBUTE_SYSTEM;
     else if (c == 'T')  *excl |= FILE_ATTRIBUTE_TEMPORARY;
+    else if (c == 'U')  *excl |= FILE_ATTRIBUTE_NO_SCRUB_DATA;
     else if (c == 'V')  *excl |= FILE_ATTRIBUTE_VIRTUAL;
   }
 }
