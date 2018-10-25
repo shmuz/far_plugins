@@ -256,9 +256,14 @@ local function RecursiveSearch (InitDir, UserFunc, Flags, FileFilter,
   local function Recurse (InitDir)
     local bSearchInThisDir = fDirMask(InitDir)
 
-    for fdata, hndl in FileIterator( [[\\?\]]..InitDir..[[\*]] ) do
+    local findspec = InitDir:find([[^\\]])
+        and InitDir..[[\*]] -- do not prepend \\?\ for a network drive (it will not work)
+        or  [[\\?\]]..InitDir..[[\*]]
+    local SlashInitDir = InitDir:find("\\$") and InitDir or InitDir.."\\"
+
+    for fdata, hndl in FileIterator(findspec) do
       if fdata.FileName ~= "." and fdata.FileName ~= ".." then
-        local fullname = InitDir .. "\\" .. fdata.FileName
+        local fullname = SlashInitDir .. fdata.FileName
         if not FileFilter or FileFilter:IsFileInFilter(fdata) then
           local param = bSearchInThisDir and fFileMask(fdata.FileName) and fdata or "display_state"
           if UserFunc(param,fullname) == "break" then
@@ -285,7 +290,6 @@ local function RecursiveSearch (InitDir, UserFunc, Flags, FileFilter,
     return false
   end
 
-  InitDir = InitDir:gsub("[/\\]+$", "\\")
   local realDir = far.GetReparsePointInfo(InitDir) or InitDir
   tRecurseGuard[realDir] = true
   Recurse(realDir)
@@ -963,7 +967,7 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
       -- note: filedata can be nil for root directories
       local isFile = filedata and not filedata.FileAttributes:find("d")
       ---------------------------------------------------------------------------
-      if isFile or ((area == "FromCurrFolder" or area == "OnlyCurrFolder") and bPlugin) then
+      if isFile or ((area == "FromCurrFolder" or area == "OnlyCurrFolder") and bPlugin and filedata) then
         if not FileFilter or FileFilter:IsFileInFilter(filedata) then
           if fFileMask(filedata.FileName) then
             Search_ProcessFile(filedata, item)

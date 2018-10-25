@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-10-25, v3.43.2
+  [!] Issue #13: Panel Find not working in Network panels.
+
 2018-10-23, v3.43.1
   [!] Panels (Find): the operation was resuming after user confirmation of its cancelling.
   [+] Panels: a file attribute (no scrub data) was not supported by File Filter.
