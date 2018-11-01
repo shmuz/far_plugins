@@ -277,7 +277,7 @@ local function FoldersHistory_CanClose (self, item, breakkey)
   end
   ----------------------------------------------------------------------------
   if item.PluginId then
-    panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, item.Source)
+    panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, item.PanelDir)
     return true
   end
   ----------------------------------------------------------------------------
@@ -358,12 +358,9 @@ local function get_history (aConfig, obj)
   local plugin_items = hst:field("items")
   local settings = hst:field("settings")
   for _,v in ipairs(plugin_items) do
-    if v.text then
-      local index = v.Param or v.text
-      if not map[index] then
-        table.insert(menu_items, v)
-        map[index] = v
-      end
+    if v.text and not map[v.text] then
+      table.insert(menu_items, v)
+      map[v.text] = v
     end
   end
 
@@ -371,33 +368,38 @@ local function get_history (aConfig, obj)
   local last_time = settings.last_time or 0
   local far_settings = assert(far.CreateSettings("far"))
 
-  local function TryAddPluginItem (trg, src)
-    local command = KnownPlugins[src.PluginId]
-    if command then
-      trg.PluginId = src.PluginId
-      trg.Param    = src.Param
-      trg.Source   = src
-      trg.text     = command .. src.File .. ":" .. src.Name
-    end
-  end
-
   local function AddFarItems (aFarHistoryType, aType)
     local far_items = far_settings:Enum(aFarHistoryType)
     for _,v in ipairs(far_items) do
-      if v.PluginId == FarId or KnownPlugins[v.PluginId] then -- filter out archive plugins' items
-        local index = (v.PluginId == FarId) and v.Name or v.Param
-        local item = map[index]
+      if v.PluginId == FarId then
+      -- FAR item
+        local item = map[v.Name]
         if item then
           if v.Time > item.time then
             item.time = v.Time
             item.typ = aType
-            TryAddPluginItem(item, v)
           end
-        elseif v.Time >= last_time then -- add only new items
-          item = { text=v.Name, time=v.Time, typ=aType }
-          TryAddPluginItem(item, v)
-          table.insert(menu_items, item)
-          map[index] = item
+        else
+          if v.Time >= last_time then
+            item = { text=v.Name, time=v.Time, typ=aType }
+            table.insert(menu_items, item)
+            map[v.Name] = item
+          end
+        end
+      else
+      -- plugin item
+        if v.Time >= last_time then
+          local name = KnownPlugins[v.PluginId]
+          if name then
+            local item = {
+              PluginId = v.PluginId;
+              PanelDir = v;
+              text     = name..v.File..":"..v.Name;
+              time     = v.Time;
+              typ      = aType;
+            }
+            table.insert(menu_items, item)
+          end
         end
       end
     end

@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-11-01, v3.10.1
+  [!] Folders history: fix handling of list items containing plugins' paths.
+  [*] Refactoring.
+
 2018-11-01, v3.10.0
   [+] Folders history: support plugins Arclite and Polygon.
 
