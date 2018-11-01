@@ -10,7 +10,12 @@ local LibHistory = require "far2.history"
 local M          = Utils.RunInternalScript("lfh_message")
 local F          = far.Flags
 local FarId      = ("\0"):rep(16)
-local NetBoxId   = win.Uuid("42E4AEB1-A230-44F4-B33C-F195BB654931")
+
+local KnownPlugins = {
+  [win.Uuid("42E4AEB1-A230-44F4-B33C-F195BB654931")] = "NetBox:";
+  [win.Uuid("D4BC5EA7-8229-4FFE-AAC1-5A4F51A0986A")] = "Polygon:";
+  [win.Uuid("65642111-AA69-4B84-B4B8-9249579EC4FA")] = "Arclite:";
+}
 
 local DefaultCfg = {
   bDynResize  = true,
@@ -272,9 +277,7 @@ local function FoldersHistory_CanClose (self, item, breakkey)
   end
   ----------------------------------------------------------------------------
   if item.PluginId then
-    local param = item.Param:gsub("/\1/", "/")
-    local s = ("Plugin.Command(%q,%q)"):format(win.Uuid(item.PluginId), param)
-    far.MacroPost(s, "KMFLAGS_ENABLEOUTPUT")
+    panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, item.Source)
     return true
   end
   ----------------------------------------------------------------------------
@@ -368,29 +371,31 @@ local function get_history (aConfig, obj)
   local last_time = settings.last_time or 0
   local far_settings = assert(far.CreateSettings("far"))
 
-  local function TryAddNetboxItem (trg, src)
-    if src.PluginId == NetBoxId then
-      trg.text     = "NetBox:" .. src.File .. ":" .. src.Name
-      trg.Param    = src.Param
+  local function TryAddPluginItem (trg, src)
+    local command = KnownPlugins[src.PluginId]
+    if command then
       trg.PluginId = src.PluginId
+      trg.Param    = src.Param
+      trg.Source   = src
+      trg.text     = command .. src.File .. ":" .. src.Name
     end
   end
 
   local function AddFarItems (aFarHistoryType, aType)
     local far_items = far_settings:Enum(aFarHistoryType)
     for _,v in ipairs(far_items) do
-      if v.PluginId == FarId or v.PluginId == NetBoxId then -- filter out archive plugins' items
+      if v.PluginId == FarId or KnownPlugins[v.PluginId] then -- filter out archive plugins' items
         local index = (v.PluginId == FarId) and v.Name or v.Param
         local item = map[index]
         if item then
           if v.Time > item.time then
             item.time = v.Time
             item.typ = aType
-            TryAddNetboxItem(item, v)
+            TryAddPluginItem(item, v)
           end
         elseif v.Time >= last_time then -- add only new items
           item = { text=v.Name, time=v.Time, typ=aType }
-          TryAddNetboxItem(item, v)
+          TryAddPluginItem(item, v)
           table.insert(menu_items, item)
           map[index] = item
         end

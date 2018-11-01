@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-11-01, v3.10.0
+  [+] Folders history: support plugins Arclite and Polygon.
+
 2018-01-23, v3.9.1
   [+] Ctrl-F8 deletes non-existent items in View/Edit and Folders menus.
 
