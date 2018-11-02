@@ -391,14 +391,24 @@ local function get_history (aConfig, obj)
         if v.Time >= last_time then
           local name = KnownPlugins[v.PluginId]
           if name then
-            local item = {
-              PluginId = v.PluginId;
-              PanelDir = v;
-              text     = name..v.File..":"..v.Name;
-              time     = v.Time;
-              typ      = aType;
-            }
-            table.insert(menu_items, item)
+            local text = name..v.File..":"..v.Name
+            local item = map[text]
+            if item then
+              if v.Time > item.time then
+                item.time = v.Time
+                item.typ = aType
+              end
+            else
+              item = {
+                PluginId = v.PluginId;
+                PanelDir = v;
+                text     = text;
+                time     = v.Time;
+                typ      = aType;
+              }
+              table.insert(menu_items, item)
+              map[text] = item
+            end
           end
         end
       end
