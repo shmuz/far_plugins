@@ -92,19 +92,20 @@ Macro {
   action = function() LFS_Panels "panel" end
 }
 
+-- This macro works best when "Show line numbers" Grep option is used.
+-- When this option is off the jump occurs to the beginning of the file.
 Macro {
   description="Jump from Grep results to file and position under cursor";
   area="Editor"; key="CtrlShiftG";
   action=function()
     local lnum = editor.GetString(nil,nil,3):match("^(%d+)[:%-]")
-    if not lnum then return end
     local EI = editor.GetInfo()
-    for n = EI.CurLine-1,1,-1 do
+    for n = EI.CurLine,1,-1 do
       local fname = editor.GetString(nil,n,3):match("^%[%d+%]%s+(.+)")
       if fname then
         editor.Editor(fname,nil,nil,nil,nil,nil,
           {EF_NONMODAL=1,EF_IMMEDIATERETURN=1,EF_ENABLE_F6=1,EF_OPENMODE_USEEXISTING=1},
-          lnum, math.max(1, EI.CurPos-lnum:len()-1))
+          lnum or 1, lnum and math.max(1, EI.CurPos-lnum:len()-1) or 1)
         break
       end
     end

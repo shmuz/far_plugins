@@ -2,6 +2,12 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-11-07, v3.43.3
+  [!] Panels (Rename): in some cases the field "Before" displayed its text partially (or not at all),
+                       due to incorrectly calculated LeftPos in Far Manager.
+                       This fix is similar to one in v3.40.3.
+  [!] A fix in macros\lfsearch.lua ("Jump from Grep results").
+
 2018-10-25, v3.43.2
   [!] Issue #13: Panel Find not working in Network panels.
 

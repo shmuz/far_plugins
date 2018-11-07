@@ -753,24 +753,24 @@ end
 local function set_progress (LEN, ratio)
   local uchar1, uchar2 = uchar(9608), uchar(9617)
   local len = math.floor(ratio*LEN + 0.5)
-  local text = uchar1:rep(len) .. uchar2:rep(LEN-len) .. (" %3d%%"):format(ratio*100)
+  local text = uchar1:rep(len) .. uchar2:rep(LEN-len) .. ("%3d%%"):format(ratio*100)
   return text
 end
 
 
 local DisplaySearchState do
   local lastclock = 0
-  local WID, W1 = 60, 3
-  local W2 = WID - W1 - 3
+  local wMsg, wHead = 60, 10
+  local wTail = wMsg - wHead - 3
   DisplaySearchState = function (fullname, cntFound, cntTotal, ratio, userbreak)
     local newclock = far.FarClock()
     if newclock >= lastclock then
       lastclock = newclock + 2e5 -- period = 0.2 sec
       local len = fullname:len()
-      local s = len<=WID and fullname..(" "):rep(WID-len) or
-                fullname:sub(1,W1).. "..." .. fullname:sub(-W2)
+      local s = len<=wMsg and fullname..(" "):rep(wMsg-len) or
+                fullname:sub(1,wHead).. "..." .. fullname:sub(-wTail)
       far.Message(
-        (s.."\n") .. (set_progress(W2, ratio).."\n") .. (M.MFilesFound..cntFound.."/"..cntTotal),
+        (s.."\n") .. (set_progress(wMsg-4, ratio).."\n") .. (M.MFilesFound..cntFound.."/"..cntTotal),
         M.MTitleSearching, "")
       return userbreak and userbreak:ConfirmEscape()
     end
