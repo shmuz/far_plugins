@@ -849,7 +849,6 @@ end
 function Panel:GetOpenPanelInfo (Handle)
   local OPIF_SAFE_FLAGS = bor(F.OPIF_ADDDOTS, F.OPIF_SHOWNAMESONLY)
   local OPIF_COMMON_FLAGS = bor(OPIF_SAFE_FLAGS, F.OPIF_REALNAMES,
-    F.OPIF_DISABLEFILTER,
     F.OPIF_EXTERNALGET, F.OPIF_EXTERNALDELETE, F.OPIF_SHORTCUT)
   -----------------------------------------------------------------------------
   --far.Message"GetOpenPanelInfo" --> this crashes FAR if enter then exit viewer/editor

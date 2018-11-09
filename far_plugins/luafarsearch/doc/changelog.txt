@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-11-09, v3.43.4
+  [*] Search results panel: enable file filter.
+
 2018-11-07, v3.43.3
   [!] Panels (Rename): in some cases the field "Before" displayed its text partially (or not at all),
                        due to incorrectly calculated LeftPos in Far Manager.
