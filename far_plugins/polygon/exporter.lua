@@ -437,20 +437,20 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
 end
 
 
-function exporter:export_data_as_dump(Params)
+function exporter:export_data_as_dump(Args)
   local s1 = ".dump"
-  if Params.rowids  then s1 = s1 .. " --preserve-rowids"; end
-  if Params.newline then s1 = s1 .. " --newlines"; end
+  if Args.rowids  then s1 = s1 .. " --preserve-rowids"; end
+  if Args.newline then s1 = s1 .. " --newlines"; end
 
   local t = { [1]='"'..self._file_name..'"'; }
-  if Params.dumpall then
+  if Args.dumpall then
     t[2] = '"'..s1..'"'
   else
-    for i,item in ipairs(Params.items) do
+    for i,item in ipairs(Args.items) do
       t[i+1] = '"'..s1..' '..item.FileName:normalize()..'"'
     end
   end
-  t[#t+1] = '1>"'..Params.file_name..'" 2>NUL'
+  t[#t+1] = '1>"'..Args.file_name..'" 2>NUL'
   local cmd = table.concat(t, " ")
   ------------------------
   far.Message("Please wait...", "", "")

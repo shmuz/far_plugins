@@ -9,7 +9,7 @@
 "&Prefix:"
 "Load &user modules"
 "Enable &extensions"
-"Honor &foreign keys"
+"Do not honor &foreign keys"
 
 "Name"
 "Type"
@@ -49,6 +49,7 @@
 "Save"
 "Cancel"
 "OK"
+"No;Yes"
 "Overwrite"
 "The file already exists"
 
@@ -57,3 +58,7 @@
 "&Reset"
 
 "Panel Filter"
+
+"Load the modules specified in this database file?"
+"Security Warning"
+"Module load: file not found"

@@ -8,7 +8,7 @@ local names = {
   "ps_cfg_prefix",
   "ps_cfg_user_modules",
   "ps_cfg_extensions",
-  "ps_cfg_foreign_keys",
+  "ps_cfg_no_foreign_keys",
 
   "ps_pt_name",
   "ps_pt_type",
@@ -48,6 +48,7 @@ local names = {
   "ps_save",
   "ps_cancel",
   "ps_ok",
+  "ps_no_yes",
   "ps_overwrite",
   "ps_already_exists",
 
@@ -55,7 +56,11 @@ local names = {
   "ps_set_columns",
   "ps_reset_columns",
 
-  "ps_panel_filter"
+  "ps_panel_filter",
+
+  "ps_load_modules_query",
+  "ps_security_warning",
+  "ps_module_not_found",
 }
 
 local indexes = {}

@@ -139,10 +139,10 @@ local function CreateAddModule (LoadedModules)
 end
 
 
-local function LoadOneUserFile (FindData, FullPath, AddModule, gmeta)
-  if FindData.FileAttributes:find("d") then return end
-  local f, msg = loadfile(FullPath)
-  if not f then
+local function LoadOneUserFile (FileData, FullPath, AddModule, gmeta)
+  if FileData.FileAttributes:find("d") then return end
+  local userchunk, msg = loadfile(FullPath)
+  if not userchunk then
     ErrMsg("LOAD: "..FullPath.."\n"..msg)
     return
   end
@@ -151,8 +151,8 @@ local function LoadOneUserFile (FindData, FullPath, AddModule, gmeta)
     NoUserModule = function() end;
   }
   setmetatable(env, gmeta)
-  setfenv(f, env)
-  local ok, msg = xpcall(function() return f(FullPath) end, debug.traceback)
+  setfenv(userchunk, env)
+  local ok, msg = xpcall(function() return userchunk(FullPath) end, debug.traceback)
   if ok then
     env.UserModule, env.NoUserModule = nil
   else
@@ -163,20 +163,51 @@ end
 
 
 local function LoadModules(object)
-  -- Load modules
+  -- Load common modules (from %farprofile%\PluginsData\polygon)
   local Modules = {}
+  local AddModule = CreateAddModule(Modules)
+  local gmeta = {__index=_G}
   local dir = win.GetEnv("FARPROFILE")
   if dir and dir~="" then
     dir = dir .. "\\PluginsData\\polygon"
-    far.RecursiveSearch(dir, "*.lua", LoadOneUserFile, F.FRS_RECUR,
-                        CreateAddModule(Modules), {__index=_G})
+    far.RecursiveSearch(dir, "*.lua", LoadOneUserFile, F.FRS_RECUR, AddModule, gmeta)
   end
+
+  -- Load modules specified in the database itself in a special table
+  local obj_info = object:get_info()
+  local tablename = ("modules-"..win.Uuid(PluginGuid):lower()):normalize()
+  local table_exists
+  local query = "SELECT name FROM sqlite_master WHERE type='table' AND LOWER(name)="..tablename
+  for item in obj_info.db:nrows(query) do table_exists=true end
+  if table_exists then
+    local collector = {}
+    local db_dir = obj_info.file_name:gsub("[^\\]+$","")
+    query = "SELECT * FROM "..tablename.." ORDER BY load_priority DESC"
+    for item in obj_info.db:nrows(query) do
+      if item.active == 1 and type(item.script) == "string" then
+        table.insert(collector, item)
+      end
+    end
+    if #collector>0 and 2==far.Message(M.ps_load_modules_query,M.ps_security_warning,M.ps_no_yes,"w") then
+      for _,item in ipairs(collector) do
+        local fullname = item.script:match("^[a-zA-Z]:") and item.script or db_dir..item.script
+        local filedata = win.GetFileInfo(fullname)
+        if filedata then
+          LoadOneUserFile(filedata, fullname, AddModule, gmeta)
+        else
+          ErrMsg(fullname, M.ps_module_not_found)
+        end
+      end
+    end
+  end
+
   -- Sort modules
   for _,mod in ipairs(Modules) do
     if type(mod.Priority) ~= "number" then mod.Priority = 50 end
     mod.Priority = math.min(100, math.max(mod.Priority, 0))
   end
   table.sort(Modules, function(a,b) return a.Priority > b.Priority; end)
+
   -- Call OnOpenConnection()
   for _,mod in ipairs(Modules) do
     if type(mod.OnOpenConnection) == "function" then
@@ -215,15 +246,39 @@ function MyExport.Analyse(info)
 end
 
 
-local function OpenFromCommandLine(name)
-  local str = name:gsub("\"", ""):gsub("^%s+", ""):gsub("%s+$", "")
-  if str == "" then
-    str = ":memory:"
-  else
-    str = str:gsub("%%(.-)%%", win.GetEnv) -- expand environment variables
-    str = far.ConvertPath(str, "CPM_FULL")
+local function AddOptions(flags, Opt)
+  if type(flags) == "string" then
+    Opt = Opt or {}
+    Opt.user_modules = flags:find("u") and true
+    Opt.extensions   = flags:find("e") and true
+    Opt.foreign_keys = not flags:find("F")
   end
-  return str
+  return Opt
+end
+
+
+-- options must precede file name
+local function OpenFromCommandLine(str)
+  local file, Opt
+  local from = 1
+  while true do
+    local start1, end1, first, flags = string.find(str, "(%S)(%S*)", from)
+    if first == "-" then
+      Opt = AddOptions(flags, Opt)
+      from = end1 + 1
+    else
+      file = string.sub(str, from)
+      break
+    end
+  end
+  file = file:gsub("\"", ""):gsub("^%s+", ""):gsub("%s+$", "")
+  if file == "" then
+    file = ":memory:"
+  else
+    file = file:gsub("%%(.-)%%", win.GetEnv) -- expand environment variables
+    file = far.ConvertPath(file, "CPM_FULL")
+  end
+  return file, Opt
 end
 
 
@@ -265,12 +320,7 @@ local function OpenFromMacro(params)
   if params[1] == "open" and type(params[2]) == "string" then
     file_name = params[2]
     local flags = params[3]
-    if type(flags) == "string" then
-      Opt = {}
-      Opt.user_modules = flags:find("u") and true
-      Opt.extensions   = flags:find("e") and true
-      Opt.foreign_keys = flags:find("f") and true
-    end
+    Opt = AddOptions(flags)
 
   -- Plugin.Call(<guid>, "lua", [<whatpanel>], <Lua code>)
   elseif params[1] == "lua" and type(params[3]) == "string" then
@@ -302,7 +352,7 @@ function MyExport.Open(OpenFrom, Guid, Item)
   elseif OpenFrom == F.OPEN_PLUGINSMENU then
     file_name = OpenFromPluginsMenu()
   elseif OpenFrom == F.OPEN_COMMANDLINE then
-    file_name = OpenFromCommandLine(Item)
+    file_name, Opt = OpenFromCommandLine(Item)
   elseif OpenFrom == F.OPEN_FROMMACRO then
     file_name, Opt = OpenFromMacro(Item)
   end

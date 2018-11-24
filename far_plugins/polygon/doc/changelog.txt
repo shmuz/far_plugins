@@ -1,3 +1,9 @@
+2018-11-24, v.0.9.0
+   1. Option "f" (honor foreign keys) removed, option "F" (do not honor foreign keys) added.
+      The default is to honor.
+   2. Options can be passed from the command line.
+   3. User modules can be also loaded from files specified in a special table in the database file.
+
 2018-09-24, v.0.8.0
    1. A new dialog: "Data dump".
       An external file sqlite3.exe is required for this functionality.
