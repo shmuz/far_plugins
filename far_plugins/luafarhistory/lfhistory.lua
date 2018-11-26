@@ -10,12 +10,7 @@ local LibHistory = require "far2.history"
 local M          = Utils.RunInternalScript("lfh_message")
 local F          = far.Flags
 local FarId      = ("\0"):rep(16)
-
-local KnownPlugins = {
-  [win.Uuid("42E4AEB1-A230-44F4-B33C-F195BB654931")] = "NetBox:";
-  [win.Uuid("D4BC5EA7-8229-4FFE-AAC1-5A4F51A0986A")] = "Polygon:";
-  [win.Uuid("65642111-AA69-4B84-B4B8-9249579EC4FA")] = "Arclite:";
-}
+local PlugTitleCache = {}
 
 local DefaultCfg = {
   bDynResize  = true,
@@ -277,8 +272,13 @@ local function FoldersHistory_CanClose (self, item, breakkey)
   end
   ----------------------------------------------------------------------------
   if item.PluginId then
-    panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, item.PanelDir)
-    return true
+    if far.FindPlugin("PFM_GUID", item.PluginId) then
+      panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, item.PanelDir)
+      return true
+    else
+      far.Message(M.mPluginNotFound.."\n"..win.Uuid(item.PluginId):upper(), M.mError, M.mOk, "w")
+      return false
+    end
   end
   ----------------------------------------------------------------------------
   if panel.SetPanelDirectory(nil, breakkey==nil and 1 or 0, item.text) then
@@ -389,9 +389,15 @@ local function get_history (aConfig, obj)
       else
       -- plugin item
         if v.Time >= last_time then
-          local name = KnownPlugins[v.PluginId]
-          if name then
-            local text = name..v.File..":"..v.Name
+          local plugin_handle = far.FindPlugin("PFM_GUID", v.PluginId)
+          if plugin_handle then
+            local title = PlugTitleCache[v.PluginId]
+            if title == nil then
+              title = far.GetPluginInformation(plugin_handle).GInfo.Title -- expensive
+              PlugTitleCache[v.PluginId] = title
+            end
+            title = v.File=="" and title or title..":"
+            local text = title..v.File..":"..v.Name
             local item = map[text]
             if item then
               if v.Time > item.time then

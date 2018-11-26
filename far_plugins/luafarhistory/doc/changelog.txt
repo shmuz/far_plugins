@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-11-26, v3.10.3
+  [+] Folders history: support _all_ panel plugins (no individual approach anymore).
+
 2018-11-02, v3.10.2
   [!] Folders history: prevent duplication of plugin items in the list.
 
