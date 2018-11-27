@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2018-11-27, v3.43.5
+  [+] Search results panel can be opened from shortcut.
+
 2018-11-09, v3.43.4
   [*] Search results panel: enable file filter.
 

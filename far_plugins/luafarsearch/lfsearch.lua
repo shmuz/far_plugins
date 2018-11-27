@@ -223,6 +223,8 @@ function export.Open (aFrom, aGuid, aItem)
   elseif aFrom == F.OPEN_EDITOR      then OpenFromEditor(userItems.editor)
   elseif aFrom == F.OPEN_COMMANDLINE then return libUtils.OpenCommandLine(aItem, commandTable, nil)
   elseif aFrom == F.OPEN_FROMMACRO   then return OpenFromMacro(aItem, commandTable)
+  elseif aFrom == F.OPEN_SHORTCUT    then
+    return Libs.Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
   end
 end
 

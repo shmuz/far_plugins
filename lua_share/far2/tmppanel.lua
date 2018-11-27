@@ -1,3 +1,4 @@
+-- Encoding: UTF-8
 -- tmppanel.lua
 
 local Package = {}
@@ -293,17 +294,29 @@ end
 
 
 function Env:OpenPanelFromOutput (command)
+  local mypanel = nil
+  -- Run the command in the context of directory displayed in Far panel
+  -- rather than current directory of the Far process.
+  local dir_to_restore = win.GetCurrentDir()
+  win.SetCurrentDir(far.GetCurrentDirectory())
   local h = io.popen (command, "rt")
   if h then
     local list = {}
+    local cp = win.GetConsoleOutputCP() -- this function exists in Far >= 3.0.5326
     for line in h:lines() do
-      table.insert (list, line)
+      local line2 = line
+      if cp ~= 65001 then -- not UTF-8
+        line2 = win.MultiByteToWideChar(line2, cp)
+        line2 = win.WideCharToMultiByte(line2, 65001)
+      end
+      table.insert(list, line2)
     end
     h:close()
-    local panel = self:NewPanel()
-    panel:AddList (list, panel.Opt.ReplaceMode)
-    return panel
+    mypanel = self:NewPanel()
+    mypanel:AddList (list, mypanel.Opt.ReplaceMode)
   end
+  win.SetCurrentDir(dir_to_restore)
+  return mypanel
 end
 
 
