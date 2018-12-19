@@ -1,12 +1,20 @@
+2018-12-19, v.0.10.0
+    1. The special user-modules table: rename column 'active' to 'enabled'.
+    2. Configuration dialog: add option "Disable security warnings".
+    3. Data export dialog: improve layout and add a help page.
+    4. Fix: no progress window was shown while executing long SQL queries.
+    5. Panel filter: do not close dialog on invalid SQL statement.
+    6. Panel filter: add a text input field before "WHERE".
+
 2018-11-24, v.0.9.0
-   1. Option "f" (honor foreign keys) removed, option "F" (do not honor foreign keys) added.
-      The default is to honor.
-   2. Options can be passed from the command line.
-   3. User modules can be also loaded from files specified in a special table in the database file.
+    1. Option "f" (honor foreign keys) removed, option "F" (do not honor foreign keys) added.
+       The default is to honor.
+    2. Options can be passed from the command line.
+    3. User modules can be also loaded from files specified in a special table in the database file.
 
 2018-09-24, v.0.8.0
-   1. A new dialog: "Data dump".
-      An external file sqlite3.exe is required for this functionality.
+    1. A new dialog: "Data dump".
+       An external file sqlite3.exe is required for this functionality.
 
 2018-08-26, v.0.7.1
     1. Fixes for correct work with a table whose name is an empty string.

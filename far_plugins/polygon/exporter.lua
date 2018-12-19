@@ -45,9 +45,9 @@ function exporter:export_data_with_dialog()
   --[[03]] {F.DI_EDIT,          5,3,66,0,  0,0,0,0,                  ""},
   --[[04]] {F.DI_TEXT,          0,4, 0,0,  0,0,0,F.DIF_SEPARATOR,    ""},
   --[[05]] {F.DI_TEXT,          5,5,20,0,  0,0,0,0,                  M.ps_exp_fmt},
-  --[[06]] {F.DI_RADIOBUTTON,  21,5,29,0,  0,0,0,0,                  "&CSV"},
-  --[[07]] {F.DI_RADIOBUTTON,  31,5,40,0,  0,0,0,0,                  M.ps_exp_fmt_text},
-  --[[08]] {F.DI_CHECKBOX,     21,6, 0,0,  0,0,0,0,                  M.ps_exp_multiline},
+  --[[06]] {F.DI_RADIOBUTTON,  21,5,29,0,  0,0,0,F.DIF_GROUP,        "&CSV"},
+  --[[07]] {F.DI_RADIOBUTTON,  21,6,40,0,  0,0,0,0,                  M.ps_exp_fmt_text},
+  --[[08]] {F.DI_CHECKBOX,     31,5, 0,0,  0,0,0,0,                  M.ps_exp_multiline},
   --[[09]] {F.DI_TEXT,          0,7, 0,0,  0,0,0,F.DIF_SEPARATOR,    ""},
   --[[10]] {F.DI_BUTTON,        0,8, 0,0,  0,0,0,FLAG_DFLT,          M.ps_exp_exp},
   --[[11]] {F.DI_BUTTON,        0,8, 0,0,  0,0,0,F.DIF_CENTERGROUP,  M.ps_cancel},
@@ -73,7 +73,7 @@ function exporter:export_data_with_dialog()
   ------------------------------------------------------------------------------
 
   local guid = win.Uuid("E9F91B4F-82B2-4B36-9C4B-240D7EE7BF59")
-  local dlg = far.DialogInit(guid, -1, -1, 72, 11, nil, dlg_items, nil, DlgProc)
+  local dlg = far.DialogInit(guid, -1, -1, 72, 11, "Export", dlg_items, nil, DlgProc)
 
   local rc = far.DialogRun(dlg)
   if rc >= 1 and rc ~= btnCancel then

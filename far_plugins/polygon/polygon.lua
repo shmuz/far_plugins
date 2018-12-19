@@ -1,4 +1,4 @@
--- Lua version started: 2018-01-13
+-- Started: 2018-01-13
 -- luacheck: globals ErrMsg LOG polygon
 
 far.ReloadDefaultScript = true -- for debugging needs
@@ -85,7 +85,7 @@ do
   local run = (require "far2.utils").RunInternalScript
   -- the order of calls here is important!
   Params.M        = run("string_rc")
-  Params.sqlite   = run("sqlite")
+  Params.sqlite   = run("sqlite",   Params)
   Params.settings = run("settings", Params)
   Params.progress = run("progress", Params)
   Params.exporter = run("exporter", Params)
@@ -154,7 +154,7 @@ local function LoadOneUserFile (FileData, FullPath, AddModule, gmeta)
   setfenv(userchunk, env)
   local ok, msg = xpcall(function() return userchunk(FullPath) end, debug.traceback)
   if ok then
-    env.UserModule, env.NoUserModule = nil
+    env.UserModule, env.NoUserModule = nil, nil
   else
     msg = msg:gsub("\n\t","\n   ")
     ErrMsg("RUN: "..FullPath.."\n"..msg)
@@ -178,17 +178,22 @@ local function LoadModules(object)
   local tablename = ("modules-"..win.Uuid(PluginGuid):lower()):normalize()
   local table_exists
   local query = "SELECT name FROM sqlite_master WHERE type='table' AND LOWER(name)="..tablename
-  for item in obj_info.db:nrows(query) do table_exists=true end
+  for item in obj_info.db:nrows(query) do
+    table_exists = true
+  end
   if table_exists then
     local collector = {}
-    local db_dir = obj_info.file_name:gsub("[^\\]+$","")
     query = "SELECT * FROM "..tablename.." ORDER BY load_priority DESC"
     for item in obj_info.db:nrows(query) do
-      if item.active == 1 and type(item.script) == "string" then
+      if item.enabled == 1 and type(item.script) == "string" then
         table.insert(collector, item)
       end
     end
-    if #collector>0 and 2==far.Message(M.ps_load_modules_query,M.ps_security_warning,M.ps_no_yes,"w") then
+    if #collector>0 and
+      (get_plugin_data().no_secur_warn or
+       1 == far.Message(M.ps_load_modules_query,M.ps_security_warning,M.ps_yes_no,"w"))
+    then
+      local db_dir = obj_info.file_name:gsub("[^\\/]+$","")
       for _,item in ipairs(collector) do
         local fullname = item.script:match("^[a-zA-Z]:") and item.script or db_dir..item.script
         local filedata = win.GetFileInfo(fullname)

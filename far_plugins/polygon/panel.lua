@@ -43,9 +43,8 @@ function mypanel.open(file_name, extensions, foreign_keys)
     _hist_file      = nil ; -- files[<filename>] in the plugin's non-volatile settings
     _sort_col_index = nil ;
     _sort_last_mode = nil ;
-    _tab_filter     = nil ;
-    _tab_filter_enb = nil ;
     _show_affinity  = nil ;
+    _tab_filter     = { enb=false; extra=""; where=nil; };
   }
 
   -- Members come from the original plugin SQLiteDB.
@@ -78,8 +77,7 @@ end
 
 
 function mypanel:set_directory(handle, Dir, UserData)
-  self._tab_filter = false
-  self._tab_filter_enb = false
+  self._tab_filter = {}
   if Dir == ".." or Dir == "/" or Dir == "\\" then
     return self:open_database()
   else
@@ -174,17 +172,17 @@ function mypanel:open_query(handle, query)
   else
     -- Update query - just execute without read result
     local prg_wnd = progress.newprogress(M.ps_execsql)
-    if not self._dbx:execute_query(query) then
+    if not self._dbx:execute_query(query, true) then
       prg_wnd:hide()
-      ErrMsg(M.ps_err_sql.."\n"..query.."\n"..self._dbx:last_error())
       return false
     end
     prg_wnd:hide()
   end
 
+  local position = word1~="update" and {CurrentItem=1} or nil -- don't reset position on update
   self:prepare_panel_info()
   panel.UpdatePanel(handle, nil, false)
-  panel.RedrawPanel(handle, nil, {CurrentItem=1})
+  panel.RedrawPanel(handle, nil, position)
   return true
 end
 
@@ -294,18 +292,20 @@ function mypanel:get_panel_list_obj()
   end
 
   -- If ROWID exists then select it as the leftmost column.
-  local count_query = "select count(*) from " .. curr_object:normalize()
+  local obj_norm = curr_object:normalize()
+  local count_query = "select count(*) from " .. obj_norm
   local query = self._rowid_name
-    and ("select %s,* from %s"):format(self._rowid_name, curr_object:normalize())
-    or   "select * from " .. curr_object:normalize()
-  if self._tab_filter and self._tab_filter_enb then
-    count_query = count_query .. " where " .. self._tab_filter
-    query       =       query .. " where " .. self._tab_filter
+    and ("select %s.%s,* from %s"):format(obj_norm, self._rowid_name, obj_norm)
+    or   "select * from " .. obj_norm
+  if self._tab_filter.where and self._tab_filter.enb then
+    local tail = " "..self._tab_filter.extra.." where "..self._tab_filter.where
+    count_query = count_query..tail
+    query = query..tail
   end
 
   local stmt = db:prepare(query)
   if not stmt then
-    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
+    ErrMsg(M.ps_err_sql.."\n"..query.."\n"..dbx:last_error())
     return items
   end
 
@@ -353,17 +353,13 @@ function mypanel:get_panel_list_obj()
     end
   end
 
-  prg_wnd:update(row_count)
   prg_wnd:hide()
   stmt:finalize()
-
   return items
 end
 
 
 function mypanel:get_panel_list_query()
-  local prg_wnd = progress.newprogress(M.ps_reading)
-
   -- Read all data to buffer - we don't know rowset size
   local buff = {}
 
@@ -382,21 +378,23 @@ function mypanel:get_panel_list_query()
   local db = self._dbx:db()
   local stmt = db:prepare(self._curr_object)
   if not stmt then
-    prg_wnd:hide()
     local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_read.."\n"..err_descr)
     return false
   end
 
+  local prg_wnd = progress.newprogress(M.ps_reading)
   local state
-  while true do
+  for row = 1, math.huge do
     state = stmt:step()
     if state ~= sql3.ROW then
       break
     end
-    if progress.aborted() then
-      state = sql3.DONE
-      break  -- Show incomplete data
+    if (row-1) % 100 == 0 then
+      if progress.aborted() then
+        break  -- Show incomplete data
+      end
+      prg_wnd:update(row-1)
     end
 
     local item = {}
@@ -408,17 +406,15 @@ function mypanel:get_panel_list_query()
     item.CustomColumnData = custom_column_data
     table.insert(buff, item)
   end
+  prg_wnd:hide()
+  stmt:finalize()
 
-  if state ~= sql3.DONE then
-    prg_wnd:hide()
+  if not (state==sql3.DONE or state==sql3.ROW) then
     local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_read.."\n"..err_descr)
-    stmt:finalize()
     return false
   end
 
-  prg_wnd:hide()
-  stmt:finalize()
   return buff
 end
 
@@ -631,26 +627,54 @@ end
 
 
 function mypanel:set_table_filter(handle)
-  local query = "SELECT * FROM "..self._curr_object:normalize().." WHERE "
-  local text = far.InputBox(nil, M.ps_panel_filter, query, "Polygon_PanelFilter", nil, nil, "PanelFilter")
-  if text then
-    local stmt = self._dbx:db():prepare(query..text)
-    if stmt then -- check syntax
-      stmt:finalize()
-      self._tab_filter = text
-      self._tab_filter_enb = true
-      panel.UpdatePanel(handle)
-      panel.RedrawPanel(handle)
-    else
-      ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
+  local guid        = win.Uuid("920436C2-C32D-487F-B590-0E255AD71038")
+  local query       = "SELECT * FROM "..self._curr_object:normalize()
+  local hist_extra  = "Polygon_PanelFilterExt"
+  local hist_where  = "Polygon_PanelFilter"
+  local flag_edit   = F.DIF_HISTORY + F.DIF_USELASTHISTORY
+  local flag_separ  = F.DIF_SEPARATOR
+  local flag_ok     = F.DIF_DEFAULTBUTTON+F.DIF_CENTERGROUP
+  local flag_cancel = F.DIF_CENTERGROUP
+
+  local Items = {
+    --[[01]] {F.DI_DOUBLEBOX,  3, 1,72, 8,   0, 0,          0, 0,            M.ps_panel_filter},
+    --[[02]] {F.DI_TEXT,       5, 2, 0, 0,   0, 0,          0, 0,            query},
+    --[[03]] {F.DI_EDIT,       5, 3,70, 0,   0, hist_extra, 0, flag_edit,    ""},
+    --[[04]] {F.DI_TEXT,       5, 4, 0, 0,   0, 0,          0, 0,            "WHERE"},
+    --[[05]] {F.DI_EDIT,       5, 5,70, 0,   0, hist_where, 0, flag_edit,    ""},
+    --[[06]] {F.DI_TEXT,      -1, 6, 0, 0,   0, 0,          0, flag_separ,   ""},
+    --[[07]] {F.DI_BUTTON,     0, 7, 0, 0,   0, 0,          0, flag_ok,      M.ps_ok},
+    --[[08]] {F.DI_BUTTON,     0, 7, 0, 0,   0, 0,          0, flag_cancel,  M.ps_cancel},
+  }
+  local edtExtra, edtWhere, btnOK = 3, 5, 7
+
+  local function DlgProc(hDlg, Msg, Param1, Param2)
+    if Msg == F.DN_CLOSE and Param1 == btnOK then
+      local extra = hDlg:send("DM_GETTEXT", edtExtra)
+      local where = hDlg:send("DM_GETTEXT", edtWhere)
+      local stmt = self._dbx:db():prepare(query.." "..extra.." WHERE "..where)
+      if stmt then -- check syntax
+        stmt:finalize()
+        self._tab_filter.extra = extra
+        self._tab_filter.where = where
+        self._tab_filter.enb = true
+      else
+        ErrMsg(M.ps_err_sql.."\n"..self._dbx:last_error())
+        return 0
+      end
     end
+  end
+
+  if far.Dialog(guid,-1,-1,76,10,"PanelFilter",Items,nil,DlgProc) == btnOK then
+    panel.UpdatePanel(handle)
+    panel.RedrawPanel(handle)
   end
 end
 
 
 function mypanel:toggle_table_filter(handle)
-  if self._tab_filter then
-    self._tab_filter_enb = not self._tab_filter_enb
+  if self._tab_filter.where then
+    self._tab_filter.enb = not self._tab_filter.enb
     panel.UpdatePanel(handle)
     panel.RedrawPanel(handle)
   end

@@ -195,9 +195,7 @@ function myeditor:remove(items)
       if query then
         local Name = DecodeItemName(item)
         query = query .. " " .. Name:normalize() .. ";"
-        if not self._dbx:execute_query(query) then
-          local err_descr = self._dbx:last_error()
-          ErrMsg(M.ps_err_sql.."\n"..query.."\n"..err_descr)
+        if not self._dbx:execute_query(query, true) then
           break
         end
       end
@@ -215,9 +213,7 @@ function myeditor:remove(items)
       for i = cnt+1, upper do tt[i-cnt] = items[i].AllocationSize; end
       local query = query_start .. table.concat(tt, ",") .. ")"
 
-      if not self._dbx:execute_query(query) then
-        local err_descr = self._dbx:last_error()
-        ErrMsg(M.ps_err_sql.."\n"..query.."\n"..err_descr)
+      if not self._dbx:execute_query(query, true) then
         break
       end
       cnt = upper

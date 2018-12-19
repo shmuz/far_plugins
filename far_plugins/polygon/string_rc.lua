@@ -9,6 +9,7 @@ local names = {
   "ps_cfg_user_modules",
   "ps_cfg_extensions",
   "ps_cfg_no_foreign_keys",
+  "ps_cfg_no_secur_warn",
 
   "ps_pt_name",
   "ps_pt_type",
@@ -48,7 +49,7 @@ local names = {
   "ps_save",
   "ps_cancel",
   "ps_ok",
-  "ps_no_yes",
+  "ps_yes_no",
   "ps_overwrite",
   "ps_already_exists",
 

@@ -10,6 +10,7 @@
 "Load &user modules"
 "Enable &extensions"
 "Do not honor &foreign keys"
+"Disable &security warnings"
 
 "Name"
 "Type"
@@ -49,7 +50,7 @@
 "Save"
 "Cancel"
 "OK"
-"No;Yes"
+"Yes;No"
 "Overwrite"
 "The file already exists"
 

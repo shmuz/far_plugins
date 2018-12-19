@@ -4,7 +4,7 @@ local Params = ...
 local M = Params.M
 local F = far.Flags
 
-local DELAY = 150 -- in milliseconds; to avoid flickering
+local DELAY = 0.15e6 -- 0.15 sec (in microseconds); to avoid flickering
 
 local uchar1 = unicode.utf8.char(9608)
 local uchar2 = unicode.utf8.char(9617)
@@ -50,18 +50,18 @@ end
 
 
 function progress:update(val)
-  if self._max_value == 0 then return; end
+  if (far.FarClock() - self._start) < DELAY then
+    return
+  end
+  if self._max_value > 0 then
+    local percent = math.floor(val * 100 / self._max_value)
 
-  if (far.FarClock() - self._start) < DELAY*1000 then return; end
+    local pv = { Completed=percent; Total=100 }
+    far.AdvControl("ACTL_SETPROGRESSVALUE", 0, pv)
 
-  local percent = math.floor(val * 100 / self._max_value)
-
-  local pv = { Completed=percent; Total=100 }
-  far.AdvControl("ACTL_SETPROGRESSVALUE", 0, pv)
-
-  local len = math.floor(percent * PROGRESS_WIDTH / 100)
-  self._bar = uchar1:rep(len) .. uchar2:rep(PROGRESS_WIDTH - len)
-
+    local len = math.floor(percent * PROGRESS_WIDTH / 100)
+    self._bar = uchar1:rep(len) .. uchar2:rep(PROGRESS_WIDTH - len)
+  end
   self:show()
 end
 

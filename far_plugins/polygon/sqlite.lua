@@ -1,4 +1,6 @@
 local sql3 = require "lsqlite3"
+local Params = ...
+local M = Params.M
 
 ---- Custom tokenizer support
 -- static sqlite3_tokenizer    _tokinizer = { nullptr };
@@ -126,8 +128,14 @@ function sqlite:get_objects_list(objects)
 end
 
 
-function sqlite:execute_query(query)
-  return self._db:exec(query) == sql3.OK
+function sqlite:execute_query(query, show_message)
+  if self._db:exec(query) == sql3.OK then
+    return true
+  end
+  if show_message then
+    ErrMsg(M.ps_err_sql.."\n"..query.."\n"..self:last_error())
+  end
+  return false
 end
 
 

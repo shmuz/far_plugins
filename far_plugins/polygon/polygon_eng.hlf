@@ -14,6 +14,7 @@ $^ #Polygon - Help Contents#
  ~Invoking the plugin~@Invoke@
  ~Configuration Dialog~@ConfigDialog@
  ~Edit/Insert Row~@EditInsertRow@
+ ~Data Export Dialog~@Export@
  ~Data Dump Dialog~@Dump@
  ~User modules~@UserModules@
  ~Functions of polygon table~@PolygonTable@
@@ -81,8 +82,9 @@ $^ #Reference of keyboard actions when the plugin's panel is active#
 @PanelView
 $^ #Custom panel view dialog#
    This dialog allows to choose what columns to display and set their widths.
-Column widths are specified with the same syntax as in panel view dialog of
-~Far Manager~@:PanelViewModes@.
+Column widths are specified with the same syntax as in
+~panel view modes~@:PanelViewModes@ dialog of Far Manager (it may be either 0,
+or number of characters, or percentage of the total panel width).
 
    If the dialog was closed with OK button then the panel will be rearranged
 according to the dialog settings. These settings will also be stored permanently
@@ -99,7 +101,9 @@ $^ #Panel Filter
  #Example:#
 
    ╔══════════════════ Panel Filter ════════════════════╗
-   ║ SELECT * FROM "Personnel" WHERE                    ║
+   ║ #SELECT * FROM 'Personnel'#                          ║
+   ║ <optional text>                                   ↓║
+   ║ #WHERE#                                              ║
    ║ salary between 2000 and 3000                      ↓║
    ╟────────────────────────────────────────────────────╢
    ║                 { OK } [ Cancel ]                  ║
@@ -111,12 +115,12 @@ $^ #Panel Filter
 @ConfigDialog
 $^ #Configuration Dialog
  The following settings belong to common plugin configuration.
- 
+
  #[ ] Add to plugins menu#     The plugin will appear in Plugins Menu
  #Prefix:#                     Command line prefix of the plugin
 
  The following settings are applied when a new database connection is created.
-Changing these settings does not affect the already opened panels. 
+Changing these settings does not affect the already opened panels.
 
  #[ ] Load user modules#           User modules will be loaded
  #[ ] Enable extensions#           Execute #sqlite3_enable_load_extension(db,1)#
@@ -135,9 +139,9 @@ table and matching the following requirements:
  2. If a database file contains a table named #modules-D4BC5EA7-8229-4FFE-AAC1-5A4F51A0986A#
 then modules specified in that table will be loaded too.
  - Column #script# should contain file name (either absolute or relative to database file directory).
- - Column #active# should be equal to 1 in order to load the script.
+ - Column #enabled# should be equal to 1 in order to load the script.
  - The numeric column #load_priority# affects order of loading scripts (the greater the earlier).
- 
+
  3. Modules are loaded immediately after a successful connection of the plugin
 to a data base is established.
 
@@ -328,12 +332,29 @@ knows the real names and uses them in its operations.
 
  ~Contents~@Contents@
 
+@Export
+$^ #Data Export Dialog#
+  #Export <table name> to:#
+    Specify the file to export the data to.
+
+  #File format:#
+    #(•) CSV#
+        export in comma-separated values format
+        #[x] Preserve line feeds#
+            If checked:    preserve line feeds
+            If unchecked:  replace line feeds with spaces
+    #(•) Text#
+        export in plain text format
+
+
+ ~Contents~@Contents@
+
 @Dump
 $^ #Data Dump Dialog#
   #IMPORTANT NOTE:#
   The plugin requires #sqlite3.exe# for making dumps.
   sqlite3.exe should be placed either on the PATH or in the plugin's directory.
-  
+
 
   #[x] Dump all#
   If checked:    make dump of the entire database.
@@ -343,7 +364,7 @@ $^ #Data Dump Dialog#
   If checked:    preserve rowids.
 
   #[x] Preserve new lines#
-  If checked:    new line characters are preserved and a row may span on multiple lines.  
+  If checked:    new line characters are preserved and a row may span on multiple lines.
   If unchecked:  the text is encoded in such a way that every row takes only one line.
 
 
