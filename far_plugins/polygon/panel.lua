@@ -21,8 +21,7 @@ end
 
 -- This file's module. Could not be called "panel" due to existing LuaFAR global "panel".
 local mypanel = {}
-local mt_panel = polygon.DEBUG and { __index=function(t,k) LOG(k) return rawget(mypanel,k) end }
-                                or { __index=mypanel }
+local mt_panel = { __index=mypanel }
 
 
 function mypanel.open(file_name, extensions, foreign_keys)
@@ -44,7 +43,7 @@ function mypanel.open(file_name, extensions, foreign_keys)
     _sort_col_index = nil ;
     _sort_last_mode = nil ;
     _show_affinity  = nil ;
-    _tab_filter     = { enb=false; extra=""; where=nil; };
+    _tab_filter     = { enabled=false; text=nil; };
   }
 
   -- Members come from the original plugin SQLiteDB.
@@ -57,7 +56,8 @@ function mypanel.open(file_name, extensions, foreign_keys)
   setmetatable(self, mt_panel)
 
   self._dbx = sqlite.newsqlite()
-  if self._dbx:open(file_name) and self:open_database() then
+  if self._dbx:open(file_name) then
+    self:set_database_mode()
     local db = self._dbx:db()
     if extensions then
       db:load_extension("") -- enable extensions
@@ -79,18 +79,23 @@ end
 function mypanel:set_directory(handle, Dir, UserData)
   self._tab_filter = {}
   if Dir == ".." or Dir == "/" or Dir == "\\" then
-    return self:open_database()
+    self:set_database_mode()
+    return true
   else
-    return self:open_object(Params.DecodeDirName(Dir, UserData))
+    local name = Params.DecodeDirName(Dir, UserData)
+      if self._dbx:get_row_count(name) > 20000 then -- sorting is very slow on big tables
+        panel.SetSortMode(handle, nil, "SM_UNSORTED")
+        panel.SetSortOrder(handle, nil, false)
+      end
+    return self:open_object(name)
   end
 end
 
 
-function mypanel:open_database()
+function mypanel:set_database_mode()
   self._panel_mode = "db"
   self._curr_object = nil
   self:prepare_panel_info()
-  return true
 end
 
 
@@ -221,11 +226,10 @@ end
 function mypanel:get_panel_list_db()
   local prg_wnd = progress.newprogress(M.ps_reading)
 
-  local db_objects = {}
-  if not self._dbx:get_objects_list(db_objects) then
+  local db_objects = self._dbx:get_objects_list()
+  if not db_objects then
     prg_wnd:hide()
-    local err_descr = self._dbx:last_error()
-    ErrMsg(M.ps_err_read.."\n"..self._file_name.."\n"..err_descr)
+    ErrMsg(M.ps_err_read.."\n"..self._file_name.."\n"..self._dbx:last_error())
     return false
   end
 
@@ -297,8 +301,8 @@ function mypanel:get_panel_list_obj()
   local query = self._rowid_name
     and ("select %s.%s,* from %s"):format(obj_norm, self._rowid_name, obj_norm)
     or   "select * from " .. obj_norm
-  if self._tab_filter.where and self._tab_filter.enb then
-    local tail = " "..self._tab_filter.extra.." where "..self._tab_filter.where
+  if self._tab_filter.text and self._tab_filter.enabled then
+    local tail = " "..self._tab_filter.text
     count_query = count_query..tail
     query = query..tail
   end
@@ -353,6 +357,7 @@ function mypanel:get_panel_list_obj()
     end
   end
 
+  prg_wnd:update(row_count)
   prg_wnd:hide()
   stmt:finalize()
   return items
@@ -652,12 +657,12 @@ function mypanel:set_table_filter(handle)
     if Msg == F.DN_CLOSE and Param1 == btnOK then
       local extra = hDlg:send("DM_GETTEXT", edtExtra)
       local where = hDlg:send("DM_GETTEXT", edtWhere)
-      local stmt = self._dbx:db():prepare(query.." "..extra.." WHERE "..where)
+      local text = where:find("%S") and (extra.." WHERE "..where) or extra
+      local stmt = self._dbx:db():prepare(query.." "..text)
       if stmt then -- check syntax
         stmt:finalize()
-        self._tab_filter.extra = extra
-        self._tab_filter.where = where
-        self._tab_filter.enb = true
+        self._tab_filter.text = text
+        self._tab_filter.enabled = true
       else
         ErrMsg(M.ps_err_sql.."\n"..self._dbx:last_error())
         return 0
@@ -673,8 +678,8 @@ end
 
 
 function mypanel:toggle_table_filter(handle)
-  if self._tab_filter.where then
-    self._tab_filter.enb = not self._tab_filter.enb
+  if self._tab_filter.text then
+    self._tab_filter.enabled = not self._tab_filter.enabled
     panel.UpdatePanel(handle)
     panel.RedrawPanel(handle)
   end
@@ -787,16 +792,15 @@ function mypanel:handle_keyboard(handle, key_event)
   elseif nomods and vcode == VK.F7 then        -- F7: suppress this key
     return true
   elseif nomods and vcode == VK.F8 then -- intercept F8 to avoid panel-reread in case of user cancel
-    if self._panel_mode == "view" then
-      return true
+    if self._panel_mode == "db" or self._panel_mode == "table" then
+      if panel.GetPanelInfo(handle).SelectedItemsNumber > 0 then
+        local guid = win.Uuid("4472C7D8-E2B2-46A0-A005-B10B4141EBBD") -- for macros
+        if far.Message(M.ps_drop_question, M.ps_title_short, ";YesNo", "w", nil, guid) == 1 then
+          return nil
+        end
+      end
     end
-    if panel.GetPanelInfo(handle).SelectedItemsNumber == 0 then
-      return true
-    end
-    local guid = win.Uuid("4472C7D8-E2B2-46A0-A005-B10B4141EBBD") -- for macros
-    if far.Message(M.ps_drop_question, M.ps_title_short, ";YesNo", "w", nil, guid) ~= 1 then
-      return true
-    end
+    return true
   elseif shift and vcode == VK.F8 then         -- ShiftF8: suppress this key
     return true
   elseif ctrl and vcode == ("A"):byte() then   -- CtrlA: suppress this key

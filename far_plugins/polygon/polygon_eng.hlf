@@ -13,11 +13,10 @@ $^ #Polygon - Help Contents#
  ~Panel Filter~@PanelFilter@
  ~Invoking the plugin~@Invoke@
  ~Configuration Dialog~@ConfigDialog@
- ~Edit/Insert Row~@EditInsertRow@
+ ~Edit Table Row~@EditInsertRow@
  ~Data Export Dialog~@Export@
  ~Data Dump Dialog~@Dump@
  ~User modules~@UserModules@
- ~Functions of polygon table~@PolygonTable@
  ~Misc~@Misc@
 
 @Invoke
@@ -262,17 +261,8 @@ $^ #Table tInfo#
  ~User Modules~@UserModules@
  ~Contents~@Contents@
 
-@PolygonTable
-$^ #Functions of polygon table#
- #polygon.debug (true|false)#
-   Turns debug mode on or off.
-   When debug mode is on the plugin outputs various info via #OutputDebugString()# calls.
-
-
- ~Contents~@Contents@
-
 @EditInsertRow
-$^ #Edit/Insert Row#
+$^ #Edit Table Row#
  This dialog allows to edit either an existing or new table row.
 
  Each edit field displays its contents as text, numeric, BLOB or NULL.

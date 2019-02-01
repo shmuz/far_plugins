@@ -1,53 +1,24 @@
 -- Started: 2018-01-13
--- luacheck: globals ErrMsg LOG polygon
+-- luacheck: globals ErrMsg
 
 far.ReloadDefaultScript = true -- for debugging needs
-local MyExport = { GetGlobalInfo = export.GetGlobalInfo; } -- function defined in another file
-
-_G.polygon = _G.polygon or {}
-
-polygon.debug = function(turn_on)
-  if not polygon.DEBUG ~= not turn_on then
-    polygon.DEBUG = not polygon.DEBUG
-    if far.RunDefaultScript then far.RunDefaultScript() end
-  end
-end
-
--- Debug section -------------------------------------------------------------------------
-if polygon.DEBUG then
-  _G.LOG = win.OutputDebugString
-  local Exclusions = {
-    -- functions that need to avoid calling __index metamethod on them
-    SetDirectory = true;
-    ProcessPanelInput = true;
-    ProcessPanelEvent = true;
-  }
-  _G.export = setmetatable({}, { __index =
-    function(t,k)
-      if not Exclusions[k] then LOG("export." .. k); end
-      return MyExport[k]
-    end })
-else
-  _G.LOG = function() end
-  _G.export = MyExport
-end
--- /Debug section ------------------------------------------------------------------------
 
 local F = far.Flags
-local band,bor = bit64.band, bit64.bor
+local band, bor = bit64.band, bit64.bor
+local PluginGuid = export.GetGlobalInfo().Guid -- plugin GUID
+local Params = {}
 
 if not package.loaded.lsqlite3 then -- this is needed for "embed" builds of the plugin
-  -- make possible to use lsqlite3.dl residing in the plugin's folder
+  -- Provide priority access to lsqlite3.dl residing in the plugin's folder
   package.cpath = far.PluginStartupInfo().ModuleDir.."?.dl;"..package.cpath
 
-  -- make possible to use sqlite3.dll residing in the plugin's folder
-  local oldpath = win.GetEnv("PATH")
-  win.SetEnv("PATH", far.PluginStartupInfo().ModuleDir..";"..oldpath)
-  require "lsqlite3"
-  win.SetEnv("PATH", oldpath)
+  -- Provide access to sqlite3.dll residing in the plugin's folder
+  local path = win.GetEnv("PATH") or ""
+  win.SetEnv("PATH", far.PluginStartupInfo().ModuleDir..";"..path) -- modify PATH
+  local ok, msg = pcall(require, "lsqlite3")
+  win.SetEnv("PATH", path) -- restore PATH
+  if not ok then error(msg) end
 end
-
-local Params = {}
 
 do
   local FixedNames = {
@@ -98,13 +69,12 @@ local sqlite   = Params.sqlite
 local settings = Params.settings
 local mypanel  = Params.mypanel
 
-local PluginGuid = MyExport.GetGlobalInfo().Guid -- plugin GUID
-
 
 -- add a convenience function
 _G.ErrMsg = function(msg, title, flags)
   far.Message(msg, title or M.ps_title_short, nil, flags or "w")
 end
+
 
 -- add a convenience function
 unicode.utf8.resize = function(str, n, char)
@@ -223,7 +193,7 @@ local function LoadModules(object)
 end
 
 
-function MyExport.GetPluginInfo()
+function export.GetPluginInfo()
   local info = { Flags=0 }
   local PluginData = get_plugin_data()
 
@@ -245,7 +215,7 @@ function MyExport.GetPluginInfo()
 end
 
 
-function MyExport.Analyse(info)
+function export.Analyse(info)
   return info.FileName and info.FileName~="" and
          sqlite.format_supported(info.Buffer, #info.Buffer)
 end
@@ -347,7 +317,7 @@ local function OpenFromMacro(params)
 end
 
 
-function MyExport.Open(OpenFrom, Guid, Item)
+function export.Open(OpenFrom, Guid, Item)
   local file_name, Opt = nil, nil
 
   if OpenFrom == F.OPEN_ANALYSE then
@@ -377,32 +347,29 @@ function MyExport.Open(OpenFrom, Guid, Item)
 end
 
 
-function MyExport.GetOpenPanelInfo(object, handle)
+function export.GetOpenPanelInfo(object, handle)
   return object:get_panel_info(handle)
 end
 
 
-function MyExport.GetFindData(object, handle, OpMode)
+function export.GetFindData(object, handle, OpMode)
   return object:get_panel_list(handle)
 end
 
 
-function MyExport.SetDirectory(object, handle, Dir, OpMode, UserData)
-  if polygon.DEBUG then
-    LOG("export.SetDirectory: "..tostring(Dir))
-  end
+function export.SetDirectory(object, handle, Dir, OpMode, UserData)
   if band(OpMode, F.OPM_FIND) == 0 then
     return object:set_directory(handle, Dir, UserData)
   end
 end
 
 
-function MyExport.DeleteFiles(object, handle, PanelItems, OpMode)
+function export.DeleteFiles(object, handle, PanelItems, OpMode)
   return object:delete_items(handle, PanelItems)
 end
 
 
-function MyExport.ClosePanel(object, handle)
+function export.ClosePanel(object, handle)
   for _,mod in ipairs(object.LoadedModules) do
     if type(mod.ClosePanel) == "function" then
       mod.ClosePanel(object:get_info(), handle)
@@ -412,12 +379,7 @@ function MyExport.ClosePanel(object, handle)
 end
 
 
-function MyExport.ProcessPanelInput(object, handle, rec)
-  if polygon.DEBUG then
-    if rec.EventType ~= F.MENU_EVENT then
-      LOG("export.ProcessPanelInput: " .. (far.InputRecordToName(rec) or "unknown"))
-    end
-  end
+function export.ProcessPanelInput(object, handle, rec)
   for _,mod in ipairs(object.LoadedModules) do
     if type(mod.ProcessPanelInput) == "function" then
       if mod.ProcessPanelInput(object:get_info(), handle, rec) then
@@ -429,22 +391,7 @@ function MyExport.ProcessPanelInput(object, handle, rec)
 end
 
 
-local FAR_EVENTS = {
-	[0] = "FE_CHANGEVIEWMODE",
-	[1] = "FE_REDRAW",
-	[2] = "FE_IDLE",
-	[3] = "FE_CLOSE",
-	[4] = "FE_BREAK",
-	[5] = "FE_COMMAND",
-	[6] = "FE_GOTFOCUS",
-	[7] = "FE_KILLFOCUS",
-	[8] = "FE_CHANGESORTPARAMS",
-};
-
-function MyExport.ProcessPanelEvent (object, handle, Event, Param)
-  if polygon.DEBUG then
-    LOG("export.ProcessPanelEvent: " .. (FAR_EVENTS[Event] or tostring(Event)))
-  end
+function export.ProcessPanelEvent (object, handle, Event, Param)
   for _,mod in ipairs(object.LoadedModules) do
     if type(mod.ProcessPanelEvent) == "function" then
       if mod.ProcessPanelEvent(object:get_info(), handle, Event, Param) then
@@ -473,11 +420,11 @@ function MyExport.ProcessPanelEvent (object, handle, Event, Param)
 end
 
 
-function MyExport.Configure()
+function export.Configure()
   settings.configure();
 end
 
 
-function MyExport.Compare(object, handle, PanelItem1, PanelItem2, Mode)
+function export.Compare(object, handle, PanelItem1, PanelItem2, Mode)
   return object:compare(PanelItem1, PanelItem2, Mode)
 end

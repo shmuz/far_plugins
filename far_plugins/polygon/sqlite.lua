@@ -87,7 +87,8 @@ function sqlite:last_error()
 end
 
 
-function sqlite:get_objects_list(objects)
+function sqlite:get_objects_list()
+  local objects = {}
   -- Add master table
   local master_table = {
     row_count = 0;
@@ -99,7 +100,7 @@ function sqlite:get_objects_list(objects)
   -- Add tables/views
   local stmt = self._db:prepare("select name,type from "..SQLITE_MASTER)
   if not stmt then
-    return false
+    return nil
   end
   while stmt:step() == sql3.ROW do
     local obj = {
@@ -114,17 +115,10 @@ function sqlite:get_objects_list(objects)
   -- Get tables row count
   for _,v in ipairs(objects) do
     if v.type == sqlite.ot_master or v.type == sqlite.ot_table or v.type == sqlite.ot_view then
-      local query = "select count(*) from " .. v.name:normalize() .. ";"
-      local stmt = self._db:prepare(query)
-      if stmt then
-        if stmt:step() == sql3.ROW then
-          v.row_count = stmt:get_value(0)
-        end
-        stmt:finalize()
-      end
+      v.row_count = self:get_row_count(v.name)
     end
   end
-  return true
+  return objects
 end
 
 

@@ -1,3 +1,8 @@
+2019-02-01, v.0.10.1
+    1. Lua API: remove function polygon.debug; remove table polygon.
+    2. When entering a table with > 20000 rows, sort mode is forcibly switched to "unsorted"
+       (otherwise it is very slow).
+
 2018-12-19, v.0.10.0
     1. The special user-modules table: rename column 'active' to 'enabled'.
     2. Configuration dialog: add option "Disable security warnings".
