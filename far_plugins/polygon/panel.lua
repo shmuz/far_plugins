@@ -296,11 +296,20 @@ function mypanel:get_panel_list_obj()
   end
 
   -- If ROWID exists then select it as the leftmost column.
+  local query
   local obj_norm = curr_object:normalize()
+  if self._rowid_name then
+    query = ("select %s.%s,* from %s"):format(obj_norm, self._rowid_name, obj_norm)
+    local stmt = db:prepare(query)
+    if stmt then stmt:finalize()
+    else self._rowid_name = nil
+    end
+  end
+  if not self._rowid_name then
+    query = "select * from " .. obj_norm
+  end
+
   local count_query = "select count(*) from " .. obj_norm
-  local query = self._rowid_name
-    and ("select %s.%s,* from %s"):format(obj_norm, self._rowid_name, obj_norm)
-    or   "select * from " .. obj_norm
   if self._tab_filter.text and self._tab_filter.enabled then
     local tail = " "..self._tab_filter.text
     count_query = count_query..tail
