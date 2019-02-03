@@ -1,3 +1,6 @@
+2019-02-03, v.0.10.3
+    1. Fix a corner case in function get_row_count().
+
 2019-02-02, v.0.10.2
     1. Fix regression (since v0.4.1): plugin could not enter "WITHOUT ROWID" tables.
 

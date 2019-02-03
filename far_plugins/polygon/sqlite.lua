@@ -163,12 +163,14 @@ end
 
 
 function sqlite:get_row_count(object_name)
-  local count = false
+  local count = 0
   local query = "select count(*) from ".. object_name:normalize() .. ";";
   local stmt = self._db:prepare(query)
   if stmt then
     count = stmt:step()==sql3.ROW and stmt:get_value(0)
     stmt:finalize()
+  else
+    ErrMsg("Object: "..object_name.."\n"..self:last_error())
   end
   return count
 end
