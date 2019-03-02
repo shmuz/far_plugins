@@ -87,7 +87,12 @@ function sqlite:last_error()
 end
 
 
-function sqlite:get_objects_list()
+function sqlite:SqlErrMsg(query)
+  ErrMsg(M.ps_err_sql.."\n"..query.."\n"..self:last_error())
+end
+
+
+function sqlite:get_objects_list(schema)
   local objects = {}
   -- Add master table
   local master_table = {
@@ -98,27 +103,30 @@ function sqlite:get_objects_list()
   table.insert(objects, master_table)
 
   -- Add tables/views
-  local stmt = self._db:prepare("select name,type from "..SQLITE_MASTER)
-  if not stmt then
-    return nil
-  end
-  while stmt:step() == sql3.ROW do
-    local obj = {
-      row_count = 0;
-      name = stmt:get_value(0);
-      type = sqlite.object_type_by_name(stmt:get_value(1));
-    }
-    table.insert(objects, obj)
-  end
-  stmt:finalize()
-
-  -- Get tables row count
-  for _,v in ipairs(objects) do
-    if v.type == sqlite.ot_master or v.type == sqlite.ot_table or v.type == sqlite.ot_view then
-      v.row_count = self:get_row_count(v.name)
+  local schema_norm = schema:norm()
+  local query = "select name,type from "..schema_norm.."."..SQLITE_MASTER
+  local stmt = self._db:prepare(query)
+  if stmt then
+    while stmt:step() == sql3.ROW do
+      local obj = {
+        row_count = 0;
+        name = stmt:get_value(0);
+        type = sqlite.object_type_by_name(stmt:get_value(1));
+      }
+      table.insert(objects, obj)
     end
+    stmt:finalize()
+
+    -- Get tables row count
+    for _,v in ipairs(objects) do
+      if v.type == sqlite.ot_master or v.type == sqlite.ot_table or v.type == sqlite.ot_view then
+        v.row_count = self:get_row_count(schema, v.name)
+      end
+    end
+    return objects
+  else
+    self:SqlErrMsg(query)
   end
-  return objects
 end
 
 
@@ -127,14 +135,14 @@ function sqlite:execute_query(query, show_message)
     return true
   end
   if show_message then
-    ErrMsg(M.ps_err_sql.."\n"..query.."\n"..self:last_error())
+    self:SqlErrMsg(query)
   end
   return false
 end
 
 
-function sqlite:read_column_description(object_name)
-  local query = "pragma table_info(" .. object_name:normalize() .. ")"
+function sqlite:read_column_description(schema, object)
+  local query = "pragma "..schema:norm()..".".."table_info(" .. object:norm() .. ")"
   local stmt = self._db:prepare(query)
   if stmt then
     local columns = {}
@@ -158,30 +166,37 @@ function sqlite:read_column_description(object_name)
 
     stmt:finalize()
     return columns
+  else
+    self:SqlErrMsg(query)
   end
 end
 
 
-function sqlite:get_row_count(object_name)
+function sqlite:get_row_count(aSchema, aObject)
   local count = 0
-  local query = "select count(*) from ".. object_name:normalize() .. ";";
+  local query = "select count(*) from ".. aSchema:norm().."."..aObject:norm();
   local stmt = self._db:prepare(query)
   if stmt then
     count = stmt:step()==sql3.ROW and stmt:get_value(0)
     stmt:finalize()
   else
-    ErrMsg("Object: "..object_name.."\n"..self:last_error())
+    -- TODO: this error is also issued when 'aObject' belongs to a VIEW
+    --       but the table that the VIEW references does not exist.
+    --       If this is the case then the error message should NOT be issued
+    --       instead just return 0;
+    self:SqlErrMsg(query)
   end
   return count
 end
 
 
-function sqlite:get_creation_sql(object_name)
+function sqlite:get_creation_sql(aSchema, aObject)
   local txt = false
-  if object_name:lower() ~= SQLITE_MASTER:lower() then
-    local stmt = self._db:prepare("select sql from " .. SQLITE_MASTER .. " where name=?")
+  if aObject:lower() ~= SQLITE_MASTER:lower() then
+    local query = ("select sql from %s.%s where name=?"):format(aSchema:norm(), SQLITE_MASTER)
+    local stmt = self._db:prepare(query)
     if stmt then
-      txt = stmt:bind(1,object_name)==sql3.OK and stmt:step()==sql3.ROW and stmt:get_value(0)
+      txt = stmt:bind(1,aObject)==sql3.OK and stmt:step()==sql3.ROW and stmt:get_value(0)
       stmt:finalize()
     end
   end
@@ -189,18 +204,20 @@ function sqlite:get_creation_sql(object_name)
 end
 
 
-function sqlite:get_object_type(object_name)
-  if object_name:lower() == SQLITE_MASTER:lower() then
+function sqlite:get_object_type(schema, name)
+  if name:lower() == SQLITE_MASTER:lower() then
     return sqlite.ot_master
   end
-
   local tp = sqlite.ot_unknown
-  local stmt = self._db:prepare("select type from ".. SQLITE_MASTER .." where name=?")
+  local query = "select type from ".. schema:norm().."."..SQLITE_MASTER .." where name=?"
+  local stmt = self._db:prepare(query)
   if stmt then
-    if stmt:bind(1, object_name)==sql3.OK and stmt:step()==sql3.ROW then
+    if stmt:bind(1, name)==sql3.OK and stmt:step()==sql3.ROW then
       tp = sqlite.object_type_by_name(stmt:get_value(0))
     end
     stmt:finalize()
+  else
+    self:SqlErrMsg(query)
   end
   return tp
 end

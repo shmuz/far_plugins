@@ -6,11 +6,13 @@
 "SQLite PRAGMA statements"
 
 "&Add to plugins menu"
+"&Confirm closing the panel"
+"&Multi-database mode"
 "&Prefix:"
-"Load &user modules"
-"Enable &extensions"
+"&Load user modules"
+"&Enable extensions"
 "Do not honor &foreign keys"
-"Disable &security warnings"
+"&Disable security warnings"
 
 "Name"
 "Type"
@@ -22,6 +24,7 @@
 "Insert row"
 "Edit row"
 "Drop selected items?"
+"Detach selected items?"
 
 "SQLite: Data export"
 "&Export %s to:"
@@ -50,9 +53,10 @@
 "Save"
 "Cancel"
 "OK"
-"Yes;No"
+"&Yes;&No"
 "Overwrite"
 "The file already exists"
+"The panel is about to be closed. Close?"
 
 "Custom panel view"
 "&Set"
@@ -60,6 +64,4 @@
 
 "Panel Filter"
 
-"Load the modules specified in this database file?"
-"Security Warning"
 "Module load: file not found"

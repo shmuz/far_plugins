@@ -29,26 +29,30 @@ do
   }
 
   function Params.EncodeDirName(Dir)
-    return FixedNames[Dir] or Dir
+    ---return FixedNames[Dir] or Dir
+    return Dir
   end
 
   function Params.EncodeDirNameToItem(Dir, item)
-    local fixed = FixedNames[Dir]
-    if fixed then
-      item.FileName = fixed
-      item.UserData = { Dir=Dir }
-    else
-      item.FileName = Dir
-    end
+    ---local fixed = FixedNames[Dir]
+    ---if fixed then
+    ---  item.FileName = fixed
+    ---  item.UserData = { Dir=Dir }
+    ---else
+    ---  item.FileName = Dir
+    ---end
+    item.FileName = Dir
   end
 
   function Params.DecodeItemName(item)
-    local ud = item.UserData
-    return ud and ud.Dir or item.FileName
+    ---local ud = item.UserData
+    ---return ud and ud.Dir or item.FileName
+    return item.FileName
   end
 
   function Params.DecodeDirName(Dir, UserData)
-    return UserData and UserData.Dir or Dir
+    ---return UserData and UserData.Dir or Dir
+    return Dir
   end
 end
 
@@ -73,6 +77,7 @@ local mypanel  = Params.mypanel
 -- add a convenience function
 _G.ErrMsg = function(msg, title, flags)
   far.Message(msg, title or M.ps_title_short, nil, flags or "w")
+---error(msg) -- need stack
 end
 
 
@@ -85,8 +90,8 @@ unicode.utf8.resize = function(str, n, char)
 end
 
 
--- add a convenience function (use for table names and column names)
-unicode.utf8.normalize = function(str)
+-- add a convenience function (use for schema, table and column names)
+function unicode.utf8.norm(str)
   return "'" .. str:gsub("'","''") .. "'"
 end
 
@@ -145,7 +150,7 @@ local function LoadModules(object)
 
   -- Load modules specified in the database itself in a special table
   local obj_info = object:get_info()
-  local tablename = ("modules-"..win.Uuid(PluginGuid):lower()):normalize()
+  local tablename = ("modules-"..win.Uuid(PluginGuid):lower()):norm()
   local table_exists
   local query = "SELECT name FROM sqlite_master WHERE type='table' AND LOWER(name)="..tablename
   for item in obj_info.db:nrows(query) do
@@ -159,10 +164,7 @@ local function LoadModules(object)
         table.insert(collector, item)
       end
     end
-    if #collector>0 and
-      (get_plugin_data().no_secur_warn or
-       1 == far.Message(M.ps_load_modules_query,M.ps_security_warning,M.ps_yes_no,"w"))
-    then
+    if #collector > 0 then
       local db_dir = obj_info.file_name:gsub("[^\\/]+$","")
       for _,item in ipairs(collector) do
         local fullname = item.script:match("^[a-zA-Z]:") and item.script or db_dir..item.script
@@ -334,7 +336,7 @@ function export.Open(OpenFrom, Guid, Item)
 
   if file_name then
     Opt = Opt or get_plugin_data()
-    local object = mypanel.open(file_name, Opt.extensions, Opt.foreign_keys)
+    local object = mypanel.open(file_name, Opt.extensions, Opt.foreign_keys, Opt.multidb_mode)
     if object then
       object.LoadedModules = Opt.user_modules and LoadModules(object) or {}
       if OpenFrom == F.OPEN_FROMMACRO then
@@ -353,7 +355,7 @@ end
 
 
 function export.GetFindData(object, handle, OpMode)
-  return object:get_panel_list(handle)
+  return object:get_find_data(handle)
 end
 
 
@@ -392,31 +394,42 @@ end
 
 
 function export.ProcessPanelEvent (object, handle, Event, Param)
+  local ret = false
   for _,mod in ipairs(object.LoadedModules) do
     if type(mod.ProcessPanelEvent) == "function" then
       if mod.ProcessPanelEvent(object:get_info(), handle, Event, Param) then
-        return true
+        ret = true; break;
       end
     end
   end
-  if Event == F.FE_COMMAND then
-    local command, text = Param:match("^%s*(%S+)%s*(.*)")
-    command = command and command:lower() or ""
-    if command == "lua" then
-      ExecuteLuaCode(text, 1)
-      panel.UpdatePanel(handle)
-    elseif command == "sql" then
-      object:open_query(handle, text)
-    elseif not command:find("%S") then
-      -- do nothing
-    else
-      far.Message("sql <SQL query>\n"..
-                  "      or\n"..
-                  "lua <Lua code>", "Syntax", nil, "l")
+  if not ret then
+    if Event == F.FE_CLOSE then
+      if get_plugin_data().confirm_close then
+        ret = 1 ~= far.Message(M.ps_confirm_close, M.ps_title_short, M.ps_yes_no)
+      end
+    elseif Event == F.FE_COMMAND then
+      local command, text = Param:match("^%s*(%S+)%s*(.*)")
+      if command then
+        local Lcommand = command:lower()
+        if Lcommand == "cd" or Lcommand:find(":") then
+          ret = false -- let Far Manager process that command
+        elseif Lcommand == "lua" then
+          if text ~= "" then
+            ExecuteLuaCode(text, 1)
+            panel.UpdatePanel(handle)
+          end
+          ret = true
+        else
+          object:open_query(handle, command.." "..text)
+          ret = true
+        end
+      end
     end
-    panel.SetCmdLine(nil, "")
-    return true
   end
+  if ret and Event==F.FE_COMMAND then
+    panel.SetCmdLine(handle, "")
+  end
+  return ret
 end
 
 

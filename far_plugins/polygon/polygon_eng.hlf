@@ -9,6 +9,7 @@ $^ #Polygon - Help Contents#
  The plugin is based on SQLiteDB plugin by Artem Senichev.
 
  ~Reference of keyboard actions when the plugin's panel is active~@Keyboard@
+ ~Multi-database mode~@MultiDbMode@
  ~Custom Panel View Dialog~@PanelView@
  ~Panel Filter~@PanelFilter@
  ~Invoking the plugin~@Invoke@
@@ -18,6 +19,25 @@ $^ #Polygon - Help Contents#
  ~Data Dump Dialog~@Dump@
  ~User modules~@UserModules@
  ~Misc~@Misc@
+
+@MultiDbMode
+$^ #Multi-database mode#
+ There are 2 major modes in plugin's browsing database and setting "directories":
+simple mode and multi-database mode.
+
+ In the simple mode the plugin "sees" only #main# database and ignores any other database
+that may be attached to the open database connection.
+ 
+ In the multi-database mode it is possible to navigate between all attached databases.
+
+ Pressing #Ctrl+BackSlash# or pressing #Enter# on #..# directory item behave differently
+depending on the current plugin's mode.
+
+ The initial starting plugin's mode is determined by the ~configuration~@ConfigDialog@ setting.
+It is also possible to switch between those 2 modes by a keyboard ~shortcut~@Keyboard@.
+
+
+ ~Contents~@Contents@
 
 @Invoke
 $^ #Invoking the plugin#
@@ -50,31 +70,42 @@ $^ #Reference of keyboard actions when the plugin's panel is active#
    View mode     │ Key         │ Action
    ──────────────┼─────────────┼───────────────────────────────────────────────────
    Any           │ F6          │ Open Editor for editing an "SQLite query"
+                 │ Alt-Shift-F6│ Toggle between simple and multi-database mode
                  │ LCtrl-1     │ Two-panel view mode
                  │ LCtrl-2     │ One-panel view mode
-                 │             │
+   ──────────────┼─────────────┼───────────────────────────────────────────────────
    Database      │ F3          │ Show contents of an item under cursor
                  │ F4          │ Show create statement of an item under cursor
                  │ Shift-F4    │ Show pragma statements
                  │ F5          │ Dialog: export data of an item under cursor
-                 │ Ctrl-D      │ Dialog: make data dump
+                 │ Shift-F5    │ Dialog: make data dump
                  │ F8          │ Dialog: delete selected database items
-                 │             │
+   ──────────────┼─────────────┼───────────────────────────────────────────────────
    Table         │ F4, Enter   │ Dialog: edit a row
                  │ Shift-F4    │ Dialog: insert a row
-                 │ F8          │ Dialog: delete selected rows
-                 │ Ctrl-A      │ Show/hide columns affinity
+                 │ Shift-F5    │ Show/hide columns affinity
                  │             │   (i=integer, t=text, b=blob, r=real, n=numeric)
-                 │             │
+                 │ F8          │ Dialog: delete selected rows
+   ──────────────┼─────────────┼───────────────────────────────────────────────────
    Table or View │ Shift-F3    │ Dialog: custom panel view mode
-                 │ Shift-F5    │ Toggle panel view mode: full/custom
-                 │ Ctrl-F      │ Dialog: panel filter
-                 │ Ctrl-G      │ Toggle panel filter: on/off
+                 │ Alt-F3      │ Toggle panel view mode: full/custom
+                 │ Shift-F6    │ Dialog: panel filter
+                 │ Alt-F6      │ Toggle panel filter: on/off
    ──────────────┴─────────────┴───────────────────────────────────────────────────
 
-   1. If command line has format #sql <text># then Enter will execute an SQL query <text>.
-   2. If command line has format #lua <text># then Enter will execute a Lua code <text>.
-      The Lua chunk will receive 2 arguments as in ~Plugin.Call(<guid>, "lua")~@CallFromMacro@.
+^#Command line execution in the plugin's panel#
+
+     #lua <text>#     <text> is executed as a Lua chunk.
+                    The chunk receives 2 arguments as in ~Plugin.Call(<guid>, "lua")~@CallFromMacro@.
+
+     #cd <text>#      The command is processed by Far Manager.
+                    This makes possible to move between plugin's emulated directories.
+
+     #<word>:<text>#  The command is processed by Far Manager.
+                    This makes possible to use other plugins' commands.
+
+     #<Other cases>#  The command is executed as an SQL query.
+
 
  ~Contents~@Contents@
 
@@ -115,8 +146,10 @@ $^ #Panel Filter
 $^ #Configuration Dialog
  The following settings belong to common plugin configuration.
 
- #[ ] Add to plugins menu#     The plugin will appear in Plugins Menu
- #Prefix:#                     Command line prefix of the plugin
+ #[ ] Add to plugins menu#         The plugin will appear in Plugins Menu
+ #[ ] Confirm closing the panel#   Confirm closing the panel
+ #[ ] Multi-database mode#         Show all connected data bases
+ #Prefix:#                         Command line prefix of the plugin
 
  The following settings are applied when a new database connection is created.
 Changing these settings does not affect the already opened panels.
@@ -124,6 +157,7 @@ Changing these settings does not affect the already opened panels.
  #[ ] Load user modules#           User modules will be loaded
  #[ ] Enable extensions#           Execute #sqlite3_enable_load_extension(db,1)#
  #[ ] Do not honor foreign keys#   Do not execute #PRAGMA foreign_keys = ON#
+
 
  ~Contents~@Contents@
 

@@ -1,4 +1,4 @@
--- panel.lua
+-- coding: UTF-8
 -- luacheck: globals ErrMsg
 
 local sql3    = require "lsqlite3"
@@ -6,6 +6,7 @@ local history = require "far2.history"
 
 local F = far.Flags
 local VK = win.GetVirtualKeys()
+local band, bor = bit64.band, bit64.bor
 local win_CompareString = win.CompareString
 
 local Params = ...
@@ -24,18 +25,20 @@ local mypanel = {}
 local mt_panel = { __index=mypanel }
 
 
-function mypanel.open(file_name, extensions, foreign_keys)
+function mypanel.open(file_name, extensions, foreign_keys, multi_db)
   local self = {
 
   -- Members come from the original plugin SQLiteDB.
     _file_name       = file_name;
     _last_sql_query  = nil ;
     _column_descr    = nil ;
-    _curr_object     = nil ;
+    _object          = ""  ;
     _dbx             = nil ;
-    _panel_mode      = nil ; -- valid values are: "db", "table", "view", "query"
+    _panel_mode      = "root"; -- valid values are: "root", "db", "table", "view", "query"
 
   -- Members added since this plugin started.
+    _db             = nil ;
+    _schema         = ""  ;
     _col_masks      = nil ; -- col_masks table (non-volatile)
     _col_masks_used = nil ;
     _rowid_name     = nil ;
@@ -44,6 +47,7 @@ function mypanel.open(file_name, extensions, foreign_keys)
     _sort_last_mode = nil ;
     _show_affinity  = nil ;
     _tab_filter     = { enabled=false; text=nil; };
+    _multi_db       = multi_db;
   }
 
   -- Members come from the original plugin SQLiteDB.
@@ -55,15 +59,21 @@ function mypanel.open(file_name, extensions, foreign_keys)
 
   setmetatable(self, mt_panel)
 
-  self._dbx = sqlite.newsqlite()
-  if self._dbx:open(file_name) then
-    self:set_database_mode()
-    local db = self._dbx:db()
+  local dbx = sqlite.newsqlite()
+  if dbx:open(file_name) then
+    ---self:set_database_mode()
+    self._dbx = dbx
+    self._db = dbx:db()
+    if self._multi_db then
+      self:set_root_mode()
+    else
+      self:set_database_mode("main")
+    end
     if extensions then
-      db:load_extension("") -- enable extensions
+      self._db:load_extension("") -- enable extensions
     end
     if foreign_keys then
-      db:exec("PRAGMA foreign_keys = ON;")
+      self._db:exec("PRAGMA foreign_keys = ON;")
     end
     self._hist_file = history.newsettings("files", file_name:lower(), "PSL_LOCAL")
     self._col_masks = self._hist_file:field("col_masks")
@@ -76,47 +86,115 @@ function mypanel.open(file_name, extensions, foreign_keys)
 end
 
 
-function mypanel:set_directory(handle, Dir, UserData)
+function mypanel:set_directory(aHandle, aDir, aUserData)
+--far.Show("aDir, self._panel_mode, self._object", aDir, self._panel_mode, self._object)
+  local success = true
   self._tab_filter = {}
-  if Dir == ".." or Dir == "/" or Dir == "\\" then
-    self:set_database_mode()
-    return true
-  else
-    local name = Params.DecodeDirName(Dir, UserData)
-      if self._dbx:get_row_count(name) > 20000 then -- sorting is very slow on big tables
-        panel.SetSortMode(handle, nil, "SM_UNSORTED")
-        panel.SetSortOrder(handle, nil, false)
+  ----------------------------------------------------------------------------------------
+  if aDir == "/" or aDir == "\\" then
+    if self._multi_db then
+      self:set_root_mode()
+    else
+      if self._panel_mode == "db" then
+        panel.ClosePanel(aHandle)
+        return false
+      else
+        self:set_database_mode("main")
       end
-    return self:open_object(name)
+    end
+  ----------------------------------------------------------------------------------------
+  elseif aDir == ".." then
+    if self._multi_db then
+      if self._panel_mode == "db" or self._panel_mode == "query" then
+        self:set_root_mode()
+      else -- "table" or "view"
+        self:set_database_mode()
+      end
+    else
+      if self._panel_mode == "db" then
+        panel.ClosePanel(aHandle)
+        return false
+      elseif self._panel_mode == "query" then
+        self:set_database_mode("main")
+      else
+        self:set_database_mode()
+      end
+    end
+  ----------------------------------------------------------------------------------------
+  else -- any directory except "/", "\\", ".."
+    local abspath, schema, bslash, object = aDir:match [[^(\?)([^\]+)(\?)([^\]*)$]]
+    if abspath==nil or (bslash=="\\" and object=="") then
+      return false
+    end
+    if abspath == "\\" then
+      if self:database_exists(schema) then
+        if object ~= "" then
+          success = self:table_or_view_exists(schema,object) and
+                    self:open_object(aHandle, schema, object)
+        else
+          self:set_database_mode(schema)
+        end
+      end
+    else -- relative path
+      if object == "" then
+        if self._panel_mode == "root" then
+          if self:database_exists(schema) then
+            self:set_database_mode(schema)
+          end
+        elseif self._panel_mode == "db" then
+          object = schema
+          success = self:table_or_view_exists(self._schema, object) and
+                    self:open_object(aHandle, self._schema, object)
+        end
+      end -- if object == ""
+    end -- absolute/relative path
+  end -- if not special directory name
+  if success then
+    self:prepare_panel_info()
+    return true
   end
 end
 
 
-function mypanel:set_database_mode()
-  self._panel_mode = "db"
-  self._curr_object = nil
+function mypanel:set_root_mode()
+  self._schema = ""
+  self._object = ""
+  self._panel_mode = "root"
   self:prepare_panel_info()
 end
 
 
-function mypanel:open_object(object_name)
-  local dbx = self._dbx
-  local tp = dbx:get_object_type(object_name)
-  if tp == sqlite.ot_master or tp == sqlite.ot_table then
-    self._panel_mode = "table"
-  elseif tp == sqlite.ot_view then
-    self._panel_mode = "view"
-  else
-    return false
+function mypanel:set_database_mode(aSchema)
+  if aSchema then
+    self._schema = aSchema
   end
-  self._curr_object = object_name
-  self._column_descr = dbx:read_column_description(object_name)
-  if self._column_descr then
-    self:prepare_panel_info()
-    return true
-  else
-    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
-    return false
+  self._object = ""
+  self._panel_mode = "db"
+  self:prepare_panel_info()
+end
+
+
+function mypanel:open_object(aHandle, aSchema, aObject)
+  local tp = self._dbx:get_object_type(aSchema, aObject)
+  local panel_mode = (tp==sqlite.ot_master or tp==sqlite.ot_table) and "table" or
+                     (tp == sqlite.ot_view) and "view"
+  if panel_mode then
+    local column_descr = self._dbx:read_column_description(aSchema, aObject)
+    if column_descr then
+      self._schema       = aSchema
+      self._object       = aObject
+      self._panel_mode   = panel_mode
+      self._column_descr = column_descr
+
+      local name = Params.DecodeDirName(self._object)--, aUserData)
+      if self._dbx:get_row_count(self._schema, name) > 20000 then -- sorting is very slow on big tables
+        panel.SetSortMode(aHandle, nil, "SM_UNSORTED")
+        panel.SetSortOrder(aHandle, nil, false)
+      end
+      return true
+    else
+      ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
+    end
   end
 end
 
@@ -150,22 +228,21 @@ function mypanel:open_query(handle, query)
      (word1=="pragma" and word2=="database_list")
   then
     -- Get column description
-    local db = self._dbx:db()
-    local stmt = db:prepare(query)
+    local stmt = self._db:prepare(query)
     if not stmt then
-      ErrMsg(M.ps_err_sql.."\n"..query.."\n"..self._dbx:last_error())
+      self._dbx:SqlErrMsg(query)
       return false
     end
     local state = stmt:step()
     if state == sql3.ERROR or state == sql3.MISUSE then
-      ErrMsg(M.ps_err_sql.."\n"..query.."\n"..self._dbx:last_error())
+      self._dbx:SqlErrMsg(query)
       stmt:finalize()
       return false
     end
 
     self._last_sql_query = query
     self._panel_mode = "query"
-    self._curr_object = query
+    self._object = query
 
     stmt:reset()
     self._column_descr = {}
@@ -193,40 +270,103 @@ end
 
 
 function mypanel:get_panel_info(handle)
-  local info = self._panel_info
+  ---local CurDir = Params.EncodeDirName(self._object):gsub("%.","\\"):gsub("^.","\\%0")
+  local CurDir = self._schema
+  if self._object ~= "" then CurDir = CurDir.."\\"..self._object; end
+  if CurDir ~= "" then CurDir = "\\"..CurDir; end
+
+  local Info  = self._panel_info
+  local Flags = bor(F.OPIF_DISABLESORTGROUPS,F.OPIF_DISABLEFILTER,F.OPIF_SHORTCUT)
   return {
-    CurDir           = Params.EncodeDirName(self._curr_object);
-    Flags            = bit64.bor(F.OPIF_DISABLESORTGROUPS,F.OPIF_DISABLEFILTER,F.OPIF_SHORTCUT);
+    CurDir           = CurDir;
+    Flags            = Flags;
     HostFile         = self._file_name;
-    KeyBar           = info.key_bar;
-    PanelModesArray  = info.modes;
-    PanelModesNumber = #info.modes;
-    PanelTitle       = info.title;
+    KeyBar           = Info.key_bar;
+    PanelModesArray  = Info.modes;
+    PanelModesNumber = #Info.modes;
+    PanelTitle       = Info.title;
     ShortcutData     = "";
     StartPanelMode   = ("1"):byte();
   }
 end
 
 
-function mypanel:get_panel_list(handle)
-  local rc = false
+-- try to avoid returning false as it closes the panel (that may cause data loss)
+function mypanel:get_find_data(handle)
   self._sort_last_mode = nil
-  if self._panel_mode=="db" then
-    rc = self:get_panel_list_db()
-    panel.SetDirectoriesFirst(handle, nil, false)
-  elseif self._panel_mode=="table" or self._panel_mode=="view" then
-    rc = self:get_panel_list_obj()
+  ------------------------------------------------------------------------------
+  if self._panel_mode == "root" then
+    return self:get_panel_list_root()
+  ------------------------------------------------------------------------------
   elseif self._panel_mode == "query" then
-    rc = self:get_panel_list_query()
+    return self:get_panel_list_query()
+  ------------------------------------------------------------------------------
+  elseif self:database_exists(self._schema) then
+    if self._panel_mode == "db" then
+      local rc = self:get_panel_list_db()
+      if rc then
+        panel.SetDirectoriesFirst(handle, nil, false)
+        return rc
+      else
+        self:set_root_mode() -- go up one level
+        return self:get_find_data(handle)
+      end
+    elseif self._panel_mode=="table" or self._panel_mode=="view" then
+      local rc = self:get_panel_list_obj()
+      if rc then
+        return rc
+      else
+        self:set_database_mode() -- go up one level
+        return self:get_find_data(handle)
+      end
+    else
+      ErrMsg("Invalid panel mode: "..tostring(self._panel_mode)) -- should never get here
+    end
+  ------------------------------------------------------------------------------
+  else
+    ErrMsg("Database not found: "..tostring(self._schema))
+    self:set_root_mode()
+    return self:get_find_data(handle) -- go root level
   end
-  return rc
+  ------------------------------------------------------------------------------
+  return false
+end
+
+
+function mypanel:table_or_view_exists(aSchema, aObject)
+  local stmt = self._db:prepare("SELECT 1 FROM "..aSchema:norm().."."..aObject:norm())
+  if stmt then stmt:finalize(); return true; end
+  return false
+end
+
+
+function mypanel:database_exists(aObject)
+  aObject = aObject:lower()
+  for obj in self._db:nrows("PRAGMA DATABASE_LIST") do
+    if obj.name:lower() == aObject then return true; end
+  end
+  return false
+end
+
+
+function mypanel:get_panel_list_root()
+  local items = {}
+  items[1] = { FileName=".."; FileAttributes="d"; }
+  for obj in self._db:nrows("PRAGMA DATABASE_LIST") do
+    table.insert(items, {
+      FileAttributes = "d";
+      FileName = obj.name;
+      CustomColumnData = { obj.seq, obj.file };
+    })
+  end
+  return items
 end
 
 
 function mypanel:get_panel_list_db()
   local prg_wnd = progress.newprogress(M.ps_reading)
 
-  local db_objects = self._dbx:get_objects_list()
+  local db_objects = self._dbx:get_objects_list(self._schema)
   if not db_objects then
     prg_wnd:hide()
     ErrMsg(M.ps_err_read.."\n"..self._file_name.."\n"..self._dbx:last_error())
@@ -262,14 +402,14 @@ end
 
 
 function mypanel:get_panel_list_obj()
-  local curr_object = self._curr_object
   local dbx = self._dbx
-  local db = dbx:db()
+  local fullname = self._schema:norm().."."..self._object:norm()
 
   -- Find a name to use for ROWID (self._rowid_name)
   self._rowid_name = nil
   if self._panel_mode == "table" then
-    local stmt = db:prepare("select * from " .. curr_object:normalize())
+    local query = "select * from " .. fullname
+    local stmt = self._db:prepare(query)
     if stmt then
       local map = {}
       for _,colname in ipairs(stmt:get_names()) do
@@ -283,7 +423,7 @@ function mypanel:get_panel_list_obj()
       end
       stmt:finalize()
     else
-      ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
+      self._dbx:SqlErrMsg(query)
       return false
     end
   end
@@ -297,33 +437,32 @@ function mypanel:get_panel_list_obj()
 
   -- If ROWID exists then select it as the leftmost column.
   local query
-  local obj_norm = curr_object:normalize()
   if self._rowid_name then
-    query = ("select %s.%s,* from %s"):format(obj_norm, self._rowid_name, obj_norm)
-    local stmt = db:prepare(query)
+    query = ("select %s.%s,* from %s"):format(fullname, self._rowid_name, fullname)
+    local stmt = self._db:prepare(query)
     if stmt then stmt:finalize()
     else self._rowid_name = nil
     end
   end
   if not self._rowid_name then
-    query = "select * from " .. obj_norm
+    query = "select * from " .. fullname
   end
 
-  local count_query = "select count(*) from " .. obj_norm
+  local count_query = "select count(*) from " .. fullname
   if self._tab_filter.text and self._tab_filter.enabled then
     local tail = " "..self._tab_filter.text
     count_query = count_query..tail
     query = query..tail
   end
 
-  local stmt = db:prepare(query)
+  local stmt = self._db:prepare(query)
   if not stmt then
-    ErrMsg(M.ps_err_sql.."\n"..query.."\n"..dbx:last_error())
+    self._dbx:SqlErrMsg(query)
     return items
   end
 
   -- Get row count
-  local count_stmt = db:prepare(count_query)
+  local count_stmt = self._db:prepare(count_query)
   count_stmt:step()
   local row_count = count_stmt:get_value(0)
   count_stmt:finalize()
@@ -389,8 +528,7 @@ function mypanel:get_panel_list_query()
   dot_item.CustomColumnData = dot_custom_column_data
   table.insert(buff, dot_item)
 
-  local db = self._dbx:db()
-  local stmt = db:prepare(self._curr_object)
+  local stmt = self._db:prepare(self._object)
   if not stmt then
     local err_descr = self._dbx:last_error()
     ErrMsg(M.ps_err_read.."\n"..err_descr)
@@ -437,12 +575,12 @@ function mypanel:set_column_mask(handle)
   -- Build dialog dynamically
   local dlg_width = 72
   local col_num = #self._column_descr
-  local FLAG_DFLT = bit64.bor(F.DIF_CENTERGROUP, F.DIF_DEFAULTBUTTON)
-  local FLAG_NOCLOSE = bit64.bor(F.DIF_CENTERGROUP, F.DIF_BTNNOCLOSE)
+  local FLAG_DFLT = bor(F.DIF_CENTERGROUP, F.DIF_DEFAULTBUTTON)
+  local FLAG_NOCLOSE = bor(F.DIF_CENTERGROUP, F.DIF_BTNNOCLOSE)
   local dlg_items = {
     {F.DI_DOUBLEBOX, 3,1,dlg_width-4,col_num+4, 0,0,0,0, M.ps_title_select_columns},
   }
-  local mask = self._col_masks[self._curr_object]
+  local mask = self._col_masks[self._object]
   for i = 1,col_num do
     local text = mask and mask[self._column_descr[i].name]
     local check = text and 1 or 0
@@ -490,7 +628,7 @@ function mypanel:set_column_mask(handle)
   local res = far.Dialog(guid, -1, -1, dlg_width, 6+col_num, "PanelView", dlg_items, nil, DlgProc)
   if res > 0 and res ~= btnCancel then
     mask = {}
-    self._col_masks[self._curr_object] = mask
+    self._col_masks[self._object] = mask
     local all_empty = true
     for k=1,col_num do
       if dlg_items[2*k+1][6] ~= 0 then
@@ -511,7 +649,7 @@ end
 
 
 function mypanel:toggle_column_mask(handle)
-  if self._col_masks[self._curr_object] then
+  if self._col_masks[self._object] then
     self._col_masks_used = not self._col_masks_used
     self:prepare_panel_info()
     panel.UpdatePanel(handle,nil,true)
@@ -520,14 +658,60 @@ function mypanel:toggle_column_mask(handle)
 end
 
 
-local function add_keybar_label (target, label, vkc, cks)
-  local kbl = {
-    Text = label;
-    LongText = label;
-    VirtualKeyCode = vkc;
-    ControlKeyState = cks or 0;
-  }
-  table.insert(target, kbl)
+local Keybar = {}
+Keybar.root = {
+--           F1        F2        F3        F4        F5        F6        F7        F8
+  nomods = { false,    false,    "",       "",       "",       "SQL",    "",       "Detach" },
+  shift  = { "",       "",       "",       "",       "",       "",       "",       ""       },
+  alt    = { false,    false,    "",       "",       "",       "",       "",       false    },
+  ctrl   = { "",       "",       "",       "",       "",       "",       "",       ""       },
+}
+Keybar.db = {
+--           F1        F2        F3        F4        F5        F6        F7        F8
+  nomods = { false,    false,    "View",   "DDL",    "Export", "SQL",    "",       "Delete" },
+  shift  = { "",       "",       "",       "Pragma", "Dump",   "",       "",       ""       },
+  alt    = { false,    false,    "",       "",       "",       "",       "",       false    },
+  ctrl   = { "",       "",       "",       "",       "",       "",       "",       ""       },
+}
+Keybar.table = {
+--           F1        F2        F3        F4        F5        F6        F7        F8
+  nomods = { false,    false,    "",       "Update", "",       "SQL",    "",       "Delete" },
+  shift  = { "",       "",       "Custom", "Insert", "Affin",  "Filter", "",       ""       },
+  alt    = { false,    false,    "Custom", "",       "",       "Filter", "",       false    },
+  ctrl   = { "",       "",       "",       "",       "",       "",       "",       ""       },
+}
+Keybar.query = {
+--           F1        F2        F3        F4        F5        F6        F7        F8
+  nomods = { false,    false,    "",       "",       "",       "SQL",    "",       ""       },
+  shift  = { "",       "",       "",       "",       "",       "",       "",       ""       },
+  alt    = { false,    false,    "",       "",       "",       "",       "",       false    },
+  ctrl   = { "",       "",       "",       "",       "",       "",       "",       ""       },
+}
+Keybar.mods = {
+  nomods = 0;
+  shift  = F.SHIFT_PRESSED;
+  alt    = F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED;
+  ctrl   = F.LEFT_CTRL_PRESSED + F.RIGHT_CTRL_PRESSED;
+}
+
+
+function mypanel:FillKeyBar (trg, src)
+  src = Keybar[src]
+  for mod,cks in pairs(Keybar.mods) do
+    for vk=VK.F1,VK.F8 do
+      local txt = src[mod][vk-VK.F1+1]
+      if txt then
+        table.insert(trg, { Text=txt; LongText=txt; VirtualKeyCode=vk; ControlKeyState=cks })
+      end
+    end
+  end
+  for vk=VK.F9,VK.F12 do
+    table.insert(trg, { Text=""; LongText=""; VirtualKeyCode=vk;
+                        ControlKeyState=F.LEFT_CTRL_PRESSED + F.RIGHT_CTRL_PRESSED })
+  end
+  local txt = self._multi_db and "MainDB" or "MultiDB"
+  table.insert(trg, { Text=txt; LongText=txt; VirtualKeyCode=VK.F6;
+                      ControlKeyState=F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED + F.SHIFT_PRESSED })
 end
 
 
@@ -547,29 +731,32 @@ function mypanel:prepare_panel_info()
   local status_types = nil
   local status_widths = nil
 
-  self._panel_info = {
+  local info = {
     key_bar = {};
     modes   = {};
     title   = M.ps_title_short .. ": " .. self._file_name:match("[^\\/]*$");
   }
-  local info = self._panel_info
-  local key_bar = info.key_bar
-
-  if self._panel_mode == "db" then
+  self._panel_info = info
+  -------------------------------------------------------------------------------------------------
+  if self._panel_mode == "root" then
+    col_types     = "N,C0,C1"
+    status_types  = "N,C0,C1"
+    col_widths    = "0,5,0"
+    status_widths = "0,5,0"
+    col_titles    = { "name", "seq", "file" }
+    self:FillKeyBar(info.key_bar, "root")
+  -------------------------------------------------------------------------------------------------
+  elseif self._panel_mode == "db" then
+    info.title = info.title .. " [" .. self._schema .. "]"
     col_types     = "N,C0,C1"
     status_types  = "N,C0,C1"
     col_widths    = "0,8,9"
     status_widths = "0,8,9"
-    table.insert(col_titles, M.ps_pt_name)
-    table.insert(col_titles, M.ps_pt_type)
-    table.insert(col_titles, M.ps_pt_count)
-
-    add_keybar_label (key_bar, "DDL", VK.F4)
-    add_keybar_label (key_bar, "Pragma", VK.F4, F.SHIFT_PRESSED)
-    add_keybar_label (key_bar, "Export", VK.F5)
-  else
-    info.title = info.title .. " [" .. self._curr_object .. "]"
-    local mask = self._col_masks_used and self._col_masks[self._curr_object]
+    col_titles    = { M.ps_pt_name, M.ps_pt_type, M.ps_pt_count }
+    self:FillKeyBar(info.key_bar, "db")
+  -------------------------------------------------------------------------------------------------
+  else -- self._panel_mode == "table"/"view"/"query"
+    local mask = self._col_masks_used and self._col_masks[self._object]
     for i,descr in ipairs(self._column_descr) do
       local width = mask and mask[descr.name]
       if width or not mask then
@@ -581,33 +768,21 @@ function mypanel:prepare_panel_info()
           col_widths = col_widths .. ','
         end
         col_widths = col_widths .. (width or "0")
-        if self._show_affinity and self._panel_mode == "table" then
+        if self._panel_mode == "table" and self._show_affinity then
           table.insert(col_titles, descr.name..affinity_map[descr.affinity])
         else
           table.insert(col_titles, descr.name)
         end
       end
     end
-    add_keybar_label (key_bar, "Update", VK.F4)
-    add_keybar_label (key_bar, "Insert", VK.F4, F.SHIFT_PRESSED)
-    add_keybar_label (key_bar, "", VK.F3)
-    add_keybar_label (key_bar, "", VK.F3, F.SHIFT_PRESSED)
-    add_keybar_label (key_bar, "", VK.F5)
-  end
-  add_keybar_label (key_bar, "SQL", VK.F6)
-  add_keybar_label (key_bar, "", VK.F1, F.SHIFT_PRESSED)
-  add_keybar_label (key_bar, "", VK.F2, F.SHIFT_PRESSED)
-  add_keybar_label (key_bar, "", VK.F3, F.SHIFT_PRESSED)
-  add_keybar_label (key_bar, "", VK.F5, F.SHIFT_PRESSED)
-  add_keybar_label (key_bar, "", VK.F6, F.SHIFT_PRESSED)
-  add_keybar_label (key_bar, "", VK.F7)
-  add_keybar_label (key_bar, "", VK.F3, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
-  add_keybar_label (key_bar, "", VK.F4, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
-  add_keybar_label (key_bar, "", VK.F5, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
-  add_keybar_label (key_bar, "", VK.F6, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
-  add_keybar_label (key_bar, "", VK.F7, F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED)
-  for i = VK.F1, VK.F12 do
-    add_keybar_label (key_bar, "", i, F.LEFT_CTRL_PRESSED + F.RIGHT_CTRL_PRESSED)
+    if self._panel_mode == "query" then
+      info.title = ("%s [%s]"):format(info.title, self._object)
+      self:FillKeyBar(info.key_bar, "query")
+    else
+      info.title = ("%s [%s.%s]"):format(info.title, self._schema, self._object)
+      self:FillKeyBar(info.key_bar, "table")
+    end
+  -------------------------------------------------------------------------------------------------
   end
 
   -- Configure one panel view for all modes
@@ -628,12 +803,16 @@ end
 
 
 function mypanel:delete_items(handle, items)
-  if self._panel_mode == "table" and not self._rowid_name then
-    ErrMsg(M.ps_err_del_norowid)
-    return false
-  end
-  if self._panel_mode == "table" or self._panel_mode == "db" then
-    local ed = myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name)
+  if self._panel_mode == "root" then
+    for _,item in ipairs(items) do
+      self._db:exec("DETACH "..item.FileName:norm())
+    end
+  elseif self._panel_mode == "db" or self._panel_mode == "table" then
+    if self._panel_mode == "table" and not self._rowid_name then
+      ErrMsg(M.ps_err_del_norowid)
+      return false
+    end
+    local ed = myeditor.neweditor(self._dbx, self._schema, self._object, self._rowid_name)
     return ed:remove(items)
   end
   return false
@@ -642,7 +821,7 @@ end
 
 function mypanel:set_table_filter(handle)
   local guid        = win.Uuid("920436C2-C32D-487F-B590-0E255AD71038")
-  local query       = "SELECT * FROM "..self._curr_object:normalize()
+  local query       = "SELECT * FROM "..self._schema:norm().."."..self._object:norm()
   local hist_extra  = "Polygon_PanelFilterExt"
   local hist_where  = "Polygon_PanelFilter"
   local flag_edit   = F.DIF_HISTORY + F.DIF_USELASTHISTORY
@@ -667,13 +846,14 @@ function mypanel:set_table_filter(handle)
       local extra = hDlg:send("DM_GETTEXT", edtExtra)
       local where = hDlg:send("DM_GETTEXT", edtWhere)
       local text = where:find("%S") and (extra.." WHERE "..where) or extra
-      local stmt = self._dbx:db():prepare(query.." "..text)
+      local longquery = query.." "..text
+      local stmt = self._db:prepare(longquery)
       if stmt then -- check syntax
         stmt:finalize()
         self._tab_filter.text = text
         self._tab_filter.enabled = true
       else
-        ErrMsg(M.ps_err_sql.."\n"..self._dbx:last_error())
+        self._dbx:SqlErrMsg(longquery)
         return 0
       end
     end
@@ -699,9 +879,12 @@ function mypanel:handle_keyboard(handle, key_event)
   local vcode  = key_event.VirtualKeyCode
   local cstate = key_event.ControlKeyState
   local nomods = (cstate == 0) or (cstate == F.ENHANCED_KEY)
---local alt    = cstate == F.LEFT_ALT_PRESSED  or cstate == F.RIGHT_ALT_PRESSED
+  local alt    = cstate == F.LEFT_ALT_PRESSED  or cstate == F.RIGHT_ALT_PRESSED
   local ctrl   = cstate == F.LEFT_CTRL_PRESSED or cstate == F.RIGHT_CTRL_PRESSED
   local shift  = cstate == F.SHIFT_PRESSED
+  local altshift = band(cstate, F.LEFT_CTRL_PRESSED+F.RIGHT_CTRL_PRESSED) == 0 and
+                   band(cstate, F.LEFT_ALT_PRESSED+F.RIGHT_ALT_PRESSED) ~= 0 and
+                   band(cstate, F.SHIFT_PRESSED) ~= 0
 
   -- Database mode -------------------------------------------------------------
   if self._panel_mode == "db" then
@@ -715,20 +898,38 @@ function mypanel:handle_keyboard(handle, key_event)
       self:view_pragma_statements()
       return true
     elseif nomods and vcode == VK.F5 then        -- F5: export table/view data
-      local ex = exporter.newexporter(self._dbx, self._file_name)
+      local ex = exporter.newexporter(self._dbx, self._file_name, self._schema)
       if ex:export_data_with_dialog() then
         panel.UpdatePanel(nil,0)
         panel.RedrawPanel(nil,0)
       end
       return true
-    elseif ctrl and vcode == VK.D then
-      local ex = exporter.newexporter(self._dbx, self._file_name)
+    elseif shift and vcode == VK.F5 then
+      local ex = exporter.newexporter(self._dbx, self._file_name, self._schema)
       ex:dump_data_with_dialog()
       return true
     end
+  end
+
+  -- Table or view mode --------------------------------------------------------
+  if self._panel_mode == "table" or self._panel_mode == "view" then
+    if shift and vcode == VK.F3 then
+      self:set_column_mask(handle)
+      return true
+    elseif alt and vcode == VK.F3 then
+      self:toggle_column_mask(handle)
+      return true
+    elseif shift and vcode == VK.F6 then         -- Shift-F6 ("panel filter")
+      self:set_table_filter(handle)
+      return true;
+    elseif alt and vcode == VK.F6 then           -- Alt-F6 ("toggle panel filter")
+      self:toggle_table_filter(handle)
+      return true
+    end
+  end
 
   -- Table mode ----------------------------------------------------------------
-  elseif self._panel_mode == "table" then
+  if self._panel_mode == "table" then
     if nomods and (vcode == VK.F4 or vcode == VK.RETURN) then -- F4 or Enter: edit row
       if vcode == VK.RETURN then
         local item = panel.GetCurrentPanelItem(nil, 1)
@@ -737,73 +938,50 @@ function mypanel:handle_keyboard(handle, key_event)
         end
       end
       if self._rowid_name then
-        local ed = myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name)
+        local ed = myeditor.neweditor(self._dbx, self._schema, self._object, self._rowid_name)
         ed:edit_item(handle)
         return true
       else
         ErrMsg(M.ps_err_edit_norowid)
       end
     elseif shift and vcode == VK.F4 then         -- ShiftF4: insert row
-      local ed = myeditor.neweditor(self._dbx, self._curr_object, self._rowid_name)
+      local ed = myeditor.neweditor(self._dbx, self._schema, self._object, self._rowid_name)
       ed:insert_item(handle)
       return true
-    elseif shift and vcode == VK.F3 then
-      self:set_column_mask(handle)
-      return true
-    elseif shift and vcode == VK.F5 then
-      self:toggle_column_mask(handle)
-      return true
-    elseif ctrl and vcode == VK.F then           -- Ctrl-F ("panel filter")
-      self:set_table_filter(handle)
-      return true;
-    elseif ctrl and vcode == VK.G then           -- Ctrl-G ("toggle panel filter")
-      self:toggle_table_filter(handle)
-      return true
-    elseif ctrl and vcode == VK.A then           -- Ctrl-A ("show/hide columns affinity")
+    elseif shift and vcode == VK.F5 then         -- Shift-F5 ("show/hide columns affinity")
       self._show_affinity = not self._show_affinity
       self:prepare_panel_info()
       panel.RedrawPanel(handle)
       return true
     end
-
-  -- View mode ----------------------------------------------------------------
-  elseif self._panel_mode == "view" then
-    if shift and vcode == VK.F3 then
-      self:set_column_mask(handle)
-      return true
-    elseif shift and vcode == VK.F5 then
-      self:toggle_column_mask(handle)
-      return true
-    elseif ctrl and vcode == VK.F then           -- Ctrl-F ("panel filter")
-      self:set_table_filter(handle)
-      return true;
-    elseif ctrl and vcode == VK.G then           -- Ctrl-G ("toggle panel filter")
-      self:toggle_table_filter(handle)
-      return true
-    end
-
-  -- Query mode ----------------------------------------------------------------
-  elseif self._panel_mode == "query" then
-    -- nothing for the moment
-
   end
 
   -- All modes -----------------------------------------------------------------
-  if nomods and vcode == VK.F6 then            -- F6: edit and execute SQL query
-    self:edit_sql_query(handle)
-    return true
-  elseif shift and vcode == VK.F4 then         -- ShiftF4: suppress this key
+  if shift and vcode == VK.F4 then             -- ShiftF4: suppress this key
     return true
   elseif nomods and vcode == VK.F5 then        -- F5: suppress this key
     return true
+  elseif nomods and vcode == VK.F6 then        -- F6: edit and execute SQL query
+    self:edit_sql_query(handle)
+    return true
+  elseif altshift and vcode == VK.F6 then      -- AltShiftF6: toggle multi_db mode
+    self._multi_db = not self._multi_db
+    self:prepare_panel_info()
+    panel.RedrawPanel(handle)
+    return false
   elseif shift and vcode == VK.F6 then         -- ShiftF6: suppress this key
     return true
   elseif nomods and vcode == VK.F7 then        -- F7: suppress this key
     return true
   elseif nomods and vcode == VK.F8 then -- intercept F8 to avoid panel-reread in case of user cancel
-    if self._panel_mode == "db" or self._panel_mode == "table" then
-      if panel.GetPanelInfo(handle).SelectedItemsNumber > 0 then
-        local guid = win.Uuid("4472C7D8-E2B2-46A0-A005-B10B4141EBBD") -- for macros
+    if panel.GetPanelInfo(handle).SelectedItemsNumber > 0 then
+      local guid = win.Uuid("4472C7D8-E2B2-46A0-A005-B10B4141EBBD") -- for macros
+      if self._panel_mode == "root" then
+        if far.Message(M.ps_detach_question, M.ps_title_short, ";YesNo", "w", nil, guid) == 1 then
+          return nil
+        end
+      end
+      if self._panel_mode == "db" or self._panel_mode == "table" then
         if far.Message(M.ps_drop_question, M.ps_title_short, ";YesNo", "w", nil, guid) == 1 then
           return nil
         end
@@ -830,7 +1008,7 @@ function mypanel:view_db_object()
 
   -- For unknown types show create sql only
   if not item.FileAttributes:find("d") then
-    local cr_sql = self._dbx:get_creation_sql(item.FileName)
+    local cr_sql = self._dbx:get_creation_sql(self._schema, item.FileName)
     if not cr_sql then
       return
     end
@@ -849,13 +1027,13 @@ function mypanel:view_db_object()
     file:close()
   else
     -- Export data
-    local ex = exporter.newexporter(self._dbx, self._file_name)
+    local ex = exporter.newexporter(self._dbx, self._file_name, self._schema)
     tmp_file_name = get_temp_file_name("txt")
     local ok = ex:export_data_as_text(tmp_file_name, RealItemName)
     if not ok then return end
   end
   local title = M.ps_title_short .. ": " .. RealItemName
-  viewer.Viewer(tmp_file_name, title, 0, 0, -1, -1, bit64.bor(
+  viewer.Viewer(tmp_file_name, title, 0, 0, -1, -1, bor(
     F.VF_ENABLE_F6, F.VF_DISABLEHISTORY, F.VF_DELETEONLYFILEONCLOSE, F.VF_IMMEDIATERETURN, F.VF_NONMODAL), 65001)
   viewer.SetMode(nil, { Type=F.VSMT_WRAP,     iParam=0,          Flags=0 })
   viewer.SetMode(nil, { Type=F.VSMT_VIEWMODE, iParam=F.VMT_TEXT, Flags=F.VSMFL_REDRAW })
@@ -867,7 +1045,7 @@ function mypanel:view_db_create_sql()
   local item = panel.GetCurrentPanelItem(nil, 1)
   if item and item.FileName ~= ".." then
     local RealItemName = Params.DecodeItemName(item)
-    local cr_sql = self._dbx:get_creation_sql(RealItemName)
+    local cr_sql = self._dbx:get_creation_sql(self._schema, RealItemName)
     if cr_sql then
       local tmp_path = far.MkTemp()..".sql"
       local file = io.open(tmp_path, "w")
@@ -897,10 +1075,9 @@ function mypanel:view_pragma_statements()
     "user_version", "wal_autocheckpoint", "wal_checkpoint"
   }
   local list_items = {}
+  local query_head = "PRAGMA "..self._schema:norm().."."
   for _,v in ipairs(pst) do
-    local query = "pragma " .. v
-    local db = self._dbx:db()
-    local stmt = db:prepare(query)
+    local stmt = self._db:prepare(query_head..v)
     if stmt then
       if stmt:step() == sql3.ROW then
         local pv = v .. ": "
@@ -916,10 +1093,11 @@ function mypanel:view_pragma_statements()
 
   if list_items[1] then
     local guid = win.Uuid("FF769EE0-2643-48F1-A8A2-239CD3C6691F")
+    local title = ("%s [%s]"):format(M.ps_title_pragma, self._schema)
     local list_flags = F.DIF_LISTNOBOX + F.DIF_LISTNOAMPERSAND + F.DIF_FOCUS
     local btn_flags = F.DIF_CENTERGROUP + F.DIF_DEFAULTBUTTON
     local dlg_items = {
-      {"DI_DOUBLEBOX", 3, 1,56,18,          0, 0, 0, 0,               M.ps_title_pragma},
+      {"DI_DOUBLEBOX", 3, 1,56,18,          0, 0, 0, 0,               title},
       {"DI_LISTBOX",   4, 2,55,15, list_items, 0, 0, list_flags,      ""},
       {"DI_TEXT",      0,16, 0,16,          0, 0, 0, F.DIF_SEPARATOR, ""},
       {"DI_BUTTON",   60,17, 0, 0,          0, 0, 0, btn_flags,       M.ps_ok}
@@ -1032,10 +1210,10 @@ end
 
 function mypanel:get_info()
   return {
-    db          = self._dbx:db();
+    db          = self._db;
     file_name   = self._file_name;
     panel_mode  = self._panel_mode;
-    curr_object = self._curr_object;
+    curr_object = self._object;
     rowid_name  = self._rowid_name;
     get_rowid   = get_rowid;
   }

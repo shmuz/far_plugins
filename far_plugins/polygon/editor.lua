@@ -17,9 +17,11 @@ local myeditor = {}
 local mt_editor = {__index=myeditor}
 
 
-function myeditor.neweditor(dbx, table_name, rowid_name)
+function myeditor.neweditor(dbx, schema, table_name, rowid_name)
   local self = setmetatable({}, mt_editor)
   self._dbx = dbx
+  self._db = dbx:db()
+  self._schema = schema
   self._table_name = table_name
   self._rowid_name = rowid_name
   return self
@@ -32,9 +34,9 @@ function myeditor:edit_item(handle)
   if not item or item.FileName == ".." then return; end
 
   local row_id = tostring(item.AllocationSize)
-  local query = ("select * from %s where %s=%s"):format(
-                self._table_name:normalize(), self._rowid_name, row_id)
-  local stmt = self._dbx:db():prepare(query)
+  local query = ("select * from %s.%s where %s=%s"):format(
+                self._schema:norm(), self._table_name:norm(), self._rowid_name, row_id)
+  local stmt = self._db:prepare(query)
   if stmt and stmt:step() == sql3.ROW then
     -- Read current row data
     local db_data = {}
@@ -49,7 +51,7 @@ function myeditor:edit_item(handle)
       elseif f.coltype == sql3.INTEGER or f.coltype == sql3.FLOAT then
         f.value = stmt:get_column_text(i)
       elseif f.coltype == sql3.TEXT then
-        f.value = stmt:get_column_text(i):normalize()
+        f.value = stmt:get_column_text(i):norm()
       elseif f.coltype == sql3.BLOB then
         local s = string.gsub(stmt:get_value(i), ".",
           function(c)
@@ -73,7 +75,7 @@ end
 
 
 function myeditor:insert_item(handle)
-  local columns_descr = self._dbx:read_column_description(self._table_name)
+  local columns_descr = self._dbx:read_column_description(self._schema, self._table_name)
   if not columns_descr then
     ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
     return
@@ -181,31 +183,30 @@ function myeditor:remove(items)
     return false
   end
 
-  if not self._table_name then
+  local schema_norm = self._schema:norm()
+  if self._table_name == "" then
     for _,item in ipairs(items) do
-      local query = "drop "
+      local what = nil
       local tp = item.AllocationSize
-      if     tp == sqlite.ot_master  then query = query .. "table"
-      elseif tp == sqlite.ot_table   then query = query .. "table"
-      elseif tp == sqlite.ot_view    then query = query .. "view"
-      elseif tp == sqlite.ot_index   then query = query .. "index"
-      elseif tp == sqlite.ot_trigger then query = query .. "trigger"
-      else query = nil
+      if     tp == sqlite.ot_master  then what = "table"
+      elseif tp == sqlite.ot_table   then what = "table"
+      elseif tp == sqlite.ot_view    then what = "view"
+      elseif tp == sqlite.ot_index   then what = "index"
+      elseif tp == sqlite.ot_trigger then what = "trigger"
       end
-      if query then
-        local Name = DecodeItemName(item)
-        query = query .. " " .. Name:normalize() .. ";"
+      if what then
+        local name_norm = DecodeItemName(item):norm()
+        local query = ("drop %s %s.%s;"):format(what, schema_norm, name_norm)
         if not self._dbx:execute_query(query, true) then
           break
         end
       end
     end
   else
-    local query_start = ("delete from %s where %s in ("):format(
-                          self._table_name:normalize(), self._rowid_name)
-    local db = self._dbx:db()
+    local query_start = ("delete from %s.%s where %s in ("):format(
+                          schema_norm, self._table_name:norm(), self._rowid_name)
 
-    db:exec("BEGIN TRANSACTION;")
+    self._db:exec("BEGIN TRANSACTION;")
     local cnt = 0
     while cnt < items_count do
       local tt = {}
@@ -218,9 +219,9 @@ function myeditor:remove(items)
       end
       cnt = upper
     end
-    if db:exec("END TRANSACTION;") ~= sql3.OK then
+    if self._db:exec("END TRANSACTION;") ~= sql3.OK then
       local msg = M.ps_err_sql.."\n"..self._dbx:last_error()
-      db:exec("ROLLBACK TRANSACTION;")
+      self._db:exec("ROLLBACK TRANSACTION;")
       ErrMsg(msg)
       return false
     end
@@ -238,19 +239,19 @@ function myeditor:exec_update(row_id, db_data)
     if db_data[1] == nil then
       return true -- no changed columns
     end
-    query = "update "..self._table_name:normalize().." set "
+    query = ("update %s.%s set "):format(self._schema:norm(), self._table_name:norm())
     for i,v in ipairs(db_data) do
       if i>1 then query = query..',' end
-      query = query..v.colname:normalize().."="..v.value
+      query = query..v.colname:norm().."="..v.value
     end
     query = query.." where "..self._rowid_name.."="..row_id
 
   else
     -- Insert query
-    query = "insert into "..self._table_name:normalize().." ("
+    query = ("insert into %s.%s ("):format(self._schema:norm(), self._table_name:norm())
     for i,v in ipairs(db_data) do
       if i>1 then query = query.."," end
-      query = query .. v.colname:normalize()
+      query = query .. v.colname:norm()
     end
     query = query .. ") values ("
     for i,v in ipairs(db_data) do
@@ -261,10 +262,10 @@ function myeditor:exec_update(row_id, db_data)
 
   end
 
-  if self._dbx:db():exec(query) == sql3.OK then
+  if self._db:exec(query) == sql3.OK then
     return true
   else
-    ErrMsg(self._dbx:last_error(), M.ps_err_sql)
+    self._dbx:SqlErrMsg(query)
     return false
   end
 end

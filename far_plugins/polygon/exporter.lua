@@ -16,8 +16,9 @@ local exporter = {}
 local mt_exporter = {__index=exporter}
 
 
-function exporter.newexporter(dbx, filename)
-  return setmetatable({_dbx=dbx; _file_name=filename}, mt_exporter)
+function exporter.newexporter(dbx, filename, schema)
+  local self = {_dbx=dbx; _db=dbx:db(); _file_name=filename, _schema=schema}
+  return setmetatable(self, mt_exporter)
 end
 
 
@@ -195,8 +196,8 @@ end
 function exporter:export_data_as_text(file_name, db_object)
   local dbx = self._dbx
   -- Get row count and  columns description
-  local row_count = dbx:get_row_count(db_object)
-  local columns_descr = dbx:read_column_description(db_object)
+  local row_count = dbx:get_row_count(self._schema, db_object)
+  local columns_descr = dbx:read_column_description(self._schema, db_object)
   if not (row_count and columns_descr) then
     ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
     return false
@@ -216,8 +217,8 @@ function exporter:export_data_as_text(file_name, db_object)
     query_val = query_val .. "[" .. columns_descr[i].name .. "]"
     query_len = query_len .. "length([" .. columns_descr[i].name .. "])"
   end
-  query_val = query_val .. " from '" .. db_object .. "'"
-  query_len = query_len .. " from '" .. db_object .. "'"
+  query_val = ("%s from %s.%s"):format(query_val, self._schema:norm(), db_object:norm())
+  query_len = ("%s from %s.%s"):format(query_len, self._schema:norm(), db_object:norm())
 
   for i = 1, columns_count do
     columns_width[i] = columns_descr[i].name:len() -- initialize with widths of titles
@@ -276,7 +277,7 @@ function exporter:export_data_as_text(file_name, db_object)
   file:write(out_text, "\r\n")
 
   -- Read data
-  local query = "select * from " .. db_object:normalize() .. ";"
+  local query = "select * from " .. self._schema:norm().."."..db_object:norm() .. ";"
   local db = dbx:db()
   local stmt = db:prepare(query)
   if not stmt then
@@ -344,8 +345,8 @@ end
 
 function exporter:export_data_as_csv(file_name, db_object, multiline)
   -- Get row count and  columns description
-  local row_count = self._dbx:get_row_count(db_object)
-  local columns_descr = self._dbx:read_column_description(db_object)
+  local row_count = self._dbx:get_row_count(self._schema, db_object)
+  local columns_descr = self._dbx:read_column_description(self._schema, db_object)
   if not (row_count and columns_descr) then
     ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
     return false
@@ -372,9 +373,8 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
   file:write(out_text, "\r\n")
 
   -- Read data
-  local query = "select * from " .. db_object:normalize() .. ";"
-  local db = self._dbx:db()
-  local stmt = db:prepare(query)
+  local query = "select * from " .. self._schema:norm().."."..db_object:norm()
+  local stmt = self._db:prepare(query)
   if not stmt then
     prg_wnd:hide()
     file:close()
@@ -447,7 +447,7 @@ function exporter:export_data_as_dump(Args)
     t[2] = '"'..s1..'"'
   else
     for i,item in ipairs(Args.items) do
-      t[i+1] = '"'..s1..' '..item.FileName:normalize()..'"'
+      t[i+1] = '"'..s1..' '..item.FileName:norm()..'"'
     end
   end
   t[#t+1] = '1>"'..Args.file_name..'" 2>NUL'

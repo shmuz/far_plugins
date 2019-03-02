@@ -5,6 +5,8 @@ local names = {
   "ps_title_pragma",
 
   "ps_cfg_add_pm",
+  "ps_cfg_confirm_close",
+  "ps_cfg_multidb_mode",
   "ps_cfg_prefix",
   "ps_cfg_user_modules",
   "ps_cfg_extensions",
@@ -21,6 +23,7 @@ local names = {
   "ps_insert_row_title",
   "ps_edit_row_title",
   "ps_drop_question",
+  "ps_detach_question",
 
   "ps_exp_title",
   "ps_exp_main",
@@ -52,6 +55,7 @@ local names = {
   "ps_yes_no",
   "ps_overwrite",
   "ps_already_exists",
+  "ps_confirm_close",
 
   "ps_title_select_columns",
   "ps_set_columns",
@@ -59,8 +63,6 @@ local names = {
 
   "ps_panel_filter",
 
-  "ps_load_modules_query",
-  "ps_security_warning",
   "ps_module_not_found",
 }
 
