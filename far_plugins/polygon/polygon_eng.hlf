@@ -18,7 +18,6 @@ $^ #Polygon - Help Contents#
  ~Data Export Dialog~@Export@
  ~Data Dump Dialog~@Dump@
  ~User modules~@UserModules@
- ~Misc~@Misc@
 
 @MultiDbMode
 $^ #Multi-database mode#
@@ -339,19 +338,6 @@ $^ #Call from a macro#
    Executes the given SQL statements.
      <whatpanel> : 0 = active panel, 1 = passive panel
      <SQL code>  : one or more SQL statements
-
-
- ~Contents~@Contents@
-
-@Misc
-$^ #Misc#
-^#Special names handling#
- Far Manager treats several directory names as special: #".."#, #"\"#, #"/"#, #""#.
- It can not properly work with a directory that has one of those names.
- Since SQLite tables can have such names the plugin passes them to Far Manager in the form of:
- #_fixed(..)#, #_fixed(\)#,  #_fixed(/)# and  #_fixed()#.
- These modified names are what the user sees in the plugin's panel but internally the plugin
-knows the real names and uses them in its operations.
 
 
  ~Contents~@Contents@

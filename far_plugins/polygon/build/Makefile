@@ -14,18 +14,17 @@ EMBED_METHOD = luasrcdiet
 bootscript = $(path_plugin)\$(PROJECT).lua
 
 scripts = \
-  $(path_plugin)\_globalinfo.lua \
-  $(path_plugin)\editor.lua      \
-  $(path_plugin)\exporter.lua    \
-  $(path_plugin)\panel.lua       \
-  $(path_plugin)\progress.lua    \
-  $(path_plugin)\settings.lua    \
-  $(path_plugin)\sqlite.lua      \
-  $(path_plugin)\string_rc.lua
+  $(path_plugin)\_globalinfo.lua
 
 modules = \
-  $(path_share)*far2\utils.lua   \
-  $(path_share)*far2\history.lua \
+  $(path_plugin)*modules\editor.lua      \
+  $(path_plugin)*modules\exporter.lua    \
+  $(path_plugin)*modules\panel.lua       \
+  $(path_plugin)*modules\progress.lua    \
+  $(path_plugin)*modules\settings.lua    \
+  $(path_plugin)*modules\sqlite.lua      \
+  $(path_plugin)*modules\string_rc.lua   \
+  $(path_share)*far2\history.lua         \
   $(path_share)*serial.lua
 
 FAR_EXPORTS = \

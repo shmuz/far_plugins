@@ -1,7 +1,6 @@
 -- progress.lua
 
-local Params = ...
-local M = Params.M
+local M = require "modules.string_rc"
 local F = far.Flags
 
 local DELAY = 0.15e6 -- 0.15 sec (in microseconds); to avoid flickering

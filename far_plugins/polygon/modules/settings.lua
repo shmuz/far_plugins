@@ -3,8 +3,7 @@
 local History = require "far2.history"
 local Data
 
-local Params = ...
-local M = Params.M
+local M = require "modules.string_rc"
 local F = far.Flags
 
 local function InitSetting (tbl, key, val)

@@ -9,12 +9,11 @@ local VK = win.GetVirtualKeys()
 local band, bor = bit64.band, bit64.bor
 local win_CompareString = win.CompareString
 
-local Params = ...
-local M        = Params.M
-local exporter = Params.exporter
-local myeditor = Params.myeditor
-local progress = Params.progress
-local sqlite   = Params.sqlite
+local M        = require "modules.string_rc"
+local exporter = require "modules.exporter"
+local myeditor = require "modules.editor"
+local progress = require "modules.progress"
+local sqlite   = require "modules.sqlite"
 
 local function get_temp_file_name(ext)
   return far.MkTemp() .. (ext and "."..ext or "")
@@ -186,7 +185,7 @@ function mypanel:open_object(aHandle, aSchema, aObject)
       self._panel_mode   = panel_mode
       self._column_descr = column_descr
 
-      local name = Params.DecodeDirName(self._object)--, aUserData)
+      local name = self._object
       if self._dbx:get_row_count(self._schema, name) > 20000 then -- sorting is very slow on big tables
         panel.SetSortMode(aHandle, nil, "SM_UNSORTED")
         panel.SetSortOrder(aHandle, nil, false)
@@ -270,7 +269,6 @@ end
 
 
 function mypanel:get_panel_info(handle)
-  ---local CurDir = Params.EncodeDirName(self._object):gsub("%.","\\"):gsub("^.","\\%0")
   local CurDir = self._schema
   if self._object ~= "" then CurDir = CurDir.."\\"..self._object; end
   if CurDir ~= "" then CurDir = "\\"..CurDir; end
@@ -381,7 +379,7 @@ function mypanel:get_panel_list_db()
     if obj.type == sqlite.ot_master or obj.type == sqlite.ot_table or obj.type == sqlite.ot_view then
       item.FileAttributes = "d"
     end
-    Params.EncodeDirNameToItem(obj.name, item)
+    item.FileName = obj.name
     item.AllocationSize = obj.type  -- This field used as type id
 
     item.CustomColumnData = {}
@@ -1004,7 +1002,7 @@ function mypanel:view_db_object()
   end
 
   local tmp_file_name
-  local RealItemName = Params.DecodeItemName(item)
+  local RealItemName = item.FileName
 
   -- For unknown types show create sql only
   if not item.FileAttributes:find("d") then
@@ -1044,7 +1042,7 @@ function mypanel:view_db_create_sql()
   -- Get selected object name
   local item = panel.GetCurrentPanelItem(nil, 1)
   if item and item.FileName ~= ".." then
-    local RealItemName = Params.DecodeItemName(item)
+    local RealItemName = item.FileName
     local cr_sql = self._dbx:get_creation_sql(self._schema, RealItemName)
     if cr_sql then
       local tmp_path = far.MkTemp()..".sql"

@@ -1,6 +1,5 @@
 local sql3 = require "lsqlite3"
-local Params = ...
-local M = Params.M
+local M = require "modules.string_rc"
 
 ---- Custom tokenizer support
 -- static sqlite3_tokenizer    _tokinizer = { nullptr };

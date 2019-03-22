@@ -4,11 +4,8 @@
 local sql3 = require "lsqlite3"
 local F = far.Flags
 
-local Params = ...
-local M        = Params.M
-local sqlite   = Params.sqlite
-local exporter = Params.exporter
-local DecodeItemName = Params.DecodeItemName
+local M        = require "modules.string_rc"
+local sqlite   = require "modules.sqlite"
 local NULLTEXT = "NULL"
 
 
@@ -195,7 +192,7 @@ function myeditor:remove(items)
       elseif tp == sqlite.ot_trigger then what = "trigger"
       end
       if what then
-        local name_norm = DecodeItemName(item):norm()
+        local name_norm = item.FileName:norm()
         local query = ("drop %s %s.%s;"):format(what, schema_norm, name_norm)
         if not self._dbx:execute_query(query, true) then
           break

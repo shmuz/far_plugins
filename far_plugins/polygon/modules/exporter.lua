@@ -4,10 +4,9 @@
 local sql3 = require "lsqlite3"
 local F = far.Flags
 
-local Params = ...
-local M        = Params.M
-local progress = Params.progress
-local settings = Params.settings
+local M        = require "modules.string_rc"
+local progress = require "modules.progress"
+local settings = require "modules.settings"
 
 local MAX_BLOB_LENGTH = 100
 local MAX_TEXT_LENGTH = 1024
@@ -30,7 +29,7 @@ function exporter:export_data_with_dialog()
   if not (item and item.FileName~=".." and item.FileAttributes:find("d")) then
     return false
   end
-  local db_object_name = Params.DecodeItemName(item)
+  local db_object_name = item.FileName
 
   -- Get destination path
   local dst_file_name = panel.GetPanelDirectory(nil, 0).Name
@@ -109,7 +108,6 @@ function exporter:dump_data_with_dialog()
        and item.FileAttributes:find("d")
        and item.CustomColumnData[1] ~= "metadata" -- exclude sqlite_master
     then
-      item.FileName = Params.DecodeItemName(item)
       table.insert(t_selected, item)
     end
   end

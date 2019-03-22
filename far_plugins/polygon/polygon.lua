@@ -6,72 +6,28 @@ far.ReloadDefaultScript = true -- for debugging needs
 local F = far.Flags
 local band, bor = bit64.band, bit64.bor
 local PluginGuid = export.GetGlobalInfo().Guid -- plugin GUID
-local Params = {}
 
-if not package.loaded.lsqlite3 then -- this is needed for "embed" builds of the plugin
+if not package.loaded.lsqlite3 then
+  local moduleDir = far.PluginStartupInfo().ModuleDir
+
   -- Provide priority access to lsqlite3.dl residing in the plugin's folder
-  package.cpath = far.PluginStartupInfo().ModuleDir.."?.dl;"..package.cpath
+  -- (needed for deployment of the plugin)
+  package.cpath = moduleDir.."?.dl;"..package.cpath
 
   -- Provide access to sqlite3.dll residing in the plugin's folder
   local path = win.GetEnv("PATH") or ""
-  win.SetEnv("PATH", far.PluginStartupInfo().ModuleDir..";"..path) -- modify PATH
+  win.SetEnv("PATH", moduleDir..";"..path) -- modify PATH
   local ok, msg = pcall(require, "lsqlite3")
   win.SetEnv("PATH", path) -- restore PATH
   if not ok then error(msg) end
+
+  package.path = moduleDir.."?.lua;"..package.path
 end
 
-do
-  local FixedNames = {
-    [""  ] = "_fixed()";
-    [".."] = "_fixed(..)";
-    ["\\"] = "_fixed(\\)";
-    ["/" ] = "_fixed(/)";
-  }
-
-  function Params.EncodeDirName(Dir)
-    ---return FixedNames[Dir] or Dir
-    return Dir
-  end
-
-  function Params.EncodeDirNameToItem(Dir, item)
-    ---local fixed = FixedNames[Dir]
-    ---if fixed then
-    ---  item.FileName = fixed
-    ---  item.UserData = { Dir=Dir }
-    ---else
-    ---  item.FileName = Dir
-    ---end
-    item.FileName = Dir
-  end
-
-  function Params.DecodeItemName(item)
-    ---local ud = item.UserData
-    ---return ud and ud.Dir or item.FileName
-    return item.FileName
-  end
-
-  function Params.DecodeDirName(Dir, UserData)
-    ---return UserData and UserData.Dir or Dir
-    return Dir
-  end
-end
-
-do
-  local run = (require "far2.utils").RunInternalScript
-  -- the order of calls here is important!
-  Params.M        = run("string_rc")
-  Params.sqlite   = run("sqlite",   Params)
-  Params.settings = run("settings", Params)
-  Params.progress = run("progress", Params)
-  Params.exporter = run("exporter", Params)
-  Params.myeditor = run("editor",   Params)
-  Params.mypanel  = run("panel",    Params)
-end
-
-local M        = Params.M
-local sqlite   = Params.sqlite
-local settings = Params.settings
-local mypanel  = Params.mypanel
+local M        = require "modules.string_rc"
+local sqlite   = require "modules.sqlite"
+local settings = require "modules.settings"
+local mypanel  = require "modules.panel"
 
 
 -- add a convenience function
