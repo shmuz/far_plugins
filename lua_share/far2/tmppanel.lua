@@ -446,9 +446,10 @@ function Env:Open (OpenFrom, Guid, Item)
             ShowMenuFromFile(PathName)
             return nil
           else
-            local panel = self:NewPanel(newOpt)
-            panel:AddList (ListFromFile(PathName), newOpt.ReplaceMode)
-            return panel
+            local pan = self:NewPanel(newOpt)
+            pan:AddList(ListFromFile(PathName), newOpt.ReplaceMode)
+            pan.HostFile = PathName
+            return pan
           end
         else
           return

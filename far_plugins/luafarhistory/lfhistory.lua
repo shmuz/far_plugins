@@ -69,6 +69,10 @@ local cfgLocateFile = {
   bDynResize = true,
 }
 
+local function GetFileAttrEx(fname)
+  return win.GetFileAttr(fname) or win.GetFileAttr([[\\?\]]..fname)
+end
+
 local function IsCtrlEnter (key)
   return key=="CtrlEnter" or key=="RCtrlEnter" or key=="CtrlNumEnter" or key=="RCtrlNumEnter"
 end
@@ -100,7 +104,7 @@ local function TellFileIsDirectory (fname)
 end
 
 local function LocateFile (fname)
-  local attr = win.GetFileAttr(fname)
+  local attr = GetFileAttrEx(fname)
   if attr and not attr:find"d" then
     local dir, name = fname:match("^(.*\\)([^\\]*)$")
     if panel.SetPanelDirectory(nil, 1, dir) then
@@ -167,7 +171,7 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
             end
           end
         end
-        local attr = win.GetFileAttr(fname)
+        local attr = GetFileAttrEx(fname)
         if not attr then
           TellFileNotExist(fname)
           return "done"
@@ -200,7 +204,8 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
       if HistTypeConfig == cfgFolders or HistTypeConfig == cfgView then
         far.Message(M.mPleaseWait, "", "")
         self:DeleteNonexistentItems(hDlg,
-            function(t) return t.text:find("^NetBox:") or win.GetFileAttr(t.text) end,
+            function(t) return t.text:find("^%w%w+:") -- some plugin's prefix
+                               or GetFileAttrEx(t.text) end,
             function(n) return 1 == far.Message((M.mDeleteItemsQuery):format(n),
                         M.mDeleteNonexistentTitle, ";YesNo", "w") end)
         hDlg:send("DM_REDRAW", 0, 0)
@@ -231,7 +236,7 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
         return "done"
       end
       if HistTypeConfig==cfgView then
-        local attr = win.GetFileAttr(Item.text)
+        local attr = GetFileAttrEx(Item.text)
         if not attr then
           TellFileNotExist(Item.text)
           return "done"

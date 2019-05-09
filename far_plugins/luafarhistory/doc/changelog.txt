@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2019-05-09, v3.10.4
+  [!] "Non-standard" file names (e.g. ending with a dot) could not be opened.
+
 2018-11-26, v3.10.3
   [+] Folders history: support _all_ panel plugins (no individual approach anymore).
 
