@@ -8,7 +8,7 @@ $^ #Polygon - Help Contents#
 
  The plugin is based on SQLiteDB plugin by Artem Senichev.
 
- ~Reference of keyboard actions when the plugin's panel is active~@Keyboard@
+ ~Reference of keyboard actions~@Keyboard@
  ~Multi-database mode~@MultiDbMode@
  ~Custom Panel View Dialog~@PanelView@
  ~Panel Filter~@PanelFilter@
@@ -65,10 +65,10 @@ $^ #Invoking the plugin#
  ~Contents~@Contents@
 
 @Keyboard
-$^ #Reference of keyboard actions when the plugin's panel is active#
+$^ #Reference of keyboard actions#
    View mode     │ Key         │ Action
    ──────────────┼─────────────┼───────────────────────────────────────────────────
-   Any           │ F6          │ Open Editor for editing an "SQLite query"
+   Any           │ F6          │ Open Editor for editing an SQL code
                  │ Alt-Shift-F6│ Toggle between simple and multi-database mode
                  │ LCtrl-1     │ Two-panel view mode
                  │ LCtrl-2     │ One-panel view mode
@@ -284,7 +284,9 @@ $^ #Table tInfo#
 
     #db         # : userdata : database connection (see ~LuaSQLite3~@http://lua.sqlite.org/index.cgi/doc/tip/doc/lsqlite3.wiki@ manual)
     #file_name  # : string   : name of database file
-    #panel_mode # : string   : "db", "table", "view", "query"
+    #multi_db   # : boolean  : multi-database mode
+    #schema     # : string   : current schema, e.g. "main", "temp", etc.
+    #panel_mode # : string   : "root", "db", "table", "view", "query"
     #curr_object# : string   : name of the current displayed object (parent directory)
     #rowid_name # : string   : name that can be used in SQL-queries as ROWID
     #get_rowid  # : function : called with 1 parameter of #tPanelItem# type

@@ -176,7 +176,9 @@ function sqlite:get_row_count(aSchema, aObject)
   local query = "select count(*) from ".. aSchema:norm().."."..aObject:norm();
   local stmt = self._db:prepare(query)
   if stmt then
-    count = stmt:step()==sql3.ROW and stmt:get_value(0)
+    if stmt:step()==sql3.ROW then
+      count = stmt:get_value(0)
+    end
     stmt:finalize()
   else
     -- TODO: this error is also issued when 'aObject' belongs to a VIEW

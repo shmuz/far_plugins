@@ -460,9 +460,11 @@ function mypanel:get_panel_list_obj()
   end
 
   -- Get row count
+  local row_count = 0
   local count_stmt = self._db:prepare(count_query)
-  count_stmt:step()
-  local row_count = count_stmt:get_value(0)
+  if count_stmt:step()==sql3.ROW then
+    row_count = count_stmt:get_value(0)
+  end
   count_stmt:finalize()
 
   -- Add real items
@@ -1210,6 +1212,8 @@ function mypanel:get_info()
   return {
     db          = self._db;
     file_name   = self._file_name;
+    multi_db    = self._multi_db;
+    schema      = self._schema;
     panel_mode  = self._panel_mode;
     curr_object = self._object;
     rowid_name  = self._rowid_name;

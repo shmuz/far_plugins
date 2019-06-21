@@ -22,6 +22,12 @@ if not package.loaded.lsqlite3 then
   if not ok then error(msg) end
 
   package.path = moduleDir.."?.lua;"..package.path
+
+  package.require = package.require or require
+  require = function(name)
+    package.loaded[name] = nil
+    return package.require(name)
+  end
 end
 
 local M        = require "modules.string_rc"
@@ -371,8 +377,9 @@ function export.ProcessPanelEvent (object, handle, Event, Param)
           ret = false -- let Far Manager process that command
         elseif Lcommand == "lua" then
           if text ~= "" then
-            ExecuteLuaCode(text, 1)
-            panel.UpdatePanel(handle)
+            local ok, msg = pcall(ExecuteLuaCode, text, 1) -- pcall is needed to return true to Far
+            if not ok then ErrMsg(msg); end                -- even if error occurs (otherwise
+            panel.UpdatePanel(handle)                      -- lua.exe will be invoked)
           end
           ret = true
         else
