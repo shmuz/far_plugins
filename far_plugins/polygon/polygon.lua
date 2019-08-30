@@ -43,18 +43,19 @@ _G.ErrMsg = function(msg, title, flags)
 end
 
 
--- add a convenience function
-unicode.utf8.resize = function(str, n, char)
-  local ln = str:len()
-  if n <  ln then return str:sub(1, n) end
-  if n == ln then return str end
-  return str .. (char or "\0"):rep(n-ln)
-end
+do -- add 2 convenience functions
+  local lib = getmetatable("").__index
 
+  lib.resize = function(str, n, char)
+    local ln = str:len()
+    if n <  ln then return str:sub(1, n) end
+    if n == ln then return str end
+    return str .. (char or "\0"):rep(n-ln)
+  end
 
--- add a convenience function (use for schema, table and column names)
-function unicode.utf8.norm(str)
-  return "'" .. str:gsub("'","''") .. "'"
+  lib.norm = function(str) -- use for schema, table and column names
+    return "'" .. str:gsub("'","''") .. "'"
+  end
 end
 
 

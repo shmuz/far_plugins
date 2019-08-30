@@ -1,3 +1,6 @@
+2019-08-30, v.1.2.0
+    1. Make the plugin work with LuaFAR builds >= 699 (that added luautf8 library).
+
 2019-06-21, v.1.1.0
     1. Permanently remove special handling of the table names: "..", "\", "/", ""
        introduced in v.0.7.1 (it made the code too complicated).
