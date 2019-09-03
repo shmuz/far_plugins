@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2019-09-03, v3.43.6
+  [*] Editor ("Show All"): do not strip leading spaces from the menu items.
+  [+] Search results panel: file times have 100ns resolution on Far builds >= 5465.
+
 2018-11-27, v3.43.5
   [+] Search results panel can be opened from shortcut.
 

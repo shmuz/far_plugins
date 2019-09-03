@@ -293,13 +293,8 @@ local function ShowCollectedLines (items, title, bForward, tBlockInfo)
       return
     end
     local s = item.text:gsub("%z", " ") -- replace null bytes with spaces
-                       :gsub("^%s*",    -- delete leading spaces
-      function(c)                       -- adjust offsets for highlighting
-        local len_delete = min(c:len(), item.fr-1)
-        local n = maxno + 2 - len_delete
-        item.offset, item.fr, item.to = n, item.fr+n, item.to+n
-        return c:sub(len_delete + 1)
-      end)
+    local n = maxno + 2
+    item.offset, item.fr, item.to = n, item.fr+n, item.to+n
     item.text = fmt:format(item.lineno, s)
   end
   local bottom = #items..M.MMatchesFound.." [F6,F7,F8,Ctrl-C]"

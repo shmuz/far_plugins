@@ -178,7 +178,7 @@ local function require_ex (libname)
   if package.loaded[libname] then
     return package.loaded[libname]
   end
-  local oldpath = win.GetEnv("PATH")
+  local oldpath = win.GetEnv("PATH") or ""
   win.SetEnv("PATH", far.PluginStartupInfo().ModuleDir..";"..oldpath)
   local ok, ret2 = pcall(require, libname)
   win.SetEnv("PATH", oldpath)

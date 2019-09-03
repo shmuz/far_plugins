@@ -19,6 +19,11 @@ local function NormDataOnFirstRun (data)
   data.bSearchBack        = false
   data.bUseDirFilter      = false
   data.bUseFileFilter     = false
+  data.sSearchArea        = "FromCurrFolder"
+end
+
+if far.FileTimeResolution then -- this function was introduced on Sep-03 2019
+  far.FileTimeResolution(2) -- set 100ns file resolution
 end
 
 if FirstRun then
@@ -130,30 +135,33 @@ local function OpenFromPanels (userItems)
   local hMenu = History:field("panels.menu")
 
   local items = {
-    {text=M.MMenuFind},
-    {text=M.MMenuReplace},
-    {text=M.MMenuGrep},
-    {text=M.MMenuRename},
-    {text=M.MMenuTmpPanel},
+    {text=M.MMenuFind,     action="find"},
+    {text=M.MMenuReplace,  action="replace"},
+    {text=M.MMenuGrep,     action="grep"},
+    {text=M.MMenuRename,   action="rename"},
+    {text=M.MMenuTmpPanel, action="tmppanel"},
   }
   for k,v in ipairs(items) do v.text=k..". "..v.text end
 
+  local nOwnItems = #items
   libUtils.AddMenuItems(items, userItems, M)
   local item, pos = far.Menu(
     { Title=M.MMenuTitle, HelpTopic="OperInPanels", SelectIndex=hMenu.position, Flags=MenuFlags }, items)
   if not item then return end
   hMenu.position = pos
 
-  if pos == 1 then
-    return GUI_SearchFromPanels(hMain)
-  elseif pos == 2 then
-    Libs.Panels.ReplaceFromPanel(hMain, true, false)
-  elseif pos == 3 then
-    Libs.Panels.GrepFromPanel(hMain, true, false)
-  elseif pos == 4 then
-    Libs.Rename.main()
-  elseif pos == 5 then
-    return Libs.Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
+  if pos <= nOwnItems then
+    if item.action == "find" then
+      return GUI_SearchFromPanels(hMain)
+    elseif item.action == "replace" then
+      Libs.Panels.ReplaceFromPanel(hMain, true, false)
+    elseif item.action == "grep" then
+      Libs.Panels.GrepFromPanel(hMain, true, false)
+    elseif item.action == "rename" then
+      Libs.Rename.main()
+    elseif item.action == "tmppanel" then
+      return Libs.Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
+    end
   else
     libUtils.RunUserItem(item, item.arg)
   end
@@ -217,14 +225,18 @@ local function OpenFromMacro (aItem, commandTable)
 end
 
 
+local function OpenFromShortcut()
+  return Libs.Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
+end
+
+
 function export.Open (aFrom, aGuid, aItem)
   local userItems, commandTable = libUtils.LoadUserMenu("_usermenu.lua")
   if     aFrom == F.OPEN_PLUGINSMENU then return OpenFromPanels(userItems.panels)
   elseif aFrom == F.OPEN_EDITOR      then OpenFromEditor(userItems.editor)
   elseif aFrom == F.OPEN_COMMANDLINE then return libUtils.OpenCommandLine(aItem, commandTable, nil)
   elseif aFrom == F.OPEN_FROMMACRO   then return OpenFromMacro(aItem, commandTable)
-  elseif aFrom == F.OPEN_SHORTCUT    then
-    return Libs.Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
+  elseif aFrom == F.OPEN_SHORTCUT    then return OpenFromShortcut()
   end
 end
 

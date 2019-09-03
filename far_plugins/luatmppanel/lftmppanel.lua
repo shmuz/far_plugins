@@ -14,6 +14,10 @@ local Cfg = {
   UseStrict = true, -- Use require 'strict'
 }
 
+if far.FileTimeResolution then -- this function was introduced on Sep-03 2019
+  far.FileTimeResolution(2) -- set 100ns file resolution
+end
+
 -- UPVALUES : keep them above all function definitions !!
 local Utils      = require "far2.utils"
 local LibHistory = require "far2.history"
