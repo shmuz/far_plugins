@@ -1,3 +1,6 @@
+2019-09-28, v.1.2.1
+    1. Use fixed lsqlite3.dl.
+
 2019-08-30, v.1.2.0
     1. Make the plugin work with LuaFAR builds >= 699 (that added luautf8 library).
 
