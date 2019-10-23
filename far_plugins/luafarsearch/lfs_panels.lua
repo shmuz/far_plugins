@@ -21,7 +21,7 @@ local strbyte, strgsub = string.byte, string.gsub
 local Utf16, Utf8 = win.Utf8ToUtf16, win.Utf16ToUtf8
 local MultiByteToWideChar = win.MultiByteToWideChar
 local WideCharToMultiByte = win.WideCharToMultiByte
-local uchar = unicode.utf8.char
+local uchar = ("").char
 
 local TmpPanelDefaults = {
   CopyContents             = 0,

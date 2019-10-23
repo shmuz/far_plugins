@@ -49,7 +49,7 @@ local function BS_Hex (T, subj, offs)
   local hex = string.match(subj, HexPattern, offs)
   if hex then
     local num = tonumber(hex,16) or 0
-    T[#T+1] = { "hex", unicode.utf8.char(num) }
+    T[#T+1] = { "hex", ("").char(num) }
     return 2 + #hex
   end
   return 0
@@ -116,7 +116,8 @@ local function DLR_Group (T, subj, offs)
 end
 
 local function IsChar (T, subj, offs)
-  local char = subj:match("^.", offs) -- a UTF-8 character
+  subj = string.sub(subj, offs, offs+3) -- take up to 4 bytes (1 UTF-8 char == 1...4 bytes)
+  local char = subj:match("^.") -- a UTF-8 character
   if char then
     if T[#T] and T[#T][1]=="literal" then T[#T][2] = T[#T][2] .. char
     else T[#T+1] = { "literal", char }
@@ -156,7 +157,7 @@ function RepLib.GetReplaceFunction (aReplacePat, is_wide)
   end
 
   local fSame = function(s) return s end
-  local U8, U16, sub, empty = fSame, fSame, unicode.utf8.sub, ""
+  local U8, U16, sub, empty = fSame, fSame, ("").sub, ""
   if is_wide then
     U8, U16, sub, empty = win.Utf16ToUtf8, win.Utf8ToUtf16, win.subW, win.Utf8ToUtf16("")
   end

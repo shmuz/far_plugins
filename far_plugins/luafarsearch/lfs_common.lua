@@ -33,7 +33,7 @@ local function MakeGsub (mode)
   local sub, len
   if     mode == "widechar"  then sub, len = win.subW, win.lenW
   elseif mode == "byte"      then sub, len = string.sub, string.len
-  elseif mode == "multibyte" then sub, len = unicode.utf8.sub, unicode.utf8.len
+  elseif mode == "multibyte" then sub, len = ("").sub, ("").len
   else return nil
   end
 
@@ -162,8 +162,8 @@ end
 
 -- Same as tfind, but all input and output offsets are in characters rather than bytes.
 local function WrapTfindMethod (tfind)
-  local usub, ssub = unicode.utf8.sub, string.sub
-  local ulen = unicode.utf8.len
+  local usub, ssub = ("").sub, string.sub
+  local ulen = ("").len
   return function(patt, s, init)
     init = init and #(usub(s, 1, init-1)) + 1
     local from, to, t = tfind(patt, s, init)

@@ -204,6 +204,16 @@ local function test_Replace (lib)
     RunEditorAction(lib, "test:replace", dt, 3, 3)
     AssertEditorText("LLine1\nLLine2\nLLine3\n")
 
+    -- Test regular expression replace with replace string containing cyrillic characters.
+    -- [*] This test hangs Far Manager >= 3.0.5459 (replace of "slnunicode" library with "luautf8"),
+    --     with LFS versions <= 3.43.6 --> fixed in LFS version 3.43.7.
+    -- [*] The hanging occured in function IsChar() in file lfs_replib.lua.
+    -- [*] LFS version 3.43.7 must work with _all_ Far Manager versions >= 3.0.4878.
+    dt = { sSearchPat="l", sReplacePat="абвгд", bRegExpr=true; bSearchBack = (k==1), sOrigin = "scope" }
+    SetEditorText("line1\n")
+    RunEditorAction(lib, "test:replace", dt, 1, 1)
+    AssertEditorText("абвгдine1\n")
+
     -- test replace from cursor
     dt = { sSearchPat="l", sReplacePat="LL", CurLine=2, CurPos=2, bSearchBack = (k==1) }
     for m=1,2 do

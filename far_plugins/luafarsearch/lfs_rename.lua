@@ -84,7 +84,7 @@ local function TransformReplacePat (aStr)
 
     elseif hex then
       local dec = tonumber(hex,16) or 0
-      T[#T+1] = { "hex", unicode.utf8.char(dec) }
+      T[#T+1] = { "hex", ("").char(dec) }
 
     elseif date then
       T[#T+1] = { "date", date }

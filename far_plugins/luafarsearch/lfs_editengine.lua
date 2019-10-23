@@ -287,7 +287,7 @@ local function ShowCollectedLines (items, title, bForward, tBlockInfo)
 
   local timing = NewTiming()
   local maxno = #tostring(items.maxline)
-  local fmt = ("%%%dd%s %%s"):format(maxno, unicode.utf8.char(9474))
+  local fmt = ("%%%dd%s %%s"):format(maxno, ("").char(9474))
   for _, item in ipairs(items) do
     if timing:Step(M.MTitleSearch) then
       return
@@ -383,8 +383,8 @@ local function GetInvariantTable (tRegex)
     empty           = is_wide and win.Utf8ToUtf16""  or "",
     find            = is_wide and regex.findW        or regex.find,
     gmatch          = is_wide and regex.gmatchW      or regex.gmatch,
-    len             = is_wide and win.lenW or unicode.utf8.len,
-    sub             = is_wide and win.subW or unicode.utf8.sub,
+    len             = is_wide and win.lenW or ("").len,
+    sub             = is_wide and win.subW or ("").sub,
     U8              = is_wide and win.Utf16ToUtf8    or function(s) return s end,
   }
 end
@@ -1160,7 +1160,7 @@ local function DoReplace (
       else -- the last substitution was single-line
         if lastSubst ~= TT.empty then
           -- Convert byte-wise offsets to character-wise ones if needed
-          local len = is_wide and lenW or unicode.utf8.len
+          local len = is_wide and lenW or ("").len
           local width = len(lastSubst)
           local x1 = 1
           for i=1,indexLS-1 do x1 = x1 + len(acc[i]) end
