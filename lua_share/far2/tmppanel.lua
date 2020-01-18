@@ -398,7 +398,7 @@ function Env:Open (OpenFrom, Guid, Item)
   if OpenFrom == F.OPEN_ANALYSE then
     if self.Opt.MenuForFilelist then
       ShowMenuFromFile(Item.FileName)
-      return -1
+      return F.PANEL_STOP
     else
       -- far.Show("OpenW", "OpenFrom="..(OpenFrom==9 and "OPEN_ANALYSE" or OpenFrom),
       --          "Item.Handle="..tostring(Item.Handle), Item.FileName)
@@ -415,7 +415,7 @@ function Env:Open (OpenFrom, Guid, Item)
 
     local argv = Item
     while #argv > 0 do
-      local switch, param, rest = argv:match "^%s*([+-])(%S*)(.*)"
+      local switch, param, rest = argv:match "^%s*([+%-])(%S*)(.*)"
       if not switch then break end
       argv = rest
       param = param:lower()
@@ -456,6 +456,7 @@ function Env:Open (OpenFrom, Guid, Item)
         end
       end
     end
+    return self:NewPanel(newOpt)
   end
   return self:NewPanel()
 end

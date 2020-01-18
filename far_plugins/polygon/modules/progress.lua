@@ -1,13 +1,15 @@
--- progress.lua
+-- coding: UTF-8
 
 local M = require "modules.string_rc"
-local F = far.Flags
 
+-- settings --
 local DELAY = 0.15e6 -- 0.15 sec (in microseconds); to avoid flickering
-
-local uchar1 = unicode.utf8.char(9608)
-local uchar2 = unicode.utf8.char(9617)
 local PROGRESS_WIDTH = 30
+-- /settings --
+
+local F = far.Flags
+local CHAR_SOLID  = ("").char(9608) -->  █
+local CHAR_DOTTED = ("").char(9617) -->  ░
 
 local progress = {}
 local mt_progress = { __index=progress }
@@ -59,7 +61,7 @@ function progress:update(val)
     far.AdvControl("ACTL_SETPROGRESSVALUE", 0, pv)
 
     local len = math.floor(percent * PROGRESS_WIDTH / 100)
-    self._bar = uchar1:rep(len) .. uchar2:rep(PROGRESS_WIDTH - len)
+    self._bar = CHAR_SOLID:rep(len) .. CHAR_DOTTED:rep(PROGRESS_WIDTH - len)
   end
   self:show()
 end

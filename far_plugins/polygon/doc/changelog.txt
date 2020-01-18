@@ -1,3 +1,17 @@
+2020-01-18, v.1.3.0
+    1. Pragma statements dialog: add more pragmas.
+    2. Database view: some items (sqlite_master, etc.) are given "system" file attribute.
+       Far Manager assigns them different colors and shows/hides them with Ctrl-H.
+    3. Updated lsqlite3.dl.
+    4. Show SQLite error codes in primary/extended format.
+    5. Add file polygon.ini that can turn the plugin into debug mode.
+    6. polygon.ini can contain setting AppIdToSkip: comma-separated list of application_id
+       to skip during export.Analyse().
+    7. A collation named "utf8_ncase" (case-insensitive UTF-8 collation) is automatically added
+       to any database connection. This collation can be used in SQL schemas and statements.
+    8. SQLite core functions lower(), upper() and like() are replaced by their UTF-8 equivalents.
+    9. Added regexp() user function. It makes possible the REGEXP operator in SQL expressions.
+
 2019-09-28, v.1.2.1
     1. Use fixed lsqlite3.dl.
 

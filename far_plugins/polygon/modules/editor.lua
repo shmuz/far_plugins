@@ -1,11 +1,12 @@
--- editor.lua
--- luacheck: globals ErrMsg
+-- coding: UTF-8
 
-local sql3 = require "lsqlite3"
+local sql3   = require "lsqlite3"
+local M      = require "modules.string_rc"
+local sqlite = require "modules.sqlite"
+local utils  = require "modules.utils"
+
 local F = far.Flags
-
-local M        = require "modules.string_rc"
-local sqlite   = require "modules.sqlite"
+local ErrMsg, Norm = utils.ErrMsg, utils.Norm
 local NULLTEXT = "NULL"
 
 
@@ -32,7 +33,7 @@ function myeditor:edit_item(handle)
 
   local row_id = tostring(item.AllocationSize)
   local query = ("select * from %s.%s where %s=%s"):format(
-                self._schema:norm(), self._table_name:norm(), self._rowid_name, row_id)
+                Norm(self._schema), Norm(self._table_name), self._rowid_name, row_id)
   local stmt = self._db:prepare(query)
   if stmt and stmt:step() == sql3.ROW then
     -- Read current row data
@@ -48,7 +49,7 @@ function myeditor:edit_item(handle)
       elseif f.coltype == sql3.INTEGER or f.coltype == sql3.FLOAT then
         f.value = stmt:get_column_text(i)
       elseif f.coltype == sql3.TEXT then
-        f.value = stmt:get_column_text(i):norm()
+        f.value = Norm(stmt:get_column_text(i))
       elseif f.coltype == sql3.BLOB then
         local s = string.gsub(stmt:get_value(i), ".",
           function(c)
@@ -180,7 +181,7 @@ function myeditor:remove(items)
     return false
   end
 
-  local schema_norm = self._schema:norm()
+  local schema_norm = Norm(self._schema)
   if self._table_name == "" then
     for _,item in ipairs(items) do
       local what = nil
@@ -192,7 +193,7 @@ function myeditor:remove(items)
       elseif tp == sqlite.ot_trigger then what = "trigger"
       end
       if what then
-        local name_norm = item.FileName:norm()
+        local name_norm = Norm(item.FileName)
         local query = ("drop %s %s.%s;"):format(what, schema_norm, name_norm)
         if not self._dbx:execute_query(query, true) then
           break
@@ -201,7 +202,7 @@ function myeditor:remove(items)
     end
   else
     local query_start = ("delete from %s.%s where %s in ("):format(
-                          schema_norm, self._table_name:norm(), self._rowid_name)
+                          schema_norm, Norm(self._table_name), self._rowid_name)
 
     self._db:exec("BEGIN TRANSACTION;")
     local cnt = 0
@@ -217,7 +218,7 @@ function myeditor:remove(items)
       cnt = upper
     end
     if self._db:exec("END TRANSACTION;") ~= sql3.OK then
-      local msg = M.ps_err_sql.."\n"..self._dbx:last_error()
+      local msg = self._dbx:last_error().."\n"..M.ps_err_sql
       self._db:exec("ROLLBACK TRANSACTION;")
       ErrMsg(msg)
       return false
@@ -236,19 +237,19 @@ function myeditor:exec_update(row_id, db_data)
     if db_data[1] == nil then
       return true -- no changed columns
     end
-    query = ("update %s.%s set "):format(self._schema:norm(), self._table_name:norm())
+    query = ("update %s.%s set "):format(Norm(self._schema), Norm(self._table_name))
     for i,v in ipairs(db_data) do
       if i>1 then query = query..',' end
-      query = query..v.colname:norm().."="..v.value
+      query = query..Norm(v.colname).."="..v.value
     end
     query = query.." where "..self._rowid_name.."="..row_id
 
   else
     -- Insert query
-    query = ("insert into %s.%s ("):format(self._schema:norm(), self._table_name:norm())
+    query = ("insert into %s.%s ("):format(Norm(self._schema), Norm(self._table_name))
     for i,v in ipairs(db_data) do
       if i>1 then query = query.."," end
-      query = query .. v.colname:norm()
+      query = query .. Norm(v.colname)
     end
     query = query .. ") values ("
     for i,v in ipairs(db_data) do

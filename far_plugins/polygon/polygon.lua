@@ -1,62 +1,81 @@
+-- coding: UTF-8
 -- Started: 2018-01-13
--- luacheck: globals ErrMsg
 
-far.ReloadDefaultScript = true -- for debugging needs
+Polygon_AppIdToSkip = Polygon_AppIdToSkip or {} -- must be global to withstand script reloads
 
-local F = far.Flags
-local band, bor = bit64.band, bit64.bor
-local PluginGuid = export.GetGlobalInfo().Guid -- plugin GUID
+-- File <fname> can turn the plugin into debug mode.
+-- This file should not be distributed with the plugin.
+local function ReadIniFile (fname)
+  local fp = io.open(fname)
+  if fp then
+    local t = {}
+    for ln in fp:lines() do
+      local key,val,nextchar = ln:match("^%s*(%w+)%s*=%s*([%w,]+)%s*(.?)")
+      if key and (nextchar=="" or nextchar==";") then
+        t[key] = val
+      end
+    end
+    fp:close()
 
-if not package.loaded.lsqlite3 then
-  local moduleDir = far.PluginStartupInfo().ModuleDir
+    local v = t["ReloadDefaultScript"]
+    if v=="1" or v=="true" then far.ReloadDefaultScript = true; end
 
-  -- Provide priority access to lsqlite3.dl residing in the plugin's folder
-  -- (needed for deployment of the plugin)
-  package.cpath = moduleDir.."?.dl;"..package.cpath
+    v = t["DontCacheLibraries"]
+    if v=="1" or v=="true" then
+      package.require = package.require or require
+      require = function(name)
+        package.loaded[name] = nil
+        return package.require(name)
+      end
+    end
 
-  -- Provide access to sqlite3.dll residing in the plugin's folder
-  local path = win.GetEnv("PATH") or ""
-  win.SetEnv("PATH", moduleDir..";"..path) -- modify PATH
-  local ok, msg = pcall(require, "lsqlite3")
-  win.SetEnv("PATH", path) -- restore PATH
-  if not ok then error(msg) end
-
-  package.path = moduleDir.."?.lua;"..package.path
-
-  package.require = package.require or require
-  require = function(name)
-    package.loaded[name] = nil
-    return package.require(name)
+    v = t["AppIdToSkip"] or ""
+    for str in v:gmatch("%w+") do
+      local N = tonumber(str)
+      if N and N <= 0xFFFFFFFF then
+        local key = string.char(
+          bit64.band(bit64.rshift(N,24), 0xFF), bit64.band(bit64.rshift(N,16), 0xFF),
+          bit64.band(bit64.rshift(N, 8), 0xFF), bit64.band(bit64.rshift(N, 0), 0xFF))
+        Polygon_AppIdToSkip[key] = true
+      end
+    end
   end
 end
+
+
+local function First_load_actions()
+  if not package.loaded.lsqlite3 then
+    local pluginDir = far.PluginStartupInfo().ModuleDir
+    ReadIniFile(pluginDir.."polygon.ini")
+
+    -- Provide priority access to lsqlite3.dl residing in the plugin's folder
+    -- (needed for deployment of the plugin)
+    package.cpath = pluginDir.."?.dl;"..package.cpath
+
+    -- Provide access to sqlite3.dll residing in the plugin's folder
+    local path = win.GetEnv("PATH") or ""
+    win.SetEnv("PATH", pluginDir..";"..path) -- modify PATH
+    local ok, msg = pcall(require, "lsqlite3")
+    win.SetEnv("PATH", path) -- restore PATH
+    if not ok then error(msg) end
+
+    package.path = pluginDir.."?.lua;"..package.path
+  end
+end
+
+-- In order to properly load sqlite3.dll and lsqlite3.dl,
+-- First_load_actions() must precede other require() calls.
+First_load_actions()
 
 local M        = require "modules.string_rc"
-local sqlite   = require "modules.sqlite"
-local settings = require "modules.settings"
 local mypanel  = require "modules.panel"
+local settings = require "modules.settings"
+local sqlite   = require "modules.sqlite"
+local utils    = require "modules.utils"
 
-
--- add a convenience function
-_G.ErrMsg = function(msg, title, flags)
-  far.Message(msg, title or M.ps_title_short, nil, flags or "w")
----error(msg) -- need stack
-end
-
-
-do -- add 2 convenience functions
-  local lib = getmetatable("").__index
-
-  lib.resize = function(str, n, char)
-    local ln = str:len()
-    if n <  ln then return str:sub(1, n) end
-    if n == ln then return str end
-    return str .. (char or "\0"):rep(n-ln)
-  end
-
-  lib.norm = function(str) -- use for schema, table and column names
-    return "'" .. str:gsub("'","''") .. "'"
-  end
-end
+local F = far.Flags
+local PluginGuid = export.GetGlobalInfo().Guid -- plugin GUID
+local ErrMsg, Norm = utils.ErrMsg, utils.Norm
 
 
 local function get_plugin_data()
@@ -113,7 +132,7 @@ local function LoadModules(object)
 
   -- Load modules specified in the database itself in a special table
   local obj_info = object:get_info()
-  local tablename = ("modules-"..win.Uuid(PluginGuid):lower()):norm()
+  local tablename = Norm("modules-"..win.Uuid(PluginGuid):lower())
   local table_exists
   local query = "SELECT name FROM sqlite_master WHERE type='table' AND LOWER(name)="..tablename
   for item in obj_info.db:nrows(query) do
@@ -173,7 +192,7 @@ function export.GetPluginInfo()
     info.PluginMenuGuids = PluginGuid;
     info.PluginMenuStrings = { M.ps_title }
   else
-    info.Flags = bor(info.Flags, F.PF_DISABLEPANELS)
+    info.Flags = bit64.bor(info.Flags, F.PF_DISABLEPANELS)
   end
 
   return info
@@ -181,8 +200,13 @@ end
 
 
 function export.Analyse(info)
-  return info.FileName and info.FileName~="" and
-         sqlite.format_supported(info.Buffer, #info.Buffer)
+  -- far.Show(info.OpMode)
+  return
+    bit64.band(info.OpMode,F.OPM_TOPLEVEL) == 0 -- not supposed to process ShiftF1/F2/F3
+    and info.FileName
+    and info.FileName ~= ""
+    and sqlite.format_supported(info.Buffer, #info.Buffer)
+    and not Polygon_AppIdToSkip[string.sub(info.Buffer,69,72)]
 end
 
 
@@ -225,7 +249,7 @@ end
 local function OpenFromPluginsMenu()
   -- Make sure that current panel item is a real existing file.
   local info = panel.GetPanelInfo(nil, 1)
-  if info and info.PanelType == F.PTYPE_FILEPANEL and band(info.Flags,F.OPIF_REALNAMES) ~= 0 then
+  if info and info.PanelType == F.PTYPE_FILEPANEL and bit64.band(info.Flags,F.OPIF_REALNAMES) ~= 0 then
     local item = panel.GetCurrentPanelItem(nil, 1)
     if item and not item.FileAttributes:find("d") then
       return far.ConvertPath(item.FileName, "CPM_FULL")
@@ -323,7 +347,7 @@ end
 
 
 function export.SetDirectory(object, handle, Dir, OpMode, UserData)
-  if band(OpMode, F.OPM_FIND) == 0 then
+  if bit64.band(OpMode, F.OPM_FIND) == 0 then
     return object:set_directory(handle, Dir, UserData)
   end
 end

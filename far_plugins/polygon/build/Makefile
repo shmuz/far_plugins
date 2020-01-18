@@ -24,6 +24,7 @@ modules = \
   $(path_plugin)*modules\settings.lua    \
   $(path_plugin)*modules\sqlite.lua      \
   $(path_plugin)*modules\string_rc.lua   \
+  $(path_plugin)*modules\utils.lua       \
   $(path_share)*far2\history.lua         \
   $(path_share)*serial.lua
 

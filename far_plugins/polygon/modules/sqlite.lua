@@ -1,5 +1,11 @@
-local sql3 = require "lsqlite3"
-local M = require "modules.string_rc"
+-- coding: UTF-8
+
+local sql3  = require "lsqlite3"
+local M     = require "modules.string_rc"
+local utils = require "modules.utils"
+
+local SQLITE_MASTER = "sqlite_master"
+local ErrMsg, Norm = utils.ErrMsg, utils.Norm
 
 ---- Custom tokenizer support
 -- static sqlite3_tokenizer    _tokinizer = { nullptr };
@@ -14,8 +20,6 @@ local M = require "modules.string_rc"
 -- int db_collation(void*, int, const void*, int, const void*) { return 0; }
 -- void db_collation_reg(void*, sqlite3* db, int text_rep, const char* name) { sqlite3_create_collation(db, name, text_rep, nullptr, &db_collation); }
 -- void db_collation_reg16(void*, sqlite3* db, int text_rep, const void* name) { sqlite3_create_collation16(db, name, text_rep, nullptr, &db_collation); }
-
-local SQLITE_MASTER = "sqlite_master"
 
 
 local sqlite = {
@@ -43,7 +47,63 @@ end
 
 
 function sqlite.format_supported(file_hdr) -- function not method
-  return 1 == string.find(file_hdr, "^SQLite format 3%z")
+  return 1 == string.find(file_hdr, "^SQLite format 3")
+end
+
+
+local func_like2, func_like3, func_regexp do
+  local cache_like2 = {}
+  local cache_like3 = {}
+  local cache_regexp = {}
+  local pat_esc = "[%^%$%(%)%%%.%[%]%*%+%-%?]"
+
+  func_like2 = function(ctx, pat, subj)
+    local pat2 = cache_like2[pat]
+    if pat2 == nil then
+      pat2 = pat:lower():gsub(".",
+        function(c)
+          if c=="%" then return ".*" end
+          if c=="_" then return "."  end
+          return ( c:gsub(pat_esc, "%%%1") )
+        end)
+      pat2 = "^"..pat2.."$"
+      cache_like2[pat] = pat2
+    end
+    ctx:result_int(subj and subj:lower():find(pat2) and 1 or 0)
+  end
+
+  func_like3 = function(ctx, pat, subj, esc)
+    if esc == "" then
+      return func_like2(ctx, pat, subj)
+    end
+    local cache = cache_like3[esc]
+    if cache_like3[esc] == nil then
+      cache = {}
+      cache_like3[esc] = cache
+    end
+    local pat2 = cache[pat]
+    if pat2 == nil then
+      esc = esc:sub(1,1):lower():gsub(pat_esc, "%%%1")
+      pat2 = pat:lower():gsub("("..esc.."?)(.)",
+        function(c1,c2)
+          if c2=="%" then return (c1 == "" and ".*" or "%%") end
+          if c2=="_" then return (c1 == "" and "."  or "_" ) end
+          return ( c2:gsub(pat_esc, "%%%1") )
+        end)
+      pat2 = "^"..pat2.."$"
+      cache[pat] = pat2
+    end
+    ctx:result_int(subj and subj:lower():find(pat2) and 1 or 0)
+  end
+
+  func_regexp = function(ctx, pat, subj)
+    local pat2 = cache_regexp[pat]
+    if pat2 == nil then
+      pat2 = regex.new(pat) or 0
+      cache_regexp[pat] = pat2
+    end
+    ctx:result_int(subj and pat2~=0 and pat2:find(subj) and 1 or 0)
+  end
 end
 
 
@@ -53,8 +113,14 @@ function sqlite:open(file_name)
     -- since sql3.open() won't fail on a non-DB file, let's work around that with a statement
     local stmt = db:prepare("select name from "..SQLITE_MASTER)
     if stmt then
-      stmt:finalize()
+      db:create_collation("utf8_ncase", utf8.ncasecmp)
+      db:create_function("lower",  1, function(ctx,str) ctx:result_text(str:lower()) end)
+      db:create_function("upper",  1, function(ctx,str) ctx:result_text(str:upper()) end)
+      db:create_function("like",   2, func_like2)
+      db:create_function("like",   3, func_like3)
+      db:create_function("regexp", 2, func_regexp)
       self._db = db
+      stmt:finalize()
       return true -- and self:prepare_tokenizers() and self:prepare_collations() --> put them aside currently
     else
       db:close()
@@ -74,10 +140,10 @@ end
 
 function sqlite:last_error()
   if self._db then
-    local code = self._db:errcode()
-    local rc = "Error: ["..code.."]"
+    local code = self._db:extended_errcode()
+    local rc = ("Error %d(%d)"):format(code%0x100, code) -- primary/extended results
     if code ~= sql3.OK then
-      rc = rc.." "..self._db:errmsg()
+      rc = rc..": "..self._db:errmsg()
     end
     return rc
   else
@@ -87,7 +153,7 @@ end
 
 
 function sqlite:SqlErrMsg(query)
-  ErrMsg(M.ps_err_sql.."\n"..query.."\n"..self:last_error())
+  ErrMsg(self:last_error().."\n"..M.ps_err_sql..":\n"..query)
 end
 
 
@@ -102,7 +168,7 @@ function sqlite:get_objects_list(schema)
   table.insert(objects, master_table)
 
   -- Add tables/views
-  local schema_norm = schema:norm()
+  local schema_norm = Norm(schema)
   local query = "select name,type from "..schema_norm.."."..SQLITE_MASTER
   local stmt = self._db:prepare(query)
   if stmt then
@@ -141,7 +207,7 @@ end
 
 
 function sqlite:read_column_description(schema, object)
-  local query = "pragma "..schema:norm()..".".."table_info(" .. object:norm() .. ")"
+  local query = "pragma "..Norm(schema)..".".."table_info(" .. Norm(object) .. ")"
   local stmt = self._db:prepare(query)
   if stmt then
     local columns = {}
@@ -173,7 +239,7 @@ end
 
 function sqlite:get_row_count(aSchema, aObject)
   local count = 0
-  local query = "select count(*) from ".. aSchema:norm().."."..aObject:norm();
+  local query = "select count(*) from ".. Norm(aSchema).."."..Norm(aObject);
   local stmt = self._db:prepare(query)
   if stmt then
     if stmt:step()==sql3.ROW then
@@ -194,7 +260,7 @@ end
 function sqlite:get_creation_sql(aSchema, aObject)
   local txt = false
   if aObject:lower() ~= SQLITE_MASTER:lower() then
-    local query = ("select sql from %s.%s where name=?"):format(aSchema:norm(), SQLITE_MASTER)
+    local query = ("select sql from %s.%s where name=?"):format(Norm(aSchema), SQLITE_MASTER)
     local stmt = self._db:prepare(query)
     if stmt then
       txt = stmt:bind(1,aObject)==sql3.OK and stmt:step()==sql3.ROW and stmt:get_value(0)
@@ -210,7 +276,7 @@ function sqlite:get_object_type(schema, name)
     return sqlite.ot_master
   end
   local tp = sqlite.ot_unknown
-  local query = "select type from ".. schema:norm().."."..SQLITE_MASTER .." where name=?"
+  local query = "select type from ".. Norm(schema).."."..SQLITE_MASTER .." where name=?"
   local stmt = self._db:prepare(query)
   if stmt then
     if stmt:bind(1, name)==sql3.OK and stmt:step()==sql3.ROW then

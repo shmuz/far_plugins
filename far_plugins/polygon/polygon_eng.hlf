@@ -18,6 +18,7 @@ $^ #Polygon - Help Contents#
  ~Data Export Dialog~@Export@
  ~Data Dump Dialog~@Dump@
  ~User modules~@UserModules@
+ ~Misc~@Misc@
 
 @MultiDbMode
 $^ #Multi-database mode#
@@ -378,6 +379,18 @@ $^ #Data Dump Dialog#
   #[x] Preserve new lines#
   If checked:    new line characters are preserved and a row may span on multiple lines.
   If unchecked:  the text is encoded in such a way that every row takes only one line.
+
+
+ ~Contents~@Contents@
+
+@Misc
+$^ #Misc#
+ 1. A collation named #utf8_ncase# (case-insensitive UTF-8 collation) is automatically added
+to any database connection. This collation can be used in SQL schemas and statements.
+
+ 2. SQLite core functions #lower#, #upper# and #like# are replaced by their UTF-8 equivalents.
+
+ 3. Added #regexp# user function. It makes possible the #REGEXP# operator in SQL expressions.
 
 
  ~Contents~@Contents@

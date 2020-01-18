@@ -1,19 +1,19 @@
 -- coding: UTF-8
--- luacheck: globals ErrMsg
 
-local sql3    = require "lsqlite3"
-local history = require "far2.history"
-
-local F = far.Flags
-local VK = win.GetVirtualKeys()
-local band, bor = bit64.band, bit64.bor
-local win_CompareString = win.CompareString
-
+local sql3     = require "lsqlite3"
+local history  = require "far2.history"
 local M        = require "modules.string_rc"
 local exporter = require "modules.exporter"
 local myeditor = require "modules.editor"
 local progress = require "modules.progress"
 local sqlite   = require "modules.sqlite"
+local utils    = require "modules.utils"
+
+local F = far.Flags
+local VK = win.GetVirtualKeys()
+local band, bor = bit64.band, bit64.bor
+local CompareString = win.CompareString
+local ErrMsg, Resize, Norm = utils.ErrMsg, utils.Resize, utils.Norm
 
 local function get_temp_file_name(ext)
   return far.MkTemp() .. (ext and "."..ext or "")
@@ -255,6 +255,8 @@ function mypanel:open_query(handle, query)
     local prg_wnd = progress.newprogress(M.ps_execsql)
     if not self._dbx:execute_query(query, true) then
       prg_wnd:hide()
+      panel.UpdatePanel(handle)
+      panel.RedrawPanel(handle)
       return false
     end
     prg_wnd:hide()
@@ -332,7 +334,7 @@ end
 
 
 function mypanel:table_or_view_exists(aSchema, aObject)
-  local stmt = self._db:prepare("SELECT 1 FROM "..aSchema:norm().."."..aObject:norm())
+  local stmt = self._db:prepare("SELECT 1 FROM "..Norm(aSchema).."."..Norm(aObject))
   if stmt then stmt:finalize(); return true; end
   return false
 end
@@ -373,16 +375,22 @@ function mypanel:get_panel_list_db()
 
   local items = { { FileName=".."; FileAttributes="d"; } }
   for i,obj in ipairs(db_objects) do
-    local item = {}
-    items[i+1] = item
-    item.FileSize = obj.row_count
-    if obj.type == sqlite.ot_master or obj.type == sqlite.ot_table or obj.type == sqlite.ot_view then
+    local item = {
+      AllocationSize = obj.type;  -- This field used as type id
+      CustomColumnData = {};
+      FileAttributes = "";
+      FileName = obj.name;
+      FileSize = obj.row_count;
+    }
+
+    if obj.type==sqlite.ot_master or obj.type==sqlite.ot_table or obj.type==sqlite.ot_view then
       item.FileAttributes = "d"
     end
-    item.FileName = obj.name
-    item.AllocationSize = obj.type  -- This field used as type id
 
-    item.CustomColumnData = {}
+    if obj.name == "sqlite_master" or obj.name == "sqlite_sequence" or
+       obj.name:find("^sqlite_autoindex_")
+    then item.FileAttributes = item.FileAttributes.."s"; end -- add "system" attribute
+
     local tp = "?"
     if     obj.type==sqlite.ot_master  then tp="metadata"
     elseif obj.type==sqlite.ot_table   then tp="table"
@@ -392,6 +400,8 @@ function mypanel:get_panel_list_db()
     end
     item.CustomColumnData[1] = tp
     item.CustomColumnData[2] = ("% 9d"):format(obj.row_count)
+
+    items[i+1] = item
   end
 
   prg_wnd:hide()
@@ -401,7 +411,7 @@ end
 
 function mypanel:get_panel_list_obj()
   local dbx = self._dbx
-  local fullname = self._schema:norm().."."..self._object:norm()
+  local fullname = Norm(self._schema).."."..Norm(self._object)
 
   -- Find a name to use for ROWID (self._rowid_name)
   self._rowid_name = nil
@@ -805,7 +815,7 @@ end
 function mypanel:delete_items(handle, items)
   if self._panel_mode == "root" then
     for _,item in ipairs(items) do
-      self._db:exec("DETACH "..item.FileName:norm())
+      self._db:exec("DETACH "..Norm(item.FileName))
     end
   elseif self._panel_mode == "db" or self._panel_mode == "table" then
     if self._panel_mode == "table" and not self._rowid_name then
@@ -821,7 +831,7 @@ end
 
 function mypanel:set_table_filter(handle)
   local guid        = win.Uuid("920436C2-C32D-487F-B590-0E255AD71038")
-  local query       = "SELECT * FROM "..self._schema:norm().."."..self._object:norm()
+  local query       = "SELECT * FROM "..Norm(self._schema).."."..Norm(self._object)
   local hist_extra  = "Polygon_PanelFilterExt"
   local hist_where  = "Polygon_PanelFilter"
   local flag_edit   = F.DIF_HISTORY + F.DIF_USELASTHISTORY
@@ -1063,46 +1073,95 @@ end
 
 
 function mypanel:view_pragma_statements()
-  local pst = {
-    "auto_vacuum", "automatic_index", "busy_timeout", "cache_size",
-    "checkpoint_fullfsync", "encoding", "foreign_keys",
-    "freelist_count", "fullfsync", "ignore_check_constraints",
-    "integrity_check", "journal_mode", "journal_size_limit",
-    "legacy_file_format", "locking_mode", "max_page_count",
-    "page_count", "page_size", "quick_check", "read_uncommitted",
-    "recursive_triggers", "reverse_unordered_selects",
-    "schema_version", "secure_delete", "synchronous", "temp_store",
-    "user_version", "wal_autocheckpoint", "wal_checkpoint"
+  local pragma_names = {
+    "application_id",
+    "auto_vacuum",
+    "automatic_index",
+    "busy_timeout",
+    "cache_size",
+    "cache_spill",
+    "cell_size_check",
+    "checkpoint_fullfsync",
+    "compile_options",
+    "data_version",
+    "defer_foreign_keys",
+    "encoding",
+    "foreign_key_check",
+    "foreign_keys",
+    "freelist_count",
+    "fullfsync",
+    "integrity_check",
+    "journal_mode",
+    "journal_size_limit",
+    "legacy_alter_table",
+    "legacy_file_format",
+    "locking_mode",
+    "max_page_count",
+    "mmap_size",--
+    "page_count",
+    "page_size",
+    "query_only",
+    "quick_check",
+    "read_uncommitted",
+    "recursive_triggers",
+    "reverse_unordered_selects",
+    "schema_version",
+    "secure_delete",
+    "synchronous",
+    "temp_store",
+    "threads",
+    "user_version",
+    "wal_autocheckpoint",
+    "wal_checkpoint",
   }
-  local list_items = {}
-  local query_head = "PRAGMA "..self._schema:norm().."."
-  for _,v in ipairs(pst) do
-    local stmt = self._db:prepare(query_head..v)
+  table.sort(pragma_names)
+  local maxlen = 0
+  for _,v in ipairs(pragma_names) do
+    maxlen = math.max(maxlen, v:len())
+  end
+  -- execute a query for each pragma from the list
+  local items = {}
+  local head = "PRAGMA "..Norm(self._schema).."."
+  for _,v in ipairs(pragma_names) do
+    local stmt = self._db:prepare(head..v)
     if stmt then
-      if stmt:step() == sql3.ROW then
-        local pv = v .. ": "
-        if pv:len() < 28 then
-          pv = pv:resize(28, ' ')
+      local cnt,first = 0,nil
+      while stmt:step() == sql3.ROW do
+        cnt = cnt+1
+        if cnt == 1 then
+          first = stmt:get_value(0)
+        else
+          if cnt == 2 then
+            table.insert(items, { Text=v..":" })
+            table.insert(items, { Text="    "..first })
+          end
+          table.insert(items, { Text = "    "..stmt:get_value(0) })
         end
-        pv = pv .. stmt:get_value(0)
-        table.insert(list_items, { Text=pv })
+      end
+      if cnt == 1 then
+        local num = tonumber(first)
+        if num and not (num>-10 and num<10) then
+          first = ("%d (0x%X)"):format(num,num)
+        end
+        local pv = Resize(v..":", maxlen+4, " ")..first
+        table.insert(items, { Text=pv })
       end
       stmt:finalize()
     end
   end
 
-  if list_items[1] then
+  if items[1] then
     local guid = win.Uuid("FF769EE0-2643-48F1-A8A2-239CD3C6691F")
     local title = ("%s [%s]"):format(M.ps_title_pragma, self._schema)
     local list_flags = F.DIF_LISTNOBOX + F.DIF_LISTNOAMPERSAND + F.DIF_FOCUS
     local btn_flags = F.DIF_CENTERGROUP + F.DIF_DEFAULTBUTTON
     local dlg_items = {
-      {"DI_DOUBLEBOX", 3, 1,56,18,          0, 0, 0, 0,               title},
-      {"DI_LISTBOX",   4, 2,55,15, list_items, 0, 0, list_flags,      ""},
-      {"DI_TEXT",      0,16, 0,16,          0, 0, 0, F.DIF_SEPARATOR, ""},
-      {"DI_BUTTON",   60,17, 0, 0,          0, 0, 0, btn_flags,       M.ps_ok}
+      {"DI_DOUBLEBOX", 3,  1, 61, 18, 0,     0, 0, 0,               title},
+      {"DI_LISTBOX",   4,  2, 60, 15, items, 0, 0, list_flags,      ""},
+      {"DI_TEXT",      0, 16,  0, 16, 0,     0, 0, F.DIF_SEPARATOR, ""},
+      {"DI_BUTTON",   60, 17,  0,  0, 0,     0, 0, btn_flags,       M.ps_ok}
     }
-    far.Dialog(guid, -1, -1, 60, 20, nil, dlg_items)
+    far.Dialog(guid, -1, -1, 65, 20, nil, dlg_items)
   end
 end
 
@@ -1178,7 +1237,7 @@ function mypanel:compare(PanelItem1, PanelItem2, Mode)
   if self._panel_mode == "db" then
     if Mode == F.SM_EXT then
       -- sort by object type
-      return win_CompareString(
+      return CompareString(
         PanelItem1.CustomColumnData[1],
         PanelItem2.CustomColumnData[1], "u", "cS") or 0
     else
@@ -1192,7 +1251,7 @@ function mypanel:compare(PanelItem1, PanelItem2, Mode)
     end
     local index = self._sort_col_index
     if index then
-      return win_CompareString(
+      return CompareString(
         PanelItem1.CustomColumnData[index],
         PanelItem2.CustomColumnData[index], "u", "cS") or 0
     else

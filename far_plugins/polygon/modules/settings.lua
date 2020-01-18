@@ -1,10 +1,10 @@
-  -- settings.lua
+-- coding: UTF-8
 
 local History = require "far2.history"
-local Data
+local M       = require "modules.string_rc"
 
-local M = require "modules.string_rc"
 local F = far.Flags
+local Data
 
 local function InitSetting (tbl, key, val)
   if tbl[key] == nil then tbl[key]=val end

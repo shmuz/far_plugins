@@ -1,15 +1,23 @@
--- exporter.lua
--- luacheck: globals ErrMsg
+-- coding: UTF-8
 
-local sql3 = require "lsqlite3"
-local F = far.Flags
-
+local sql3     = require "lsqlite3"
 local M        = require "modules.string_rc"
 local progress = require "modules.progress"
 local settings = require "modules.settings"
+local utils    = require "modules.utils"
 
+-- settings --
 local MAX_BLOB_LENGTH = 100
 local MAX_TEXT_LENGTH = 1024
+-- /settings --
+
+local CHAR_HORIS = ("").char(9472) -->  ─
+local CHAR_VERT  = ("").char(9474) -->  │
+local CHAR_CROSS = ("").char(9532) -->  ┼
+
+
+local F = far.Flags
+local ErrMsg, Resize, Norm = utils.ErrMsg, utils.Resize, utils.Norm
 
 local exporter = {}
 local mt_exporter = {__index=exporter}
@@ -215,8 +223,8 @@ function exporter:export_data_as_text(file_name, db_object)
     query_val = query_val .. "[" .. columns_descr[i].name .. "]"
     query_len = query_len .. "length([" .. columns_descr[i].name .. "])"
   end
-  query_val = ("%s from %s.%s"):format(query_val, self._schema:norm(), db_object:norm())
-  query_len = ("%s from %s.%s"):format(query_len, self._schema:norm(), db_object:norm())
+  query_val = ("%s from %s.%s"):format(query_val, Norm(self._schema), Norm(db_object))
+  query_len = ("%s from %s.%s"):format(query_len, Norm(self._schema), Norm(db_object))
 
   for i = 1, columns_count do
     columns_width[i] = columns_descr[i].name:len() -- initialize with widths of titles
@@ -256,26 +264,25 @@ function exporter:export_data_as_text(file_name, db_object)
   for i = 1, columns_count do
     local col_name = (i==1 and "" or " ") .. columns_descr[i].name
     local n = columns_width[i] + (i > 1 and i < columns_count and 2 or 1)
-    out_text = out_text .. col_name:resize(n, " ")
+    out_text = out_text .. Resize(col_name, n, " ")
     if i < columns_count then
-      out_text = out_text .. unicode.utf8.char(0x2502)
+      out_text = out_text .. CHAR_VERT
     end
   end
   out_text = out_text .. "\r\n"
 
   -- Header separator
   for i = 1, columns_count do
-    local col_sep = unicode.utf8.char(0x2500):rep(
-      columns_width[i] + (i > 1 and i ~= columns_count and 2 or 1))
+    local col_sep = CHAR_HORIS:rep(columns_width[i] + (i > 1 and i ~= columns_count and 2 or 1))
     out_text = out_text .. col_sep
     if i < columns_count then
-      out_text = out_text .. unicode.utf8.char(0x253C)
+      out_text = out_text .. CHAR_CROSS
     end
   end
   file:write(out_text, "\r\n")
 
   -- Read data
-  local query = "select * from " .. self._schema:norm().."."..db_object:norm() .. ";"
+  local query = "select * from " .. Norm(self._schema).."."..Norm(db_object) .. ";"
   local db = dbx:db()
   local stmt = db:prepare(query)
   if not stmt then
@@ -313,9 +320,9 @@ function exporter:export_data_as_text(file_name, db_object)
         col_data = " " .. col_data
       end
       local sz = columns_width[i] + (i > 1 and i < columns_count and 2 or 1)
-      out_text = out_text .. col_data:resize(sz, " ")
+      out_text = out_text .. Resize(col_data, sz, " ")
       if i < columns_count then
-        out_text = out_text .. unicode.utf8.char(0x2502)
+        out_text = out_text .. CHAR_VERT
       end
     end
 
@@ -371,7 +378,7 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
   file:write(out_text, "\r\n")
 
   -- Read data
-  local query = "select * from " .. self._schema:norm().."."..db_object:norm()
+  local query = "select * from " .. Norm(self._schema).."."..Norm(db_object)
   local stmt = self._db:prepare(query)
   if not stmt then
     prg_wnd:hide()
@@ -445,7 +452,7 @@ function exporter:export_data_as_dump(Args)
     t[2] = '"'..s1..'"'
   else
     for i,item in ipairs(Args.items) do
-      t[i+1] = '"'..s1..' '..item.FileName:norm()..'"'
+      t[i+1] = '"'..s1..' '..Norm(item.FileName)..'"'
     end
   end
   t[#t+1] = '1>"'..Args.file_name..'" 2>NUL'
