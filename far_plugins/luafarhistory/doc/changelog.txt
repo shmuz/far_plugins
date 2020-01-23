@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2020-01-23, v3.10.5
+  [!] Protect against cases when items in history have item.time == nil.
+
 2019-05-09, v3.10.4
   [!] "Non-standard" file names (e.g. ending with a dot) could not be opened.
 

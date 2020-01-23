@@ -87,12 +87,15 @@ local function ExecuteFromCmdLine(str, newwindow)
 end
 
 local function GetTimeString (filetime)
-  local ft = win.FileTimeToLocalFileTime(filetime)
-  ft = ft and win.FileTimeToSystemTime(ft)
-  if ft then
-    return ("%04d-%02d-%02d %02d:%02d:%02d"):format(
-      ft.wYear,ft.wMonth,ft.wDay,ft.wHour,ft.wMinute,ft.wSecond)
+  if filetime then
+    local ft = win.FileTimeToLocalFileTime(filetime)
+    ft = ft and win.FileTimeToSystemTime(ft)
+    if ft then
+      return ("%04d-%02d-%02d %02d:%02d:%02d"):format(
+        ft.wYear,ft.wMonth,ft.wDay,ft.wHour,ft.wMinute,ft.wSecond)
+    end
   end
+  return M.mTimestampMissing
 end
 
 local function TellFileNotExist (fname)
@@ -139,10 +142,10 @@ local function SortListItems (list, bDirectSort, hDlg)
   _Plugin.Cfg.bDirectSort = bDirectSort
   if bDirectSort then
     list.selalign = "bottom"
-    list:Sort(function(a,b) return a.time < b.time end)
+    list:Sort(function(a,b) return (a.time or 0) < (b.time or 0) end)
   else
     list.selalign = "top"
-    list:Sort(function(a,b) return a.time > b.time end)
+    list:Sort(function(a,b) return (a.time or 0) > (b.time or 0) end)
   end
   if hDlg then
     list:ChangePattern(hDlg, list.pattern)
@@ -380,7 +383,7 @@ local function get_history (aConfig, obj)
       -- FAR item
         local item = map[v.Name]
         if item then
-          if v.Time > item.time then
+          if not (item.time and item.time >= v.Time) then
             item.time = v.Time
             item.typ = aType
           end
@@ -405,7 +408,7 @@ local function get_history (aConfig, obj)
             local text = title..v.File..":"..v.Name
             local item = map[text]
             if item then
-              if v.Time > item.time then
+              if not (item.time and item.time >= v.Time) then
                 item.time = v.Time
                 item.typ = aType
               end
