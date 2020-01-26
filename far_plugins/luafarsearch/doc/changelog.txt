@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2020-01-26, v3.43.8
+  [!] File filter in panels was broken with regards to date/time (since v3.43.6).
+
 2019-10-23, v3.43.7
   [!] Regular expression replace with cyrillic replacement string hanged
       Far Manager >= 3.0.5459 (replace of "slnunicode" library with "luautf8").

@@ -22,8 +22,10 @@ local function NormDataOnFirstRun (data)
   data.sSearchArea        = "FromCurrFolder"
 end
 
-if far.FileTimeResolution then -- this function was introduced on Sep-03 2019
+if 5550 <= select(4, far.AdvControl("ACTL_GETFARMANAGERVERSION",true)) then -- Far build >= 5550
+  -- far.FileTimeResolution appeared on Far build 5465
   far.FileTimeResolution(2) -- set 100ns file resolution
+  _finder.FileTimeResolution(2)
 end
 
 if FirstRun then

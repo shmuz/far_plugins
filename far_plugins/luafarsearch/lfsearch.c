@@ -18,6 +18,7 @@ extern lua_State* GetLuaState();
 
 struct PluginStartupInfo *PSInfo;
 LuafarAPI Api;
+int FileTimeResolution = 1;
 
 const char strFileFindHandle[] = "lfsearch.filefind_handle";
 
@@ -119,7 +120,15 @@ static void PutFileTimeToTable(lua_State *L, const char* key, FILETIME ft)
   LARGE_INTEGER li;
   li.LowPart = ft.dwLowDateTime;
   li.HighPart = ft.dwHighDateTime;
-  Api.PutNumToTable(L, key, (double)(li.QuadPart/10000)); // convert 100ns units to 1ms ones
+  if (FileTimeResolution == 2)
+  {
+    if (Api.bit64_pushuserdata == NULL)
+      luaL_error(L, "attempt to call bit64_pushuserdata with old LuaFAR version");
+    Api.bit64_pushuserdata(L, li.QuadPart); // will crash if called on Far build < 5550
+    lua_setfield(L, -2, key);
+  }
+  else
+    Api.PutNumToTable(L, key, (double)(li.QuadPart/10000));
 }
 
 // the table is on the stack top
@@ -286,11 +295,21 @@ static int su_Files(lua_State *L)
   return 3;
 }
 
+static int _FileTimeResolution(lua_State *L)
+{
+  int old = FileTimeResolution;
+  int res = luaL_checkinteger(L, 1);
+  FileTimeResolution = (res == 2) ? 2 : 1;
+  lua_pushinteger(L, old);
+  return 1;
+}
+
 static const luaL_Reg su_funcs[] = {
   {"FindFirst",         su_FindFirst},         //unicode
   {"FindNext",          su_FindNext},          //unicode
   {"FindClose",         su_FindClose},         //unicode
   {"Files",             su_Files},             //unicode
+  {"FileTimeResolution", _FileTimeResolution},
   {NULL, NULL}
 };
 
