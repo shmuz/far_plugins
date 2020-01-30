@@ -208,7 +208,7 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
         far.Message(M.mPleaseWait, "", "")
         self:DeleteNonexistentItems(hDlg,
             function(t) return t.text:find("^%w%w+:") -- some plugin's prefix
-                               or GetFileAttrEx(t.text) end,
+                               or GetFileAttrEx(t.text) or t.checked end,
             function(n) return 1 == far.Message((M.mDeleteItemsQuery):format(n),
                         M.mDeleteNonexistentTitle, ";YesNo", "w") end)
         hDlg:send("DM_REDRAW", 0, 0)

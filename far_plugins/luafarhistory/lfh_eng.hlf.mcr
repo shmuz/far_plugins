@@ -39,6 +39,7 @@ title. There are 4 switchable filtering methods available:
    #Alt-F8#             Switch to Commands history.
    #Alt-F11#            Switch to View/Edit history.
    #Alt-F12#            Switch to Folders history.
+   #Ins#                Check the item (and prevent its deleting by Ctrl-F8)
 
  \3BCommands history\-
    #Enter#              Execute.
