@@ -222,12 +222,11 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
     -----------------------------------------------------------------------------------------------
     elseif key=="CtrlDel" or key=="RCtrlDel" or key=="CtrlNumDel" or key=="RCtrlNumDel" then
       if HistTypeConfig ~= cfgLocateFile then
-        if Item then
-          if far.Message((M.mDeleteItemsQuery):format(#self.drawitems),
-                          M.mDeleteItemsTitle, ";YesNo", "w") == 1 then
-            self:DeleteFilteredItems (hDlg, false)
-          end
-        end
+        self:DeleteNonexistentItems(hDlg,
+            function(t) return t.checked end,
+            function(n) return 1 == far.Message((M.mDeleteItemsQuery):format(n),
+                        M.mDeleteItemsTitle, ";YesNo", "w") end)
+        hDlg:send("DM_REDRAW", 0, 0)
       end
       return "done"
     -----------------------------------------------------------------------------------------------
