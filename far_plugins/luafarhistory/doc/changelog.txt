@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2020-02-17, v3.10.8
+  [!] A minor fix.
+  [!] Rebuild the plugin due to a fix in luaplug.c.
+
 2020-01-31, v3.10.7
   [*] Checked history items are not deleted when Ctrl-Del is pressed.
 

@@ -1,3 +1,6 @@
+2020-02-17, v.1.3.1
+    1. Rebuild the plugin due to a fix in luaplug.c.
+
 2020-01-18, v.1.3.0
     1. Pragma statements dialog: add more pragmas.
     2. Database view: some items (sqlite_master, etc.) are given "system" file attribute.

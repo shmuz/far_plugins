@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2020-02-17, v3.43.9
+  [!] Rebuild the plugin due to a fix in luaplug.c.
+
 2020-01-26, v3.43.8
   [!] File filter in panels was broken with regards to date/time (since v3.43.6).
 
