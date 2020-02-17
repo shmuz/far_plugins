@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2020-02-17, v3.9.1
+  [!] Rebuild the plugin due to a fix in luaplug.c.
+
 2018-06-30, v3.9.0
   [+] Function AddCommand accepts either a string (file name) or a function as its 2-nd parameter.
   [+] New function AddToMenuEx.
