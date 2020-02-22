@@ -232,11 +232,12 @@ $ #Presets#
  Pressing the #Presets# button from the Search or Replace dialog invokes a menu
 for handling presets: create, load, rename and delete them.
 
- #Ins#   - save the current dialog settings as a preset
  #Del#   - delete a preset
- #F6#    - rename a preset
  #Enter# - load the selected preset into the dialog
  #Esc#   - close the menu and return to the dialog
+ #F2#    - save the loaded preset under the same name
+ #F6#    - rename a preset
+ #Ins#   - save the current dialog settings as a new preset
 
  ~Contents~@Contents@
 

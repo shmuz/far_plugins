@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2020-02-22, v3.44.0
+  [+] Add "save" (F2) operation to dialogs' Presets Menu.
+
 2020-02-17, v3.43.9
   [!] Rebuild the plugin due to a fix in luaplug.c.
 

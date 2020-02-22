@@ -1,5 +1,5 @@
 -- lfsearch.lua
--- luacheck: globals _Plugin lfsearch
+-- luacheck: globals _Plugin lfsearch _finder
 
 local FirstRun = ... --> this works with Far >= 3.0.4425
 
@@ -22,12 +22,6 @@ local function NormDataOnFirstRun (data)
   data.sSearchArea        = "FromCurrFolder"
 end
 
-if 5550 <= select(4, far.AdvControl("ACTL_GETFARMANAGERVERSION",true)) then -- Far build >= 5550
-  -- far.FileTimeResolution appeared on Far build 5465
-  far.FileTimeResolution(2) -- set 100ns file resolution
-  _finder.FileTimeResolution(2)
-end
-
 if FirstRun then
   _Plugin = {
     DialogHistoryPath = "LuaFAR Search\\",
@@ -35,11 +29,16 @@ if FirstRun then
     History = libHistory.newsettings(nil, "alldata"),
     Repeat = {},
     FileList = nil,
-    Finder = _G._finder,
+    Finder = _finder,
   }
-  _G._finder = nil
+
+  if 5550 <= select(4, far.AdvControl("ACTL_GETFARMANAGERVERSION",true)) then
+    -- far.FileTimeResolution appeared on Far build 5465
+    far.FileTimeResolution(2) -- set 100ns file resolution
+    _finder.FileTimeResolution(2)
+  end
+
   NormDataOnFirstRun(_Plugin.History:field("main"))
-  libUtils.AddCfindFunction()
   export.OnError = libUtils.OnError
   local ModuleDir = far.PluginStartupInfo().ModuleDir
   package.path = ModuleDir .. "?.lua;" .. package.path

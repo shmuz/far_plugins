@@ -692,6 +692,8 @@ end
 
 function SRFrame:CompleteLoadData (hDlg, Data, LoadFromPreset)
   local Dlg = self.Dlg
+  local bScript = self.bScriptCall or LoadFromPreset
+
   if self.bInEditor then
     -- Set scope
     local EI = editor.GetInfo()
@@ -699,19 +701,19 @@ function SRFrame:CompleteLoadData (hDlg, Data, LoadFromPreset)
       Dlg.rScopeGlobal:SetCheck(hDlg, true)
       Dlg.rScopeBlock:Enable(hDlg, false)
     else
-      local OptForceBlock = _Plugin.History:field("config").bForceScopeToBlock
-      if LoadFromPreset or self.bScriptCall or not OptForceBlock then
-        local name = Data.sScope=="block" and "rScopeBlock" or "rScopeGlobal"
-        Dlg[name]:SetCheck(hDlg, true)
+      local bScopeBlock
+      local bForceBlock = _Plugin.History:field("config").bForceScopeToBlock
+      if bScript or not bForceBlock then
+        bScopeBlock = (Data.sScope == "block")
       else
         local line = editor.GetStringW(nil, EI.BlockStartLine+1) -- test the 2-nd selected line
-        local name = line and line.SelStart>0 and "rScopeBlock" or "rScopeGlobal"
-        Dlg[name]:SetCheck(hDlg, true)
+        bScopeBlock = line and line.SelStart>0
       end
+      Dlg[bScopeBlock and "rScopeBlock" or "rScopeGlobal"]:SetCheck(hDlg, true)
     end
 
     -- Set origin
-    local key = self.bScriptCall and "sOrigin"
+    local key = bScript and "sOrigin"
                 or Dlg.rScopeGlobal:GetCheck(hDlg) and "sOriginInGlobal"
                 or "sOriginInBlock"
     local name = Data[key]=="scope" and "rOriginScope" or "rOriginCursor"
@@ -719,6 +721,7 @@ function SRFrame:CompleteLoadData (hDlg, Data, LoadFromPreset)
 
     self:CheckWrapAround(hDlg)
   end
+
   self:CheckAdvancedEnab(hDlg)
   self:CheckRegexInit(hDlg, Data)
 end
@@ -876,9 +879,10 @@ function SRFrame:DoPresets (hDlg)
   local Dlg = self.Dlg
   local HistPresetNames = _Plugin.DialogHistoryPath .. "Presets"
   hDlg:send("DM_SHOWDIALOG", 0)
-  local props = { Title=M.MTitlePresets, Bottom = "Esc,Enter,Ins,Del,F6", HelpTopic="Presets", }
+  local props = { Title=M.MTitlePresets, Bottom = "Esc,Enter,F2,Ins,F6,Del", HelpTopic="Presets", }
   local presets = _Plugin.History:field("presets")
-  local bkeys = { {BreakKey="INSERT"}, {BreakKey="DELETE"}, {BreakKey="F6"} }
+  local bkeys = { {BreakKey="F2"}, {BreakKey="INSERT"}, {BreakKey="DELETE"}, {BreakKey="F6"} }
+
   while true do
     local items = {}
     for name, preset in pairs(presets) do
@@ -889,6 +893,7 @@ function SRFrame:DoPresets (hDlg)
     if not item then break end
     ----------------------------------------------------------------------------
     if item.preset then
+      self.PresetName = item.text
       local data = item.preset
       libDialog.LoadDataDyn (hDlg, Dlg, data, true)
 
@@ -934,23 +939,36 @@ function SRFrame:DoPresets (hDlg)
       self:CompleteLoadData(hDlg, data, true)
       break
     ----------------------------------------------------------------------------
-    elseif item.BreakKey == "INSERT" then
-      local name = far.InputBox(nil, M.MSavePreset, M.MEnterPresetName,
-        HistPresetNames, nil, nil, nil, F.FIB_NOUSELASTHISTORY)
+    elseif item.BreakKey == "F2" or item.BreakKey == "INSERT" then
+      local pure_save_name = item.BreakKey == "F2" and self.PresetName
+      local name = pure_save_name or
+        far.InputBox(nil, M.MSavePreset, M.MEnterPresetName, HistPresetNames,
+                     self.PresetName, nil, nil, F.FIB_NOUSELASTHISTORY)
       if name then
-        if not presets[name] or far.Message(M.MPresetOverwrite, M.MConfirm, M.MBtnYesNo, "w") == 1 then
+        if pure_save_name or not presets[name] or
+          far.Message(M.MPresetOverwrite, M.MConfirm, M.MBtnYesNo, "w") == 1
+        then
           local data = {}
           presets[name] = data
+          self.PresetName = name
           self:SaveDataDyn (hDlg, data)
           if Dlg.cmbCodePage then SaveCodePageCombo(hDlg, Dlg.cmbCodePage, data) end
           _Plugin.History:save()
+          if pure_save_name then
+            far.Message(M.MPresetWasSaved, M.MMenuTitle)
+            break
+          end
         end
       end
     ----------------------------------------------------------------------------
     elseif item.BreakKey == "DELETE" and items[1] then
-      local msg = ([[%s "%s"?]]):format(M.MDeletePreset, items[pos].text)
+      local name = items[pos].text
+      local msg = ([[%s "%s"?]]):format(M.MDeletePreset, name)
       if far.Message(msg, M.MConfirm, M.MBtnYesNo, "w") == 1 then
-        presets[items[pos].text] = nil
+        if self.PresetName == name then
+          self.PresetName = nil
+        end
+        presets[name] = nil
         _Plugin.History:save()
       end
     ----------------------------------------------------------------------------
@@ -959,6 +977,9 @@ function SRFrame:DoPresets (hDlg)
       local name = far.InputBox(nil, M.MRenamePreset, M.MEnterPresetName, HistPresetNames, oldname)
       if name and name ~= oldname then
         if not presets[name] or far.Message(M.MPresetOverwrite, M.MConfirm, M.MBtnYesNo, "w") == 1 then
+          if self.PresetName == oldname then
+            self.PresetName = name
+          end
           presets[name], presets[oldname] = presets[oldname], nil
           _Plugin.History:save()
         end
