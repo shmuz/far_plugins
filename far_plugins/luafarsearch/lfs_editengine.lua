@@ -1050,7 +1050,7 @@ local function DoReplace (
           tRepeat.from, tRepeat.to = fr, to
           -----------------------------------------------------------------------
           collect[0] = TT.sub(sLine, fr, to)
-          local sRepFinal, ret2 = fReplace(collect, nFound, nReps)
+          local sRepFinal, ret2 = fReplace(collect, nFound, nReps, y)
           if ret2 and sChoice == "all" then bFinish = true end
           if sRepFinal then
             if sChoice ~= "all" then

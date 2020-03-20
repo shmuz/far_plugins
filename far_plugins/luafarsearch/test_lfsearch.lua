@@ -347,11 +347,11 @@ local function test_Replace (lib)
 
   -- test "function mode"
   dt = { sSearchPat=".+", bRepIsFunc=true, bRegExpr=true,
-         sReplacePat=[[return M~=2 and ("%d.%d. %s"):format(M, R, T[0])]]
+         sReplacePat=[[return M~=2 and ("%d.%d.%d. %s"):format(LN, M, R, T[0])]]
        }
   SetEditorText("line1\nline2\nline3\n")
   RunEditorAction(lib, "test:replace", dt, 3, 2)
-  AssertEditorText("1.1. line1\nline2\n3.2. line3\n")
+  AssertEditorText("1.1.1. line1\nline2\n3.3.2. line3\n")
   --------
   dt = { sSearchPat="(.)(.)(.)(.)(.)(.)(.)(.)(.)", bRepIsFunc=true,
          bRegExpr=true,
@@ -1173,8 +1173,8 @@ function selftest.test_all()
 end
 
 -- use as a script (rather than a module)
-local modname = ...
-if type(modname) == "table" then
+local arg = ...
+if arg == "run" then
   selftest.test_all()
   --far.Message("All tests OK", "LuaFAR Search")
 end

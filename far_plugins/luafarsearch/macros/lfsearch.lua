@@ -111,3 +111,21 @@ Macro {
     end
   end;
 }
+
+Macro {
+  description="LF Search test suite";
+  area="Shell"; key="put some key here";
+  action=function()
+    local handle   = assert(far.FindPlugin("PFM_GUID", win.Uuid(Guid)), "Plugin not found")
+    local info     = assert(far.GetPluginInformation(handle))
+    local testfile = info.ModuleName:gsub("[^\\]+$", "").."test_lfsearch.lua"
+    assert(win.GetFileAttr(testfile), "test file not found")
+    far.Message("Please wait...", "Test LF Search", "")  
+
+    Plugin.Command(Guid, "-r"..testfile.." run")      -- this does not enable screen redraws
+    -- Plugin.SyncCall(Guid, "file", testfile, "run") -- this also works but lots of screen redraws occur
+
+    assert(Area.Shell, "LF Search tests failed")
+    far.Message("All tests OK", "LF Search")
+  end;
+}

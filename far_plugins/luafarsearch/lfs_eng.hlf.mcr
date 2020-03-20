@@ -211,8 +211,11 @@ in the ~Syntax of Replace pattern~@SyntaxReplace@ section.
  On invoking editor search or replace dialog, automatically set #Scope#
 to #Selected text# if the editor contains selection.
   
- #[x] Select found#
+ #[x] Select found text#
  Select found text in the editor.
+ 
+ #[x] Show operation time#
+ Show time taken by the operation
  
  #Pick search string from:#
  This setting determines how the #Search# field is initialized when the
@@ -1380,13 +1383,14 @@ treated as the body of a Lua function (see below).
     must be omitted). The function is called whenever a match occurs.
 
  *  The function can use the following preset variables:
-       #T# -- a table containing captured submatches.
-          #T[0]# -- whole match.
-          #T[1]#, #...# -- numbered submatches.
-          #T[name1]#, #...# -- named submatches.
-       #M# -- number of the current match (1-based).
-       #R# -- number of the current replacement (1-based).
-       #rex# -- regex library loaded.
+       #T#   - a table containing captured submatches
+          #T[0]#          - whole match
+          #T[1], ...#     - numbered submatches
+          #T[name1], ...# - named submatches
+       #M#   - number of the current match (1-based)
+       #R#   - number of the current replacement (1-based)
+       #LN#  - line number in editor or file (1-based)
+       #rex# - regex library loaded
  
  *  The function can set and modify global variables and use them
     during its current and future invocations (within the current

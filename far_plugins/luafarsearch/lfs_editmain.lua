@@ -372,20 +372,24 @@ local function EditorAction (aOp, aData, aScriptCall)
         aData.fUserChoiceFunc)
     if aData.bAdvanced then tParams.FinalFunc() end
     ---------------------------------------------------------------------------
-    local function title()
-      return ("%s [ %s s ]"):format(M.MMenuTitle, Libs.Common.FormatTime(nElapsed))
+    local function GetTitle()
+      if _Plugin.History:field("config").bShowSpentTime then
+        return ("%s [ %s s ]"):format(M.MMenuTitle, Libs.Common.FormatTime(nElapsed))
+      else
+        return M.MMenuTitle
+      end
     end
     if not bTest and sOperation ~= "searchword" and sChoice ~= "broken" and sChoice ~= "cancel" then
       if nFound == 0 and nReps == 0 then
-        ErrorMsg (M.MNotFound .. aData.sSearchPat .. "\"", title())
+        ErrorMsg (M.MNotFound .. aData.sSearchPat .. "\"", GetTitle())
       elseif sOperation == "count" then
-        far.Message (M.MTotalFound .. FormatInt(nFound), title())
+        far.Message (M.MTotalFound .. FormatInt(nFound), GetTitle())
       elseif bReplace and (sChoice=="initial" or sChoice=="all") then
         libMessage.TableBox( {
           { M.MTotalFound,    FormatInt(nFound) },
           { M.MTotalReplaced, FormatInt(nReps) },
         },
-        title(), nil, "T")
+        GetTitle(), nil, "T")
       end
     end
     return nFound, nReps, sChoice, nElapsed

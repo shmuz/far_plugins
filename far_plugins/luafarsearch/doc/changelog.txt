@@ -2,6 +2,12 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2020-03-20, v3.44.1
+  [*] Presets: preserve menu selection when the menu opens repeatedly.
+  [*] Presets: place checkmark on the current preset in the menu.
+  [+] Editor replace, panel replace (function mode): new variable LN (line number).
+  [+] Editor (configuration): new option "Show operation time".
+
 2020-02-22, v3.44.0
   [+] Add "save" (F2) operation to dialogs' Presets Menu.
 

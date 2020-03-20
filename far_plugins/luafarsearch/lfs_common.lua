@@ -1,4 +1,4 @@
--- common.lua
+-- lfs_common.lua
 -- luacheck: globals _Plugin
 
 local Libs = ...
@@ -294,21 +294,21 @@ local function GetReplaceFunction (aReplacePat, is_wide)
 
   if type(aReplacePat) == "function" then
     return is_wide and
-      function(collect,nMatch,nReps) -- this implementation is inefficient as it works in UTF-8 !
+      function(collect,nMatch,nReps,nLine) -- this implementation is inefficient as it works in UTF-8 !
         local ccopy = {}
         for k,v in pairs(collect) do
           local key = type(k)=="number" and k or U8(k)
           ccopy[key] = v and U8(v)
         end
-        local R1,R2 = aReplacePat(ccopy,nMatch,nReps+1)
+        local R1,R2 = aReplacePat(ccopy,nMatch,nReps+1,nLine)
         local tp1 = type(R1)
         if     tp1 == "string" then R1 = U16(R1)
         elseif tp1 == "number" then R1 = U16(tostring(R1))
         end
         return R1, R2
       end or
-      function(collect,nMatch,nReps)
-        local R1,R2 = aReplacePat(collect,nMatch,nReps+1)
+      function(collect,nMatch,nReps,nLine)
+        local R1,R2 = aReplacePat(collect,nMatch,nReps+1,nLine)
         if type(R1)=="number" then R1=tostring(R1) end
         return R1, R2
       end
@@ -454,8 +454,7 @@ local function ProcessDialogData (aData, bReplace, bInEditor, bUseMultiPatterns,
   ---------------------------------------------------------------------------
   if bReplace then
     if aData.bRepIsFunc then
-      local func, msg = loadstring("local T,M,R = ...\n" ..
-        aData.sReplacePat, M.MReplaceFunction)
+      local func, msg = loadstring("local T,M,R,LN = ...\n"..aData.sReplacePat, M.MReplaceFunction)
       if func then params.ReplacePat = setfenv(func, params.Envir)
       else ErrorMsg(msg, M.MReplaceFunction..": "..M.MSyntaxError); return nil,"sReplacePat"
       end
@@ -886,7 +885,9 @@ function SRFrame:DoPresets (hDlg)
   while true do
     local items = {}
     for name, preset in pairs(presets) do
-      items[#items+1] = { text=name, preset=preset }
+      local t = { text=name, preset=preset }
+      items[#items+1] = t
+      if name == self.PresetName then t.selected,t.checked = true,true; end
     end
     table.sort(items, function(a,b) return win.CompareString(a.text,b.text,nil,"cS") < 0; end)
     local item, pos = far.Menu(props, items, bkeys)
@@ -1034,25 +1035,26 @@ local function EditorConfigDialog()
   local offset = 5 + math.max(M.MBtnHighlightColor:len(),
                               M.MBtnGrepLineNumMatchedColor:len(),
                               M.MBtnGrepLineNumContextColor:len()) + 5
-  Dlg.frame           = {"DI_DOUBLEBOX",   3, 1,72,14,  0, 0, 0,  0,  M.MConfigTitleEditor}
+  Dlg.frame           = {"DI_DOUBLEBOX",   3, 1,72,15,  0, 0, 0,  0,  M.MConfigTitleEditor}
   Dlg.bForceScopeToBlock={"DI_CHECKBOX",   5, 2, 0, 0,  0, 0, 0,  0,  M.MOptForceScopeToBlock}
   Dlg.bSelectFound    = {"DI_CHECKBOX",    5, 3, 0, 0,  0, 0, 0,  0,  M.MOptSelectFound}
-  Dlg.lab             = {"DI_TEXT",        5, 5, 0, 0,  0, 0, 0,  0,  M.MOptPickFrom}
-  Dlg.rPickEditor     = {"DI_RADIOBUTTON", 7, 6, 0, 0,  0, 0, 0,  "DIF_GROUP", M.MOptPickEditor, _noauto=1}
-  Dlg.rPickHistory    = {"DI_RADIOBUTTON",27, 6, 0, 0,  0, 0, 0,  0,           M.MOptPickHistory, _noauto=1}
-  Dlg.rPickNowhere    = {"DI_RADIOBUTTON",47, 6, 0, 0,  0, 0, 0,  0,           M.MOptPickNowhere, _noauto=1}
+  Dlg.bShowSpentTime  = {"DI_CHECKBOX",    5, 4, 0, 0,  0, 0, 0,  0,  M.MOptShowSpentTime}
+  Dlg.lab             = {"DI_TEXT",        5, 6, 0, 0,  0, 0, 0,  0,  M.MOptPickFrom}
+  Dlg.rPickEditor     = {"DI_RADIOBUTTON", 7, 7, 0, 0,  0, 0, 0,  "DIF_GROUP", M.MOptPickEditor, _noauto=1}
+  Dlg.rPickHistory    = {"DI_RADIOBUTTON",27, 7, 0, 0,  0, 0, 0,  0,           M.MOptPickHistory, _noauto=1}
+  Dlg.rPickNowhere    = {"DI_RADIOBUTTON",47, 7, 0, 0,  0, 0, 0,  0,           M.MOptPickNowhere, _noauto=1}
 
-  Dlg.sep             = {"DI_TEXT",       -1, 8, 0, 0,  0, 0, 0,  {DIF_BOXCOLOR=nil,DIF_SEPARATOR=1,DIF_CENTERTEXT=1}, M.MSepHighlightColors}
-  Dlg.btnHighlight    = {"DI_BUTTON",      5, 9, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.MBtnHighlightColor}
-  Dlg.labHighlight    = {"DI_TEXT",   offset, 9, 0, 0,  0, 0, 0,  0,  M.MTextSample}
-  Dlg.btnGrepLNum1    = {"DI_BUTTON",      5,10, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.MBtnGrepLineNumMatchedColor}
-  Dlg.labGrepLNum1    = {"DI_TEXT",   offset,10, 0, 0,  0, 0, 0,  0,  M.MTextSample}
-  Dlg.btnGrepLNum2    = {"DI_BUTTON",      5,11, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.MBtnGrepLineNumContextColor}
-  Dlg.labGrepLNum2    = {"DI_TEXT",   offset,11, 0, 0,  0, 0, 0,  0,  M.MTextSample}
+  Dlg.sep             = {"DI_TEXT",       -1, 9, 0, 0,  0, 0, 0,  {DIF_BOXCOLOR=nil,DIF_SEPARATOR=1,DIF_CENTERTEXT=1}, M.MSepHighlightColors}
+  Dlg.btnHighlight    = {"DI_BUTTON",      5,10, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.MBtnHighlightColor}
+  Dlg.labHighlight    = {"DI_TEXT",   offset,10, 0, 0,  0, 0, 0,  0,  M.MTextSample}
+  Dlg.btnGrepLNum1    = {"DI_BUTTON",      5,11, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.MBtnGrepLineNumMatchedColor}
+  Dlg.labGrepLNum1    = {"DI_TEXT",   offset,11, 0, 0,  0, 0, 0,  0,  M.MTextSample}
+  Dlg.btnGrepLNum2    = {"DI_BUTTON",      5,12, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.MBtnGrepLineNumContextColor}
+  Dlg.labGrepLNum2    = {"DI_TEXT",   offset,12, 0, 0,  0, 0, 0,  0,  M.MTextSample}
 
-  Dlg.sep             = {"DI_TEXT",        5,12, 0, 0,  0, 0, 0,  {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  Dlg.btnOk           = {"DI_BUTTON",      0,13, 0, 0,  0, 0, 0,  {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
-  Dlg.btnCancel       = {"DI_BUTTON",      0,13, 0, 0,  0, 0, 0,  "DIF_CENTERGROUP", M.MCancel}
+  Dlg.sep             = {"DI_TEXT",        5,13, 0, 0,  0, 0, 0,  {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
+  Dlg.btnOk           = {"DI_BUTTON",      0,14, 0, 0,  0, 0, 0,  {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
+  Dlg.btnCancel       = {"DI_BUTTON",      0,14, 0, 0,  0, 0, 0,  "DIF_CENTERGROUP", M.MCancel}
   ----------------------------------------------------------------------------
   local Data = _Plugin.History:field("config")
   libDialog.LoadData(Dlg, Data)
@@ -1085,7 +1087,7 @@ local function EditorConfigDialog()
     end
   end
 
-  local ret = far.Dialog (CfgGuid, -1, -1, 76, 16, "Configuration", Dlg, 0, DlgProc)
+  local ret = far.Dialog (CfgGuid, -1, -1, 76, 17, "Configuration", Dlg, 0, DlgProc)
   if ret == Dlg.btnOk.id then
     libDialog.SaveData(Dlg, Data)
     Data.EditorHighlightColor    = hColor0
