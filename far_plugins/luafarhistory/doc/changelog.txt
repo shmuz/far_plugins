@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2020-04-14, v3.10.9
+  [!] Fix "lua" filter method (was broken since adoption of luautf8 library in LuaFAR).
+
 2020-02-17, v3.10.8
   [!] A minor fix.
   [!] Rebuild the plugin due to a fix in luaplug.c.

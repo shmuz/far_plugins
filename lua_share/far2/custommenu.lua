@@ -473,11 +473,20 @@ local function ProcessSearchMethod (method, pattern)
     pattern = pattern:gsub(sNeedEscape, "\\%1")
   elseif method == "lua" then
     local map = { l="%a", u="%a", L="%A", U="%A" }
-    return function(s, p, init)
-      p = p:gsub("(%%?)(.)", function(a,b) return a=="" and b:lower() or map[b] end)
-      local ok, fr, to = pcall(("").find, s:lower(), p, #(s:sub(1, init-1)) + 1)
-      if not (ok and fr) then return nil end
-      return string.sub(s,1,fr-1):len()+1, string.sub(s,1,to):len()
+    if ("").charpattern then -- luautf8 library (since 30-Aug-2019)
+      return function(s, p, init)
+        p = p:gsub("(%%?)(.)", function(a,b) return a=="" and b:lower() or map[b] end)
+        local ok, fr, to = pcall(("").find, s:lower(), p, init)
+        if ok then return fr, to end
+        return fr, to
+      end
+    else -- Selene Unicode library (prior to 30-Aug-2019)
+      return function(s, p, init)
+        p = p:gsub("(%%?)(.)", function(a,b) return a=="" and b:lower() or map[b] end)
+        local ok, fr, to = pcall(("").find, s:lower(), p, #(s:sub(1, init-1)) + 1)
+        if not (ok and fr) then return nil end
+        return string.sub(s,1,fr-1):len()+1, string.sub(s,1,to):len()
+      end
     end
   elseif method ~= "regex" then
     error("invalid search method")
