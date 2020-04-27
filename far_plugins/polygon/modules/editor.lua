@@ -35,63 +35,61 @@ function myeditor:edit_item(handle)
   local query = ("select * from %s.%s where %s=%s"):format(
                 Norm(self._schema), Norm(self._table_name), self._rowid_name, row_id)
   local stmt = self._db:prepare(query)
-  if stmt and stmt:step() == sql3.ROW then
-    -- Read current row data
-    local db_data = {}
-    for i = 0, stmt:columns()-1 do
-      local f = {
-        colname = stmt:get_name(i);
-        coltype = stmt:get_column_type(i);
-        value = nil;
-      }
-      if f.coltype == sql3.NULL then
-        f.value = NULLTEXT
-      elseif f.coltype == sql3.INTEGER or f.coltype == sql3.FLOAT then
-        f.value = stmt:get_column_text(i)
-      elseif f.coltype == sql3.TEXT then
-        f.value = Norm(stmt:get_column_text(i))
-      elseif f.coltype == sql3.BLOB then
-        local s = string.gsub(stmt:get_value(i), ".",
-          function(c)
-            return string.format("%02x", string.byte(c))
-          end)
-        f.value = "x'" .. s .. "'"
+  if stmt then
+    if stmt:step() == sql3.ROW then
+      -- Read current row data
+      local db_data = {}
+      for i = 0, stmt:columns()-1 do
+        local f = {
+          colname = stmt:get_name(i);
+          coltype = stmt:get_column_type(i);
+          value = nil;
+        }
+        if f.coltype == sql3.NULL then
+          f.value = NULLTEXT
+        elseif f.coltype == sql3.INTEGER or f.coltype == sql3.FLOAT then
+          f.value = stmt:get_column_text(i)
+        elseif f.coltype == sql3.TEXT then
+          f.value = Norm(stmt:get_column_text(i))
+        elseif f.coltype == sql3.BLOB then
+          local s = string.gsub(stmt:get_value(i), ".",
+            function(c)
+              return string.format("%02x", string.byte(c))
+            end)
+          f.value = "x'" .. s .. "'"
+        end
+        table.insert(db_data, f)
       end
-      table.insert(db_data, f)
+
+      if self:dialog(db_data, row_id) then
+        panel.UpdatePanel(handle)
+        panel.RedrawPanel(handle)
+      end
+    else
+      ErrMsg(M.ps_err_read .. "\n" .. self._dbx:last_error())
     end
     stmt:finalize()
-
-    if self:dialog(db_data, row_id) then
-      panel.UpdatePanel(handle)
-      panel.RedrawPanel(handle)
-    end
-  else
-    if stmt then stmt:finalize() end
-    ErrMsg(M.ps_err_read .. "\n" .. self._dbx:last_error())
   end
 end
 
 
 function myeditor:insert_item(handle)
   local columns_descr = self._dbx:read_column_description(self._schema, self._table_name)
-  if not columns_descr then
-    ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
-    return
-  end
+  if columns_descr then
+    local db_data = {}
+    for _,v in ipairs(columns_descr) do
+      local f = {
+        colname = v.name;
+        coltype = sql3.NULL;
+        value = NULLTEXT;
+      }
+      table.insert(db_data, f)
+    end
 
-  local db_data = {}
-  for _,v in ipairs(columns_descr) do
-    local f = {
-      colname = v.name;
-      coltype = sql3.NULL;
-      value = NULLTEXT;
-    }
-    table.insert(db_data, f)
-  end
-
-  if self:dialog(db_data, nil) then
-    panel.UpdatePanel(handle, nil, true)
-    panel.RedrawPanel(handle, nil)
+    if self:dialog(db_data, nil) then
+      panel.UpdatePanel(handle, nil, true)
+      panel.RedrawPanel(handle, nil)
+    end
   end
 end
 

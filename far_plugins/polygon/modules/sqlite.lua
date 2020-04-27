@@ -185,7 +185,7 @@ function sqlite:get_objects_list(schema)
     -- Get tables row count
     for _,v in ipairs(objects) do
       if v.type == sqlite.ot_master or v.type == sqlite.ot_table or v.type == sqlite.ot_view then
-        v.row_count = self:get_row_count(schema, v.name)
+        v.row_count = self:get_row_count(schema, v.name) or 0
       end
     end
     return objects
@@ -238,7 +238,7 @@ end
 
 
 function sqlite:get_row_count(aSchema, aObject)
-  local count = 0
+  local count = nil
   local query = "select count(*) from ".. Norm(aSchema).."."..Norm(aObject);
   local stmt = self._db:prepare(query)
   if stmt then

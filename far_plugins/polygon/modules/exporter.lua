@@ -201,13 +201,12 @@ end
 
 function exporter:export_data_as_text(file_name, db_object)
   local dbx = self._dbx
-  -- Get row count and  columns description
+
   local row_count = dbx:get_row_count(self._schema, db_object)
+  if not row_count then return end
+
   local columns_descr = dbx:read_column_description(self._schema, db_object)
-  if not (row_count and columns_descr) then
-    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
-    return false
-  end
+  if not columns_descr then return end
 
   local columns_count = #columns_descr
   local prg_wnd = progress.newprogress(M.ps_reading, row_count)
@@ -351,17 +350,16 @@ end
 function exporter:export_data_as_csv(file_name, db_object, multiline)
   -- Get row count and  columns description
   local row_count = self._dbx:get_row_count(self._schema, db_object)
+  if not row_count then return end
+
   local columns_descr = self._dbx:read_column_description(self._schema, db_object)
-  if not (row_count and columns_descr) then
-    ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
-    return false
-  end
+  if not columns_descr then return end
 
   -- Create output file
   local file = io.open(file_name, "wb")
   if not file then
     ErrMsg(M.ps_err_writef.."\n"..file_name, nil, "we")
-    return false
+    return
   end
 
   local columns_count = #columns_descr

@@ -20,7 +20,7 @@ scripts = \
 modules = \
   $(path_plugin)*sortdialog.lua     \
   $(path_plugin)*sortlines.lua      \
-  $(path_share)*serial.lua          \
+  $(path_share)*shmuz\serial.lua    \
   $(path_share)*strict.lua          \
   $(path_share)*far2\dialog.lua     \
   $(path_share)*far2\history.lua    \

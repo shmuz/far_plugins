@@ -14,7 +14,7 @@ scripts = $(path_plugin)\_globalinfo.lua
 
 modules = \
   $(path_plugin)*tmpp_message.lua  \
-  $(path_share)*serial.lua         \
+  $(path_share)*shmuz\serial.lua   \
   $(path_share)*strict.lua         \
   $(path_share)*far2\history.lua   \
   $(path_share)*far2\tmppanel.lua  \

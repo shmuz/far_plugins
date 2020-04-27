@@ -20,7 +20,7 @@ scripts = \
   $(path_plugin)\_globalinfo.lua
 
 modules = \
-  $(path_share)*serial.lua           \
+  $(path_share)*shmuz\serial.lua     \
   $(path_share)*far2\history.lua     \
   $(path_share)*far2\dialog.lua
 

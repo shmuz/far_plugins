@@ -122,7 +122,7 @@ $(C_MAIN):
 
 ifndef NO_MACRO_GENERATE
 version.h $(GLOBINFO) $(HELP) : % : %.mcr define.lua
-	$(LUAEXE) -erequire([[macro]])([[define.lua]],[[$<]],[[$@]])
+	$(LUAEXE) -erequire([[shmuz.macro]])([[define.lua]],[[$<]],[[$@]])
 endif
 
 clean:

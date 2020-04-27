@@ -1,4 +1,4 @@
-local bin2c = require "bin2c"
+local bin2c = require "shmuz.bin2c"
 
 local linit = [[
 /* This is a generated file. */

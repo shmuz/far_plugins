@@ -185,14 +185,12 @@ function mypanel:open_object(aHandle, aSchema, aObject)
       self._panel_mode   = panel_mode
       self._column_descr = column_descr
 
-      local name = self._object
-      if self._dbx:get_row_count(self._schema, name) > 20000 then -- sorting is very slow on big tables
+      local count = self._dbx:get_row_count(self._schema, self._object) or 0
+      if count > 20000 then -- sorting is very slow on big tables
         panel.SetSortMode(aHandle, nil, "SM_UNSORTED")
         panel.SetSortOrder(aHandle, nil, false)
       end
       return true
-    else
-      ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
     end
   end
 end

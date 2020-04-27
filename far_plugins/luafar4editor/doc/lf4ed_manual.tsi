@@ -882,11 +882,14 @@ id=36
 lv=1
 dt=Text
 nm=Installation functions
+mtime=3739542998
 <article>
 #_<markdown>
 #_
 #_[`AddToMenu`](13.html)<br>
+#_[`AddToMenuEx`](95.html)<br>
 #_[`AddCommand`](57.html)<br>
+#_[`AddCommandEx`](96.html)<br>
 #_[`AddUserFile`](34.html)<br>
 #_[`AutoInstall`](35.html)<br>
 #_[`MakeResident`](20.html)<br>
@@ -1042,7 +1045,7 @@ id=34
 lv=2
 dt=Text
 nm=AddUserFile
-mtime=3491216844
+mtime=3739605990
 <article>
 #_<markdown>
 #_**`AddUserFile (filename)`**
@@ -1052,10 +1055,14 @@ mtime=3491216844
 #_Parameter `filename` (its path is relative to the plugin's directory)
 #_specifies a file that is treated as an additional *_usermenu.lua* file.
 #_
-#_All utilities added by [`AddToMenu`](13.html) and
-#_[`AddCommand`](57.html) calls within the file specified by `filename`
-#_share a common environment that does not change until the next
-#_*Reload User File* operation (or until FAR termination).
+#_All utilities added by
+#_  [`AddToMenu`](13.html),
+#_  [`AddToMenuEx`](95.html),
+#_  [`AddCommand`](57.html) and
+#_  [`AddCommandEx`](96.html)
+#_calls within the file specified by `filename` share a common environment
+#_that does not change until the next *Reload User File* operation
+#_(or until FAR termination).
 #_
 #_In fact, the plugin itself executes `AddUserFile("_usermenu.lua")`.
 #_
@@ -1614,7 +1621,7 @@ id=27
 lv=2
 dt=Text
 nm=SaveData
-mtime=3511292574
+mtime=3778233898
 <article>
 #_far2_dialog.SaveData(aDialog, aData)
 #_
@@ -1650,7 +1657,7 @@ mtime=3511292574
 #_  -- add other items
 #_  -- call far.Dialog(...)
 #_  local data = {}
-#_  far2.dialog.SaveData(dlg, data)
+#_  far2_dialog.SaveData(dlg, data)
 #_  return data
 #_
 #_@@@

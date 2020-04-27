@@ -16,7 +16,7 @@ scripts = \
   $(path_plugin)\config.lua
 
 modules = \
-  $(path_share)*serial.lua           \
+  $(path_share)*shmuz\serial.lua     \
   $(path_share)*far2\history.lua     \
   $(path_share)*far2\custommenu.lua  \
   $(path_share)*far2\dialog.lua      \

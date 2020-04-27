@@ -441,7 +441,7 @@ local function get_history (aConfig, obj)
   local maxitems = GetMaxItems(aConfig)
   if #menu_items > maxitems then
     -- sort menu items: oldest records go first
-    table.sort(menu_items, function(a,b) return a.time < b.time end)
+    table.sort(menu_items, function(a,b) return (a.time or 0) < (b.time or 0) end)
 
     -- remove excessive items; leave checked items;
     local i = 1

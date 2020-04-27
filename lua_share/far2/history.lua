@@ -41,7 +41,7 @@
        *  @return:       serialized history object
 --]=]
 
-local serial  = require "serial"
+local serial  = require "shmuz.serial"
 
 local history = {}
 local meta = { __index = history }
