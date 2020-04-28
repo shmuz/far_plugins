@@ -25,9 +25,9 @@ scripts = \
   $(path_plugin)\lfs_panels.lua
 
 modules = \
-  $(path_share)*serial.lua           \
-  $(path_share)*hilite.lua           \
-  $(path_share)*cqueue.lua           \
+  $(path_share)*shmuz\serial.lua     \
+  $(path_share)*shmuz\hilite.lua     \
+  $(path_share)*shmuz\cqueue.lua     \
   $(path_share)*far2\custommenu.lua  \
   $(path_share)*far2\dialog.lua      \
   $(path_share)*far2\history.lua     \
