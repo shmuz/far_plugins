@@ -12,7 +12,7 @@ PROGRAMS = $(HOME)/Programs
 EXE32    = $(PROGRAMS)/Exe32
 
 # Root work directory
-workdir    = S:/progr/work
+workdir    = $(abspath ../../../..)
 path_share = $(workdir)/lua_share
 path_run   = $(workdir)/lua_run
 
