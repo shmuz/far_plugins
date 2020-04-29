@@ -1,45 +1,55 @@
 #  Makefile for a FAR plugin containing embedded Lua modules and/or scripts.
 #  The target embeds Lua scripts and has dependencies on Lua and LuaFAR DLLs.
 
-include $(PATH_SYSTEM)\paths.mak
+ifneq ($(CROOT),C:\Shmuel_Home)
 
-#------------------------------------ SETTINGS TO BE CONFIGURED BY THE USER --
-# 32 or 64-bit plugin
-DIRBIT = 32
+#---------------------------- SETTINGS TO BE CONFIGURED BY THE USER ----------
+  # 32 or 64-bit plugin; override from command line if needed
+  DIRBIT = 32
 
-HOME     = C:/Shmuel_Home
-PROGRAMS = $(HOME)/Programs
-EXE32    = $(PROGRAMS)/Exe32
+  # Root work directory - relative to plugins' "build" directories
+  rootpath = $(abspath ../../..)
 
-# Root work directory
-workdir    = $(abspath ../../../..)
-path_share = $(workdir)/lua_share
-path_run   = $(workdir)/lua_run
+  # Location of Far Manager source directory
+  farsource = C:/farmanager
 
-# Location of FAR source directory
-FARDIR = $(HOME)/work/farmanager
+  # Location of Far Manager installations for 32 and 64 bits
+  farhome = C:/Far3-$(DIRBIT)bit
+#---------------------------- END OF USER'S SETTINGS -------------------------
 
-# Lua interpreter (always 32 bit, not using DIRBIT value)
-LUAEXE = $(EXE32)\lua.exe -epackage.path=[[$(path_share)/?.lua]]
+else
+  DIRBIT    = 32
+  rootpath  = $(abspath ../../../..)
+  farsource = $(CROOT)/work/farmanager
+  farhome   = $(CROOT)/Programs/Far3-$(DIRBIT)bit
+  ifeq ($(EMBED_METHOD),luajit)
+    LUAC = $(CROOT)/Programs/Exe$(DIRBIT)/LuaJIT/luajit.exe
+  else ifeq ($(EMBED_METHOD),luac)
+    LUAC = $(CROOT)/Programs/Exe$(DIRBIT)/luac.exe
+  endif
+#---------------------------- END OF Shmuel's SETTINGS -----------------------
+endif
+
+ifndef EMBED_METHOD
+EMBED_METHOD = luasrcdiet
+endif
 
 # Location of LuaFAR source directory
-PATH_LUAFARSRC = $(FARDIR)/plugins/luamacro/luafar
+PATH_LUAFARSRC = $(farsource)/plugins/luamacro/luafar
 
 # Include paths
-INC_LUA = $(FARDIR)/plugins/luamacro/luasdk/include
-INC_FAR = $(FARDIR)/plugins/common/unicode
+INC_LUA = $(farsource)/plugins/luamacro/luasdk/include
+INC_FAR = $(farsource)/plugins/common/unicode
 
-# Location of executable files and DLLs
-libdir    = $(PROGRAMS)/Far3-$(DIRBIT)bit
-LUADLL    = $(libdir)/lua51.dll
-LUAFARDLL = $(libdir)/luafar3.dll
+# Location of DLLs
+LUADLL    = $(farhome)/lua51.dll
+LUAFARDLL = $(farhome)/luafar3.dll
 
-ifeq ($(EMBED_METHOD),luajit)
-  LUAC = $(PROGRAMS)/Exe$(DIRBIT)/LuaJIT/luajit.exe
-else
-  LUAC = $(PROGRAMS)/Exe$(DIRBIT)/luac.exe
-endif
-#------------------------------------ END OF USER'S SETTINGS -----------------
+path_share = $(rootpath)/lua_share
+path_run   = $(rootpath)/lua_run
+
+# Lua interpreter (any bitness; must be on PATH)
+LUAEXE = lua.exe -epackage.path=[[$(path_share)/?.lua]]
 
 vpath %.c $(path_plugin)
 

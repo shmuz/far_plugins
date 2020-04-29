@@ -6,7 +6,6 @@ path_plugin = ..
 COMMON_MAK = $(path_plugin)\..\common.mak
 
 T_MESSAGE = $(path_plugin)\tmpp_message.lua
-EMBED_METHOD = luasrcdiet
 
 bootscript = $(path_plugin)\$(PROJECT).lua
 

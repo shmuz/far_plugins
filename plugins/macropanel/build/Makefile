@@ -9,7 +9,6 @@ MYCFLAGS = -I$(PATH_LUAFARSRC) -DRUN_LUAFAR_INIT
 embed: MYCFLAGS = -I$(PATH_LUAFARSRC)
 
 T_MESSAGE =
-EMBED_METHOD = luasrcdiet
 
 bootscript = $(path_plugin)\$(PROJECT).lua
 

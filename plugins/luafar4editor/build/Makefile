@@ -6,7 +6,6 @@ path_plugin = ..
 COMMON_MAK = $(path_plugin)\..\common.mak
 
 T_MESSAGE = $(path_plugin)\lf4ed_message.lua
-EMBED_METHOD = strip
 
 bootscript = $(path_plugin)\$(PROJECT).lua
 

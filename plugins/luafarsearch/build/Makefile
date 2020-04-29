@@ -9,7 +9,6 @@ MYOBJECTS = lfsearch.o
 MYLUAOPEN_LIST = luaopen_lfsearch
 
 T_MESSAGE = $(path_plugin)\lfsearch_message.lua
-EMBED_METHOD = luasrcdiet
 
 bootscript = $(path_plugin)\$(PROJECT).lua
 
