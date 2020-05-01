@@ -21,7 +21,11 @@ local meta = { __index = get_predefined }
 local function preprocess (mapfile, file1, file2)
   assert(file2, "three arguments required")
   local map = setmetatable({}, meta)
-  setfenv(assert(loadfile(mapfile)), map)()
+  if _VERSION == "Lua 5.1" then
+    setfenv(assert(loadfile(mapfile)), map)()
+  else
+    assert(loadfile(mapfile, "t", map))()
+  end
   local fp = assert(io.open(file1, "rb"))
   local str = fp:read("*all")
   fp:close()

@@ -15,6 +15,9 @@ ifneq ($(CROOT),C:\Shmuel_Home)
 
   # Location of Far Manager installations for 32 and 64 bits
   farhome = C:/Far3-$(DIRBIT)bit
+
+  # Lua 5.1 interpreter (any bitness; if not on PATH specify the full path)
+  LUA = lua.exe
 #---------------------------- END OF USER'S SETTINGS -------------------------
 
 else
@@ -22,6 +25,7 @@ else
   rootpath  = $(abspath ../../../..)
   farsource = $(CROOT)/work/farmanager
   farhome   = $(CROOT)/Programs/Far3-$(DIRBIT)bit
+  LUA       = lua.exe
   ifeq ($(EMBED_METHOD),luajit)
     LUAC = $(CROOT)/Programs/Exe$(DIRBIT)/LuaJIT/luajit.exe
   else ifeq ($(EMBED_METHOD),luac)
@@ -48,8 +52,8 @@ LUAFARDLL = $(farhome)/luafar3.dll
 path_share = $(rootpath)/lua_share
 path_run   = $(rootpath)/lua_run
 
-# Lua interpreter (any bitness; must be on PATH)
-LUAEXE = lua.exe -epackage.path=[[$(path_share)/?.lua]]
+# Lua interpreter (any bitness)
+LUAEXE = $(LUA) -epackage.path=[[$(path_share)/?.lua]]
 
 vpath %.c $(path_plugin)
 
