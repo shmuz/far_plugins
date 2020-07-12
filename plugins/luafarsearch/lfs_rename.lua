@@ -2,20 +2,19 @@
 --
 -- luacheck: globals _Plugin
 
-local Libs = ...
-local M = Libs.GetMsg
+local Common     = require "lfs_common"
+local M          = require "lfs_message"
+
+local libDialog  = require "far2.dialog"
+local libMessage = require "far2.message"
 
 local AppName = "LF Rename"
 local RegPath = "LuaFAR\\"..AppName.."\\"
-local sLogFileTemplate = "\\D{%Y%m%d-%H%M%S}.log"
 
-local libDialog = require "far2.dialog"
-local libMessage = require "far2.message"
 local F = far.Flags
-
 local HistData = _Plugin.History:field("rename")
-local GsubMB = Libs.Common.GsubMB
-local Rex = Libs.Common.GetRegexLib("far")
+local GsubMB = Common.GsubMB
+local Rex = Common.GetRegexLib("far")
 
 local function ErrorMsg (text, title)
   far.Message (text, title or AppName, nil, "w")
@@ -123,36 +122,6 @@ local function TransformReplacePat (aStr)
   return T
 end
 
-local function TransformLogFilePat (aStr)
-  local T = { MaxGroupNumber=0 }
-  local patt = [[
-    \\D \{ ([^\}]+) \} |
-    (.) |
-    ($)
-  ]]
-
-  for date,char,dollar in regex.gmatch(aStr,patt,"sx") do
-    if date then
-      T[#T+1] = { "date", date }
-    elseif char then
-      if T[#T] and T[#T][1]=="literal" then T[#T][2] = T[#T][2] .. char
-      else T[#T+1] = { "literal", char }
-      end
-    elseif dollar then
-      if not T[1] then return nil, "empty pattern" end
-    end
-
-    local curr = T[#T]
-    if curr[1]=="literal" then
-      local c = curr[2]:match("[\\/:*?\"<>|%c%z]")
-      if c then
-        return nil, "invalid filename character: "..c
-      end
-    end
-  end
-  return T
-end
-
 local function GetReplaceFunction (aReplacePat)
   if type(aReplacePat) == "function" then return
     function(collect,nMatch,nReps)
@@ -248,7 +217,7 @@ local function UserDialog (aData, aList, aDlgTitle)
   local X2 = 5 + math.max(M.MDlgRenameBefore:len()+4, M.MDlgRenameAfter:len())
   ------------------------------------------------------------------------------
   local Dlg = libDialog.NewDialog()
-  Dlg._                 = {"DI_DOUBLEBOX", 3, 1,  W,22, 0, 0, 0, 0, aDlgTitle, NoHilite=1}
+  Dlg._                 = {"DI_DOUBLEBOX", 3, 1,  W,22, 0, 0, 0, 0, aDlgTitle}
 
   Dlg.lab               = {"DI_TEXT",        5, 2,  0, 0, 0, 0, 0, 0, M.MDlgFileMask}
   Dlg.sFileMask         = {"DI_EDIT",       X1, 2, 70, 0, 0, "Masks", 0, "DIF_HISTORY", ""}
@@ -410,23 +379,23 @@ local function UserDialog (aData, aList, aDlgTitle)
         CheckAdvancedEnab(hDlg)
       end
 
-    elseif Libs.Common.Check_F4_On_DI_EDIT(Dlg, hDlg, msg, param1, param2) then
+    elseif Common.Check_F4_On_DI_EDIT(Dlg, hDlg, msg, param1, param2) then
       -- processed
 
     elseif msg == F.DN_CLOSE then
       if param1 == Dlg.btnOk.id then
         local mask = Dlg.sFileMask:GetText(hDlg)
         if not far.ProcessName("PN_CHECKMASK", mask, "", "PN_SHOWERRORMESSAGE") then
-          Libs.Common.GotoEditField(hDlg, Dlg.sFileMask.id)
+          Common.GotoEditField(hDlg, Dlg.sFileMask.id)
           return 0
         end
         if sErrSearch then
           ErrorMsg(sErrSearch, M.MSearchPattern..": "..M.MSyntaxError)
-          Libs.Common.GotoEditField(hDlg, Dlg.sSearchPat.id)
+          Common.GotoEditField(hDlg, Dlg.sSearchPat.id)
           return 0
         elseif sErrReplace or sErrMaxGroup then
           ErrorMsg(sErrReplace or sErrMaxGroup, M.MReplacePattern..": "..M.MSyntaxError)
-          Libs.Common.GotoEditField(hDlg, Dlg.sReplacePat.id)
+          Common.GotoEditField(hDlg, Dlg.sReplacePat.id)
           return 0
         end
         if Dlg.bAdvanced:GetCheck(hDlg) then
@@ -434,14 +403,14 @@ local function UserDialog (aData, aList, aDlgTitle)
           InitFunc, msg = loadstring (sInitFunc or "", "Initial")
           if not InitFunc then
             ErrorMsg(msg, "Initial Function: " .. M.MSyntaxError)
-            Libs.Common.GotoEditField(hDlg, Dlg.sInitFunc.id)
+            Common.GotoEditField(hDlg, Dlg.sInitFunc.id)
             return 0
           end
           local sFinalFunc = Dlg.sFinalFunc:GetText(hDlg)
           FinalFunc, msg = loadstring (sFinalFunc or "", "Final")
           if not FinalFunc then
             ErrorMsg(msg, "Final Function: " .. M.MSyntaxError)
-            Libs.Common.GotoEditField(hDlg, Dlg.sFinalFunc.id)
+            Common.GotoEditField(hDlg, Dlg.sFinalFunc.id)
             return 0
           end
           local env = type(tReplace)=="function" and getfenv(tReplace) or NewEnvir()
@@ -450,7 +419,7 @@ local function UserDialog (aData, aList, aDlgTitle)
         end
       elseif param1 == Dlg.btnConfig.id then
         hDlg:send(F.DM_SHOWDIALOG, 0)
-        Libs.Common.ConfigDialog()
+        Common.ConfigDialog()
         hDlg:send(F.DM_SHOWDIALOG, 1)
         hDlg:send(F.DM_SETFOCUS, Dlg.btnOk.id)
         return 0
@@ -458,7 +427,7 @@ local function UserDialog (aData, aList, aDlgTitle)
     end
   end
 
-  Libs.Common.AssignHotKeys(Dlg)
+  Common.AssignHotKeys(Dlg)
   libDialog.LoadData(Dlg, aData)
   if far.Dialog (UserGuid,-1,-1,W+4,24,"Rename",Dlg,0,DlgProc) == Dlg.btnOk.id then
     libDialog.SaveData(Dlg, aData)
@@ -623,10 +592,10 @@ end
 
 local function GetLogFileName()
   local config = _Plugin.History:field("config")
-  local name = config.sLogFileTemplate or sLogFileTemplate
-  local tReplace = TransformLogFilePat(name)
+  local name = config.sLogFileTemplate or Common.DefaultLogFileName
+  local tReplace = Common.TransformLogFilePat(name)
   local fReplace = GetReplaceFunction(tReplace)
-  local rex = Libs.Common.GetRegexLib("far")
+  local rex = Common.GetRegexLib("far")
   local uRegex = rex.new(".*")
   local name2 = GsubMB("", uRegex, fReplace, 0, 1, "")
   return name2
@@ -699,6 +668,4 @@ end
 
 return {
   main = main,
-  DefaultLogFileName = sLogFileTemplate,
-  TransformLogFilePat = TransformLogFilePat,
 }

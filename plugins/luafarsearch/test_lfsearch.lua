@@ -346,12 +346,12 @@ local function test_Replace (lib)
   AssertEditorText("line1\nl###e2\nl###e3\nline4\n")
 
   -- test "function mode"
-  dt = { sSearchPat=".+", bRepIsFunc=true, bRegExpr=true,
-         sReplacePat=[[return M~=2 and ("%d.%d.%d. %s"):format(LN, M, R, T[0])]]
+  dt = { sSearchPat="\\w+", bRepIsFunc=true, bRegExpr=true,
+         sReplacePat=[[return M~=2 and ("%d.%d.%d. %s;"):format(LN, M, R, T[0])]]
        }
-  SetEditorText("line1\nline2\nline3\n")
-  RunEditorAction(lib, "test:replace", dt, 3, 2)
-  AssertEditorText("1.1.1. line1\nline2\n3.3.2. line3\n")
+  SetEditorText("\n\nгруша\nяблоко\nслива вишня\n")
+  RunEditorAction(lib, "test:replace", dt, 4, 3)
+  AssertEditorText("\n\n3.1.1. груша;\nяблоко\n5.3.2. слива; 5.4.3. вишня;\n")
   --------
   dt = { sSearchPat="(.)(.)(.)(.)(.)(.)(.)(.)(.)", bRepIsFunc=true,
          bRegExpr=true,
@@ -1046,9 +1046,9 @@ local function test_replace (lib)
   dt.sReplacePat = "$2$1$0"
   local refReplacePat = "%2%1%0"
 
-  local function MyTest (dt)
+  local function MyTest (dt, common_ref)
     for _,f in ipairs(files) do
-      local ref = (f:gsub(dt.sSearchPat,refReplacePat).."\n"):rep(4)
+      local ref = common_ref or (f:gsub(dt.sSearchPat,refReplacePat).."\n"):rep(4)
       PrAssert(ref == ReadFile(TestDir.."\\"..f))
     end
   end
@@ -1057,6 +1057,15 @@ local function test_replace (lib)
   AddMyFiles()
   lfsearch.ReplaceFromPanel(dt)
   MyTest(dt)
+
+  -- test "function mode"
+  AddMyFiles()
+  local dtfm = { sFileMask="*", sSearchArea="OnlyCurrFolder", sRegexLib=lib,
+         sSearchPat=".+", bRepIsFunc=true, bRegExpr=true,
+         sReplacePat=[[return ("%d.%d.%d.line;"):format(LN, M, R)]]
+       }
+  lfsearch.ReplaceFromPanel(dtfm)
+  MyTest(dtfm, "1.1.1.line;\n2.2.2.line;\n3.3.3.line;\n4.4.4.line;\n")
 
   -- Test named groups
   if lib=="oniguruma" or lib=="pcre" then

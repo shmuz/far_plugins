@@ -300,7 +300,7 @@ local function TableBox (items, title, buttons, flags, helptopic, id)
     end
   end
   local nl = false
-  for i,v in ipairs(items) do
+  for _,v in ipairs(items) do
     if v.separator then
       out[#out+1], nl = v, false
     else

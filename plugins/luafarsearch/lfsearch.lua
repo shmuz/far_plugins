@@ -1,13 +1,24 @@
 -- lfsearch.lua
--- luacheck: globals _Plugin lfsearch _finder
+-- luacheck: globals lfsearch _finder
 
-local FirstRun = ... --> this works with Far >= 3.0.4425
+-- Minimal required Far Manager build changed from 4425 to 4878 after some testing.
+-- The reason: FSF.GetReparsePointInfo() did not work in the range of builds [4425-4876].
 
-local libUtils   = require "far2.utils"
-local libHistory = require "far2.history"
+local F = far.Flags
+local MenuFlags = bit64.bor(F.FMENU_WRAPMODE, F.FMENU_AUTOHIGHLIGHT)
+local PluginConfigGuid1 = win.Uuid("B2C08615-ED7C-491D-BE5C-8758FDAB9139")
+local PluginMenuGuid1   = win.Uuid("3D5E7985-3B5D-4777-A572-BA7C621B3731")
+_G.lfsearch = {}
+
+
+local function GetFarBuildNumber()
+  return ( select(4, far.AdvControl("ACTL_GETFARMANAGERVERSION",true)) )
+end
+
 
 -- Set the defaults: prioritize safety and "least surprise".
-local function NormDataOnFirstRun (data)
+local function NormDataOnFirstRun()
+  local data = _Plugin.History:field("main")
   data.bAdvanced          = false
   data.bConfirmReplace    = true
   data.bDelEmptyLine      = false
@@ -20,9 +31,17 @@ local function NormDataOnFirstRun (data)
   data.bUseDirFilter      = false
   data.bUseFileFilter     = false
   data.sSearchArea        = "FromCurrFolder"
+  ------------------------------------------------
+  data = _Plugin.History:field("lua_pattern")
+  data.bMultiLine         = true
+  data.bOnlyCurrFolder    = true
+  data.bInverseSearch     = false
+  ------------------------------------------------
 end
 
-if FirstRun then
+
+local function FirstRunActions()
+  local libHistory = require "far2.history"
   _Plugin = {
     DialogHistoryPath = "LuaFAR Search\\",
     OriginalRequire = require,
@@ -32,35 +51,35 @@ if FirstRun then
     Finder = _finder,
   }
 
-  if 5550 <= select(4, far.AdvControl("ACTL_GETFARMANAGERVERSION",true)) then
-    -- far.FileTimeResolution appeared on Far build 5465
+  if GetFarBuildNumber() >= 5550 then
+    -- far.FileTimeResolution()     requires LuaFAR build >= 704 (Far build 5465)
+    -- _finder.FileTimeResolution() requires LuaFAR build >= 725 (Far build 5550)
     far.FileTimeResolution(2) -- set 100ns file resolution
     _finder.FileTimeResolution(2)
   end
 
-  NormDataOnFirstRun(_Plugin.History:field("main"))
-  export.OnError = libUtils.OnError
+  NormDataOnFirstRun()
   local ModuleDir = far.PluginStartupInfo().ModuleDir
   package.path = ModuleDir .. "?.lua;" .. package.path
   package.cpath = ModuleDir .. "?.dl;" .. package.cpath
 end
 
--- Run internal scripts: do not change the order.
-local Libs = {}
-Libs.GetMsg     = libUtils.RunInternalScript("lfs_message")
-Libs.RepLib     = libUtils.RunInternalScript("lfs_replib", Libs)
-Libs.Common     = libUtils.RunInternalScript("lfs_common", Libs)
-Libs.EditEngine = libUtils.RunInternalScript("lfs_editengine", Libs)
-Libs.EditMain   = libUtils.RunInternalScript("lfs_editmain", Libs)
-Libs.MReplace   = libUtils.RunInternalScript("lfs_mreplace", Libs)
-Libs.Rename     = libUtils.RunInternalScript("lfs_rename", Libs)
-Libs.Panels     = libUtils.RunInternalScript("lfs_panels", Libs) -- call only after modifying package.cpath
 
-local M = Libs.GetMsg
-local F = far.Flags
+local FirstRun = ... --> this works with LuaFAR builds >= 529 (Far >= 3.0.4425)
+if FirstRun then FirstRunActions() end
+
+
+local libUtils   = require "far2.utils"
+local Common     = require "lfs_common"
+local EditMain   = require "lfs_editmain"
+local Editors    = require "lfs_editors"
+local LpatPanels = require "lfs_panels_lpat"
+local M          = require "lfs_message"
+local MReplace   = require "lfs_mreplace"
+local Panels     = require "lfs_panels" -- call only after modifying package.cpath
+local Rename     = require "lfs_rename"
+
 local History = _Plugin.History
-local MenuFlags = bit64.bor(F.FMENU_WRAPMODE, F.FMENU_AUTOHIGHLIGHT)
-lfsearch = {}
 
 
 local function ForcedRequire (name)
@@ -97,11 +116,11 @@ local function OpenFromEditor (userItems)
     local ret
 
     if item.action == "togglehighlight" then
-      Libs.EditMain.ToggleHighlight()
+      Editors.ToggleHighlight()
     elseif item.action == "mreplace" then
-      ret = Libs.MReplace.ReplaceWithDialog(data, true)
+      ret = MReplace.ReplaceWithDialog(data, true)
     else
-      ret = Libs.EditMain.EditorAction(item.action, data, false)
+      ret = EditMain.EditorAction(item.action, data, false)
     end
 
     if ret and item.save then
@@ -115,14 +134,14 @@ end
 
 
 local function GUI_SearchFromPanels (data)
-  local tFileList, bCancel = Libs.Panels.SearchFromPanel(data, true, false)
+  local tFileList, bCancel = Panels.SearchFromPanel(data, true, false)
   if tFileList then -- the dialog was not cancelled
     if tFileList[1] then
-      local panel = Libs.Panels.CreateTmpPanel(tFileList, History:field("tmppanel"))
+      local panel = Panels.CreateTmpPanel(tFileList, History:field("tmppanel"))
       History:save()
       return panel
     else -- no files were found
-      if bCancel or far.Message(M.MNoFilesFound,M.MMenuTitle,M.MButtonsNewSearch)==1 then
+      if bCancel or 1==far.Message(M.MNoFilesFound,M.MMenuTitle,M.MButtonsNewSearch) then
         return GUI_SearchFromPanels(data)
       end
       History:save()
@@ -141,6 +160,7 @@ local function OpenFromPanels (userItems)
     {text=M.MMenuGrep,     action="grep"},
     {text=M.MMenuRename,   action="rename"},
     {text=M.MMenuTmpPanel, action="tmppanel"},
+--  {text=M.MMenuFindPanelLua, action="lpatfind"}, -- not ready for release
   }
   for k,v in ipairs(items) do v.text=k..". "..v.text end
 
@@ -155,13 +175,20 @@ local function OpenFromPanels (userItems)
     if item.action == "find" then
       return GUI_SearchFromPanels(hMain)
     elseif item.action == "replace" then
-      Libs.Panels.ReplaceFromPanel(hMain, true, false)
+      Panels.ReplaceFromPanel(hMain, true, false)
     elseif item.action == "grep" then
-      Libs.Panels.GrepFromPanel(hMain, true, false)
+      Panels.GrepFromPanel(hMain, true, false)
     elseif item.action == "rename" then
-      Libs.Rename.main()
+      Rename.main()
     elseif item.action == "tmppanel" then
-      return Libs.Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
+      return Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
+    elseif item.action == "lpatfind" then
+      repeat
+        local list, cancel = LpatPanels.SearchFromPanel()
+        if list then
+          return Panels.CreateTmpPanel(list, History:field("tmppanel"))
+        end
+      until cancel or 1~=far.Message(M.MNoFilesFound,M.MMenuTitle,M.MButtonsNewSearch)
     end
   else
     libUtils.RunUserItem(item, item.arg)
@@ -185,19 +212,19 @@ local function OpenFromMacro (aItem, commandTable)
         if Cmd=="search" or Cmd=="replace" or Cmd=="repeat" or Cmd=="repeat_rev" or
           Cmd=="searchword" or Cmd=="searchword_rev" or Cmd=="config"
         then
-          local ret = Libs.EditMain.EditorAction(Cmd, data, false)
+          local ret = EditMain.EditorAction(Cmd, data, false)
           if ret and (Cmd=="search" or Cmd=="replace" or Cmd=="config") then
             History:save() -- very expensive with SQLite (~ 0.1 sec)
           end
           return ret
         elseif Cmd=="mreplace" then
-          if Libs.MReplace.ReplaceWithDialog(data, true) then
+          if MReplace.ReplaceWithDialog(data, true) then
             History:save() -- very expensive with SQLite (~ 0.1 sec)
           end
         elseif Cmd=="resethighlight" then
-          Libs.EditMain.ActivateHighlight(false)
+          Editors.ActivateHighlight(false)
         elseif Cmd=="togglehighlight" then
-          Libs.EditMain.ToggleHighlight()
+          Editors.ToggleHighlight()
         end
       end
 
@@ -209,13 +236,13 @@ local function OpenFromMacro (aItem, commandTable)
           local panel = GUI_SearchFromPanels(data)
           return panel and { panel, type="panel" }
         elseif Cmd=="replace" then
-          Libs.Panels.ReplaceFromPanel(data, true, false)
+          Panels.ReplaceFromPanel(data, true, false)
         elseif Cmd=="grep" then
-          Libs.Panels.GrepFromPanel(data, true, false)
+          Panels.GrepFromPanel(data, true, false)
         elseif Cmd=="rename" then
-          Libs.Rename.main()
+          Rename.main()
         elseif Cmd=="panel" then
-          local pan = Libs.Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
+          local pan = Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
           return { [1]=pan; type="panel" }
         end
       end
@@ -227,11 +254,15 @@ end
 
 
 local function OpenFromShortcut()
-  return Libs.Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
+  return Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
 end
 
 
-function export.Open (aFrom, aGuid, aItem)
+export.OnError = libUtils.OnError
+export.ProcessEditorEvent = Editors.ProcessEditorEvent
+
+
+function export.Open (aFrom, aGuid, aItem) -- luacheck: no unused args (aGuid)
   local userItems, commandTable = libUtils.LoadUserMenu("_usermenu.lua")
   if     aFrom == F.OPEN_PLUGINSMENU then return OpenFromPanels(userItems.panels)
   elseif aFrom == F.OPEN_EDITOR      then OpenFromEditor(userItems.editor)
@@ -242,8 +273,6 @@ function export.Open (aFrom, aGuid, aItem)
 end
 
 
-local PluginMenuGuid1 = win.Uuid("3d5e7985-3b5d-4777-a572-ba7c621b3731")
-local PluginConfigGuid1 = win.Uuid("b2c08615-ed7c-491d-be5c-8758fdab9139")
 function export.GetPluginInfo()
   return {
     CommandPrefix = "lfs",
@@ -256,44 +285,7 @@ function export.GetPluginInfo()
 end
 
 
-function lfsearch.EditorAction (aOp, aData, aSaveData)
-  assert(type(aOp)=="string", "arg #1: string expected")
-  assert(type(aData)=="table", "arg #2: table expected")
-  local newdata = {}; for k,v in pairs(aData) do newdata[k] = v end
-  local nFound, nReps = Libs.EditMain.EditorAction(aOp, newdata, true)
-  if aSaveData and nFound then
-    History:setfield("main", newdata)
-  end
-  return nFound, nReps
-end
-
-
-function lfsearch.SetDebugMode (On)
-  if On then
-    require = ForcedRequire
-    far.ReloadDefaultScript = true
-  else
-    require = _Plugin.OriginalRequire
-    far.ReloadDefaultScript = false
-  end
-end
-
-
-function lfsearch.SearchFromPanel (data, bWithDialog)
-  return Libs.Panels.SearchFromPanel(data, bWithDialog, true)
-end
-
-
-function lfsearch.ReplaceFromPanel (data, bWithDialog)
-  return Libs.Panels.ReplaceFromPanel(data, bWithDialog, true)
-end
-
-
-lfsearch.MReplaceEditorAction = Libs.MReplace.EditorAction
-lfsearch.MReplaceDialog = Libs.MReplace.ReplaceWithDialog
-
-
-function export.Configure (Guid)
+function export.Configure (Guid) -- luacheck: no unused args
   local properties = {
     Flags = MenuFlags,
     Title = M.MConfigMenuTitle,
@@ -310,16 +302,53 @@ function export.Configure (Guid)
     local item, pos = far.Menu(properties, items)
     if not item then break end
     if pos == 1 then
-      Libs.Common.ConfigDialog()
+      Common.ConfigDialog()
     elseif pos == 2 then
-      Libs.Common.EditorConfigDialog()
+      Common.EditorConfigDialog()
     elseif pos == 3 then
-      Libs.Panels.ConfigDialog()
+      Panels.ConfigDialog()
     else
       libUtils.RunUserItem(item, item.arg)
     end
     properties.SelectIndex = pos
   end
+end
+
+
+lfsearch.MReplaceEditorAction = MReplace.EditorAction
+lfsearch.MReplaceDialog = MReplace.ReplaceWithDialog
+
+
+function lfsearch.EditorAction (aOp, aData, aSaveData)
+  assert(type(aOp)=="string", "arg #1: string expected")
+  assert(type(aData)=="table", "arg #2: table expected")
+  local newdata = {}; for k,v in pairs(aData) do newdata[k] = v end
+  local nFound, nReps = EditMain.EditorAction(aOp, newdata, true)
+  if aSaveData and nFound then
+    History:setfield("main", newdata)
+  end
+  return nFound, nReps
+end
+
+
+function lfsearch.SetDebugMode (On)
+  if On then
+    require = ForcedRequire -- luacheck: allow defined (require)
+    far.ReloadDefaultScript = true
+  else
+    require = _Plugin.OriginalRequire
+    far.ReloadDefaultScript = false
+  end
+end
+
+
+function lfsearch.SearchFromPanel (data, bWithDialog)
+  return Panels.SearchFromPanel(data, bWithDialog, true)
+end
+
+
+function lfsearch.ReplaceFromPanel (data, bWithDialog)
+  return Panels.ReplaceFromPanel(data, bWithDialog, true)
 end
 
 
@@ -329,5 +358,5 @@ do
   config.EditorHighlightColor    = config.EditorHighlightColor    or 0xCF
   config.GrepLineNumMatchColor   = config.GrepLineNumMatchColor   or 0xA0
   config.GrepLineNumContextColor = config.GrepLineNumContextColor or 0x80
-  Libs.Panels.InitTmpPanel()
+  Panels.InitTmpPanel()
 end

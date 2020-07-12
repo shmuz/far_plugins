@@ -1,18 +1,22 @@
 -- lfs_common.lua
 -- luacheck: globals _Plugin
 
-local Libs = ...
-local M = Libs.GetMsg
+local Editors    = require "lfs_editors"
+local M          = require "lfs_message"
+local RepLib     = require "lfs_replib"
+
 local libDialog  = require "far2.dialog"
 local libHistory = require "far2.history"
-require "hilite"
+
+local DefaultLogFileName = "\\D{%Y%m%d-%H%M%S}.log"
 
 local type = type
+local uchar = ("").char
 local F = far.Flags
 local VK = win.GetVirtualKeys()
 local band, bor, bnot = bit64.band, bit64.bor, bit64.bnot
 local Utf8, Utf16 = win.Utf16ToUtf8, win.Utf8ToUtf16
-local TransformReplacePat = Libs.RepLib.TransformReplacePat
+local TransformReplacePat = RepLib.TransformReplacePat
 
 local function ErrorMsg (text, title)
   far.Message (text, title or M.MError, nil, "w")
@@ -160,19 +164,6 @@ local function GetSearchAreas(aData)
 end
 
 
--- Same as tfind, but all input and output offsets are in characters rather than bytes.
-local function WrapTfindMethod (tfind)
-  local usub, ssub = ("").sub, string.sub
-  local ulen = ("").len
-  return function(patt, s, init)
-    init = init and #(usub(s, 1, init-1)) + 1
-    local from, to, t = tfind(patt, s, init)
-    if from == nil then return nil end
-    return ulen(ssub(s, 1, from-1)) + 1, ulen(ssub(s, 1, to)), t
-  end
-end
-
-
 -- Make possible to use <libname>'s dependencies residing in the plugin's directory.
 local function require_ex (libname)
   if package.loaded[libname] then
@@ -317,7 +308,7 @@ local function GetReplaceFunction (aReplacePat, is_wide)
     return function() return U16(aReplacePat) end
 
   elseif type(aReplacePat) == "table" then
-    return Libs.RepLib.GetReplaceFunction(aReplacePat, is_wide)
+    return RepLib.GetReplaceFunction(aReplacePat, is_wide)
 
   else
     error("invalid type of replace pattern", 2)
@@ -326,7 +317,7 @@ end
 
 
 local function EscapeSearchPattern(pat)
-  pat = pat:gsub("[~!@#$%%^&*()%-+[%]{}\\|:;'\",<.>/?]", "\\%1")
+  pat = string.gsub(pat, "[~!@#$%%^&*()%-+[%]{}\\|:;'\",<.>/?]", "\\%1")
   return pat
 end
 
@@ -433,6 +424,7 @@ local function ProcessDialogData (aData, bReplace, bInEditor, bUseMultiPatterns,
   else
     local SearchPat = ProcessSinglePattern(rex, aData.sSearchPat, aData)
     local cflags = GetCFlags(aData, bInEditor)
+    if libname=="far" then cflags = cflags.."o"; end -- optimize
     local ok, ret = pcall(rex.new, SearchPat, cflags)
     if not ok then
       ErrorMsg(ret, M.MSearchPattern..": "..M.MSyntaxError)
@@ -842,11 +834,11 @@ function SRFrame:DlgProc (hDlg, msg, param1, param2)
           return 0
         end
       end
-      local tmpdata, msg = {}, nil
+      local tmpdata, key = {}
       for k,v in pairs(Data) do tmpdata[k]=v end
       self:SaveDataDyn(hDlg, tmpdata)
       local bSkip = Dlg.sSkipPat and tmpdata.sSkipPat ~= ""
-      self.close_params, msg = ProcessDialogData(tmpdata, bReplace, bInEditor, Dlg.bMultiPatterns, bSkip)
+      self.close_params, key = ProcessDialogData(tmpdata, bReplace, bInEditor, Dlg.bMultiPatterns, bSkip)
       if self.close_params then
         for k,v in pairs(tmpdata) do Data[k]=v end
         hDlg:send("DM_ADDHISTORY", Dlg.sSearchPat.id, Data.sSearchPat)
@@ -854,18 +846,13 @@ function SRFrame:DlgProc (hDlg, msg, param1, param2)
         if Dlg.sSkipPat    then hDlg:send("DM_ADDHISTORY", Dlg.sSkipPat.id,    Data.sSkipPat)    end
         if Dlg.bHighlight then
           local checked = Dlg.bHighlight:GetCheck(hDlg)
-          if not checked and Libs.EditMain.IsHighlightGrep() then
-            -- do not reset Grep highlighting
-          else
-            Libs.EditMain.SetHighlightPattern(self.close_params.Regex)
-            Libs.EditMain.ActivateHighlight(checked)
+          if checked or not Editors.IsHighlightGrep() then
+            Editors.SetHighlightPattern(self.close_params.Regex)
+            Editors.ActivateHighlight(checked)
           end
         end
       else
-        if msg=="sSearchPat" or msg=="sReplacePat" or msg=="sFilterFunc" or msg=="sInitFunc"
-        or msg=="sFinalFunc" or msg=="sSkipPat" then
-          if Dlg[msg] then GotoEditField(hDlg, Dlg[msg].id) end
-        end
+        if key and Dlg[key] then GotoEditField(hDlg, Dlg[key].id) end
         return 0 -- do not close the dialog
       end
 
@@ -992,6 +979,37 @@ function SRFrame:DoPresets (hDlg)
 end
 
 
+local function TransformLogFilePat (aStr)
+  local T = { MaxGroupNumber=0 }
+  local patt = [[
+    \\D \{ ([^\}]+) \} |
+    (.) |
+    ($)
+  ]]
+
+  for date,char,dollar in regex.gmatch(aStr,patt,"sx") do
+    if date then
+      T[#T+1] = { "date", date }
+    elseif char then
+      if T[#T] and T[#T][1]=="literal" then T[#T][2] = T[#T][2] .. char
+      else T[#T+1] = { "literal", char }
+      end
+    elseif dollar then
+      if not T[1] then return nil, "empty pattern" end
+    end
+
+    local curr = T[#T]
+    if curr[1]=="literal" then
+      local c = curr[2]:match("[\\/:*?\"<>|%c%z]")
+      if c then
+        return nil, "invalid filename character: "..c
+      end
+    end
+  end
+  return T
+end
+
+
 local function ConfigDialog()
   local CfgGuid = win.Uuid("6C2BC7AF-8739-499E-BFA2-7E967B0BDDA9")
   local HIST_LOG = _Plugin.DialogHistoryPath .. "LogFileName"
@@ -1001,7 +1019,7 @@ local function ConfigDialog()
   Dlg.bUseFarHistory  = {"DI_CHECKBOX",    5, 2, 0, 0,  0, 0, 0,  0,  M.MUseFarHistory}
   Dlg.lab             = {"DI_TEXT",        5, 4, 0, 0,  0, 0, 0,  0,  M.MRenameLogFileName}
   Dlg.sLogFileName    = {"DI_EDIT",       X1, 4,70, 0,  0, HIST_LOG, 0, {DIF_HISTORY=1,DIF_USELASTHISTORY=1},
-                                                                      Libs.Rename.DefaultLogFileName}
+                                                                      DefaultLogFileName}
   Dlg.sep             = {"DI_TEXT",        5, 6, 0, 0,  0, 0, 0,  {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
   Dlg.btnOk           = {"DI_BUTTON",      0, 7, 0, 0,  0, 0, 0,  {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
   Dlg.btnCancel       = {"DI_BUTTON",      0, 7, 0, 0,  0, 0, 0,  "DIF_CENTERGROUP", M.MCancel}
@@ -1012,9 +1030,9 @@ local function ConfigDialog()
   local function DlgProc (hDlg, msg, param1, param2)
     if msg == F.DN_CLOSE then
       if param1 == Dlg.btnOk.id then
-        local ok, msg = Libs.Rename.TransformLogFilePat(Dlg.sLogFileName:GetText(hDlg))
+        local ok, errmsg = TransformLogFilePat(Dlg.sLogFileName:GetText(hDlg))
         if not ok then
-          ErrorMsg(msg, "Log file name"); return 0
+          ErrorMsg(errmsg, "Log file name"); return 0
         end
       end
     end
@@ -1107,11 +1125,14 @@ end
 -- @param Dlg : an array of dialog items (tables);
 --              an item may have a boolean field 'NoHilite' that means no automatic highlighting;
 local function AssignHotKeys (Dlg)
-  local fHilite = require "hilite"
+  local fHilite = require "shmuz.hilite"
+  local typeIndex = 1  -- index of the "Type" element in a dialog item (Far 3 API)
   local dataIndex = 10 -- index of the "Data" element in a dialog item (Far 3 API)
+  local types = { [F.DI_BUTTON]=1;[F.DI_CHECKBOX]=1;[F.DI_RADIOBUTTON]=1;[F.DI_TEXT]=1;[F.DI_VTEXT]=1; }
   local arr, idx = {}, {}
   for i,v in ipairs(Dlg) do
-    if not v.NoHilite then
+    local iType = type(v[typeIndex])=="number" and v[typeIndex] or F[v[typeIndex]] -- convert flag to number
+    if types[iType] and not v.NoHilite then
       local n = #arr+1
       arr[n], idx[n] = v[dataIndex], i
     end
@@ -1165,13 +1186,109 @@ local function Check_F4_On_DI_EDIT (Dlg, hDlg, msg, param1, param2)
 end
 
 
+local TUserBreak = {
+  time       = nil;
+  cancel     = nil;
+  fullcancel = nil;
+}
+local UserBreakMeta = { __index=TUserBreak }
+
+local function NewUserBreak()
+  return setmetatable({ time=0 }, UserBreakMeta)
+end
+
+function TUserBreak:ConfirmEscape (in_file)
+  local ret
+  if win.ExtractKey() == "ESCAPE" then
+    local hScreen = far.SaveScreen()
+    local msg = M.MInterrupted.."\n"..M.MConfirmCancel
+    local t1 = os.clock()
+    if in_file then
+      -- [Cancel current file] [Cancel all files] [Continue]
+      local r = far.Message(msg, M.MMenuTitle, M.MButtonsCancelOnFile, "w")
+      if r == 2 then
+        self.fullcancel = true
+      end
+      ret = r==1 or r==2
+    else
+      -- [Yes] [No]
+      local r = far.Message(msg, M.MMenuTitle, M.MBtnYesNo, "w")
+      if r == 1 then
+        self.fullcancel = true
+        ret = true
+      end
+    end
+    self.time = self.time + os.clock() - t1
+    far.RestoreScreen(hScreen); far.Text();
+  end
+  return ret
+end
+
+function TUserBreak:fInterrupt()
+  local c = self:ConfirmEscape("in_file")
+  self.cancel = c
+  return c
+end
+
+
+local function set_progress (LEN, ratio, space)
+  space = space or ""
+  local uchar1, uchar2 = uchar(9608), uchar(9617)
+  local len = math.floor(ratio*LEN + 0.5)
+  local text = uchar1:rep(len) .. uchar2:rep(LEN-len) .. space .. ("%3d%%"):format(ratio*100)
+  return text
+end
+
+
+local DisplaySearchState do
+  local lastclock = 0
+  local wMsg, wHead = 60, 10
+  local wTail = wMsg - wHead - 3
+  DisplaySearchState = function (fullname, cntFound, cntTotal, ratio, userbreak)
+    local newclock = far.FarClock()
+    if newclock >= lastclock then
+      lastclock = newclock + 2e5 -- period = 0.2 sec
+      local len = fullname:len()
+      local s = len<=wMsg and fullname..(" "):rep(wMsg-len) or
+                fullname:sub(1,wHead).. "..." .. fullname:sub(-wTail)
+      far.Message(
+        (s.."\n") .. (set_progress(wMsg-4, ratio).."\n") .. (M.MFilesFound..cntFound.."/"..cntTotal),
+        M.MTitleSearching, "")
+      return userbreak and userbreak:ConfirmEscape()
+    end
+  end
+end
+
+
+local function DisplayReplaceState (fullname, cnt, ratio)
+  local WID, W1 = 60, 3
+  local W2 = WID - W1 - 3
+  local len = fullname:len()
+  local s = len<=WID and fullname..(" "):rep(WID-len) or
+            fullname:sub(1,W1).. "..." .. fullname:sub(-W2)
+  far.Message(
+    (s.."\n") .. (set_progress(W2, ratio, " ").."\n") .. (M.MPanelFin_FilesProcessed.." "..cnt),
+    M.MTitleProcessing, "")
+end
+
+
+local function CheckMask (mask)
+  return far.ProcessName("PN_CHECKMASK", mask, nil, "PN_SHOWERRORMESSAGE")
+end
+
+
 return {
   AssignHotKeys = AssignHotKeys,
   Check_F4_On_DI_EDIT = Check_F4_On_DI_EDIT,
+  CheckMask = CheckMask,
   CheckSearchArea = CheckSearchArea,
   ConfigDialog = ConfigDialog,
   CreateSRFrame = CreateSRFrame,
+  DefaultLogFileName = DefaultLogFileName,
+  DisplayReplaceState = DisplayReplaceState,
+  DisplaySearchState = DisplaySearchState,
   EditorConfigDialog = EditorConfigDialog,
+  ErrorMsg = ErrorMsg,
   FormatInt = FormatInt,
   FormatTime = FormatTime,
   GetDialogHistoryKey = GetDialogHistoryKey,
@@ -1185,7 +1302,8 @@ return {
   GsubMB = GsubMB,
   GsubW = GsubW,
   IndexToSearchArea = IndexToSearchArea,
+  NewUserBreak = NewUserBreak,
   ProcessDialogData = ProcessDialogData,
   SaveCodePageCombo = SaveCodePageCombo,
-  WrapTfindMethod = WrapTfindMethod,
+  TransformLogFilePat = TransformLogFilePat,
 }

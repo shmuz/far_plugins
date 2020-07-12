@@ -99,7 +99,7 @@ local function MakeLang (aModuleFileName, aDescriptions, ...)
   ----------------------------------------------------------------------------
   -- check for duplicates
   local map = {}
-  for k,name in ipairs(t_out[1]) do
+  for _,name in ipairs(t_out[1]) do
     if map[name] then error("duplicate name: " .. name) end
     map[name] = true
   end

@@ -1,14 +1,34 @@
 -- lfs_panels.lua
 -- luacheck: globals _Plugin
 
-local Libs = ...
-local M = Libs.GetMsg
+local Common     = require "lfs_common"
+local Editors    = require "lfs_editors"
+local M          = require "lfs_message"
 
-local libCqueue  = require "cqueue"
+local libCqueue  = require "shmuz.cqueue"
 local libDialog  = require "far2.dialog"
 local libMessage = require "far2.message"
 local libUCD     = require "ucd"
 local libReader  = require "reader"
+
+local AssignHotKeys        = Common.AssignHotKeys
+local Check_F4_On_DI_EDIT  = Common.Check_F4_On_DI_EDIT
+local CheckMask            = Common.CheckMask
+local CheckSearchArea      = Common.CheckSearchArea
+local CreateSRFrame        = Common.CreateSRFrame
+local DisplayReplaceState  = Common.DisplayReplaceState
+local DisplaySearchState   = Common.DisplaySearchState
+local ErrorMsg             = Common.ErrorMsg
+local FormatTime           = Common.FormatTime
+local GetReplaceFunction   = Common.GetReplaceFunction
+local GetSearchAreas       = Common.GetSearchAreas
+local GotoEditField        = Common.GotoEditField
+local IndexToSearchArea    = Common.IndexToSearchArea
+local NewUserBreak         = Common.NewUserBreak
+local ProcessDialogData    = Common.ProcessDialogData
+local SaveCodePageCombo    = Common.SaveCodePageCombo
+local ActivateHighlight    = Editors.ActivateHighlight
+local SetHighlightPattern  = Editors.SetHighlightPattern
 
 package.preload.tmpp_message = function() return M end
 local libTmpPanel = require "far2.tmppanel"
@@ -21,7 +41,6 @@ local strbyte, strgsub = string.byte, string.gsub
 local Utf16, Utf8 = win.Utf8ToUtf16, win.Utf16ToUtf8
 local MultiByteToWideChar = win.MultiByteToWideChar
 local WideCharToMultiByte = win.WideCharToMultiByte
-local uchar = ("").char
 
 local TmpPanelDefaults = {
   CopyContents             = 0,
@@ -38,17 +57,12 @@ local TmpPanelDefaults = {
 
 
 local function MsgCannotOpenFile (name)
-  far.Message(M.MCannotOpenFile.."\n"..name, M.MError, M.MOk, "w")
+  ErrorMsg(M.MCannotOpenFile.."\n"..name)
 end
 
 
 local function SwapEndian (str)
   return (strgsub(str, "(.)(.)", "%2%1"))
-end
-
-
-local function CheckMask (mask)
-  return far.ProcessName("PN_CHECKMASK", mask, nil, "PN_SHOWERRORMESSAGE")
 end
 
 
@@ -89,51 +103,6 @@ local function CheckUtf8 (str)
     if c < min then return false end -- bad sequence
   end
 	return len
-end
-
-
-local TUserBreak = {
-  time       = nil;
-  cancel     = nil;
-  fullcancel = nil;
-}
-local UserBreakMeta = { __index=TUserBreak }
-
-local function NewUserBreak()
-  return setmetatable({ time=0 }, UserBreakMeta)
-end
-
-function TUserBreak:ConfirmEscape (in_file)
-  local ret
-  if win.ExtractKey() == "ESCAPE" then
-    local hScreen = far.SaveScreen()
-    local msg = M.MInterrupted.."\n"..M.MConfirmCancel
-    local t1 = clock()
-    if in_file then
-      -- [Cancel current file] [Cancel all files] [Continue]
-      local r = far.Message(msg, M.MMenuTitle, M.MButtonsCancelOnFile, "w")
-      if r == 2 then
-        self.fullcancel = true
-      end
-      ret = r==1 or r==2
-    else
-      -- [Yes] [No]
-      local r = far.Message(msg, M.MMenuTitle, M.MBtnYesNo, "w")
-      if r == 1 then
-        self.fullcancel = true
-        ret = true
-      end
-    end
-    self.time = self.time + clock() - t1
-    far.RestoreScreen(hScreen); far.Text();
-  end
-  return ret
-end
-
-function TUserBreak:fInterrupt()
-  local c = self:ConfirmEscape("in_file")
-  self.cancel = c
-  return c
 end
 
 
@@ -501,12 +470,12 @@ local function DirectoryFilterDialog (aData)
     if msg == F.DN_CLOSE and param1 == Dlg.btnOk.id then
       local mask = Dlg.sDirMask:GetText(hDlg) -- this mask is allowed to be empty
       if not (mask == "" or CheckMask(mask)) then
-        Libs.Common.GotoEditField(hDlg, Dlg.sDirMask.id)
+        GotoEditField(hDlg, Dlg.sDirMask.id)
         return 0
       end
       local mask = Dlg.sDirExMask:GetText(hDlg) -- this mask is allowed to be empty
       if not (mask == "" or CheckMask(mask)) then
-        Libs.Common.GotoEditField(hDlg, Dlg.sDirExMask.id)
+        GotoEditField(hDlg, Dlg.sDirExMask.id)
         return 0
       end
     end
@@ -525,10 +494,10 @@ local grepGuid    = win.Uuid("74D7F486-487D-40D0-9B25-B2BB06171D86")
 local function PanelDialog (aOp, aData, aScriptCall)
   local sepflags = bor(F.DIF_BOXCOLOR, F.DIF_SEPARATOR)
   local D = libDialog.NewDialog()
-  local Frame = Libs.Common.CreateSRFrame(D, aData, false, aScriptCall)
+  local Frame = CreateSRFrame(D, aData, false, aScriptCall)
   ------------------------------------------------------------------------------
   local title = aOp=="search" and M.MTitleSearch or aOp=="replace" and M.MTitleReplace or M.MTitleGrep
-  D.dblbox      = {"DI_DOUBLEBOX",3, 1,72, 0, 0, 0, 0, 0, title, NoHilite=1}
+  D.dblbox      = {"DI_DOUBLEBOX",3, 1,72, 0, 0, 0, 0, 0, title}
   local Y = Frame:InsertInDialog(true, 2, aOp)
   ------------------------------------------------------------------------------
   D.sep         = {"DI_TEXT",     5, Y, 0, 0, 0, 0, 0, sepflags, ""}
@@ -541,8 +510,7 @@ end
   Y = Y + 1
   D.lab         = {"DI_TEXT",     5, Y, 0,0, 0, 0, 0, 0, M.MDlgSearchArea}
   Y = Y + 1
-  D.cmbSearchArea={"DI_COMBOBOX", 5, Y,36,0, Libs.Common.GetSearchAreas(aData), 0, 0,
-                                         F.DIF_DROPDOWNLIST, "", _noauto=1}
+  D.cmbSearchArea={"DI_COMBOBOX", 5, Y,36,0, GetSearchAreas(aData), 0, 0, F.DIF_DROPDOWNLIST, "", _noauto=1}
 if aOp == "search" then
   D.bSearchFolders ={"DI_CHECKBOX",40,Y-1,0,0,  0,0,0,0, M.MDlgSearchFolders}
 end
@@ -624,7 +592,7 @@ end
             end
           end
         else
-          Libs.Common.Check_F4_On_DI_EDIT(D, hDlg, msg, param1, param2)
+          Check_F4_On_DI_EDIT(D, hDlg, msg, param1, param2)
         end
       end
 
@@ -637,21 +605,21 @@ end
         return 0
       elseif (D.btnOk and param1==D.btnOk.id) or (D.btnCount and param1==D.btnCount.id) then
         if not CheckMask(D.sFileMask:GetText(hDlg)) then
-          Libs.Common.GotoEditField(hDlg, D.sFileMask.id)
+          GotoEditField(hDlg, D.sFileMask.id)
           return 0
         end
         if (aOp=="replace" or aOp=="grep") and D.sSearchPat:GetText(hDlg) == "" then
-          far.Message(M.MSearchFieldEmpty, M.MError, ";Ok", "w")
-          Libs.Common.GotoEditField(hDlg, D.sSearchPat.id)
+          ErrorMsg(M.MSearchFieldEmpty)
+          GotoEditField(hDlg, D.sSearchPat.id)
           return 0
         end
-        aData.sSearchArea = Libs.Common.IndexToSearchArea(D.cmbSearchArea:GetListCurPos(hDlg))
+        aData.sSearchArea = IndexToSearchArea(D.cmbSearchArea:GetListCurPos(hDlg))
         D.bUseDirFilter:SaveCheck(hDlg, aData)
         D.bUseFileFilter:SaveCheck(hDlg, aData)
       end
       --------------------------------------------------------------------------
       -- store selected code pages no matter what user pressed: OK or Esc.
-      if D.cmbCodePage then Libs.Common.SaveCodePageCombo(hDlg, D.cmbCodePage, aData) end
+      if D.cmbCodePage then SaveCodePageCombo(hDlg, D.cmbCodePage, aData) end
       --------------------------------------------------------------------------
     end
     if msg==F.DN_BTNCLICK and param1==D.btnPresets.id then
@@ -676,7 +644,7 @@ end
     end
   end
 
-  Libs.Common.AssignHotKeys(D)
+  AssignHotKeys(D)
   libDialog.LoadData(D, aData)
   Frame:OnDataLoaded(aData)
   local Guid = aOp=="search" and searchGuid or aOp=="replace" and replaceGuid or grepGuid
@@ -750,46 +718,6 @@ local function MakeItemList (panelInfo, searchArea)
 end
 
 
-local function set_progress (LEN, ratio)
-  local uchar1, uchar2 = uchar(9608), uchar(9617)
-  local len = math.floor(ratio*LEN + 0.5)
-  local text = uchar1:rep(len) .. uchar2:rep(LEN-len) .. ("%3d%%"):format(ratio*100)
-  return text
-end
-
-
-local DisplaySearchState do
-  local lastclock = 0
-  local wMsg, wHead = 60, 10
-  local wTail = wMsg - wHead - 3
-  DisplaySearchState = function (fullname, cntFound, cntTotal, ratio, userbreak)
-    local newclock = far.FarClock()
-    if newclock >= lastclock then
-      lastclock = newclock + 2e5 -- period = 0.2 sec
-      local len = fullname:len()
-      local s = len<=wMsg and fullname..(" "):rep(wMsg-len) or
-                fullname:sub(1,wHead).. "..." .. fullname:sub(-wTail)
-      far.Message(
-        (s.."\n") .. (set_progress(wMsg-4, ratio).."\n") .. (M.MFilesFound..cntFound.."/"..cntTotal),
-        M.MTitleSearching, "")
-      return userbreak and userbreak:ConfirmEscape()
-    end
-  end
-end
-
-
-local function DisplayReplaceState (fullname, cnt, ratio)
-  local WID, W1 = 60, 3
-  local W2 = WID - W1 - 3
-  local len = fullname:len()
-  local s = len<=WID and fullname..(" "):rep(WID-len) or
-            fullname:sub(1,W1).. "..." .. fullname:sub(-W2)
-  far.Message(
-    (s.."\n") .. (set_progress(W2, ratio).."\n") .. (M.MPanelFin_FilesProcessed.." "..cnt),
-    M.MTitleProcessing, "")
-end
-
-
 local DisplayListState do
   local lastclock = 0
   local WIDTH = 60
@@ -835,7 +763,7 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
   if aWithDialog then
     tParams = PanelDialog("search", aData, aScriptCall)
   else
-    tParams = Libs.Common.ProcessDialogData(aData, false, false, true)
+    tParams = ProcessDialogData(aData, false, false, true)
   end
   if not tParams then return end
   ----------------------------------------------------------------------------
@@ -946,7 +874,7 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
     reader:closefile()
   end
 
-  local area = Libs.Common.CheckSearchArea(aData.sSearchArea) -- can throw error
+  local area = CheckSearchArea(aData.sSearchArea) -- can throw error
   local hScreen = far.SaveScreen()
   DisplaySearchState("", 0, 0, 0)
 --local t1=os.clock()
@@ -1013,7 +941,7 @@ local function CollectAllItems (aData, tParams, fFileMask, fDirMask, fDirExMask,
 
   local panelInfo = panel.GetPanelInfo(nil, 1)
   local bPlugin = (band(panelInfo.Flags, F.PFLAGS_PLUGIN) ~= 0)
-  local area = Libs.Common.CheckSearchArea(aData.sSearchArea)
+  local area = CheckSearchArea(aData.sSearchArea)
   local itemList, flags = MakeItemList(panelInfo, area)
   if aData.bSearchSymLinks then
     flags.symlinks = true
@@ -1293,7 +1221,7 @@ local function Replace_ProcessFile (fdata, fullname, cdata)
               win.DeleteFile(tmpname)
             end
             cdata.bWasError = true
-            far.Message(sRepFinal, M.MError, nil, "w")
+            ErrorMsg(sRepFinal)
             return
           end
           if sRepFinal then
@@ -1325,7 +1253,7 @@ local function Replace_ProcessFile (fdata, fullname, cdata)
                     fout:close()
                     win.DeleteFile(tmpname)
                   end
-                  far.Message("Could not create output file",nil,nil,"w") --### add localization
+                  ErrorMsg(M.MErrorCreateOutputFile)
                   return
                 end
                 if not bDeleteLine then
@@ -1502,7 +1430,7 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
     sOp, tParams = PanelDialog(aOp, aData, aScriptCall)
     if sOp and not aScriptCall then _Plugin.History:save() end
   else
-    sOp, tParams = aOp, Libs.Common.ProcessDialogData(aData, true, false)
+    sOp, tParams = aOp, ProcessDialogData(aData, true, false)
   end
   if not (sOp and tParams) then return end
   ----------------------------------------------------------------------------
@@ -1535,7 +1463,7 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
     bReplaceAll = not aData.bConfirmReplace,                          -- in/out
     bWideCharRegex = bWideCharRegex,                                     -- in
     ufind_method = tParams.Regex.ufindW or tParams.Regex.ufind,          -- in
-    fReplace = aOp=="replace" and Libs.Common.GetReplaceFunction(tParams.ReplacePat, bWideCharRegex), -- in
+    fReplace = aOp=="replace" and GetReplaceFunction(tParams.ReplacePat, bWideCharRegex), -- in
     nFilesModified = 0,                                                  -- out
     nFilesProcessed = 0,                                                 -- out
     nFilesWithMatches = 0,                                               -- out
@@ -1622,8 +1550,8 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
         table.insert(items, { M.MPanelFin_RepsTotal, cdata.nRepsTotal })
       end
       table.insert(items, { separator=1 })
-      table.insert(items, { M.MPanelFin_TimeSearch,       Libs.Common.FormatTime(timeSearch) .. " s" })
-      table.insert(items, { M.MPanelFin_TimeProcess,      Libs.Common.FormatTime(timeProcess) .. " s" })
+      table.insert(items, { M.MPanelFin_TimeSearch,       FormatTime(timeSearch) .. " s" })
+      table.insert(items, { M.MPanelFin_TimeProcess,      FormatTime(timeProcess) .. " s" })
       ----------------------------------------------------------------------------------------------
       libMessage.TableBox(items, M.MMenuTitle)
     else
@@ -1665,8 +1593,8 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
       local flags = {EF_DELETEONLYFILEONCLOSE=1,EF_NONMODAL=1,EF_IMMEDIATERETURN=1,EF_DISABLEHISTORY=1}
       if editor.Editor(fname,nil,nil,nil,nil,nil,flags,nil,nil,65001) == F.EEC_MODIFIED then
         if aData.bGrepHighlight then
-          Libs.EditMain.SetHighlightPattern(tParams.Regex, true, aData.bGrepShowLineNumbers, tParams.bSkip)
-          Libs.EditMain.ActivateHighlight(true)
+          SetHighlightPattern(tParams.Regex, true, aData.bGrepShowLineNumbers, tParams.bSkip)
+          ActivateHighlight(true)
         end
       end
     else

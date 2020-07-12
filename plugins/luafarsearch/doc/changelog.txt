@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2020-07-12, v3.44.2
+  [*] Add optimization flag "o" in Far regex operations.
+
 2020-03-20, v3.44.1
   [*] Presets: preserve menu selection when the menu opens repeatedly.
   [*] Presets: place checkmark on the current preset in the menu.

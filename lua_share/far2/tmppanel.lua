@@ -9,7 +9,7 @@ local far2_dialog = require "far2.dialog"
 
 local F  = far.Flags
 local VK = win.GetVirtualKeys()
-local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
+local band, bor, bnot = bit64.band, bit64.bor, bit64.bnot
 
 -- constants
 local COMMONPANELSNUMBER = 10

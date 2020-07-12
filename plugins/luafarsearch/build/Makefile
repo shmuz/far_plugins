@@ -13,17 +13,20 @@ T_MESSAGE = $(path_plugin)\lfsearch_message.lua
 bootscript = $(path_plugin)\$(PROJECT).lua
 
 scripts = \
-  $(path_plugin)\_globalinfo.lua     \
-  $(path_plugin)\lfs_message.lua     \
-  $(path_plugin)\lfs_replib.lua      \
-  $(path_plugin)\lfs_common.lua      \
-  $(path_plugin)\lfs_editmain.lua    \
-  $(path_plugin)\lfs_editengine.lua  \
-  $(path_plugin)\lfs_mreplace.lua    \
-  $(path_plugin)\lfs_rename.lua      \
-  $(path_plugin)\lfs_panels.lua
+  $(path_plugin)\_globalinfo.lua
 
 modules = \
+  $(path_plugin)\lfs_common.lua      \
+  $(path_plugin)\lfs_editengine.lua  \
+  $(path_plugin)\lfs_editmain.lua    \
+  $(path_plugin)\lfs_editors.lua     \
+  $(path_plugin)\lfs_message.lua     \
+  $(path_plugin)\lfs_mreplace.lua    \
+  $(path_plugin)\lfs_panels.lua      \
+  $(path_plugin)\lfs_panels_lpat.lua \
+  $(path_plugin)\lfs_rename.lua      \
+  $(path_plugin)\lfs_replib.lua      \
+                                     \
   $(path_share)*shmuz\serial.lua     \
   $(path_share)*shmuz\hilite.lua     \
   $(path_share)*shmuz\cqueue.lua     \
@@ -47,7 +50,7 @@ FAR_EXPORTS =       \
   PUTFILES          \
   SETDIRECTORY
 
-MYCFLAGS  = -I$(PATH_LUAFARSRC) -DRUN_LUAFAR_INIT
+MYCFLAGS  = -DRUN_LUAFAR_INIT
 RCFILE    = lfsearch.rc
 TEMPL     = lfs_lang.templ tmpp_lang2.templ
 TEMPL_SCR = lfs_lang.lua

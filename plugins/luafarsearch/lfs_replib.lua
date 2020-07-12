@@ -1,8 +1,7 @@
 -- encoding: utf-8
 -- started: 2014-09-27
 
-local Libs = ...
-local M = Libs.GetMsg
+local M = require "lfs_message"
 
 local RepLib = {}
 

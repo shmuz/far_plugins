@@ -1,8 +1,10 @@
 -- lfs_editengine.lua
 -- luacheck: globals _Plugin
 
-local Libs = ...
-local M = Libs.GetMsg
+local M          = require "lfs_message"
+local Common     = require "lfs_common"
+local Editors    = require "lfs_editors"
+
 local CustomMessage = require "far2.message"
 local CustomMenu = require "far2.custommenu"
 
@@ -191,14 +193,12 @@ local function ScrollToPosition (row, pos, from, to, scroll)
 
   row = row or Info.CurLine
   local TopScreenLine = nil
-  if scroll == "none" then
-    -- do nothing
-  elseif (scroll == "+lazy") or (scroll == "-lazy") then
+  if (scroll == "+lazy") or (scroll == "-lazy") then
     if row < Info.TopScreenLine or row >= Info.TopScreenLine + Info.WindowSizeY then
       scroll = floor(Info.WindowSizeY * (scroll=="+lazy" and 0.25 or 0.75))
       TopScreenLine = max(1, row - scroll)
     end
-  else
+  elseif scroll ~= "none" then
     scroll = (scroll or 0) + floor(Info.WindowSizeY / 2)
     TopScreenLine = max(1, row - scroll)
   end
@@ -419,7 +419,7 @@ local function DoSearch (
 
   local is_wide = tRegex.ufindW and true
   local TT = GetInvariantTable(tRegex)
-  local ufind_method = tRegex.ufindW or Libs.Common.WrapTfindMethod(tRegex.ufind)
+  local ufind_method = tRegex.ufindW or Editors.WrapTfindMethod(tRegex.ufind)
   -----------------------------------------------------------------------------
   local sTitle = M.MTitleSearch
   local bForward = not bSearchBack
@@ -625,9 +625,6 @@ local function DoSearch (
             ShowFound(X, fr, to, bForward and "+lazy" or "-lazy")
             return 1, 0, sChoice, timing:GetElapsedTime()
           -----------------------------------------------------------------------
-          elseif sOperation=="count" then
-            -- do nothing
-          -----------------------------------------------------------------------
           elseif sOperation=="showall" then
             local seloffset = tBlockInfo and egs.SelStart>0 and egs.SelStart-1 or 0
             table.insert(tItems, {lineno=y, text=get_sLineU8(), fr=fr, to=to, seloffset=seloffset})
@@ -684,7 +681,7 @@ local function DoReplace (
   bDelNonMatchLine = bDelNonMatchLine and bFirstSearch
   local is_wide = tRegex.ufindW and true
   local TT = GetInvariantTable(tRegex)
-  local ufind_method = tRegex.ufindW or Libs.Common.WrapTfindMethod(tRegex.ufind)
+  local ufind_method = tRegex.ufindW or Editors.WrapTfindMethod(tRegex.ufind)
   local EditorSetCurString = function(text, eol)
     if not TT.EditorSetString(nil, nil, text, eol) then error("EditorSetString failed") end
   end
@@ -693,7 +690,7 @@ local function DoReplace (
   local bForward = not bSearchBack
   local bAllowEmpty = bFirstSearch
   fReplaceChoice = fReplaceChoice or GetReplaceChoice
-  local fReplace = Libs.Common.GetReplaceFunction(xReplacePat, is_wide)
+  local fReplace = Common.GetReplaceFunction(xReplacePat, is_wide)
 
   local sChoice = bFirstSearch and not bConfirmReplace and "all" or "initial"
   local nFound, nReps, nLine = 0, 0, 0

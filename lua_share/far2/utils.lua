@@ -1,7 +1,7 @@
 -- utils.lua --
 
 local F = far.Flags
-local band, bor, bnot = bit64.band, bit64.bor, bit64.bnot
+local band, bor = bit64.band, bit64.bor
 local PluginDir = far.PluginStartupInfo().ModuleDir
 
 local function OnError (msg)
@@ -97,8 +97,8 @@ end
 local function RunInternalScript (name, ...)
   local f = LoadEmbeddedScript(name)
   if f then return f(...) end
-  local f, errmsg = loadfile(PluginDir..name..".lua")
-  if f then return f(...) end
+  local f2, errmsg = loadfile(PluginDir..name..".lua")
+  if f2 then return f2(...) end
   error(errmsg)
 end
 
@@ -153,7 +153,7 @@ end
 
 local function ConvertUserHotkey(str)
   local d = 0
-  for elem in str:upper():gmatch("[^+-]+") do
+  for elem in str:upper():gmatch("[^+%-]+") do
     if elem == "ALT" then d = bor(d, 0x01)
     elseif elem == "CTRL" then d = bor(d, 0x02)
     elseif elem == "SHIFT" then d = bor(d, 0x04)
@@ -416,7 +416,7 @@ end
 local function ExecuteCommandLine (tActions, tCommands, sFrom, fConfig)
   local function wrapfunc()
     local env = setmetatable({}, {__index=_G})
-    for i,v in ipairs(tActions) do
+    for _,v in ipairs(tActions) do
       if v.command then
         local fileobject = tCommands[v.command]
         RunUserItem(fileobject, {From=sFrom}, unpack(v))
@@ -504,14 +504,17 @@ end
 -- same as find, but offsets are in characters rather than bytes
 -- DON'T REMOVE: it's documented in LF4Ed manual and must be available to user scripts.
 local function AddCfindFunction()
-  local usub, ssub = unicode.utf8.sub, string.sub
-  local ulen, slen = unicode.utf8.len, string.len
-  local ufind = unicode.utf8.find
-  unicode.utf8.cfind = function(s, patt, init, plain)
-    init = init and slen(usub(s, 1, init-1)) + 1
-    local t = { ufind(s, patt, init, plain) }
-    if t[1] == nil then return nil end
-    return ulen(ssub(s, 1, t[1]-1)) + 1, ulen(ssub(s, 1, t[2])), unpack(t, 3)
+  local ulib = getmetatable("").__index
+  if type(ulib) == "table" then
+    local usub, ssub = ulib.sub, string.sub
+    local ulen, slen = ulib.len, string.len
+    local ufind = ulib.find
+    ulib.cfind = function(s, patt, init, plain)
+      init = init and slen(usub(s, 1, init-1)) + 1
+      local t = { ufind(s, patt, init, plain) }
+      if t[1] == nil then return nil end
+      return ulen(ssub(s, 1, t[1]-1)) + 1, ulen(ssub(s, 1, t[2])), unpack(t, 3)
+    end
   end
 end
 

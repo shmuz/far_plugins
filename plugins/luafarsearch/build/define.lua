@@ -1,7 +1,9 @@
+-- luacheck: no global
+
 -- Definitions
 VER_MAJOR = "3"
 VER_MINOR = "44"
-VER_MICRO = "1"
+VER_MICRO = "2"
 
 MINFARVERSION = "{ 3, 0, 0, 4878 }"
 

@@ -1,15 +1,17 @@
 -- edt_main.lua
 -- luacheck: globals _Plugin
 
-local Libs = ...
-local M = Libs.GetMsg
-local FormatInt = Libs.Common.FormatInt
-local libDialog = require "far2.dialog"
+local Common     = require "lfs_common"
+local M          = require "lfs_message"
+local EditEngine = require "lfs_editengine"
+local Editors    = require "lfs_editors"
+
+local libDialog  = require "far2.dialog"
 local libMessage = require "far2.message"
 
 local F = far.Flags
+local FormatInt = Common.FormatInt
 local band, bor = bit64.band, bit64.bor
-local min = math.min
 
 local function ErrorMsg (text, title, buttons, flags)
   far.Message (text, title or M.MError, buttons, flags or "w")
@@ -28,139 +30,6 @@ local function UnlockEditor (Title, EI)
   end
   return true
 end
-
---~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- "Highlight All"
---~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-local ColorPriority = 100
-local ColorFlags = bor(F.ECF_TABMARKCURRENT, F.ECF_AUTODELETE)
-local ColorOwner = export.GetGlobalInfo().Guid
-local Editors do
-  Editors = _Plugin.Editors or {}
-  _Plugin.Editors = Editors
-end
-
-local function ToggleHighlight()
-  local info = editor.GetInfo()
-  if info then
-    local state = Editors[info.EditorID]
-    if state then
-      state.active = not state.active
-      editor.Redraw()
-    end
-  end
-end
-
-local function ActivateHighlight (On)
-  local info = editor.GetInfo()
-  if info then
-    local state = Editors[info.EditorID]
-    if state then
-      state.active = (On and true)
-      editor.Redraw()
-    end
-  end
-end
-
-local function SetHighlightPattern (pattern, is_grep, line_numbers, bSkip)
-  local info = editor.GetInfo()
-  if info then
-    local state = Editors[info.EditorID]
-    if state then
-      state.pattern = pattern
-      if is_grep then state.is_grep = true; end -- can be only set
-      state.line_numbers = line_numbers and true
-      state.bSkip = bSkip
-    end
-  end
-end
-
-local function IsHighlightGrep()
-  local info = editor.GetInfo()
-  local state = info and Editors[info.EditorID]
-  return state and state.is_grep
-end
-
-local function MakeGetString (EditorID, ymin, ymax)
-  ymin = ymin - 1
-  return function()
-    if ymin < ymax then
-      ymin = ymin + 1
-      return editor.GetStringW(EditorID,ymin), ymin
-    end
-  end
-end
-
----------------------------------------------------------------------------------------------------
--- @param EI: editor info table
--- @param Pattern: pattern object for finding matches in regular editor text
--- @param Priority: color priority (number) for added colors
--- @param ProcessLineNumbers: (used with Grep) locate line numbers at the beginning of lines
---                            and highlight them separately from regular editor text
----------------------------------------------------------------------------------------------------
-local function RedrawHighlightPattern (EI, Pattern, Priority, ProcessLineNumbers, bSkip)
-  local config = _Plugin.History:field("config")
-  local Color = config.EditorHighlightColor
-  local ID = EI.EditorID
-  local GetNextString = MakeGetString(ID, EI.TopScreenLine,
-    min(EI.TopScreenLine+EI.WindowSizeY-1, EI.TotalLines))
-  local ufind = Pattern.ufindW or Libs.Common.WrapTfindMethod(Pattern.ufind)
-
-  local prefixPattern = regex.new("^(\\d+([:\\-]))") -- (grep) 123: matched_line; 123- context_line
-  local filenamePattern = regex.new("^\\[\\d+\\]")   -- (grep) [123] c:\dir1\dir2\filename
-
-  for str, y in GetNextString do
-    local filename_line -- reliable detection is possible only when ProcessLineNumbers is true
-    local offset, text = 0, str.StringText
-    if ProcessLineNumbers then
-      local prefix, char = prefixPattern:matchW(text)
-      if prefix then
-        offset = win.lenW(prefix)
-        text = win.subW(text, offset+1)
-        local prColor = char==":\0" and config.GrepLineNumMatchColor or config.GrepLineNumContextColor
-        editor.AddColor(ID, y, 1, offset, ColorFlags, prColor, Priority, ColorOwner)
-      else
-        filename_line = filenamePattern:matchW(text)
-      end
-    end
-
-    if not filename_line then
-      text = Pattern.ufindW and text or win.Utf16ToUtf8(text)
-      local start = 1
-      local maxstart = min(str.StringLength+1, EI.LeftPos+EI.WindowSizeX-1) - offset
-
-      while start <= maxstart do
-        local from, to, collect = ufind(Pattern, text, start)
-        if not from then break end
-        start = to>=from and to+1 or from+1
-        if not (bSkip and collect[1]) then
-          if to >= from and to+offset >= EI.LeftPos then
-            editor.AddColor(ID, y, offset+from, offset+to, ColorFlags, Color, Priority, ColorOwner)
-          end
-        end
-      end
-    end
-  end
-end
-
-function export.ProcessEditorEvent (id, event, param)
-  if event == F.EE_READ then
-    Editors[id] = Editors[id] or {}
-    Editors[id].sLastOp = "search"
-  elseif event == F.EE_CLOSE then
-    Editors[id] = nil
-  elseif event == F.EE_REDRAW then
-    local state = Editors[id] or {}
-    Editors[id] = state
-    if state.active and state.pattern then
-      local ei = editor.GetInfo(id)
-      if ei then
-        RedrawHighlightPattern(ei, state.pattern, ColorPriority, state.line_numbers, state.bSkip)
-      end
-    end
-  end
-end
---~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 --~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 local searchGuid  = win.Uuid("0b81c198-3e20-4339-a762-ffcbbc0c549c")
@@ -174,8 +43,8 @@ local function EditorDialog (aData, aReplace, aScriptCall)
   ------------------------------------------------------------------------------
   local BF = F.DIF_CENTERGROUP
   local Dlg = libDialog.NewDialog()
-  local Frame = Libs.Common.CreateSRFrame(Dlg, aData, true, aScriptCall)
-  Dlg.frame       = {"DI_DOUBLEBOX",    3,1, 72,17, 0, 0, 0, 0, sTitle, NoHilite=1}
+  local Frame = Common.CreateSRFrame(Dlg, aData, true, aScriptCall)
+  Dlg.frame       = {"DI_DOUBLEBOX",    3,1, 72,17, 0, 0, 0, 0, sTitle}
   ------------------------------------------------------------------------------
   local Y = Frame:InsertInDialog(false, 2, aReplace and "replace" or "search")
   Dlg.sep = {"DI_TEXT", 5,Y,0,0, 0,0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
@@ -234,16 +103,14 @@ local function EditorDialog (aData, aReplace, aScriptCall)
       hDlg:send(F.DM_SETFOCUS, Dlg.btnOk.id)
     elseif msg==F.DN_BTNCLICK and param1==Dlg.btnConfig.id then
       hDlg:send("DM_SHOWDIALOG", 0)
-      Libs.Common.EditorConfigDialog()
+      Common.EditorConfigDialog()
       hDlg:send("DM_SHOWDIALOG", 1)
-    elseif Libs.Common.Check_F4_On_DI_EDIT(Dlg, hDlg, msg, param1, param2) then
-      -- processed
-    else
+    elseif not Common.Check_F4_On_DI_EDIT(Dlg, hDlg, msg, param1, param2) then
       return Frame:DlgProc(hDlg, msg, param1, param2)
     end
   end
   ----------------------------------------------------------------------------
-  Libs.Common.AssignHotKeys(Dlg)
+  Common.AssignHotKeys(Dlg)
   libDialog.LoadData(Dlg, aData)
   Frame:OnDataLoaded(aData)
   local Guid = aReplace and replaceGuid or searchGuid
@@ -283,12 +150,12 @@ local function EditorAction (aOp, aData, aScriptCall)
   assert(ValidOperations[aOp], "invalid operation")
 
   if aOp == "config" then
-    Libs.Common.EditorConfigDialog()
+    Common.EditorConfigDialog()
     return nil
   end
 
   local EInfo = editor.GetInfo()
-  local State = Editors[EInfo.EditorID]
+  local State = Editors.GetState(EInfo.EditorID)
   local bReplace = aOp:find("replace") or (aOp:find("repeat") and (State.sLastOp == "replace"))
   if not aScriptCall and bReplace and not UnlockEditor(M.MTitleReplace) then
     return
@@ -303,7 +170,7 @@ local function EditorAction (aOp, aData, aScriptCall)
     bFirstSearch = true
     bReplace = (aOp == "test:replace")
     sOperation = aOp:sub(6) -- skip "test:"
-    tParams = assert(Libs.Common.ProcessDialogData (aData, bReplace, true))
+    tParams = assert(Common.ProcessDialogData (aData, bReplace, true))
 
   elseif aOp == "search" or aOp == "replace" then
     bFirstSearch = true
@@ -314,20 +181,20 @@ local function EditorAction (aOp, aData, aScriptCall)
 
   elseif aOp == "repeat" or aOp == "repeat_rev" then
     bReplace = (State.sLastOp == "replace")
-    local key = Libs.Common.GetDialogHistoryKey("SearchText")
-    local searchtext = Libs.Common.GetDialogHistoryValue(key, -1)
-    if searchtext == "" then searchtext = Libs.Common.GetDialogHistoryValue(key, -2) end
+    local key = Common.GetDialogHistoryKey("SearchText")
+    local searchtext = Common.GetDialogHistoryValue(key, -1)
+    if searchtext == "" then searchtext = Common.GetDialogHistoryValue(key, -2) end
     if searchtext ~= aData.sSearchPat then
       bReplace = false
       aData.bSearchBack = false
       if searchtext then aData.sSearchPat = searchtext end
     end
     sOperation = bReplace and "replace" or "search"
-    tParams = Libs.Common.ProcessDialogData (aData, bReplace, true)
+    tParams = Common.ProcessDialogData (aData, bReplace, true)
     if not tParams then return nil end
 
   elseif aOp == "searchword" or aOp == "searchword_rev" then
-    local searchtext = Libs.Common.GetWordUnderCursor(_Plugin.History:field("config").bSelectFound)
+    local searchtext = Common.GetWordUnderCursor(_Plugin.History:field("config").bSelectFound)
     if not searchtext then return end
     aData = {
       bAdvanced = false;
@@ -342,7 +209,7 @@ local function EditorAction (aOp, aData, aScriptCall)
     bFirstSearch = true
     bReplace = false
     sOperation = "searchword"
-    tParams = assert(Libs.Common.ProcessDialogData (aData, false, true))
+    tParams = assert(Common.ProcessDialogData (aData, false, true))
 
   end
 
@@ -353,7 +220,7 @@ local function EditorAction (aOp, aData, aScriptCall)
 
   local function Work()
     if aData.bAdvanced then tParams.InitFunc() end
-    local nFound, nReps, sChoice, nElapsed = Libs.EditEngine.DoAction(
+    local nFound, nReps, sChoice, nElapsed = EditEngine.DoAction(
         sOperation,
         bFirstSearch,
         aScriptCall,
@@ -374,7 +241,7 @@ local function EditorAction (aOp, aData, aScriptCall)
     ---------------------------------------------------------------------------
     local function GetTitle()
       if _Plugin.History:field("config").bShowSpentTime then
-        return ("%s [ %s s ]"):format(M.MMenuTitle, Libs.Common.FormatTime(nElapsed))
+        return ("%s [ %s s ]"):format(M.MMenuTitle, Common.FormatTime(nElapsed))
       else
         return M.MMenuTitle
       end
@@ -412,8 +279,4 @@ end
 return {
   EditorAction = EditorAction,
   UnlockEditor = UnlockEditor,
-  SetHighlightPattern = SetHighlightPattern,
-  ActivateHighlight = ActivateHighlight,
-  ToggleHighlight = ToggleHighlight,
-  IsHighlightGrep = IsHighlightGrep,
 }

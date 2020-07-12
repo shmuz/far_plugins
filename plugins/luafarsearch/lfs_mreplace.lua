@@ -1,13 +1,16 @@
 -- luacheck: globals _Plugin
 
-local Libs = ...
-local M = Libs.GetMsg
-local FormatInt = Libs.Common.FormatInt
+local Common     = require "lfs_common"
+local EditMain   = require "lfs_editmain"
+local M          = require "lfs_message"
+
+local libDialog  = require "far2.dialog"
+local libMessage = require "far2.message"
+
+local FormatInt = Common.FormatInt
 local AppName = function() return M.MDlgMultilineReplace end
 
 local F=far.Flags
-local libDialog = require "far2.dialog"
-local libMessage = require "far2.message"
 
 local RegexLibs = {"far", "oniguruma", "pcre", "pcre2"}
 
@@ -18,7 +21,7 @@ local function ReplaceDialog (Data)
   local guid = win.Uuid("87ed8b17-e2b2-47d0-896d-e2956f396f1a")
   local Dlg = libDialog.NewDialog()
   ------------------------------------------------------------------------------
-  Dlg.dbox        = {"DI_DOUBLEBOX", 3, 1, 72,18, 0, 0, 0, 0, M.MDlgMultilineReplace, NoHilite=1}
+  Dlg.dbox        = {"DI_DOUBLEBOX", 3, 1, 72,18, 0, 0, 0, 0, M.MDlgMultilineReplace}
   Dlg.lab         = {"DI_TEXT",      5, 2,  0, 0, 0, 0, 0, 0, M.MDlgSearchPat}
   Dlg.sSearchPat  = {"DI_EDIT",      5, 3, 70, 4, 0, "SearchText", 0, hstflags, ""}
   Dlg.lab         = {"DI_TEXT",      5, 4,  0, 0, 0, 0, 0, 0, M.MDlgReplacePat}
@@ -77,27 +80,27 @@ local function ReplaceDialog (Data)
       if param1==Dlg.bRegExpr.id then CheckRegexChange(hDlg)
       elseif param1==Dlg.bAdvanced.id then CheckAdvancedEnab (hDlg)
       end
-    elseif Libs.Common.Check_F4_On_DI_EDIT(Dlg, hDlg, msg, param1, param2) then
+    elseif Common.Check_F4_On_DI_EDIT(Dlg, hDlg, msg, param1, param2) then
       -- processed
     elseif msg == F.DN_CLOSE then
       if param1==Dlg.btnReplace.id or param1==Dlg.btnCount.id then
         local tmpData = {}
         libDialog.SaveDataDyn(hDlg, Dlg, tmpData)
         tmpData.sRegexLib = RegexLibs[ Dlg.cmbRegexLib:GetListCurPos(hDlg) ]
-        local ok, field = Libs.Common.ProcessDialogData(tmpData, true, true)
+        local ok, field = Common.ProcessDialogData(tmpData, true, true)
         if ok then
           Data.sRegexLib = tmpData.sRegexLib
           hDlg:send("DM_ADDHISTORY", Dlg.sSearchPat.id, tmpData.sSearchPat)
           hDlg:send("DM_ADDHISTORY", Dlg.sReplacePat.id, tmpData.sReplacePat)
         else
-          if Dlg[field] then Libs.Common.GotoEditField(hDlg, Dlg[field].id) end
+          if Dlg[field] then Common.GotoEditField(hDlg, Dlg[field].id) end
           return 0
         end
       end
     end
   end
 
-  Libs.Common.AssignHotKeys(Dlg)
+  Common.AssignHotKeys(Dlg)
   libDialog.LoadData(Dlg, Data)
   local items = Dlg.cmbRegexLib.ListItems
   items.SelectIndex = 1
@@ -115,12 +118,12 @@ end
 
 local function EditorAction (op, data)
   local editorInfo = editor.GetInfo()
-  if not Libs.EditMain.UnlockEditor(M.MDlgMultilineReplace, editorInfo) then
+  if not EditMain.UnlockEditor(M.MDlgMultilineReplace, editorInfo) then
     return false
   end
 
   local bSelection = editorInfo.BlockType~=F.BTYPE_NONE
-  local tParams = Libs.Common.ProcessDialogData(data, op=="replace", true)
+  local tParams = Common.ProcessDialogData(data, op=="replace", true)
   if not tParams then
     far.Message("invalid input data"); return
   end
@@ -131,12 +134,12 @@ local function EditorAction (op, data)
   local TT_empty           = is_wide and win.Utf8ToUtf16("")  or ""
   local TT_newline         = is_wide and win.Utf8ToUtf16("\n")  or "\n"
   local TT_gmatch          = is_wide and regex.gmatchW or regex.gmatch
-  local TT_Gsub            = is_wide and Libs.Common.GsubW or Libs.Common.Gsub
+  local TT_Gsub            = is_wide and Common.GsubW or Common.Gsub
 
   local fReplace = function() end
   if op == "replace" then
     local nMatch,nReps = 0,0
-    local ff = Libs.Common.GetReplaceFunction(tParams.ReplacePat, is_wide)
+    local ff = Common.GetReplaceFunction(tParams.ReplacePat, is_wide)
     fReplace = function (collect)
       nMatch = nMatch + 1
       local r1,r2 = ff(collect,nMatch,nReps)
@@ -224,7 +227,7 @@ local function EditorAction (op, data)
 end
 
 local function ReplaceWithDialog (data, collect)
-  if not Libs.EditMain.UnlockEditor(M.MDlgMultilineReplace) then
+  if not EditMain.UnlockEditor(M.MDlgMultilineReplace) then
     return false
   end
   local op = ReplaceDialog(data)
