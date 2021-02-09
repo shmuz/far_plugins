@@ -1,7 +1,9 @@
 -- coding: UTF-8
 -- Started: 2018-01-13
+-- luacheck: globals  Polygon_AppIdToSkip  package  require
 
 Polygon_AppIdToSkip = Polygon_AppIdToSkip or {} -- must be global to withstand script reloads
+local band, bor, rshift = bit64.band, bit64.bor, bit64.rshift
 
 -- File <fname> can turn the plugin into debug mode.
 -- This file should not be distributed with the plugin.
@@ -34,8 +36,8 @@ local function ReadIniFile (fname)
       local N = tonumber(str)
       if N and N <= 0xFFFFFFFF then
         local key = string.char(
-          bit64.band(bit64.rshift(N,24), 0xFF), bit64.band(bit64.rshift(N,16), 0xFF),
-          bit64.band(bit64.rshift(N, 8), 0xFF), bit64.band(bit64.rshift(N, 0), 0xFF))
+          band(rshift(N,24), 0xFF), band(rshift(N,16), 0xFF),
+          band(rshift(N, 8), 0xFF), band(rshift(N, 0), 0xFF))
         Polygon_AppIdToSkip[key] = true
       end
     end
@@ -79,7 +81,7 @@ local ErrMsg, Norm = utils.ErrMsg, utils.Norm
 
 
 local function get_plugin_data()
-  return settings.load():getfield("plugin")
+  return settings.load().plugin
 end
 
 
@@ -98,9 +100,9 @@ end
 
 local function LoadOneUserFile (FileData, FullPath, AddModule, gmeta)
   if FileData.FileAttributes:find("d") then return end
-  local userchunk, msg = loadfile(FullPath)
+  local userchunk, msg1 = loadfile(FullPath)
   if not userchunk then
-    ErrMsg("LOAD: "..FullPath.."\n"..msg)
+    ErrMsg("LOAD: "..FullPath.."\n"..msg1)
     return
   end
   local env = {
@@ -109,12 +111,12 @@ local function LoadOneUserFile (FileData, FullPath, AddModule, gmeta)
   }
   setmetatable(env, gmeta)
   setfenv(userchunk, env)
-  local ok, msg = xpcall(function() return userchunk(FullPath) end, debug.traceback)
+  local ok, msg2 = xpcall(function() return userchunk(FullPath) end, debug.traceback)
   if ok then
     env.UserModule, env.NoUserModule = nil, nil
   else
-    msg = msg:gsub("\n\t","\n   ")
-    ErrMsg("RUN: "..FullPath.."\n"..msg)
+    msg2 = msg2:gsub("\n\t","\n   ")
+    ErrMsg("RUN: "..FullPath.."\n"..msg2)
   end
 end
 
@@ -135,7 +137,7 @@ local function LoadModules(object)
   local tablename = Norm("modules-"..win.Uuid(PluginGuid):lower())
   local table_exists
   local query = "SELECT name FROM sqlite_master WHERE type='table' AND LOWER(name)="..tablename
-  for item in obj_info.db:nrows(query) do
+  for _ in obj_info.db:nrows(query) do
     table_exists = true
   end
   if table_exists then
@@ -154,7 +156,7 @@ local function LoadModules(object)
         if filedata then
           LoadOneUserFile(filedata, fullname, AddModule, gmeta)
         else
-          ErrMsg(fullname, M.ps_module_not_found)
+          ErrMsg(fullname, M.module_not_found)
         end
       end
     end
@@ -186,13 +188,13 @@ function export.GetPluginInfo()
   end
 
   info.PluginConfigGuids = PluginGuid
-  info.PluginConfigStrings = { M.ps_title }
+  info.PluginConfigStrings = { M.title }
 
   if PluginData.add_to_menu then
     info.PluginMenuGuids = PluginGuid;
-    info.PluginMenuStrings = { M.ps_title }
+    info.PluginMenuStrings = { M.title }
   else
-    info.Flags = bit64.bor(info.Flags, F.PF_DISABLEPANELS)
+    info.Flags = bor(info.Flags, F.PF_DISABLEPANELS)
   end
 
   return info
@@ -202,7 +204,7 @@ end
 function export.Analyse(info)
   -- far.Show(info.OpMode)
   return
-    bit64.band(info.OpMode,F.OPM_TOPLEVEL) == 0 -- not supposed to process ShiftF1/F2/F3
+    band(info.OpMode,F.OPM_TOPLEVEL) == 0 -- not supposed to process ShiftF1/F2/F3
     and info.FileName
     and info.FileName ~= ""
     and sqlite.format_supported(info.Buffer, #info.Buffer)
@@ -226,10 +228,10 @@ local function OpenFromCommandLine(str)
   local file, Opt
   local from = 1
   while true do
-    local start1, end1, first, flags = string.find(str, "(%S)(%S*)", from)
+    local _, to, first, flags = string.find(str, "(%S)(%S*)", from)
     if first == "-" then
       Opt = AddOptions(flags, Opt)
-      from = end1 + 1
+      from = to + 1
     else
       file = string.sub(str, from)
       break
@@ -249,7 +251,7 @@ end
 local function OpenFromPluginsMenu()
   -- Make sure that current panel item is a real existing file.
   local info = panel.GetPanelInfo(nil, 1)
-  if info and info.PanelType == F.PTYPE_FILEPANEL and bit64.band(info.Flags,F.OPIF_REALNAMES) ~= 0 then
+  if info and info.PanelType == F.PTYPE_FILEPANEL and band(info.Flags,F.OPIF_REALNAMES) ~= 0 then
     local item = panel.GetCurrentPanelItem(nil, 1)
     if item and not item.FileAttributes:find("d") then
       return far.ConvertPath(item.FileName, "CPM_FULL")
@@ -347,7 +349,7 @@ end
 
 
 function export.SetDirectory(object, handle, Dir, OpMode, UserData)
-  if bit64.band(OpMode, F.OPM_FIND) == 0 then
+  if band(OpMode, F.OPM_FIND) == 0 then
     return object:set_directory(handle, Dir, UserData)
   end
 end
@@ -392,7 +394,7 @@ function export.ProcessPanelEvent (object, handle, Event, Param)
   if not ret then
     if Event == F.FE_CLOSE then
       if get_plugin_data().confirm_close then
-        ret = 1 ~= far.Message(M.ps_confirm_close, M.ps_title_short, M.ps_yes_no)
+        ret = 1 ~= far.Message(M.confirm_close, M.title_short, M.yes_no)
       end
     elseif Event == F.FE_COMMAND then
       local command, text = Param:match("^%s*(%S+)%s*(.*)")

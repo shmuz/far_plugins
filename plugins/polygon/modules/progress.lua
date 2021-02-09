@@ -7,7 +7,6 @@ local DELAY = 0.15e6 -- 0.15 sec (in microseconds); to avoid flickering
 local PROGRESS_WIDTH = 30
 -- /settings --
 
-local F = far.Flags
 local CHAR_SOLID  = ("").char(9608) -->  █
 local CHAR_DOTTED = ("").char(9617) -->  ░
 
@@ -18,7 +17,7 @@ function progress.newprogress(msg, max_value)
   local self = setmetatable({}, mt_progress)
   self._visible = false
   self._max_value = max_value or 0
-  self._title = M.ps_title_short
+  self._title = M.title_short
   self._message = msg
   self._start = far.FarClock()
   return self

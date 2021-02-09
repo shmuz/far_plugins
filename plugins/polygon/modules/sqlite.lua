@@ -153,23 +153,21 @@ end
 
 
 function sqlite:SqlErrMsg(query)
-  ErrMsg(self:last_error().."\n"..M.ps_err_sql..":\n"..query)
+  ErrMsg(self:last_error().."\n"..M.err_sql..":\n"..query)
 end
 
 
 function sqlite:get_objects_list(schema)
   local objects = {}
   -- Add master table
-  local master_table = {
+  objects[1] = {
     row_count = 0;
     name = SQLITE_MASTER;
     type = sqlite.ot_master;
   }
-  table.insert(objects, master_table)
 
   -- Add tables/views
-  local schema_norm = Norm(schema)
-  local query = "select name,type from "..schema_norm.."."..SQLITE_MASTER
+  local query = "SELECT name,type FROM "..Norm(schema).."."..SQLITE_MASTER
   local stmt = self._db:prepare(query)
   if stmt then
     while stmt:step() == sql3.ROW do
@@ -206,29 +204,22 @@ function sqlite:execute_query(query, show_message)
 end
 
 
-function sqlite:read_column_description(schema, object)
-  local query = "pragma "..Norm(schema)..".".."table_info(" .. Norm(object) .. ")"
+function sqlite:read_columns_info(schema, object)
+  local query = ( "pragma %s.table_info(%s)" ):format(Norm(schema), Norm(object))
   local stmt = self._db:prepare(query)
   if stmt then
     local columns = {}
     while stmt:step() == sql3.ROW do
-      local col = { name = stmt:get_value(1); }
-      table.insert(columns, col)
-
+      local affinity
       local ct = stmt:get_value(2):lower()
-      if ct:find("int") then
-        col.affinity = "INTEGER"
-      elseif ct:find("char") or ct:find("clob") or ct:find("text") then
-        col.affinity = "TEXT"
-      elseif ct:find("blob") or (ct == "") then
-        col.affinity = "BLOB"
-      elseif ct:find("real") or ct:find("floa") or ct:find("doub") then
-        col.affinity = "REAL"
-      else
-        col.affinity = "NUMERIC"
+      if     ct:find("int")                                        then affinity = "INTEGER"
+      elseif ct:find("char") or ct:find("clob") or ct:find("text") then affinity = "TEXT"
+      elseif ct:find("blob") or (ct == "")                         then affinity = "BLOB"
+      elseif ct:find("real") or ct:find("floa") or ct:find("doub") then affinity = "REAL"
+      else                                                              affinity = "NUMERIC"
       end
+      table.insert(columns, { name=stmt:get_value(1); affinity=affinity; })
     end
-
     stmt:finalize()
     return columns
   else
@@ -272,21 +263,21 @@ end
 
 
 function sqlite:get_object_type(schema, name)
-  if name:lower() == SQLITE_MASTER:lower() then
-    return sqlite.ot_master
+  if name:lower() == "sqlite_master" then
+    return "sqlite_master"
   end
-  local tp = sqlite.ot_unknown
-  local query = "select type from ".. Norm(schema).."."..SQLITE_MASTER .." where name=?"
+  local tp
+  local query = "SELECT type FROM ".. Norm(schema).."."..SQLITE_MASTER .." WHERE name=?"
   local stmt = self._db:prepare(query)
   if stmt then
     if stmt:bind(1, name)==sql3.OK and stmt:step()==sql3.ROW then
-      tp = sqlite.object_type_by_name(stmt:get_value(0))
+      tp = stmt:get_value(0):lower()
     end
     stmt:finalize()
   else
     self:SqlErrMsg(query)
   end
-  return tp
+  return tp or "unknown"
 end
 
 

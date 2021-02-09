@@ -1,6 +1,7 @@
 -- coding: UTF-8
 
 local sql3     = require "lsqlite3"
+local sdialog  = require "far2.simpledialog"
 local M        = require "modules.string_rc"
 local progress = require "modules.progress"
 local settings = require "modules.settings"
@@ -24,13 +25,13 @@ local mt_exporter = {__index=exporter}
 
 
 function exporter.newexporter(dbx, filename, schema)
-  local self = {_dbx=dbx; _db=dbx:db(); _file_name=filename, _schema=schema}
+  local self = {_dbx=dbx; _db=dbx:db(); _filename=filename, _schema=schema}
   return setmetatable(self, mt_exporter)
 end
 
 
 function exporter:export_data_with_dialog()
-  local data = settings.load():getfield("exporter")
+  local data = settings.load().exporter
 
   -- Get source table/view name
   local item = panel.GetCurrentPanelItem(nil, 1)
@@ -46,65 +47,56 @@ function exporter:export_data_with_dialog()
   end
   dst_file_name = dst_file_name .. db_object_name
 
-  local FLAG_DFLT = bit64.bor(F.DIF_CENTERGROUP, F.DIF_DEFAULTBUTTON)
-  local dlg_items = {
-  --[[01]] {F.DI_DOUBLEBOX,     3,1,68,9,  0,0,0,0,                  M.ps_exp_title},
-  --[[02]] {F.DI_TEXT,          5,2,66,0,  0,0,0,0,                  M.ps_exp_main:format(db_object_name)},
-  --[[03]] {F.DI_EDIT,          5,3,66,0,  0,0,0,0,                  ""},
-  --[[04]] {F.DI_TEXT,          0,4, 0,0,  0,0,0,F.DIF_SEPARATOR,    ""},
-  --[[05]] {F.DI_TEXT,          5,5,20,0,  0,0,0,0,                  M.ps_exp_fmt},
-  --[[06]] {F.DI_RADIOBUTTON,  21,5,29,0,  0,0,0,F.DIF_GROUP,        "&CSV"},
-  --[[07]] {F.DI_RADIOBUTTON,  21,6,40,0,  0,0,0,0,                  M.ps_exp_fmt_text},
-  --[[08]] {F.DI_CHECKBOX,     31,5, 0,0,  0,0,0,0,                  M.ps_exp_multiline},
-  --[[09]] {F.DI_TEXT,          0,7, 0,0,  0,0,0,F.DIF_SEPARATOR,    ""},
-  --[[10]] {F.DI_BUTTON,        0,8, 0,0,  0,0,0,FLAG_DFLT,          M.ps_exp_exp},
-  --[[11]] {F.DI_BUTTON,        0,8, 0,0,  0,0,0,F.DIF_CENTERGROUP,  M.ps_cancel},
+  local Items = {
+    guid="E9F91B4F-82B2-4B36-9C4B-240D7EE7BF59";
+    help="Export";
+    width=72;
+    {tp="dbox";   text=M.exp_title;                                          },
+    {tp="text";   text=M.exp_main:format(db_object_name);                    },
+    {tp="edit";                                          name="targetfile";  },
+    {tp="sep";                                                               },
+    {tp="text";   text=M.exp_fmt;                                            },
+    {tp="rbutt";  text=M.exp_fmt_csv;   x1=21; ystep=0;  name="csv"; group=1 },
+    {tp="rbutt";  text=M.exp_fmt_text;  x1=21;           name="text";        },
+    {tp="cbox";   text=M.exp_multiline; x1=31; ystep=-1; name="multiline";   },
+    {tp="sep";                                 ystep=2;                      },
+    {tp="butt";   text=M.exp_exp; centergroup=1; default=1;                  },
+    {tp="butt";   text=M.cancel;  centergroup=1; cancel=1;                   },
   }
-  local edtFileName = 3
-  local btnCSV, btnText, btnMultiline, btnCancel = 6, 7, 8, 11
-
+  local Pos, _ = sdialog.Indexes(Items)
   ------------------------------------------------------------------------------
-  local function DlgProc(hDlg, Msg, Param1, Param2)
+  Items.proc = function(hDlg, Msg, Param1, Param2)
     if Msg == F.DN_INITDIALOG then
-      hDlg:send(F.DM_SETCHECK, (data.format=="csv" and btnCSV or btnText), 1)
-      hDlg:send(F.DM_SETCHECK, btnMultiline, data.multiline and 1 or 0)
+      hDlg:send(F.DM_SETCHECK, data.format=="csv" and Pos.csv or Pos.text, 1)
+      hDlg:send(F.DM_SETCHECK, Pos.multiline, data.multiline and 1 or 0)
 
     elseif Msg == F.DN_BTNCLICK then
-      if Param1 == btnCSV or Param1 == btnText then
-        local csv   = hDlg:send(F.DM_GETCHECK, btnCSV) == F.BSTATE_CHECKED
+      if Param1 == Pos.csv or Param1 == Pos.text then
+        local csv = hDlg:send(F.DM_GETCHECK, Pos.csv) == F.BSTATE_CHECKED
         local fname = dst_file_name .. (csv and ".csv" or ".txt")
-        hDlg:send(F.DM_SETTEXT, edtFileName, fname)
-        hDlg:send(F.DM_ENABLE, btnMultiline, csv and 1 or 0)
+        hDlg:send(F.DM_SETTEXT, Pos.targetfile, fname)
+        hDlg:send(F.DM_ENABLE, Pos.multiline, csv and 1 or 0)
       end
     end
   end
   ------------------------------------------------------------------------------
-
-  local guid = win.Uuid("E9F91B4F-82B2-4B36-9C4B-240D7EE7BF59")
-  local dlg = far.DialogInit(guid, -1, -1, 72, 11, "Export", dlg_items, nil, DlgProc)
-
-  local rc = far.DialogRun(dlg)
-  if rc >= 1 and rc ~= btnCancel then
-    local file_name  = dlg:send(F.DM_GETTEXT, edtFileName)
-    data.format      = 0 ~= dlg:send(F.DM_GETCHECK, btnCSV) and "csv" or "text"
-    data.multiline   = 0 ~= dlg:send(F.DM_GETCHECK, btnMultiline)
-    far.DialogFree(dlg)
+  local rc = sdialog.Run(Items)
+  if rc then
+    data.format = rc.csv and "csv" or "text"
+    data.multiline = rc.multiline
     settings.save()
-
     if data.format == "csv" then
-      return self:export_data_as_csv(file_name, db_object_name, data.multiline)
+      return self:export_data_as_csv(rc.targetfile, db_object_name, rc.multiline)
     else
-      return self:export_data_as_text(file_name, db_object_name)
+      return self:export_data_as_text(rc.targetfile, db_object_name)
     end
-  else
-    far.DialogFree(dlg)
-    return false
   end
+  return false
 end
 
 
 function exporter:dump_data_with_dialog()
-  local data = settings.load():getfield("exporter")
+  local data = settings.load().exporter
 
   -- Collect selected items for dump
   local t_selected = {}
@@ -127,73 +119,63 @@ function exporter:dump_data_with_dialog()
   end
   dst_file_name = dst_file_name .. "dump1.dump"
 
-  local FLAG_DFLT = bit64.bor(F.DIF_CENTERGROUP, F.DIF_DEFAULTBUTTON)
-  local dlg_items = {
-  --[[01]] {F.DI_DOUBLEBOX,     3,1,68,10,  0,0,0,0,                  M.ps_dump_title},
-  --[[02]] {F.DI_TEXT,          5,2,66, 0,  0,0,0,0,                  M.ps_dump_main},
-  --[[03]] {F.DI_EDIT,          5,3,66, 0,  0,0,0,0,                  ""},
-  --[[04]] {F.DI_TEXT,          0,4, 0, 0,  0,0,0,F.DIF_SEPARATOR,    ""},
-  --[[05]] {F.DI_CHECKBOX,      5,5, 0, 0,  0,0,0,0,                  M.ps_dump_dumpall},
-  --[[06]] {F.DI_CHECKBOX,      5,6, 0, 0,  0,0,0,0,                  M.ps_dump_rowids},
-  --[[07]] {F.DI_CHECKBOX,      5,7, 0, 0,  0,0,0,0,                  M.ps_dump_newlines},
-  --[[08]] {F.DI_TEXT,          0,8, 0, 0,  0,0,0,F.DIF_SEPARATOR,    ""},
-  --[[09]] {F.DI_BUTTON,        0,9, 0, 0,  0,0,0,FLAG_DFLT,          M.ps_dump_dump},
-  --[[10]] {F.DI_BUTTON,        0,9, 0, 0,  0,0,0,F.DIF_CENTERGROUP,  M.ps_cancel},
+  local Items = {
+    guid="B6EBFACA-232D-42FA-887E-66C7B03DB65D";
+    help="Dump";
+    width=72;
+    {tp="dbox";  text=M.dump_title;                           },
+    {tp="text";  text=M.dump_main;                            },
+    {tp="edit";                        name="targetfile";     },
+    {tp="sep";                                                },
+    {tp="cbox";  text=M.dump_dumpall;  name="dumpall";        },
+    {tp="cbox";  text=M.dump_rowids;   name="rowids";         },
+    {tp="cbox";  text=M.dump_newlines; name="newline";        },
+    {tp="sep";                                                },
+    {tp="butt";  text=M.dump_dump; centergroup=1; default=1;  },
+    {tp="butt";  text=M.cancel;    centergroup=1; cancel=1;   },
   }
-  local edtFileName = 3
-  local btn_dumpall, btn_rowids, btn_newline, btnExport, btnCancel = 5, 6, 7, 9, 10
-
+  local Pos, _ = sdialog.Indexes(Items)
   ------------------------------------------------------------------------------
-  local function DlgProc(hDlg, Msg, Param1, Param2)
-    if Msg == F.DN_INITDIALOG then
-      hDlg:send(F.DM_SETTEXT,  edtFileName, dst_file_name)
-      hDlg:send(F.DM_SETCHECK, btn_dumpall, data.dump_dumpall and 1 or 0)
-      hDlg:send(F.DM_SETCHECK, btn_rowids, data.dump_rowids and 1 or 0)
-      hDlg:send(F.DM_SETCHECK, btn_newline, data.dump_newline and 1 or 0)
-      if t_selected[1] == nil then
-        hDlg:send(F.DM_SETCHECK, btn_dumpall, 1)
-        hDlg:send(F.DM_ENABLE, btn_dumpall, 0)
-      end
+  function Items.initaction(hDlg)
+    hDlg:send(F.DM_SETTEXT,  Pos.targetfile, dst_file_name)
+    hDlg:send(F.DM_SETCHECK, Pos.dumpall, data.dump_dumpall and 1 or 0)
+    hDlg:send(F.DM_SETCHECK, Pos.rowids,  data.dump_rowids  and 1 or 0)
+    hDlg:send(F.DM_SETCHECK, Pos.newline, data.dump_newline and 1 or 0)
+    if t_selected[1] == nil then
+      hDlg:send(F.DM_SETCHECK, Pos.dumpall, 1)
+      hDlg:send(F.DM_ENABLE,   Pos.dumpall, 0)
+    end
+  end
 
-    elseif Msg == F.DN_BTNCLICK then
-
-    elseif Msg == F.DN_CLOSE and Param1 == btnExport then
-      -- check if the output file already exists
-      local fname = hDlg:send(F.DM_GETTEXT, edtFileName)
-      if win.GetFileAttr(fname) then
-        local r = far.Message(M.ps_already_exists..":\n"..fname, M.ps_warning,
-                              M.ps_overwrite..";"..M.ps_cancel, "w")
-        if r~=1 then return 0; end
-      end
-      -- check that the output file can be created
-      local fp = io.open(fname, "w")
-      if fp then fp:close(); win.DeleteFile(fname)
-      else ErrMsg(M.ps_err_openfile..":\n"..fname); return 0
-      end
+  function Items.closeaction(hDlg, Param1, tOut)
+    -- check if the output file already exists
+    local fname = tOut.targetfile
+    if win.GetFileAttr(fname) then
+      local r = far.Message(M.already_exists..":\n"..fname, M.warning,
+                            M.overwrite..";"..M.cancel, "w")
+      if r~=1 then return 0; end
+    end
+    -- check that the output file can be created
+    local fp = io.open(fname, "w")
+    if fp then fp:close(); win.DeleteFile(fname)
+    else ErrMsg(M.err_openfile..":\n"..fname); return 0
     end
   end
   ------------------------------------------------------------------------------
-
-  local guid = win.Uuid("B6EBFACA-232D-42FA-887E-66C7B03DB65D")
-  local dlg = far.DialogInit(guid, -1, -1, 72, 12, "Dump", dlg_items, nil, DlgProc)
-
-  local rc = far.DialogRun(dlg)
-  if rc >= 1 and rc ~= btnCancel then
-    local file_name = dlg:send(F.DM_GETTEXT,  edtFileName)
-    data.dump_dumpall = 0 ~= dlg:send(F.DM_GETCHECK, btn_dumpall)
-    data.dump_rowids  = 0 ~= dlg:send(F.DM_GETCHECK, btn_rowids)
-    data.dump_newline = 0 ~= dlg:send(F.DM_GETCHECK, btn_newline)
-    far.DialogFree(dlg)
+  local rc = sdialog.Run(Items)
+  if rc then
+    data.dump_dumpall = rc.dumpall
+    data.dump_rowids  = rc.rowids
+    data.dump_newline = rc.newline
     settings.save()
     return self:export_data_as_dump {
-        file_name = file_name;
         items     = t_selected;
-        dumpall   = data.dump_dumpall;
-        rowids    = data.dump_rowids;
-        newline   = data.dump_newline;
+        file_name = rc.targetfile;
+        dumpall   = rc.dumpall;
+        rowids    = rc.rowids;
+        newline   = rc.newline;
       }
   else
-    far.DialogFree(dlg)
     return false
   end
 end
@@ -201,46 +183,45 @@ end
 
 function exporter:export_data_as_text(file_name, db_object)
   local dbx = self._dbx
+  local db = dbx:db()
 
   local row_count = dbx:get_row_count(self._schema, db_object)
   if not row_count then return end
 
-  local columns_descr = dbx:read_column_description(self._schema, db_object)
-  if not columns_descr then return end
+  local col_info = dbx:read_columns_info(self._schema, db_object)
+  if not col_info then return end
 
-  local columns_count = #columns_descr
-  local prg_wnd = progress.newprogress(M.ps_reading, row_count)
+  local col_count = #col_info
+  local prg_wnd = progress.newprogress(M.reading, row_count)
 
   -- Get maximum width for each column
-  local columns_width = {}
+  local col_widths = {}
   local query_val, query_len = "select ", "select "
-  for i = 1, columns_count do
+  for i = 1, col_count do
     if i > 1 then
       query_val = query_val .. ", "
       query_len = query_len .. ", "
     end
-    query_val = query_val .. "[" .. columns_descr[i].name .. "]"
-    query_len = query_len .. "length([" .. columns_descr[i].name .. "])"
+    query_val = query_val .. "[" .. col_info[i].name .. "]"
+    query_len = query_len .. "length([" .. col_info[i].name .. "])"
   end
   query_val = ("%s from %s.%s"):format(query_val, Norm(self._schema), Norm(db_object))
   query_len = ("%s from %s.%s"):format(query_len, Norm(self._schema), Norm(db_object))
 
-  for i = 1, columns_count do
-    columns_width[i] = columns_descr[i].name:len() -- initialize with widths of titles
+  for i = 1, col_count do
+    col_widths[i] = col_info[i].name:len() -- initialize with widths of titles
   end
-  local db = dbx:db()
   local stmt_val = db:prepare(query_val)
   local stmt_len = db:prepare(query_len)
   if stmt_val and stmt_len then
     while stmt_val:step() == sql3.ROW do
       stmt_len:step()
-      for i = 1, columns_count do
+      for i = 1, col_count do
         local len = stmt_len:get_value(i-1) or 1
         if stmt_val:get_column_type(i-1) == sql3.BLOB then
           len = len*2 + #tostring(len) + 3 -- correction for e.g. [24]:
         end
-        columns_width[i] = math.max(columns_width[i], len)
-        columns_width[i] = math.min(columns_width[i], MAX_TEXT_LENGTH)
+        col_widths[i] = math.min(MAX_TEXT_LENGTH, math.max(len, col_widths[i]))
       end
     end
     stmt_val:finalize()
@@ -251,7 +232,7 @@ function exporter:export_data_as_text(file_name, db_object)
   local file = io.open(file_name, "wb")
   if not file then
     prg_wnd:hide()
-    ErrMsg(M.ps_err_writef.."\n"..file_name, nil, "we")
+    ErrMsg(M.err_writef.."\n"..file_name, nil, "we")
     return false
   end
 
@@ -260,21 +241,21 @@ function exporter:export_data_as_text(file_name, db_object)
 
   -- Write header (columns names)
   local out_text = ""
-  for i = 1, columns_count do
-    local col_name = (i==1 and "" or " ") .. columns_descr[i].name
-    local n = columns_width[i] + (i > 1 and i < columns_count and 2 or 1)
+  for i = 1, col_count do
+    local col_name = (i==1 and "" or " ") .. col_info[i].name
+    local n = col_widths[i] + (i > 1 and i < col_count and 2 or 1)
     out_text = out_text .. Resize(col_name, n, " ")
-    if i < columns_count then
+    if i < col_count then
       out_text = out_text .. CHAR_VERT
     end
   end
   out_text = out_text .. "\r\n"
 
   -- Header separator
-  for i = 1, columns_count do
-    local col_sep = CHAR_HORIS:rep(columns_width[i] + (i > 1 and i ~= columns_count and 2 or 1))
+  for i = 1, col_count do
+    local col_sep = CHAR_HORIS:rep(col_widths[i] + (i > 1 and i ~= col_count and 2 or 1))
     out_text = out_text .. col_sep
-    if i < columns_count then
+    if i < col_count then
       out_text = out_text .. CHAR_CROSS
     end
   end
@@ -282,12 +263,11 @@ function exporter:export_data_as_text(file_name, db_object)
 
   -- Read data
   local query = "select * from " .. Norm(self._schema).."."..Norm(db_object) .. ";"
-  local db = dbx:db()
   local stmt = db:prepare(query)
   if not stmt then
     prg_wnd:hide()
     file:close()
-    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
+    ErrMsg(M.err_read.."\n"..dbx:last_error())
     return false
   end
 
@@ -310,17 +290,17 @@ function exporter:export_data_as_text(file_name, db_object)
     end
 
     out_text = ""
-    for i = 1, columns_count do
+    for i = 1, col_count do
       local col_data = exporter.get_text(stmt, i-1, false):gsub("%s+", " ")
-      if col_data:len() > columns_width[i] then
-        col_data = col_data:sub(1, columns_width[i]-3) .. "..."
+      if col_data:len() > col_widths[i] then
+        col_data = col_data:sub(1, col_widths[i]-3) .. "..."
       end
       if i > 1 then
         col_data = " " .. col_data
       end
-      local sz = columns_width[i] + (i > 1 and i < columns_count and 2 or 1)
+      local sz = col_widths[i] + (i > 1 and i < col_count and 2 or 1)
       out_text = out_text .. Resize(col_data, sz, " ")
-      if i < columns_count then
+      if i < col_count then
         out_text = out_text .. CHAR_VERT
       end
     end
@@ -329,7 +309,7 @@ function exporter:export_data_as_text(file_name, db_object)
       prg_wnd:hide()
       stmt:finalize()
       file:close()
-      ErrMsg(M.ps_err_writef.."\n"..file_name, nil, "we")
+      ErrMsg(M.err_writef.."\n"..file_name, nil, "we")
       return false
     end
   end
@@ -341,48 +321,48 @@ function exporter:export_data_as_text(file_name, db_object)
   if state == sql3.DONE then
     return true
   else
-    ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
+    ErrMsg(M.err_read.."\n"..dbx:last_error())
     return false
   end
 end
 
 
 function exporter:export_data_as_csv(file_name, db_object, multiline)
-  -- Get row count and  columns description
+  -- Get row count and columns info
   local row_count = self._dbx:get_row_count(self._schema, db_object)
   if not row_count then return end
 
-  local columns_descr = self._dbx:read_column_description(self._schema, db_object)
-  if not columns_descr then return end
+  local col_info = self._dbx:read_columns_info(self._schema, db_object)
+  if not col_info then return end
 
   -- Create output file
   local file = io.open(file_name, "wb")
   if not file then
-    ErrMsg(M.ps_err_writef.."\n"..file_name, nil, "we")
+    ErrMsg(M.err_writef.."\n"..file_name, nil, "we")
     return
   end
 
-  local columns_count = #columns_descr
-  local prg_wnd = progress.newprogress(M.ps_reading, row_count)
+  local col_count = #col_info
+  local prg_wnd = progress.newprogress(M.reading, row_count)
 
   -- Write header (columns names)
   local out_text = ""
-  for i = 1, columns_count do
-    out_text = out_text .. columns_descr[i].name
-    if i ~= columns_count then
+  for i = 1, col_count do
+    out_text = out_text .. col_info[i].name
+    if i ~= col_count then
       out_text = out_text .. ';'
     end
   end
   file:write(out_text, "\r\n")
 
   -- Read data
-  local query = "select * from " .. Norm(self._schema).."."..Norm(db_object)
+  local query = "SELECT * FROM " .. Norm(self._schema).."."..Norm(db_object)
   local stmt = self._db:prepare(query)
   if not stmt then
     prg_wnd:hide()
     file:close()
     local err_descr = self._dbx:last_error()
-    ErrMsg(M.ps_err_read.."\n"..err_descr)
+    ErrMsg(M.err_read.."\n"..err_descr)
     return false
   end
 
@@ -404,7 +384,7 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
     end
 
     out_text = ""
-    for i = 1, columns_count do
+    for i = 1, col_count do
       local col_data = exporter.get_text(stmt, i-1, multiline)
       local use_quote = col_data:find("[;\"\n\r]")
       if use_quote then
@@ -416,7 +396,7 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
       if use_quote then
         out_text = out_text .. '"'
       end
-      if i < columns_count then
+      if i < col_count then
         out_text = out_text .. ';'
       end
     end
@@ -432,9 +412,9 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
   if state == sql3.DONE and ok_write then
     return true
   elseif not ok_write then
-    ErrMsg(M.ps_err_writef.."\n"..file_name, nil, "we")
+    ErrMsg(M.err_writef.."\n"..file_name, nil, "we")
   else
-    ErrMsg(M.ps_err_read.."\n"..self._dbx:last_error())
+    ErrMsg(M.err_read.."\n"..self._dbx:last_error())
   end
   return false
 end
@@ -445,7 +425,7 @@ function exporter:export_data_as_dump(Args)
   if Args.rowids  then s1 = s1 .. " --preserve-rowids"; end
   if Args.newline then s1 = s1 .. " --newlines"; end
 
-  local t = { [1]='"'..self._file_name..'"'; }
+  local t = { [1]='"'..self._filename..'"'; }
   if Args.dumpall then
     t[2] = '"'..s1..'"'
   else

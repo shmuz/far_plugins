@@ -1,3 +1,15 @@
+2021-02-02, v.1.3.4
+    1. Refactoring.
+
+2020-11-27, v.1.3.3
+    1. Fix: trying to open "Edit row" dialog resulted in error if row fields contained text
+       that was not valid UTF-8.
+
+2020-10-08, v.1.3.2
+    1. Module 'settings' is used instead of module 'history'.
+       Attention: the existing plugin's settings may disappear.
+    2. Module 'simpledialog' is now used in all dialogs.
+
 2020-02-17, v.1.3.1
     1. Rebuild the plugin due to a fix in luaplug.c.
 

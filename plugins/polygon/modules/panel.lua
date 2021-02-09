@@ -1,7 +1,8 @@
 -- coding: UTF-8
 
 local sql3     = require "lsqlite3"
-local history  = require "far2.history"
+local history  = require "far2.settings"
+local sdialog  = require "far2.simpledialog"
 local M        = require "modules.string_rc"
 local exporter = require "modules.exporter"
 local myeditor = require "modules.editor"
@@ -15,25 +16,21 @@ local band, bor = bit64.band, bit64.bor
 local CompareString = win.CompareString
 local ErrMsg, Resize, Norm = utils.ErrMsg, utils.Resize, utils.Norm
 
-local function get_temp_file_name(ext)
-  return far.MkTemp() .. (ext and "."..ext or "")
-end
-
 -- This file's module. Could not be called "panel" due to existing LuaFAR global "panel".
 local mypanel = {}
 local mt_panel = { __index=mypanel }
 
 
-function mypanel.open(file_name, extensions, foreign_keys, multi_db)
+function mypanel.open(filename, extensions, foreign_keys, multi_db)
   local self = {
 
-  -- Members come from the original plugin SQLiteDB.
-    _file_name       = file_name;
-    _last_sql_query  = nil ;
-    _column_descr    = nil ;
-    _object          = ""  ;
-    _dbx             = nil ;
-    _panel_mode      = "root"; -- valid values are: "root", "db", "table", "view", "query"
+  -- Members come from the original plugin SQLiteDB (renamed).
+    _filename       = filename; -- either host file name or ":memory:"
+    _last_query     = nil ; -- SQL query last executed
+    _col_info       = nil ;
+    _object         = ""  ;
+    _dbx            = nil ;
+    _panel_mode     = "root"; -- valid values are: "root", "db", "table", "view", "query"
 
   -- Members added since this plugin started.
     _db             = nil ;
@@ -41,7 +38,7 @@ function mypanel.open(file_name, extensions, foreign_keys, multi_db)
     _col_masks      = nil ; -- col_masks table (non-volatile)
     _col_masks_used = nil ;
     _rowid_name     = nil ;
-    _hist_file      = nil ; -- files[<filename>] in the plugin's non-volatile settings
+    _histfile       = nil ; -- files[<filename>] in the plugin's non-volatile settings
     _sort_col_index = nil ;
     _sort_last_mode = nil ;
     _show_affinity  = nil ;
@@ -59,7 +56,7 @@ function mypanel.open(file_name, extensions, foreign_keys, multi_db)
   setmetatable(self, mt_panel)
 
   local dbx = sqlite.newsqlite()
-  if dbx:open(file_name) then
+  if dbx:open(filename) then
     ---self:set_database_mode()
     self._dbx = dbx
     self._db = dbx:db()
@@ -74,12 +71,12 @@ function mypanel.open(file_name, extensions, foreign_keys, multi_db)
     if foreign_keys then
       self._db:exec("PRAGMA foreign_keys = ON;")
     end
-    self._hist_file = history.newsettings("files", file_name:lower(), "PSL_LOCAL")
-    self._col_masks = self._hist_file:field("col_masks")
+    self._histfile = history.mload("files", filename:lower(), "local") or { col_masks={} }
+    self._col_masks = self._histfile.col_masks
     self._col_masks_used = false
     return self
   else
-    ErrMsg(M.ps_err_open.."\n"..file_name)
+    ErrMsg(M.err_open.."\n"..filename)
     return nil
   end
 end
@@ -175,15 +172,14 @@ end
 
 function mypanel:open_object(aHandle, aSchema, aObject)
   local tp = self._dbx:get_object_type(aSchema, aObject)
-  local panel_mode = (tp==sqlite.ot_master or tp==sqlite.ot_table) and "table" or
-                     (tp == sqlite.ot_view) and "view"
+  local panel_mode = (tp=="sqlite_master" or tp=="table") and "table" or (tp=="view") and "view"
   if panel_mode then
-    local column_descr = self._dbx:read_column_description(aSchema, aObject)
-    if column_descr then
-      self._schema       = aSchema
-      self._object       = aObject
-      self._panel_mode   = panel_mode
-      self._column_descr = column_descr
+    local col_info = self._dbx:read_columns_info(aSchema, aObject)
+    if col_info then
+      self._schema     = aSchema
+      self._object     = aObject
+      self._panel_mode = panel_mode
+      self._col_info   = col_info
 
       local count = self._dbx:get_row_count(self._schema, self._object) or 0
       if count > 20000 then -- sorting is very slow on big tables
@@ -201,7 +197,7 @@ local function FindFirstTwoWords(query)
   local words = {}
   for k = 1,2 do
     repeat
-      query, num = string.gsub(query, "^%s+", "") -- remove white space
+      query = string.gsub(query, "^%s+", "") -- remove white space
       query, num = string.gsub(query, "^%-%-[^\n]*\n?", "") -- remove a comment
     until (num == 0)
 
@@ -237,20 +233,20 @@ function mypanel:open_query(handle, query)
       return false
     end
 
-    self._last_sql_query = query
+    self._last_query = query
     self._panel_mode = "query"
     self._object = query
 
     stmt:reset()
-    self._column_descr = {}
+    self._col_info = {}
     for i, name in ipairs(stmt:get_names()) do
-      self._column_descr[i] = { name = name; }
+      self._col_info[i] = { name = name; }
     end
 
     stmt:finalize()
   else
     -- Update query - just execute without read result
-    local prg_wnd = progress.newprogress(M.ps_execsql)
+    local prg_wnd = progress.newprogress(M.execsql)
     if not self._dbx:execute_query(query, true) then
       prg_wnd:hide()
       panel.UpdatePanel(handle)
@@ -278,7 +274,7 @@ function mypanel:get_panel_info(handle)
   return {
     CurDir           = CurDir;
     Flags            = Flags;
-    HostFile         = self._file_name;
+    HostFile         = self._filename;
     KeyBar           = Info.key_bar;
     PanelModesArray  = Info.modes;
     PanelModesNumber = #Info.modes;
@@ -362,12 +358,12 @@ end
 
 
 function mypanel:get_panel_list_db()
-  local prg_wnd = progress.newprogress(M.ps_reading)
+  local prg_wnd = progress.newprogress(M.reading)
 
   local db_objects = self._dbx:get_objects_list(self._schema)
   if not db_objects then
     prg_wnd:hide()
-    ErrMsg(M.ps_err_read.."\n"..self._file_name.."\n"..self._dbx:last_error())
+    ErrMsg(M.err_read.."\n"..self._filename.."\n"..self._dbx:last_error())
     return false
   end
 
@@ -437,7 +433,7 @@ function mypanel:get_panel_list_obj()
   -- Add a special item with dots (..) in all columns.
   local items = {}
   items[1] = { FileName=".."; FileAttributes="d"; CustomColumnData={}; }
-  for i = 1, #self._column_descr do
+  for i = 1, #self._col_info do
     items[1].CustomColumnData[i] = ".."
   end
 
@@ -476,7 +472,7 @@ function mypanel:get_panel_list_obj()
   count_stmt:finalize()
 
   -- Add real items
-  local prg_wnd = progress.newprogress(M.ps_reading, row_count)
+  local prg_wnd = progress.newprogress(M.reading, row_count)
   for row = 1, row_count do
     if (row-1) % 100 == 0 then
       prg_wnd:update(row-1)
@@ -485,7 +481,7 @@ function mypanel:get_panel_list_obj()
     if res == sql3.DONE then
       break
     elseif res ~= sql3.ROW then
-      ErrMsg(M.ps_err_read.."\n"..dbx:last_error())
+      ErrMsg(M.err_read.."\n"..dbx:last_error())
       items = false
       break
     end
@@ -497,7 +493,7 @@ function mypanel:get_panel_list_obj()
     items[row+1] = item -- shift by 1, as items[1] is dot_item
 
     if self._rowid_name then
-      for i = 1,#self._column_descr do
+      for i = 1,#self._col_info do
         item.CustomColumnData[i] = exporter.get_text(stmt, i, true)
       end
       -- the leftmost column is ROWID (according to the query used)
@@ -507,7 +503,7 @@ function mypanel:get_panel_list_obj()
       -- use ROWID as file name, otherwise FAR cannot properly handle selections on the panel
       item.FileName = ("%010d"):format(rowid)
     else
-      for i = 1,#self._column_descr do
+      for i = 1,#self._col_info do
         item.CustomColumnData[i] = exporter.get_text(stmt, i-1, true)
       end
     end
@@ -528,7 +524,7 @@ function mypanel:get_panel_list_query()
   local dot_item = { FileName=".."; FileAttributes="d"; }
 
   -- All dots (..)
-  local dot_col_num = #self._column_descr
+  local dot_col_num = #self._col_info
   local dot_custom_column_data = {}
   for j = 1, dot_col_num do
     dot_custom_column_data[j] = ".."
@@ -539,11 +535,11 @@ function mypanel:get_panel_list_query()
   local stmt = self._db:prepare(self._object)
   if not stmt then
     local err_descr = self._dbx:last_error()
-    ErrMsg(M.ps_err_read.."\n"..err_descr)
+    ErrMsg(M.err_read.."\n"..err_descr)
     return false
   end
 
-  local prg_wnd = progress.newprogress(M.ps_reading)
+  local prg_wnd = progress.newprogress(M.reading)
   local state
   for row = 1, math.huge do
     state = stmt:step()
@@ -571,7 +567,7 @@ function mypanel:get_panel_list_query()
 
   if not (state==sql3.DONE or state==sql3.ROW) then
     local err_descr = self._dbx:last_error()
-    ErrMsg(M.ps_err_read.."\n"..err_descr)
+    ErrMsg(M.err_read.."\n"..err_descr)
     return false
   end
 
@@ -582,31 +578,31 @@ end
 function mypanel:set_column_mask(handle)
   -- Build dialog dynamically
   local dlg_width = 72
-  local col_num = #self._column_descr
-  local FLAG_DFLT = bor(F.DIF_CENTERGROUP, F.DIF_DEFAULTBUTTON)
-  local FLAG_NOCLOSE = bor(F.DIF_CENTERGROUP, F.DIF_BTNNOCLOSE)
-  local dlg_items = {
-    {F.DI_DOUBLEBOX, 3,1,dlg_width-4,col_num+4, 0,0,0,0, M.ps_title_select_columns},
+  local col_num = #self._col_info
+  local Items = {
+    guid="D252C184-9E10-4DE8-BD68-08A8A937E1F8";
+    help="PanelView";
+    width=dlg_width;
+    [1]={ tp="dbox"; text=M.title_select_columns };
   }
   local mask = self._col_masks[self._object]
   for i = 1,col_num do
-    local text = mask and mask[self._column_descr[i].name]
-    local check = text and 1 or 0
-    local name = self._column_descr[i].name
-    local name_len = name:len()
-    if name_len > dlg_width-18 then
+    local text = mask and mask[self._col_info[i].name]
+    local check = text and true
+    local name = self._col_info[i].name
+    if name:len() > dlg_width-18 then
       name = name:sub(1,dlg_width-21).."..."
     end
-    table.insert(dlg_items, { F.DI_FIXEDIT,  5,1+i,7,0,     0,0,0,0, text or "0" })
-    table.insert(dlg_items, { F.DI_CHECKBOX, 9,1+i,0,0, check,0,0,0, name })
+    table.insert(Items, { tp="fixedit"; text=text or "0"; x1=5; x2=7;        name=2*i;   })
+    table.insert(Items, { tp="cbox";    text=name; x1=9; ystep=0; val=check; name=2*i+1; })
   end
-  table.insert(dlg_items, {F.DI_TEXT,   0,2+col_num,0,0, 0,0,0,F.DIF_SEPARATOR,   ""})
-  table.insert(dlg_items, {F.DI_BUTTON, 0,3+col_num,0,0, 0,0,0,FLAG_DFLT,         M.ps_ok})
-  table.insert(dlg_items, {F.DI_BUTTON, 0,3+col_num,0,0, 0,0,0,FLAG_NOCLOSE,      M.ps_set_columns})
-  table.insert(dlg_items, {F.DI_BUTTON, 0,3+col_num,0,0, 0,0,0,FLAG_NOCLOSE,      M.ps_reset_columns})
-  table.insert(dlg_items, {F.DI_BUTTON, 0,3+col_num,0,0, 0,0,0,F.DIF_CENTERGROUP, M.ps_cancel})
+  table.insert(Items, { tp="sep";                                                     })
+  table.insert(Items, { tp="butt"; text=M.ok;            centergroup=1; default=1;    })
+  table.insert(Items, { tp="butt"; text=M.set_columns;   centergroup=1; btnnoclose=1; })
+  table.insert(Items, { tp="butt"; text=M.reset_columns; centergroup=1; btnnoclose=1; })
+  table.insert(Items, { tp="butt"; text=M.cancel;        centergroup=1; cancel=1;     })
 
-  local btnSet, btnReset, btnCancel = 2*col_num+4, 2*col_num+5, 2*col_num+6
+  local btnSet, btnReset = 2*col_num+4, 2*col_num+5
 
   local function SetEnable(hDlg)
     hDlg:send(F.DM_ENABLEREDRAW, 0)
@@ -617,7 +613,7 @@ function mypanel:set_column_mask(handle)
     hDlg:send(F.DM_ENABLEREDRAW, 1)
   end
 
-  local function DlgProc(hDlg, Msg, Param1, Param2)
+  Items.proc = function(hDlg, Msg, Param1, Param2)
     if Msg == F.DN_INITDIALOG then
       SetEnable(hDlg)
       hDlg:send(F.DM_SETFOCUS, 3)
@@ -632,23 +628,21 @@ function mypanel:set_column_mask(handle)
     end
   end
 
-  local guid = win.Uuid("D252C184-9E10-4DE8-BD68-08A8A937E1F8")
-  local res = far.Dialog(guid, -1, -1, dlg_width, 6+col_num, "PanelView", dlg_items, nil, DlgProc)
-  if res > 0 and res ~= btnCancel then
+  local res = sdialog.Run(Items)
+  if res then
     mask = {}
     self._col_masks[self._object] = mask
-    local all_empty = true
     for k=1,col_num do
-      if dlg_items[2*k+1][6] ~= 0 then
-        mask[self._column_descr[k].name] = dlg_items[2*k][10]
-        all_empty = false
+      if res[2*k+1] then -- if checkbox is checked
+        mask[self._col_info[k].name] = res[2*k] -- take data from fixedit
       end
     end
-    if all_empty and col_num > 0 then -- all columns should not be hidden - show the 1-st column
-      mask[self._column_descr[1].name] = "0"
+    if next(mask) == nil and col_num > 0 then -- all columns should not be hidden - show the 1-st column
+      mask[self._col_info[1].name] = "0"
     end
     self._col_masks_used = true
-    self._hist_file:save()
+    --self._histfile:save()
+    history.msave("files", self._filename:lower(), self._histfile, "local")
     self:prepare_panel_info()
     panel.UpdatePanel(handle,nil,true)
     panel.RedrawPanel(handle,nil)
@@ -742,7 +736,7 @@ function mypanel:prepare_panel_info()
   local info = {
     key_bar = {};
     modes   = {};
-    title   = M.ps_title_short .. ": " .. self._file_name:match("[^\\/]*$");
+    title   = M.title_short .. ": " .. self._filename:match("[^\\/]*$");
   }
   self._panel_info = info
   -------------------------------------------------------------------------------------------------
@@ -760,12 +754,12 @@ function mypanel:prepare_panel_info()
     status_types  = "N,C0,C1"
     col_widths    = "0,8,9"
     status_widths = "0,8,9"
-    col_titles    = { M.ps_pt_name, M.ps_pt_type, M.ps_pt_count }
+    col_titles    = { M.pt_name, M.pt_type, M.pt_count }
     self:FillKeyBar(info.key_bar, "db")
   -------------------------------------------------------------------------------------------------
   else -- self._panel_mode == "table"/"view"/"query"
     local mask = self._col_masks_used and self._col_masks[self._object]
-    for i,descr in ipairs(self._column_descr) do
+    for i,descr in ipairs(self._col_info) do
       local width = mask and mask[descr.name]
       if width or not mask then
         if col_types ~= "" then
@@ -817,7 +811,7 @@ function mypanel:delete_items(handle, items)
     end
   elseif self._panel_mode == "db" or self._panel_mode == "table" then
     if self._panel_mode == "table" and not self._rowid_name then
-      ErrMsg(M.ps_err_del_norowid)
+      ErrMsg(M.err_del_norowid)
       return false
     end
     local ed = myeditor.neweditor(self._dbx, self._schema, self._object, self._rowid_name)
@@ -828,46 +822,37 @@ end
 
 
 function mypanel:set_table_filter(handle)
-  local guid        = win.Uuid("920436C2-C32D-487F-B590-0E255AD71038")
-  local query       = "SELECT * FROM "..Norm(self._schema).."."..Norm(self._object)
-  local hist_extra  = "Polygon_PanelFilterExt"
-  local hist_where  = "Polygon_PanelFilter"
-  local flag_edit   = F.DIF_HISTORY + F.DIF_USELASTHISTORY
-  local flag_separ  = F.DIF_SEPARATOR
-  local flag_ok     = F.DIF_DEFAULTBUTTON+F.DIF_CENTERGROUP
-  local flag_cancel = F.DIF_CENTERGROUP
-
+  local query = "SELECT * FROM "..Norm(self._schema).."."..Norm(self._object)
   local Items = {
-    --[[01]] {F.DI_DOUBLEBOX,  3, 1,72, 8,   0, 0,          0, 0,            M.ps_panel_filter},
-    --[[02]] {F.DI_TEXT,       5, 2, 0, 0,   0, 0,          0, 0,            query},
-    --[[03]] {F.DI_EDIT,       5, 3,70, 0,   0, hist_extra, 0, flag_edit,    ""},
-    --[[04]] {F.DI_TEXT,       5, 4, 0, 0,   0, 0,          0, 0,            "WHERE"},
-    --[[05]] {F.DI_EDIT,       5, 5,70, 0,   0, hist_where, 0, flag_edit,    ""},
-    --[[06]] {F.DI_TEXT,      -1, 6, 0, 0,   0, 0,          0, flag_separ,   ""},
-    --[[07]] {F.DI_BUTTON,     0, 7, 0, 0,   0, 0,          0, flag_ok,      M.ps_ok},
-    --[[08]] {F.DI_BUTTON,     0, 7, 0, 0,   0, 0,          0, flag_cancel,  M.ps_cancel},
+    guid="920436C2-C32D-487F-B590-0E255AD71038";
+    help="PanelFilter";
+    width=76;
+    --[[01]] {tp="dbox"; text=M.panel_filter;                                           },
+    --[[02]] {tp="text"; text=query;                                                    },
+    --[[03]] {tp="edit"; hist="Polygon_PanelFilterExt"; uselasthistory=1; name="extra"; },
+    --[[04]] {tp="text"; text="WHERE"                                                   },
+    --[[05]] {tp="edit"; hist="Polygon_PanelFilter";    uselasthistory=1; name="where"; },
+    --[[06]] {tp="sep";                                                                 },
+    --[[07]] {tp="butt"; text=M.ok;     centergroup=1; default=1;                       },
+    --[[08]] {tp="butt"; text=M.cancel; centergroup=1; cancel=1;                        },
   }
-  local edtExtra, edtWhere, btnOK = 3, 5, 7
 
-  local function DlgProc(hDlg, Msg, Param1, Param2)
-    if Msg == F.DN_CLOSE and Param1 == btnOK then
-      local extra = hDlg:send("DM_GETTEXT", edtExtra)
-      local where = hDlg:send("DM_GETTEXT", edtWhere)
-      local text = where:find("%S") and (extra.." WHERE "..where) or extra
-      local longquery = query.." "..text
-      local stmt = self._db:prepare(longquery)
-      if stmt then -- check syntax
-        stmt:finalize()
-        self._tab_filter.text = text
-        self._tab_filter.enabled = true
-      else
-        self._dbx:SqlErrMsg(longquery)
-        return 0
-      end
+  function Items.closeaction(hDlg, Param1, tOut)
+    local extra, where = tOut.extra, tOut.where
+    local text = where:find("%S") and (extra.." WHERE "..where) or extra
+    local longquery = query.." "..text
+    local stmt = self._db:prepare(longquery)
+    if stmt then -- check syntax
+      stmt:finalize()
+      self._tab_filter.text = text
+      self._tab_filter.enabled = true
+    else
+      self._dbx:SqlErrMsg(longquery)
+      return 0
     end
   end
 
-  if far.Dialog(guid,-1,-1,76,10,"PanelFilter",Items,nil,DlgProc) == btnOK then
+  if sdialog.Run(Items) then
     panel.UpdatePanel(handle)
     panel.RedrawPanel(handle)
   end
@@ -906,14 +891,14 @@ function mypanel:handle_keyboard(handle, key_event)
       self:view_pragma_statements()
       return true
     elseif nomods and vcode == VK.F5 then        -- F5: export table/view data
-      local ex = exporter.newexporter(self._dbx, self._file_name, self._schema)
+      local ex = exporter.newexporter(self._dbx, self._filename, self._schema)
       if ex:export_data_with_dialog() then
         panel.UpdatePanel(nil,0)
         panel.RedrawPanel(nil,0)
       end
       return true
     elseif shift and vcode == VK.F5 then
-      local ex = exporter.newexporter(self._dbx, self._file_name, self._schema)
+      local ex = exporter.newexporter(self._dbx, self._filename, self._schema)
       ex:dump_data_with_dialog()
       return true
     end
@@ -947,14 +932,14 @@ function mypanel:handle_keyboard(handle, key_event)
       end
       if self._rowid_name then
         local ed = myeditor.neweditor(self._dbx, self._schema, self._object, self._rowid_name)
-        ed:edit_item(handle)
+        ed:edit_row(handle)
         return true
       else
-        ErrMsg(M.ps_err_edit_norowid)
+        ErrMsg(M.err_edit_norowid)
       end
     elseif shift and vcode == VK.F4 then         -- ShiftF4: insert row
       local ed = myeditor.neweditor(self._dbx, self._schema, self._object, self._rowid_name)
-      ed:insert_item(handle)
+      ed:insert_row(handle)
       return true
     elseif shift and vcode == VK.F5 then         -- Shift-F5 ("show/hide columns affinity")
       self._show_affinity = not self._show_affinity
@@ -985,12 +970,12 @@ function mypanel:handle_keyboard(handle, key_event)
     if panel.GetPanelInfo(handle).SelectedItemsNumber > 0 then
       local guid = win.Uuid("4472C7D8-E2B2-46A0-A005-B10B4141EBBD") -- for macros
       if self._panel_mode == "root" then
-        if far.Message(M.ps_detach_question, M.ps_title_short, ";YesNo", "w", nil, guid) == 1 then
+        if far.Message(M.detach_question, M.title_short, ";YesNo", "w", nil, guid) == 1 then
           return nil
         end
       end
       if self._panel_mode == "db" or self._panel_mode == "table" then
-        if far.Message(M.ps_drop_question, M.ps_title_short, ";YesNo", "w", nil, guid) == 1 then
+        if far.Message(M.drop_question, M.title_short, ";YesNo", "w", nil, guid) == 1 then
           return nil
         end
       end
@@ -1020,27 +1005,27 @@ function mypanel:view_db_object()
     if not cr_sql then
       return
     end
-    tmp_file_name = get_temp_file_name("sql")
+    tmp_file_name = utils.get_temp_file_name("sql")
 
     local file = io.open(tmp_file_name, "wb")
     if not file then
-      ErrMsg(M.ps_err_writef.."\n"..tmp_file_name, nil, "we")
+      ErrMsg(M.err_writef.."\n"..tmp_file_name, nil, "we")
       return
     end
     if not file:write(cr_sql) then
       file:close()
-      ErrMsg(M.ps_err_writef.."\n"..tmp_file_name, nil, "we")
+      ErrMsg(M.err_writef.."\n"..tmp_file_name, nil, "we")
       return
     end
     file:close()
   else
     -- Export data
-    local ex = exporter.newexporter(self._dbx, self._file_name, self._schema)
-    tmp_file_name = get_temp_file_name("txt")
+    local ex = exporter.newexporter(self._dbx, self._filename, self._schema)
+    tmp_file_name = utils.get_temp_file_name("txt")
     local ok = ex:export_data_as_text(tmp_file_name, RealItemName)
     if not ok then return end
   end
-  local title = M.ps_title_short .. ": " .. RealItemName
+  local title = M.title_short .. ": " .. RealItemName
   viewer.Viewer(tmp_file_name, title, 0, 0, -1, -1, bor(
     F.VF_ENABLE_F6, F.VF_DISABLEHISTORY, F.VF_DELETEONLYFILEONCLOSE, F.VF_IMMEDIATERETURN, F.VF_NONMODAL), 65001)
   viewer.SetMode(nil, { Type=F.VSMT_WRAP,     iParam=0,          Flags=0 })
@@ -1063,7 +1048,7 @@ function mypanel:view_db_create_sql()
           F.VF_ENABLE_F6 + F.VF_DISABLEHISTORY + F.VF_DELETEONLYFILEONCLOSE + F.VF_NONMODAL, 65001)
       else
         if file then file:close() end
-        ErrMsg(M.ps_err_writef.."\n"..tmp_path, nil, "we")
+        ErrMsg(M.err_writef.."\n"..tmp_path, nil, "we")
       end
     end
   end
@@ -1149,32 +1134,30 @@ function mypanel:view_pragma_statements()
   end
 
   if items[1] then
-    local guid = win.Uuid("FF769EE0-2643-48F1-A8A2-239CD3C6691F")
-    local title = ("%s [%s]"):format(M.ps_title_pragma, self._schema)
-    local list_flags = F.DIF_LISTNOBOX + F.DIF_LISTNOAMPERSAND + F.DIF_FOCUS
-    local btn_flags = F.DIF_CENTERGROUP + F.DIF_DEFAULTBUTTON
-    local dlg_items = {
-      {"DI_DOUBLEBOX", 3,  1, 61, 18, 0,     0, 0, 0,               title},
-      {"DI_LISTBOX",   4,  2, 60, 15, items, 0, 0, list_flags,      ""},
-      {"DI_TEXT",      0, 16,  0, 16, 0,     0, 0, F.DIF_SEPARATOR, ""},
-      {"DI_BUTTON",   60, 17,  0,  0, 0,     0, 0, btn_flags,       M.ps_ok}
+    local W = 65
+    sdialog.Run {
+      guid = "FF769EE0-2643-48F1-A8A2-239CD3C6691F";
+      width = W;
+      { tp="dbox"; text=("%s [%s]"):format(M.title_pragma, self._schema);              },
+      { tp="listbox"; x1=4; x2=W-5; y2=15; list=items; listnobox=1; listnoampersand=1; },
+      { tp="sep";                                                                      },
+      { tp="butt"; text=M.ok; centergroup=1; default=1;                                },
     }
-    far.Dialog(guid, -1, -1, 65, 20, nil, dlg_items)
   end
 end
 
 
 function mypanel:edit_sql_query(handle)
   -- Create a file and save the last used query if any.
-  local tmp_name = get_temp_file_name("sql")
+  local tmp_name = utils.get_temp_file_name("sql")
   local fp = io.open(tmp_name, "w")
   if fp then
-    if self._last_sql_query then
-      fp:write(self._last_sql_query)
+    if self._last_query then
+      fp:write(self._last_query)
     end
     fp:close()
   else
-    ErrMsg(M.ps_err_writef.."\n"..tmp_name, nil, "we")
+    ErrMsg(M.err_writef.."\n"..tmp_name, nil, "we")
     return
   end
 
@@ -1189,11 +1172,11 @@ function mypanel:edit_sql_query(handle)
       query = string.gsub(query, "\r\n", "\n")
       fp:close()
       if query:find("%S") then
-        self._last_sql_query = query
+        self._last_query = query
         self:open_query(handle, query)
       end
     else
-      ErrMsg(M.ps_err_read.."\n"..tmp_name, nil, "we")
+      ErrMsg(M.err_read.."\n"..tmp_name, nil, "we")
     end
   end
 
@@ -1268,7 +1251,7 @@ end
 function mypanel:get_info()
   return {
     db          = self._db;
-    file_name   = self._file_name;
+    file_name   = self._filename;
     multi_db    = self._multi_db;
     schema      = self._schema;
     panel_mode  = self._panel_mode;

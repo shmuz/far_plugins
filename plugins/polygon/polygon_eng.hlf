@@ -120,7 +120,7 @@ or number of characters, or percentage of the total panel width).
 according to the dialog settings. These settings will also be stored permanently
 in the plugin's local database.
 
-   Pressing Shift-F5 in the plugin panel will toggle between full and custom views.
+   Pressing Alt-F3 in the plugin panel will toggle between full and custom views.
 
  ~Contents~@Contents@
 
@@ -307,7 +307,9 @@ $^ #Edit Table Row#
    - BLOB values are displayed like     #x'13E6BC64'#
    - NULL values are displayed as       #NULL#
 
- To toggle a field between NULL and the initial value, press #Ctrl-N# when that field is focused.
+ To toggle a field between NULL and the initial value, press #Ctrl-N#.
+ To view a field in the viewer press #F3#.
+ To edit a field in the editor press #F4#.
 
 
  ~Contents~@Contents@

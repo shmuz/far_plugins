@@ -29,6 +29,7 @@
 "SQLite: Data export"
 "&Export %s to:"
 "File format:"
+"&CSV"
 "&Text"
 "Export"
 "&Preserve line feeds"

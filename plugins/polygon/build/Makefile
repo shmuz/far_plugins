@@ -5,8 +5,7 @@ PROJECT = polygon
 path_plugin = ..
 COMMON_MAK = $(path_plugin)\..\common.mak
 
-MYCFLAGS = -I$(PATH_LUAFARSRC) -DRUN_LUAFAR_INIT
-embed: MYCFLAGS = -I$(PATH_LUAFARSRC)
+MYCFLAGS = -DRUN_LUAFAR_INIT
 
 T_MESSAGE =
 
@@ -24,8 +23,8 @@ modules = \
   $(path_plugin)*modules\sqlite.lua      \
   $(path_plugin)*modules\string_rc.lua   \
   $(path_plugin)*modules\utils.lua       \
-  $(path_share)*far2\history.lua         \
-  $(path_share)*shmuz\serial.lua
+  $(path_share)*far2\settings.lua        \
+  $(path_share)*far2\simpledialog.lua
 
 FAR_EXPORTS = \
   ANALYSE            \

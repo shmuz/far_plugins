@@ -4,7 +4,7 @@ local M = require "modules.string_rc"
 
 -- Show error message
 function mod.ErrMsg (msg, title, flags)
-  far.Message(msg, title or M.ps_title_short, nil, flags or "wl")
+  far.Message(msg, title or M.title_short, nil, flags or "wl")
 end
 
 -- Resize a string
@@ -17,7 +17,11 @@ end
 
 -- Normalize a string. Use for schema, table and column names.
 function mod.Norm (str)
-  return "'" .. str:gsub("'","''") .. "'"
+  return "'" .. string.gsub(str, "'", "''") .. "'"
+end
+
+function mod.get_temp_file_name(ext)
+  return far.MkTemp() .. (ext and "."..ext or "")
 end
 
 return mod
