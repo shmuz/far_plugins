@@ -7,33 +7,34 @@ local VK = win.GetVirtualKeys()
 local band, bor = bit64.band, bit64.bor
 local IND_TYPE, IND_X1, IND_Y1, IND_X2, IND_Y2, IND_VALUE, IND_DATA = 1,2,3,4,5,6,10
 
---- Edit a dialog DI_EDIT field in Far editor
--- @param hDlg     : dialog handle
--- @param itempos  : item position
+--- Edit some text (e.g. a DI_EDIT dialog field) in Far editor
+-- @param text     : input text
 -- @param ext      : extension of temporary file (affects syntax highlighting; optional)
-local function OpenInEditor(hDlg, itempos, ext)
+-- @return         : output text (or nil)
+local function OpenInEditor(text, ext)
   local tempdir = win.GetEnv("TEMP")
   if not tempdir then
-    far.Message("Environment variable TEMP is not set", "Error", nil, "w"); return
+    far.Message("Environment variable TEMP is not set", "Error", nil, "w"); return nil
   end
   ext = type(ext)=="string" and ext or ".tmp"
   if ext~="" and ext:sub(1,1)~="." then ext = "."..ext; end
   local fname = ("%s\\far3-%s%s"):format(tempdir, win.Uuid(win.Uuid()):sub(1,8), ext)
   local fp = io.open(fname, "w")
   if fp then
-    fp:write(far.SendDlgMessage(hDlg, "DM_GETTEXT", itempos))
+    fp:write(text or "")
     fp:close()
     local flags = {EF_DISABLEHISTORY=1,EF_DISABLESAVEPOS=1}
     if editor.Editor(fname,nil,nil,nil,nil,nil,flags,nil,nil,65001) == F.EEC_MODIFIED then
       fp = io.open(fname)
       if fp then
-        local txt = fp:read("*all")
+        text = fp:read("*all")
         fp:close()
-        far.SendDlgMessage(hDlg, "DM_SETTEXT", itempos, txt)
+        return text
       end
     end
     win.DeleteFile(fname)
   end
+  return nil
 end
 
 -- @param txt     : string
@@ -209,6 +210,7 @@ local function Run (inData)
   local outData = {}
   local cgroup = { y=nil; width=0; } -- centergroup
   local x2_defer = {}
+  local EMPTY = {}
 
   for i,v in ipairs(inData) do
     assert(type(v)=="table", "dialog element #"..i.." is not a table")
@@ -226,16 +228,24 @@ local function Run (inData)
     local hist = v.hist or ""
     local mask = v.mask or ""
 
+    local prev = (i > 1) and outData[i-1] or EMPTY
     local is_cgroup = (tp==F.DI_BUTTON) and band(flags,F.DIF_CENTERGROUP)~=0
-    local x1 = tonumber(v.x1) or (v.x1=="" and i>1 and outData[i-1][IND_X1]) or HMARGIN+2
-    local x2 = tonumber(v.x2) or (v.x2=="" and i>1 and outData[i-1][IND_X2]) or
-               (v.width and x1+v.width-1) or x2_defer
-    local y1 = tonumber(v.y1) or
-               v.ystep and (Y + v.ystep) or
-               (v.y1=="" and i>1 and outData[i-1][IND_Y1]) or
-               cgroup.y and is_cgroup and Y or Y + 1
-    local y2 = tonumber(v.y2) or (v.y2=="" and i>1 and outData[i-1][IND_Y2]) or
-               (v.height and y1+v.height-1) or y1
+    local x1 = tonumber(v.x1)                  or
+               v.x1=="" and prev[IND_X1]       or
+               HMARGIN+2
+    local x2 = tonumber(v.x2)                  or
+               v.x2=="" and prev[IND_X2]       or
+               v.width  and x1+v.width-1       or
+               x2_defer
+    local y1 = tonumber(v.y1)                  or
+               v.ystep  and Y + v.ystep        or
+               v.y1=="" and prev[IND_Y1]       or
+               cgroup.y and is_cgroup and Y    or
+               Y + 1
+    local y2 = tonumber(v.y2)                  or
+               v.y2=="" and prev[IND_Y2]       or
+               v.height and y1+v.height-1      or
+               y1
     if is_cgroup then
       local textlen = text:gsub("&", ""):len()
       local left = (y1==cgroup.y) and cgroup.width+1 or 2
@@ -392,7 +402,9 @@ local function Run (inData)
         end
       elseif Par2.VirtualKeyCode == VK.F4 and not mod then
         if outData[Par1][IND_TYPE] == F.DI_EDIT then
-          OpenInEditor(hDlg, Par1, inData[Par1].ext)
+          local txt = far.SendDlgMessage(hDlg, "DM_GETTEXT", Par1)
+          txt = OpenInEditor(txt, inData[Par1].ext)
+          if txt then far.SendDlgMessage(hDlg, "DM_SETTEXT", Par1, txt); end
         end
       end
 

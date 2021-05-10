@@ -1,11 +1,51 @@
 -- Encoding: UTF-8
 -- tmppanel.lua
 
+local far2_dialog = require "far2.dialog"
+
 local Package = {}
 
--- UPVALUES : keep them above all function definitions !!
-local M  = require "tmpp_message"
-local far2_dialog = require "far2.dialog"
+-- The default message table
+local M = {
+  MOk                         = "Ok";
+  MCancel                     = "Cancel";
+  MError                      = "Error";
+  MWarning                    = "Warning";
+  MTempPanel                  = "LuaFAR Temp. Panel";
+  MTempPanelTitleNum          = " %sLuaFAR Temp. Panel [%d] ";
+  MDiskMenuString             = "temporary (LuaFAR)";
+  MF7                         = "Remove";
+  MAltShiftF12                = "Switch";
+  MAltShiftF2                 = "SavLst";
+  MAltShiftF3                 = "Goto";
+  MTempUpdate                 = "Updating temporary panel contents";
+  MTempSendFiles              = "Sending files to temporary panel";
+  MSwitchMenuTxt              = "Total files:";
+  MSwitchMenuTitle            = "Available temporary panels";
+  MConfigTitle                = "LuaFAR Temporary Panel";
+  MConfigAddToDisksMenu       = "Add to &Disks menu";
+  MConfigAddToPluginsMenu     = "Add to &Plugins menu";
+  MConfigCommonPanel          = "Use &common panel";
+  MSafeModePanel              = "&Safe panel mode";
+  MReplaceInFilelist          = "&Replace files with file list";
+  MMenuForFilelist            = "&Menu from file list";
+  MCopyContents               = "Copy folder c&ontents";
+  MFullScreenPanel            = "F&ull screen mode";
+  MColumnTypes                = "Column &types";
+  MColumnWidths               = "Column &widths";
+  MStatusColumnTypes          = "Status line column t&ypes";
+  MStatusColumnWidths         = "Status l&ine column widths";
+  MMask                       = "File masks for the file &lists:";
+  MPrefix                     = "Command line pre&fix:";
+  MConfigNewOption            = "New settings will become active after FAR restart";
+  MNewPanelForSearchResults   = "&New panel for search results";
+  MListFilePath               = "Save file list as";
+  MCopyContentsMsg            = "Copy folder contents?";
+  MSavePanelsOnFarExit        = "Sa&ve panels on FAR exit";
+}
+
+-- This function should be called if message localization support is needed
+function Package.SetMessageTable(msg_tbl) M = msg_tbl; end
 
 local F  = far.Flags
 local VK = win.GetVirtualKeys()
@@ -36,17 +76,14 @@ local Opt = {
 }
 
 local Env, Panel = {}, {}
-local OptMeta   = { __index = Opt }
 local EnvMeta   = { __index = Env }
 local PanelMeta = { __index = Panel }
 
 local function LTrim(s) return s:match "^%s*(.*)" end
-local function RTrim(s) return s:match "(.-)%s*$" end
 local function Trim(s) return s:match "^%s*(.-)%s*$" end
 local function Unquote(s) return (s:gsub("\"", "")) end
 local function ExtractFileName(s) return s:match "[^\\:]*$" end
 local function ExtractFileDir(s) return s:match ".*\\" or "" end
-local function ExtractFileExt(s) return s:match "%.[^.\\]+$" or "" end
 local function AddEndSlash(s) return (s:gsub("\\?$", "\\", 1)) end
 local function TruncStr(s, maxlen)
   local len = s:len()
@@ -75,9 +112,9 @@ end
 
 -- File lists are supported in the following formats:
 -- (a) UTF-16LE with BOM, (b) UTF-8 with BOM, (c) OEM.
-local function ListFromFile (filename)
+local function ListFromFile (aFileName, aFullPaths)
   local list = {}
-  local hFile = io.open (filename, "rb")
+  local hFile = io.open (aFileName, "rb")
   if hFile then
     local text = hFile:read("*a")
     hFile:close()
@@ -89,11 +126,11 @@ local function ListFromFile (filename)
         text = win.Utf16ToUtf8(strsub(text, 3))
       elseif string.find(text, "%z") then
         text = win.Utf16ToUtf8(text)
-      else -- default is UTF-8
+      -- else -- default is UTF-8
         -- do nothing
       end
       for line in text:gmatch("[^\n\r]+") do
-        table.insert(list, line)
+        table.insert(list, aFullPaths and far.ConvertPath(line,"CPM_REAL") or line)
       end
     end
   end
@@ -181,7 +218,7 @@ end
 
 
 local function ShowMenuFromFile (FileName)
-  local list = ListFromFile(FileName)
+  local list = ListFromFile(FileName,false)
   local menuitems = {}
   for i, line in ipairs(list) do
     line = ExpandEnvironmentStr(line)
@@ -403,7 +440,7 @@ function Env:Open (OpenFrom, Guid, Item)
       -- far.Show("OpenW", "OpenFrom="..(OpenFrom==9 and "OPEN_ANALYSE" or OpenFrom),
       --          "Item.Handle="..tostring(Item.Handle), Item.FileName)
       local pan = self:NewPanel()
-      pan:AddList (ListFromFile(Item.FileName), self.Opt.ReplaceMode)
+      pan:AddList (ListFromFile(Item.FileName,true), self.Opt.ReplaceMode)
       pan.HostFile = Item.FileName
       return pan
     end
@@ -447,7 +484,7 @@ function Env:Open (OpenFrom, Guid, Item)
             return nil
           else
             local pan = self:NewPanel(newOpt)
-            pan:AddList(ListFromFile(PathName), newOpt.ReplaceMode)
+            pan:AddList(ListFromFile(PathName,true), newOpt.ReplaceMode)
             pan.HostFile = PathName
             return pan
           end
@@ -748,11 +785,10 @@ function Panel:RemoveDuplicates ()
   if items.NoDuplicates then
     items.NoDuplicates = nil
   else
-    table.sort(items)
-    local RemoveTable = {}
-    for i = 1, #items - 1 do
-      if items[i] == items[i+1] then
-        RemoveTable[i] = true
+    local RemoveTable, map = {}, {}
+    for i,v in ipairs(items) do
+      if map[v] then RemoveTable[i] = true
+      else map[v] = true
       end
     end
     self:RemoveMarkedItems(RemoveTable)
@@ -800,12 +836,12 @@ function Panel:PutOneFile (SrcPath, PanelItem)
   local items = self:GetItems()
   items[#items+1] = CurName
 
-  if self.SelectedCopyContents ~= 0 and IsDirectory(outPanelItem) then
+  if self.SelectedCopyContents and IsDirectory(outPanelItem) then
     if self.SelectedCopyContents == 2 then
       local res = far.Message(M.MCopyContentsMsg, M.MWarning, ";YesNo", "", "Config")
-      self.SelectedCopyContents = (res == 1) and 1 or 0
+      self.SelectedCopyContents = (res == 1)
     end
-    if self.SelectedCopyContents ~= 0 then
+    if self.SelectedCopyContents then
       local DirPanelItems = far.GetDirList (CurName)
       if DirPanelItems then
         for _, v in ipairs (DirPanelItems) do
@@ -862,9 +898,23 @@ end
 
 
 function Panel:GetOpenPanelInfo (Handle)
-  local OPIF_SAFE_FLAGS = bor(F.OPIF_ADDDOTS, F.OPIF_SHOWNAMESONLY)
-  local OPIF_COMMON_FLAGS = bor(OPIF_SAFE_FLAGS, F.OPIF_REALNAMES,
-    F.OPIF_EXTERNALGET, F.OPIF_EXTERNALDELETE, F.OPIF_SHORTCUT)
+  local OPIF_SAFE_FLAGS = bor(
+    F.OPIF_ADDDOTS,         -- Автоматически добавить элемент, равный двум точкам (..)
+    F.OPIF_SHOWNAMESONLY)   -- Показывать по умолчанию имена без путей во всех режимах просмотра
+
+  local OPIF_COMMON_FLAGS = bor(
+    OPIF_SAFE_FLAGS,
+    F.OPIF_EXTERNALDELETE,  -- Флаги могут быть использованы только с OPIF_REALNAMES.
+    F.OPIF_EXTERNALGET,     -- Вынуждает использование соответствующих функций Far Manager,
+                            -- даже если требуемая функция экспортируется плагином.
+
+    F.OPIF_REALNAMES,       -- Включает использование стандартной обработки файла Far Manager'ом,
+                            -- если запрошенная операция не поддерживается плагином. Если этот
+                            -- флаг указан, элементы на панели плагина должны быть именами
+                            -- реальных файлов.
+    F.OPIF_SHORTCUT)        -- Флаг указывает, что плагин позволяет добавлять смену каталогов
+                            -- в историю Far Manager'a, а также поддерживает установку "быстрых
+                            -- каталогов" на своей панели.
   -----------------------------------------------------------------------------
   --far.Message"GetOpenPanelInfo" --> this crashes FAR if enter then exit viewer/editor
                                   --  on a file in the emulated file system
@@ -873,8 +923,11 @@ function Panel:GetOpenPanelInfo (Handle)
     Flags = self.Opt.SafeModePanel and OPIF_SAFE_FLAGS or OPIF_COMMON_FLAGS,
     Format = M.MTempPanel,
     CurDir = "",
-    HostFile = self.HostFile,
   }
+  if self.HostFile then
+    local cur = panel.GetCurrentPanelItem(nil,1)
+    if cur and cur.FileName==".." then Info.HostFile=self.HostFile; end
+  end
   -----------------------------------------------------------------------------
   local TitleMode = self.Opt.SafeModePanel and "(R) " or ""
   if self.Index then

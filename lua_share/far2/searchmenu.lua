@@ -1,4 +1,60 @@
--- Original author: Maxim Gonchar.
+--[=[
+far2.searchmenu
+===============
+
+Original author: Maxim Gonchar
+------------------------------
+
+Description
+-----------
+This provides a filter for standard menu. Every typed symbol is added to the pattern which is used
+to check every menu item. Every item which satisfies the pattern is displayed, others become hidden.
+The pattern is displayed in the menu header.
+
+Parameters
+----------
+Item, Position = far2.searchmenu(Properties, Items [, BreakKeys])
+
+All arguments and return values are the same as for far.Menu (see LuaFAR manual), except some
+optional additional fields of Properties table:
+
+  AllowEmpty:    Allow the user to input patterns that make menu
+                 empty (boolean)
+
+  CheckItem:     Function for determining if an item should be
+                 displayed:
+                   from,to = CheckItem(pattern,text[,searchmethod])
+
+  Map:           Table that maps keys and key combinations
+                 to characters and actions. It allows to add
+                 keys or redefine the treatment of user's input.
+
+  Menu:          Function for displaying the menu
+                 (defaults to far.Menu)
+
+  Pattern:       Initial search pattern (string)
+
+  SearchMethod:  "lua"   = use Lua regexps (default)
+                 "dos"   = use DOS wildcards * and ?
+                 "plain" = plain text search
+
+Also, there is an optional field SearchText in a menu item. When present, it is used instead
+of the text field when checking the item, while the text field is used for displaying the item.
+
+Predefined keys
+---------------
+  Space     - insert a space character
+  DELETE    - delete the entire pattern
+  BACKSPACE - delete the last symbol
+  CtrlV     - insert a pattern from the clipboard
+
+Available symbols
+-----------------
+  Small English letters: a-z
+  Numbers:  0-9
+  Symbols: .,><=+-_;:/?`~[]{}()\~|'"!@#$%^&*
+
+-------------------------------------------------------------------------------------------------]=]
 
 local F = far.Flags
 local band = bit64.band
@@ -18,6 +74,7 @@ mapkey('C+V',     function(pattern) return (pattern or '')..(far.PasteFromClipbo
 
 for i=48,57 do mapkey(string.char(i),string.char(i)) end
 for i=65,90 do mapkey(string.char(i),string.char(32+i)) end
+for i=97,122 do mapkey(string.char(i),string.char(i)) end
 
 mapkey('OEM_PERIOD', '.')
 mapkey('OEM_COMMA',  ',')
