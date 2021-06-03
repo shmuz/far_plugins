@@ -113,7 +113,7 @@ function sqlite:open(file_name)
     -- since sql3.open() won't fail on a non-DB file, let's work around that with a statement
     local stmt = db:prepare("select name from "..SQLITE_MASTER)
     if stmt then
-      db:create_collation("utf8_ncase", utf8.ncasecmp)
+      db:create_collation("utf8_ncase", utf8 and utf8.ncasecmp or far.LStricmp)
       db:create_function("lower",  1, function(ctx,str) ctx:result_text(str:lower()) end)
       db:create_function("upper",  1, function(ctx,str) ctx:result_text(str:upper()) end)
       db:create_function("like",   2, func_like2)

@@ -1,13 +1,14 @@
-# Highlight: Makefile
+# Makefile
 
 # adjust the 3 lines below according to your configuration
 PROJECT = polygon
 path_plugin = ..
 COMMON_MAK = $(path_plugin)\..\common.mak
 
+# Note: Far build >= 3.0.4364 required if -DRUN_LUAFAR_INIT is used
 MYCFLAGS = -DRUN_LUAFAR_INIT
 
-T_MESSAGE =
+T_MESSAGE = $(path_plugin)\modules\string_rc.lua
 
 bootscript = $(path_plugin)\$(PROJECT).lua
 
@@ -40,9 +41,9 @@ FAR_EXPORTS = \
   PROCESSPANELINPUT  \
   SETDIRECTORY
 
-TEMPL       =
-TEMPL_SCR   =
-RCFILE      = $(PROJECT).rc
-HELP        =
+TEMPL     = polygon_lang.templ
+TEMPL_SCR = polygon_lang.lua
+RCFILE    = $(PROJECT).rc
+HELP      =
 
 include $(COMMON_MAK)

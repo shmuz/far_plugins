@@ -1,9 +1,10 @@
 -- coding: UTF-8
 -- Started: 2018-01-13
--- luacheck: globals  Polygon_AppIdToSkip  package  require
+-- luacheck: globals  AppIdToSkip  package  require
 
-Polygon_AppIdToSkip = Polygon_AppIdToSkip or {} -- must be global to withstand script reloads
+AppIdToSkip = AppIdToSkip or {} -- must be global to withstand script reloads
 local band, bor, rshift = bit64.band, bit64.bor, bit64.rshift
+local Guid_ConfirmClose = win.Uuid("27224BE2-EEF4-4240-808F-38095BCEF7B2")
 
 -- File <fname> can turn the plugin into debug mode.
 -- This file should not be distributed with the plugin.
@@ -38,7 +39,7 @@ local function ReadIniFile (fname)
         local key = string.char(
           band(rshift(N,24), 0xFF), band(rshift(N,16), 0xFF),
           band(rshift(N, 8), 0xFF), band(rshift(N, 0), 0xFF))
-        Polygon_AppIdToSkip[key] = true
+        AppIdToSkip[key] = true
       end
     end
   end
@@ -85,79 +86,80 @@ local function get_plugin_data()
 end
 
 
-local function CreateAddModule (LoadedModules)
-  return function (srctable, FileName)
-    if  type(srctable) == "table" then
-      if not LoadedModules[srctable] then
-        LoadedModules[srctable] = true
-        if FileName then srctable.FileName=FileName; end
-        table.insert(LoadedModules, srctable)
-      end
-    end
-  end
-end
-
-
-local function LoadOneUserFile (FileData, FullPath, AddModule, gmeta)
+-- Important: this function must not raise errors, in order to allow next user files to be loaded
+local function LoadOneUserFile (FileData, FullName, AddModule)
   if FileData.FileAttributes:find("d") then return end
-  local userchunk, msg1 = loadfile(FullPath)
+  local userchunk, msg1 = loadfile(FullName)
   if not userchunk then
-    ErrMsg("LOAD: "..FullPath.."\n"..msg1)
+    ErrMsg("LOAD: "..FullName.."\n"..msg1)
     return
   end
-  local env = {
-    UserModule = AddModule;
-    NoUserModule = function() end;
-  }
-  setmetatable(env, gmeta)
+  -- "UserModule" is the loading function name specified in the docs!
+  local env = { UserModule = AddModule; }
+  setmetatable(env, {__index=_G})
   setfenv(userchunk, env)
-  local ok, msg2 = xpcall(function() return userchunk(FullPath) end, debug.traceback)
-  if ok then
-    env.UserModule, env.NoUserModule = nil, nil
-  else
+  local ok, msg2 = xpcall(
+    function() return userchunk(FullName) end, -- FullName is passed according to the docs!
+    debug.traceback)
+  env.UserModule = nil
+  if not ok then
     msg2 = msg2:gsub("\n\t","\n   ")
-    ErrMsg("RUN: "..FullPath.."\n"..msg2)
+    ErrMsg("RUN: "..FullName.."\n"..msg2)
   end
 end
 
 
-local function LoadModules(object)
-  -- Load common modules (from %farprofile%\PluginsData\polygon)
+local function LoadUserModules(object, aLoadCommon, aLoadIndividual)
   local Modules = {}
-  local AddModule = CreateAddModule(Modules)
-  local gmeta = {__index=_G}
-  local dir = win.GetEnv("FARPROFILE")
-  if dir and dir~="" then
-    dir = dir .. "\\PluginsData\\polygon"
-    far.RecursiveSearch(dir, "*.lua", LoadOneUserFile, F.FRS_RECUR, AddModule, gmeta)
+  local function AddModule(module)
+    -- prevent multiple loading of the same module table
+    if type(module) == "table" and not Modules[module] then
+      Modules[module] = true
+      table.insert(Modules, module)
+    end
+  end
+
+  -- Load common modules (from %farprofile%\PluginsData\polygon)
+  if aLoadCommon then
+    local dir = win.GetEnv("FARPROFILE")
+    if dir and dir~="" then
+      dir = dir .. "\\PluginsData\\polygon"
+      far.RecursiveSearch(dir, "*.lua", LoadOneUserFile, F.FRS_RECUR, AddModule)
+      -- Far build >= 3810 required for calling far.RecursiveSearch with extra parameters
+    end
   end
 
   -- Load modules specified in the database itself in a special table
-  local obj_info = object:get_info()
-  local tablename = Norm("modules-"..win.Uuid(PluginGuid):lower())
-  local table_exists
-  local query = "SELECT name FROM sqlite_master WHERE type='table' AND LOWER(name)="..tablename
-  for _ in obj_info.db:nrows(query) do
-    table_exists = true
-  end
-  if table_exists then
-    local collector = {}
-    query = "SELECT * FROM "..tablename.." ORDER BY load_priority DESC"
-    for item in obj_info.db:nrows(query) do
-      if item.enabled == 1 and type(item.script) == "string" then
-        table.insert(collector, item)
-      end
-    end
-    if #collector > 0 then
-      local db_dir = obj_info.file_name:gsub("[^\\/]+$","")
-      for _,item in ipairs(collector) do
-        local fullname = item.script:match("^[a-zA-Z]:") and item.script or db_dir..item.script
-        local filedata = win.GetFileInfo(fullname)
-        if filedata then
-          LoadOneUserFile(filedata, fullname, AddModule, gmeta)
-        else
-          ErrMsg(fullname, M.module_not_found)
+  if aLoadIndividual then
+    local tablename = Norm("modules-"..win.Uuid(PluginGuid):lower())
+    local table_exists = false
+    local query = "SELECT name FROM sqlite_master WHERE type='table' AND LOWER(name)="..tablename
+    object._db:exec(query, function() table_exists=true end)
+    if table_exists then
+      local collector = {}
+      query = "SELECT script,load_priority,enabled FROM "..tablename.." ORDER BY load_priority DESC"
+      local stmt = object._db:prepare(query)
+      if stmt then
+        for item in stmt:nrows(query) do
+          if item.enabled == 1 and type(item.script) == "string" then
+            table.insert(collector, item)
+          end
         end
+        stmt:finalize()
+        if #collector > 0 then
+          local db_dir = object._filename:gsub("[^\\/]+$","")
+          for _,item in ipairs(collector) do
+            local fullname = item.script:match("^[a-zA-Z]:") and item.script or db_dir..item.script
+            local filedata = win.GetFileInfo(fullname)
+            if filedata then
+              LoadOneUserFile(filedata, fullname, AddModule)
+            else
+              ErrMsg(fullname, M.module_not_found)
+            end
+          end
+        end
+      else
+        ErrMsg("Table "..tablename..":\n"..object._dbx:last_error(), M.err_sql)
       end
     end
   end
@@ -172,7 +174,10 @@ local function LoadModules(object)
   -- Call OnOpenConnection()
   for _,mod in ipairs(Modules) do
     if type(mod.OnOpenConnection) == "function" then
-      mod.OnOpenConnection(object:get_info())
+      local ok, msg = xpcall(
+        function() mod.OnOpenConnection(object:get_info()) end,
+        debug.traceback)
+      if not ok then ErrMsg(msg) end
     end
   end
   return Modules
@@ -183,14 +188,13 @@ function export.GetPluginInfo()
   local info = { Flags=0 }
   local PluginData = get_plugin_data()
 
-  if PluginData.prefix ~= "" then
-    info.CommandPrefix = PluginData.prefix
-  end
+  local prefix = PluginData[settings.PREFIX]
+  if prefix ~= "" then info.CommandPrefix = prefix; end
 
   info.PluginConfigGuids = PluginGuid
   info.PluginConfigStrings = { M.title }
 
-  if PluginData.add_to_menu then
+  if PluginData[settings.ADD_TO_MENU] then
     info.PluginMenuGuids = PluginGuid;
     info.PluginMenuStrings = { M.title }
   else
@@ -201,6 +205,12 @@ function export.GetPluginInfo()
 end
 
 
+local function MatchExcludeMasks(filename)
+  local mask = get_plugin_data()[settings.EXCL_MASKS]
+  return mask:find("%S") and far.ProcessName("PN_CMPNAMELIST", mask, filename, "PN_SKIPPATH")
+end
+
+
 function export.Analyse(info)
   -- far.Show(info.OpMode)
   return
@@ -208,43 +218,42 @@ function export.Analyse(info)
     and info.FileName
     and info.FileName ~= ""
     and sqlite.format_supported(info.Buffer, #info.Buffer)
-    and not Polygon_AppIdToSkip[string.sub(info.Buffer,69,72)]
+    and not AppIdToSkip[string.sub(info.Buffer,69,72)]
+    and not MatchExcludeMasks(info.FileName)
 end
 
 
-local function AddOptions(flags, Opt)
-  if type(flags) == "string" then
-    Opt = Opt or {}
-    Opt.user_modules = flags:find("u") and true
-    Opt.extensions   = flags:find("e") and true
-    Opt.foreign_keys = not flags:find("F")
+local function AddOptions(Opt, Str)
+  if type(Str) == "string" then
+    if Str:find("u") then Opt[settings.COMMON_USER_MODULES]  = true; end
+    if Str:find("i") then Opt[settings.INDIVID_USER_MODULES] = true; end
+    if Str:find("e") then Opt[settings.EXTENSIONS]           = true; end
+    if Str:find("F") then Opt[settings.IGNORE_FOREIGN_KEYS]  = true; end
   end
-  return Opt
 end
 
 
 -- options must precede file name
 local function OpenFromCommandLine(str)
-  local file, Opt
-  local from = 1
-  while true do
-    local _, to, first, flags = string.find(str, "(%S)(%S*)", from)
-    if first == "-" then
-      Opt = AddOptions(flags, Opt)
-      from = to + 1
+  local File = ""
+  local Opt = {}
+  for pos, word in str:gmatch("()(%S+)") do
+    if word:sub(1,1) == "-" then
+      AddOptions(Opt, word:sub(2))
     else
-      file = string.sub(str, from)
+      File = str:sub(pos)
       break
     end
   end
-  file = file:gsub("\"", ""):gsub("^%s+", ""):gsub("%s+$", "")
-  if file == "" then
-    file = ":memory:"
+  File = File:gsub("\"", "")
+  File = File:gsub("^%s*(.-)%s*$", "%1")
+  if File == "" then
+    File = ":memory:"
   else
-    file = file:gsub("%%(.-)%%", win.GetEnv) -- expand environment variables
-    file = far.ConvertPath(file, "CPM_FULL")
+    File = File:gsub("%%(.-)%%", win.GetEnv) -- expand environment variables
+    File = far.ConvertPath(File, "CPM_FULL")
   end
-  return file, Opt
+  return File, Opt
 end
 
 
@@ -280,13 +289,13 @@ end
 
 
 local function OpenFromMacro(params)
-  local file_name, Opt = nil, nil
+  local File
+  local Opt = {}
 
   -- Plugin.Call(<guid>, "open", <filename>[, <flags>])
   if params[1] == "open" and type(params[2]) == "string" then
-    file_name = params[2]
-    local flags = params[3]
-    Opt = AddOptions(flags)
+    File = params[2]
+    AddOptions(Opt, params[3])
 
   -- Plugin.Call(<guid>, "lua", [<whatpanel>], <Lua code>)
   elseif params[1] == "lua" and type(params[3]) == "string" then
@@ -304,30 +313,35 @@ local function OpenFromMacro(params)
     end
   end
 
-  return file_name, Opt
+  return File, Opt
 end
 
 
 function export.Open(OpenFrom, Guid, Item)
-  local file_name, Opt = nil, nil
+  local FileName, Opt = nil, nil
 
   if OpenFrom == F.OPEN_ANALYSE then
-    file_name = Item.FileName
+    FileName = Item.FileName
   elseif OpenFrom == F.OPEN_SHORTCUT then
-    file_name = Item.HostFile
+    FileName = Item.HostFile
   elseif OpenFrom == F.OPEN_PLUGINSMENU then
-    file_name = OpenFromPluginsMenu()
+    FileName = OpenFromPluginsMenu()
   elseif OpenFrom == F.OPEN_COMMANDLINE then
-    file_name, Opt = OpenFromCommandLine(Item)
+    FileName, Opt = OpenFromCommandLine(Item)
   elseif OpenFrom == F.OPEN_FROMMACRO then
-    file_name, Opt = OpenFromMacro(Item)
+    FileName, Opt = OpenFromMacro(Item)
   end
 
-  if file_name then
+  if FileName then
     Opt = Opt or get_plugin_data()
-    local object = mypanel.open(file_name, Opt.extensions, Opt.foreign_keys, Opt.multidb_mode)
+    local object = mypanel.open(FileName,
+                   Opt[settings.EXTENSIONS],
+                   Opt[settings.IGNORE_FOREIGN_KEYS],
+                   Opt[settings.MULTIDB_MODE])
     if object then
-      object.LoadedModules = Opt.user_modules and LoadModules(object) or {}
+      object.LoadedModules = LoadUserModules(object,
+                   Opt[settings.COMMON_USER_MODULES],
+                   Opt[settings.INDIVID_USER_MODULES])
       if OpenFrom == F.OPEN_FROMMACRO then
         return { type="panel", [1]=object }
       else
@@ -339,7 +353,7 @@ end
 
 
 function export.GetOpenPanelInfo(object, handle)
-  return object:get_panel_info(handle)
+  return object:get_open_panel_info(handle)
 end
 
 
@@ -363,7 +377,10 @@ end
 function export.ClosePanel(object, handle)
   for _,mod in ipairs(object.LoadedModules) do
     if type(mod.ClosePanel) == "function" then
-      mod.ClosePanel(object:get_info(), handle)
+      local ok, msg = xpcall(
+        function() mod.ClosePanel(object:get_info(), handle) end,
+        debug.traceback)
+      if not ok then ErrMsg(msg) end
     end
   end
   object._dbx:close()
@@ -373,9 +390,11 @@ end
 function export.ProcessPanelInput(object, handle, rec)
   for _,mod in ipairs(object.LoadedModules) do
     if type(mod.ProcessPanelInput) == "function" then
-      if mod.ProcessPanelInput(object:get_info(), handle, rec) then
-        return true
-      end
+      local ok, msg = xpcall(
+        function() return mod.ProcessPanelInput(object:get_info(), handle, rec) end,
+        debug.traceback)
+        if ok and msg then return true end
+      if not ok then ErrMsg(msg) end
     end
   end
   return rec.EventType == F.KEY_EVENT and object:handle_keyboard(handle, rec)
@@ -386,15 +405,22 @@ function export.ProcessPanelEvent (object, handle, Event, Param)
   local ret = false
   for _,mod in ipairs(object.LoadedModules) do
     if type(mod.ProcessPanelEvent) == "function" then
-      if mod.ProcessPanelEvent(object:get_info(), handle, Event, Param) then
-        ret = true; break;
+      local ok, val = xpcall(
+        function() return mod.ProcessPanelEvent(object:get_info(), handle, Event, Param) end,
+        debug.traceback)
+      if ok then
+        if val then ret = true; break; end
+      else
+        ErrMsg(val)
       end
     end
   end
   if not ret then
     if Event == F.FE_CLOSE then
-      if get_plugin_data().confirm_close then
-        ret = 1 ~= far.Message(M.confirm_close, M.title_short, M.yes_no)
+      -- work around the Far bug: FE_CLOSE is called twice after a folder shortcut was pressed
+      if get_plugin_data()[settings.CONFIRM_CLOSE] and not object.close_confirmed then
+        ret = 1 ~= far.Message(M.confirm_close, M.title_short, M.yes_no, "w", nil, Guid_ConfirmClose)
+        object.close_confirmed = not ret
       end
     elseif Event == F.FE_COMMAND then
       local command, text = Param:match("^%s*(%S+)%s*(.*)")
@@ -431,3 +457,14 @@ end
 function export.Compare(object, handle, PanelItem1, PanelItem2, Mode)
   return object:compare(PanelItem1, PanelItem2, Mode)
 end
+
+--   if oldexport then return end
+--   far.ReloadDefaultScript = false
+--   oldexport = export
+--   export = {}
+--   local mt = {}
+--   mt.__index = function(t,name)
+--     win.OutputDebugString(name)
+--     return oldexport[name]
+--   end
+--   setmetatable(export, mt)

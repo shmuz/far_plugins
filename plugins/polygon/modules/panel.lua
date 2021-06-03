@@ -21,29 +21,33 @@ local mypanel = {}
 local mt_panel = { __index=mypanel }
 
 
-function mypanel.open(filename, extensions, foreign_keys, multi_db)
+function mypanel.open(filename, extensions, ignore_foreign_keys, multi_db)
   local self = {
 
   -- Members come from the original plugin SQLiteDB (renamed).
-    _filename       = filename; -- either host file name or ":memory:"
-    _last_query     = nil ; -- SQL query last executed
-    _col_info       = nil ;
-    _object         = ""  ;
-    _dbx            = nil ;
-    _panel_mode     = "root"; -- valid values are: "root", "db", "table", "view", "query"
+    _col_info    = nil ;     -- array of tables: { { name=<name>; affinity=<affinity> }, ... }
+    _dbx         = nil ;     -- database connection wrapper
+    _filename    = filename; -- either host file name or ":memory:"
+    _last_query  = nil ;     -- SQL query last executed
+    _object      = ""  ;     -- name of the current object, e.g. database table name or SQL query
+    _panel_mode  = "root";   -- valid values are: "root", "db", "table", "view", "query"
 
   -- Members added since this plugin started.
-    _db             = nil ;
-    _schema         = ""  ;
-    _col_masks      = nil ; -- col_masks table (non-volatile)
-    _col_masks_used = nil ;
-    _rowid_name     = nil ;
-    _histfile       = nil ; -- files[<filename>] in the plugin's non-volatile settings
-    _sort_col_index = nil ;
-    _sort_last_mode = nil ;
-    _show_affinity  = nil ;
-    _tab_filter     = { enabled=false; text=nil; };
-    _multi_db       = multi_db;
+    _col_masks      = nil ;  -- col_masks table (non-volatile): _col_masks[<colname>]=<col_width>|nil
+    _col_masks_used = nil ;  -- boolean value
+    _db             = nil ;  -- database connection (extracted from _dbx for convience sake)
+    _exiting        = nil;   -- boolean (Enter pressed on .. in database mode and _multi_db==false).
+                             -- Without it TopPanelItem of the Far panel might not be preserved
+                             -- as Far will try to place the host file at the bottom of the visible
+                             -- part of the panel.
+    _histfile       = nil ;  -- files[<filename>] in the plugin's non-volatile settings
+    _multi_db       = multi_db; -- boolean value
+    _rowid_name     = nil ;  -- either "rowid", "oid", "_rowid_", or nil
+    _schema         = ""  ;  -- either "main", "temp", or the name of an attached database
+    _show_affinity  = nil ;  -- boolean value
+    _sort_col_index = nil ;  -- number of column counting from the left
+    _sort_last_mode = nil ;  -- F.SM_NAME...F.SM_OWNER (1...9)
+    _tab_filter     = { enabled=false; text=nil; }; -- current table filter
   }
 
   -- Members come from the original plugin SQLiteDB.
@@ -68,7 +72,7 @@ function mypanel.open(filename, extensions, foreign_keys, multi_db)
     if extensions then
       self._db:load_extension("") -- enable extensions
     end
-    if foreign_keys then
+    if not ignore_foreign_keys then
       self._db:exec("PRAGMA foreign_keys = ON;")
     end
     self._histfile = history.mload("files", filename:lower(), "local") or { col_masks={} }
@@ -210,16 +214,27 @@ local function FindFirstTwoWords(query)
 end
 
 
+local pragma_word2 = {
+  ["collation_list"   ] = true;
+  ["compile_options"  ] = true;
+  ["database_list"    ] = true;
+  ["foreign_key_check"] = true;
+  ["foreign_key_list" ] = true;
+  ["function_list"    ] = true;
+  ["module_list"      ] = true;
+  ["pragma_list"      ] = true;
+  ["table_info"       ] = true;
+  ["table_xinfo"      ] = true;
+}
 function mypanel:open_query(handle, query)
   local word1, word2 = FindFirstTwoWords(query)
   if not word1 then return end
   word1 = word1:lower()
+  word2 = word2 and word2:lower()
 
   -- Check query for select
-  word2 = word2 and word2:lower()
-  if (word1=="select" and word2~="load_extension") or
-     (word1=="pragma" and word2=="database_list")
-  then
+  if (word1=="select" and word2~="load_extension")
+  or (word1=="pragma" and pragma_word2[word2]) then
     -- Get column description
     local stmt = self._db:prepare(query)
     if not stmt then
@@ -245,7 +260,7 @@ function mypanel:open_query(handle, query)
 
     stmt:finalize()
   else
-    -- Update query - just execute without read result
+    -- Update query - just execute without reading the result
     local prg_wnd = progress.newprogress(M.execsql)
     if not self._dbx:execute_query(query, true) then
       prg_wnd:hide()
@@ -264,10 +279,15 @@ function mypanel:open_query(handle, query)
 end
 
 
-function mypanel:get_panel_info(handle)
-  local CurDir = self._schema
-  if self._object ~= "" then CurDir = CurDir.."\\"..self._object; end
-  if CurDir ~= "" then CurDir = "\\"..CurDir; end
+function mypanel:get_open_panel_info(handle)
+  local CurDir
+  if self._exiting then
+    CurDir = ""
+  else
+    CurDir = self._schema
+    if self._object ~= "" then CurDir = CurDir.."\\"..self._object; end
+    if CurDir ~= "" then CurDir = "\\"..CurDir; end
+  end
 
   local Info  = self._panel_info
   local Flags = bor(F.OPIF_DISABLESORTGROUPS,F.OPIF_DISABLEFILTER,F.OPIF_SHORTCUT)
@@ -901,6 +921,9 @@ function mypanel:handle_keyboard(handle, key_event)
       local ex = exporter.newexporter(self._dbx, self._filename, self._schema)
       ex:dump_data_with_dialog()
       return true
+    elseif nomods and vcode == VK.RETURN and not self._multi_db then
+      local item = panel.GetCurrentPanelItem(handle)
+      if item.FileName == ".." then self._exiting=true; end
     end
   end
 

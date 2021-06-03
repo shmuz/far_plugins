@@ -49,7 +49,8 @@ $^ #Invoking the plugin#
 
    3. From the command line: #polygon: [<options>] <filename>#
       - Options may include:
-          #-u# - load user modules
+          #-u# - load common user modules
+          #-i# - load individual user modules
           #-e# - enable extensions
           #-F# - do not honor foreign keys
         Multiple options may be passed together (e.g. #-ue#) or separate (e.g. #-u -e#).
@@ -146,58 +147,70 @@ $^ #Panel Filter
 $^ #Configuration Dialog
  The following settings belong to common plugin configuration.
 
- #[ ] Add to plugins menu#         The plugin will appear in Plugins Menu
- #[ ] Confirm closing the panel#   Confirm closing the panel
- #[ ] Multi-database mode#         Show all connected data bases
- #Prefix:#                         Command line prefix of the plugin
+ #[ ] Add to plugins menu#            The plugin will appear in Plugins Menu
+ #[ ] Confirm closing the panel#      Confirm closing the panel
+ #[ ] Multi-database mode#            Show all connected data bases
+ #Prefix:#                            Command line prefix of the plugin
+ #Exclude files matching masks:#      Do not try to open file matching these
+                                    masks when pressing Enter or CtrlPgDn
 
  The following settings are applied when a new database connection is created.
 Changing these settings does not affect the already opened panels.
 
- #[ ] Load user modules#           User modules will be loaded
- #[ ] Enable extensions#           Execute #sqlite3_enable_load_extension(db,1)#
- #[ ] Do not honor foreign keys#   Do not execute #PRAGMA foreign_keys = ON#
+ #[ ] Load common user modules#       Modules from %farprofile%\PluginsData\Polygon
+ #[ ] Load individual user modules#   Modules referenced within a database file
+ #[ ] Enable extensions#              Execute #sqlite3_enable_load_extension(db,1)#
+ #[ ] Do not honor foreign keys#      Do not execute #PRAGMA foreign_keys = ON#
 
 
  ~Contents~@Contents@
 
 @UserModules
 $^ #User Modules
- User module is a script in Lua programming language contained in a Lua
-table and matching the following requirements:
+ User module is a set of Lua functions placed in a table.
+ The modules are loaded from files with #.lua# extension whose locations
+are specified below in (1) and (2).
+ When a file is executed it receives its full name as the first parameter.
 
- 1. Modules are loaded from #*.lua# files that reside in
-#%FARPROFILE%\PluginsData\Polygon# directory or its subdirectories.
+ #1.# Modules are loaded from files that reside in
+#%FARPROFILE%\PluginsData\Polygon#
+    directory and its subdirectories.
 
- 2. If a database file contains a table named #modules-D4BC5EA7-8229-4FFE-AAC1-5A4F51A0986A#
-then modules specified in that table will be loaded too.
- - Column #script# should contain file name (either absolute or relative to database file directory).
- - Column #enabled# should be equal to 1 in order to load the script.
- - The numeric column #load_priority# affects order of loading scripts (the greater the earlier).
+    This mechanism acts for any database file being opened by the plugin,
+    therefore these modules are better contain some utilities of common use.
 
- 3. Modules are loaded immediately after a successful connection of the plugin
+ #2.# If a database file contains a table named #modules-D4BC5EA7-8229-4FFE-AAC1-5A4F51A0986A#
+    then modules specified in that table will be loaded too.
+
+    - Column #script# should contain file name (either absolute or relative to database file directory).
+    - Column #enabled# should be equal to 1 in order to load the script.
+    - The numeric column #load_priority# affects order of loading scripts (the greater the earlier).
+
+    This mechanism acts individually for the given database file, therefore
+    these modules may contain actions that are specific for this database.
+
+ #3.# Modules are loaded immediately after a successful connection of the plugin
 to a data base is established.
 
- 4. A module may contain all or some of the following fields referring to
+ #4.# A module may contain all or some of the following fields referring to
 functions called by the plugin in various situations:
 ~OnOpenConnection~@OnOpenConnection@, ~ProcessPanelEvent~@ProcessPanelEvent@,
 ~ProcessPanelInput~@ProcessPanelInput@ and ~ClosePanel~@ClosePanel@.
 
- 5. A module may contain the #Priority# field (a number between 0 and 100).
+ #5.# A module may contain the #Priority# field (a number between 0 and 100).
 If the field is not specified then it defaults to 50.
 Functions of a module with higher priority are called earlier.
 
- 6. For loading modules the #UserModule# function should be used.
+ #6.# For loading modules the #UserModule# function should be used.
 
+ #7.# As an example the user module code looks like that:
 
- As an example the user module code looks like that:
-
-   #local mod = { Priority=60 }#
-   #mod.OnOpenConnection  = function() ... end#
-   #mod.ProcessPanelEvent = function() ... end#
-   #mod.ProcessPanelInput = function() ... end#
-   #mod.ClosePanel        = function() ... end#
-   #UserModule(mod)#
+    #local mod = { Priority=60 }#
+    #mod.OnOpenConnection  = function() ... end#
+    #mod.ProcessPanelEvent = function() ... end#
+    #mod.ProcessPanelInput = function() ... end#
+    #mod.ClosePanel        = function() ... end#
+    #UserModule(mod)#
 
 
  ~Contents~@Contents@
@@ -265,7 +278,8 @@ $^ #ClosePanel
  #ClosePanel(info, handle)#
 
  #Parameters:#
-   info:   table ~tInfo~@tInfo@
+   info   : table ~tInfo~@tInfo@
+   handle : panel handle
 
  #Returns:#
    nothing
@@ -321,7 +335,8 @@ $^ #Call from a macro#
    Opens SQLite3 file <filename> in the active panel.
      <filename>: file name with full path.
      <flags>: string, a combination of zero or more options:
-              #"u"# - load user modules
+              #"u"# - load common user modules
+              #"i"# - load individual user modules
               #"e"# - enable extensions
               #"F"# - do not honor foreign keys
         If <flags> is not a string (or omitted) then

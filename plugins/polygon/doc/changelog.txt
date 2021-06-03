@@ -1,3 +1,9 @@
+2021-??-??, v.1.4.0
+    1. Configuration dialog: added "Exclude files matching masks" setting.
+    2. Configuration dialog: option "Load user modules" was split into two:
+       "Load common user modules" and "Load individual user modules".
+    3. Bug fixes.
+
 2021-02-02, v.1.3.4
     1. Refactoring.
 

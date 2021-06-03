@@ -451,7 +451,6 @@ function exporter:export_data_as_dump(Args)
 end
 
 
-local patt_unreadable = "[%z"..string.char(1).."-"..string.char(0x20-1).."]"
 function exporter.get_text(stmt, idx, multiline)
   local data
   if stmt:get_column_type(idx) == sql3.BLOB then
@@ -467,7 +466,7 @@ function exporter.get_text(stmt, idx, multiline)
     data = stmt:get_column_text(idx)
     -- Replace unreadable symbols
     if not multiline then
-      data = string.gsub(data, patt_unreadable, " ")
+      data = string.gsub(data, "[%z\1-\31]", " ")
     end
   end
   return data or ""
