@@ -48,6 +48,7 @@ function mypanel.open(filename, extensions, ignore_foreign_keys, multi_db)
     _sort_col_index = nil ;  -- number of column counting from the left
     _sort_last_mode = nil ;  -- F.SM_NAME...F.SM_OWNER (1...9)
     _tab_filter     = { enabled=false; text=nil; }; -- current table filter
+    _language       = nil ;  -- current Far language
   }
 
   -- Members come from the original plugin SQLiteDB.
@@ -186,7 +187,7 @@ function mypanel:open_object(aHandle, aSchema, aObject)
       self._col_info   = col_info
 
       local count = self._dbx:get_row_count(self._schema, self._object) or 0
-      if count > 20000 then -- sorting is very slow on big tables
+      if count >= 50000 then -- sorting is very slow on big tables
         panel.SetSortMode(aHandle, nil, "SM_UNSORTED")
         panel.SetSortOrder(aHandle, nil, false)
       end
@@ -280,6 +281,10 @@ end
 
 
 function mypanel:get_open_panel_info(handle)
+  if self_language ~= win.GetEnv("FARLANG") then
+    self:prepare_panel_info()
+  end
+
   local CurDir
   if self._exiting then
     CurDir = ""
@@ -307,6 +312,13 @@ end
 
 -- try to avoid returning false as it closes the panel (that may cause data loss)
 function mypanel:get_find_data(handle)
+  -- Safety check (required because polygon.c uses LuaFAR implementation details)
+  local tPlugin = debug.getregistry()[handle]
+  if type(tPlugin) ~= "table" or self ~= tPlugin["Panel_Object"] then
+    ErrMsg("Plugin must be updated to work with new LuaFAR versions")
+    return false
+  end
+  ------------------------------------------------------------------------------
   self._sort_last_mode = nil
   ------------------------------------------------------------------------------
   if self._panel_mode == "root" then
@@ -680,36 +692,39 @@ function mypanel:toggle_column_mask(handle)
 end
 
 
-local Keybar = {}
-Keybar.root = {
---           F1        F2        F3        F4        F5        F6        F7        F8
-  nomods = { false,    false,    "",       "",       "",       "SQL",    "",       "Detach" },
-  shift  = { "",       "",       "",       "",       "",       "",       "",       ""       },
-  alt    = { false,    false,    "",       "",       "",       "",       "",       false    },
-  ctrl   = { "",       "",       "",       "",       "",       "",       "",       ""       },
-}
-Keybar.db = {
---           F1        F2        F3        F4        F5        F6        F7        F8
-  nomods = { false,    false,    "View",   "DDL",    "Export", "SQL",    "",       "Delete" },
-  shift  = { "",       "",       "",       "Pragma", "Dump",   "",       "",       ""       },
-  alt    = { false,    false,    "",       "",       "",       "",       "",       false    },
-  ctrl   = { "",       "",       "",       "",       "",       "",       "",       ""       },
-}
-Keybar.table = {
---           F1        F2        F3        F4        F5        F6        F7        F8
-  nomods = { false,    false,    "",       "Update", "",       "SQL",    "",       "Delete" },
-  shift  = { "",       "",       "Custom", "Insert", "Affin",  "Filter", "",       ""       },
-  alt    = { false,    false,    "Custom", "",       "",       "Filter", "",       false    },
-  ctrl   = { "",       "",       "",       "",       "",       "",       "",       ""       },
-}
-Keybar.query = {
---           F1        F2        F3        F4        F5        F6        F7        F8
-  nomods = { false,    false,    "",       "",       "",       "SQL",    "",       ""       },
-  shift  = { "",       "",       "",       "",       "",       "",       "",       ""       },
-  alt    = { false,    false,    "",       "",       "",       "",       "",       false    },
-  ctrl   = { "",       "",       "",       "",       "",       "",       "",       ""       },
-}
-Keybar.mods = {
+local function GetKeybarStrings(panelmode)
+  if panelmode == "root" then return {
+  --           F1        F2        F3         F4           F5           F6            F7     F8
+    nomods = { false,    false,    "",        "",          "",          "SQL",        "",    "Detach" },
+    shift  = { "",       "",       "",        "",          "",          "",           "",    ""    },
+    alt    = { false,    false,    "",        "",          "",          "",           "",    false },
+    ctrl   = { "",       "",       "",        "",          "",          "",           "",    ""    },
+  }
+  elseif panelmode == "db" then return {
+  --           F1        F2        F3         F4           F5           F6            F7     F8
+    nomods = { false,    false,    M.kb_view, "DDL",       M.kb_export, "SQL",        "",    M.kb_delete },
+    shift  = { "",       "",       "",        M.kb_pragma, "Dump",      "",           "",    ""    },
+    alt    = { false,    false,    "",        "",          "",          "",           "",    false },
+    ctrl   = { "",       "",       "",        "",          "",          "",           "",    ""    },
+  }
+  elseif panelmode == "table" then return {
+  --           F1        F2        F3         F4           F5           F6            F7     F8
+    nomods = { false,    false,    "",        "Update",    "",          "SQL",        "",    M.kb_delete },
+    shift  = { "",       "",       "Custom",  "Insert",    "Affinit",   M.kb_filter,  "",    ""    },
+    alt    = { false,    false,    "Custom",  "",          "",          M.kb_filter,  "",    false },
+    ctrl   = { "",       "",       "",        "",          "",          "",           "",      ""  },
+  }
+  elseif panelmode == "query" then return {
+  --           F1        F2        F3         F4           F5           F6            F7     F8
+    nomods = { false,    false,    "",        "",          "",          "SQL",        "",    ""    },
+    shift  = { "",       "",       "",        "",          "",          "",           "",    ""    },
+    alt    = { false,    false,    "",        "",          "",          "",           "",    false },
+    ctrl   = { "",       "",       "",        "",          "",          "",           "",    ""    },
+  }
+  end
+end
+
+Keybar_mods = {
   nomods = 0;
   shift  = F.SHIFT_PRESSED;
   alt    = F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED;
@@ -718,8 +733,8 @@ Keybar.mods = {
 
 
 function mypanel:FillKeyBar (trg, src)
-  src = Keybar[src]
-  for mod,cks in pairs(Keybar.mods) do
+  src = GetKeybarStrings(src)
+  for mod,cks in pairs(Keybar_mods) do
     for vk=VK.F1,VK.F8 do
       local txt = src[mod][vk-VK.F1+1]
       if txt then
@@ -759,6 +774,7 @@ function mypanel:prepare_panel_info()
     title   = M.title_short .. ": " .. self._filename:match("[^\\/]*$");
   }
   self._panel_info = info
+  self_language = win.GetEnv("FARLANG")
   -------------------------------------------------------------------------------------------------
   if self._panel_mode == "root" then
     col_types     = "N,C0,C1"
@@ -1237,15 +1253,15 @@ function mypanel:get_sort_index(Mode)
 end
 
 
-function mypanel:compare(PanelItem1, PanelItem2, Mode)
+-- This function is called from polygon.c from CompareW exported function
+-- (its name and semantics must be in accordance with polygon.c).
+-- Its return value if < 1 is treated as CompareW return value,
+-- otherwise as the 1-based index into CustomColumnData array.
+function mypanel:sort_callback(Mode)
   if self._panel_mode == "db" then
-    if Mode == F.SM_EXT then
-      -- sort by object type
-      return CompareString(
-        PanelItem1.CustomColumnData[1],
-        PanelItem2.CustomColumnData[1], "u", "cS") or 0
-    else
-      -- use Far Manager compare function
+    if Mode == F.SM_EXT then -- sort by object type
+      return 1
+    else -- use Far Manager compare function
       return -2
     end
   else
@@ -1253,14 +1269,7 @@ function mypanel:compare(PanelItem1, PanelItem2, Mode)
       self._sort_last_mode = Mode
       self._sort_col_index = self:get_sort_index(Mode)
     end
-    local index = self._sort_col_index
-    if index then
-      return CompareString(
-        PanelItem1.CustomColumnData[index],
-        PanelItem2.CustomColumnData[index], "u", "cS") or 0
-    else
-      return 0
-    end
+    return self._sort_col_index or 0
   end
 end
 

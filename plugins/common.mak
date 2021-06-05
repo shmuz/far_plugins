@@ -44,6 +44,7 @@ PATH_LUAFARSRC = $(farsource)/plugins/luamacro/luafar
 # Include paths
 INC_LUA = $(farsource)/plugins/luamacro/luasdk/include
 INC_FAR = $(farsource)/plugins/common/unicode
+INCLUDE = -I$(INC_LUA) -I$(INC_FAR) -I$(PATH_LUAFARSRC)
 
 # Location of DLLs
 LUADLL    = $(farhome)/lua51.dll
@@ -57,17 +58,29 @@ LUAEXE = $(LUA) -epackage.path=[[$(path_share)/?.lua]]
 
 vpath %.c $(path_plugin)
 
-ARCH = -m$(DIRBIT)
-
 ifeq ($(DIRBIT),64)
-  T_NOEMBED = $(PROJECT)-x64.dll
-  T_EMBED = $(PROJECT)_e-x64.dll
+  ARCH = -m64
+  T_NOEMBED = $(OUTDIR)/$(PROJECT)-x64.dll
+  T_EMBED = $(OUTDIR)/$(PROJECT)_e-x64.dll
   RESFLAGS = -F pe-x86-64
 else
-  T_NOEMBED = $(PROJECT).dll
-  T_EMBED = $(PROJECT)_e.dll
+  ARCH = -m32
+  T_NOEMBED = $(OUTDIR)/$(PROJECT).dll
+  T_EMBED = $(OUTDIR)/$(PROJECT)_e.dll
   RESFLAGS = -F pe-i386
 endif
+
+ifdef EMBED
+  OUTDIR = Out$(DIRBIT)_embed
+  LUAOPEN_LIST = $(LUAOPEN_EMBED) $(MYLUAOPEN_LIST)
+  TARGETS = $(T_EMBED) $(T_MESSAGE) $(GLOBINFO) $(HELP)
+else
+  OUTDIR = Out$(DIRBIT)
+  LUAOPEN_LIST = $(MYLUAOPEN_LIST)
+  TARGETS = $(T_NOEMBED) $(T_MESSAGE) $(GLOBINFO) $(HELP)
+endif
+
+MYOBJECTS_D = $(MYOBJECTS:%.o=$(OUTDIR)/%.o)
 
 ifndef LUAPLUG
 LUAPLUG = $(PATH_LUAFARSRC)\luaplug.c
@@ -76,34 +89,31 @@ endif
 LUAOPEN_EMBED = luaopen_embed
 LUAOPEN_MAIN = luaopen_main
 
-noembed: LUAOPEN_LIST = $(MYLUAOPEN_LIST)
-embed:   LUAOPEN_LIST = $(LUAOPEN_EMBED) $(MYLUAOPEN_LIST)
-
-GLOBINFO   = $(path_plugin)\_globalinfo.lua
-C_EMBED    = $(T_NOEMBED)_embed.c
-OBJ_EMBED  = $(T_NOEMBED)_embed.o
-C_MAIN     = $(T_NOEMBED)_main.c
-OBJ_MAIN   = $(T_NOEMBED)_main.o
-OBJ_PLUG_N = $(T_NOEMBED)_plug.o
-OBJ_PLUG_E = $(T_EMBED)_plug.o
-OBJ_RC     = $(patsubst %.rc,%$(ARCH).o,$(RCFILE))
+GLOBINFO   = $(path_plugin)/_globalinfo.lua
+C_EMBED    = $(OUTDIR)/$(PROJECT)_embed.c
+OBJ_EMBED  = $(OUTDIR)/$(PROJECT)_embed.o
+C_MAIN     = $(OUTDIR)/$(PROJECT)_main.c
+OBJ_MAIN   = $(OUTDIR)/$(PROJECT)_main.o
+OBJ_PLUG   = $(OUTDIR)/$(PROJECT)_plug.o
+OBJ_RC     = $(OUTDIR)/$(RCFILE:%.rc=%-rc.o)
+VERSION_H  = $(OUTDIR)/version.h
 
 EXPORTS = $(addprefix -DEXPORT_,$(FAR_EXPORTS))
 
-OBJ_N  = $(OBJ_PLUG_N) $(OBJ_MAIN) $(OBJ_RC) $(MYOBJECTS)
-OBJ_E  = $(OBJ_PLUG_E) $(OBJ_MAIN) $(OBJ_RC) $(MYOBJECTS) $(OBJ_EMBED)
-CFLAGS = -O2 -Wall -I$(INC_LUA) -I$(INC_FAR) $(ARCH) $(EXPORTS) $(MYCFLAGS) \
-         -DFUNC_OPENLIBS=$(LUAOPEN_MAIN)
+OBJ_N  = $(OBJ_PLUG) $(OBJ_MAIN) $(OBJ_RC) $(MYOBJECTS_D)
+OBJ_E  = $(OBJ_N) $(OBJ_EMBED)
+CFLAGS = -O2 -Wall $(INCLUDE) $(ARCH) $(EXPORTS) -DFUNC_OPENLIBS=$(LUAOPEN_MAIN) $(MYCFLAGS)
 
 CC = gcc
 
 LIBS    = $(LUADLL) $(LUAFARDLL)
 LDFLAGS = -Wl,--kill-at -shared -s $(ARCH) -static-libgcc
 
-noembed: $(T_NOEMBED) $(T_MESSAGE) $(GLOBINFO) $(HELP)
-embed:   $(T_EMBED) $(T_MESSAGE) $(GLOBINFO) $(HELP)
-all:     noembed embed
+all:     $(OUTDIR) $(TARGETS)
 help:    $(HELP)
+
+$(OUTDIR)/%.o : %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(T_NOEMBED): $(OBJ_N) $(LIBS)
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -111,21 +121,19 @@ $(T_NOEMBED): $(OBJ_N) $(LIBS)
 $(T_EMBED): $(OBJ_E) $(LIBS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-$(T_MESSAGE): $(addprefix $(path_plugin)/,$(TEMPL))
+$(T_MESSAGE): FORCE
 	cd $(path_plugin) && $(LUAEXE) $(TEMPL_SCR) $(TEMPL)
 
-$(OBJ_PLUG_N): $(LUAPLUG)
+$(OBJ_PLUG): $(LUAPLUG)
 	$(CC) -c $< -o $@ $(CFLAGS)
 
-$(OBJ_PLUG_E): $(LUAPLUG)
-	$(CC) -c $< -o $@ $(CFLAGS)
-
-$(OBJ_RC): $(RCFILE) version.h
-	windres $< -o $@ $(RESFLAGS)
+$(OBJ_RC): $(RCFILE) $(VERSION_H)
+	copy $(RCFILE) $(OUTDIR)
+	windres $(OUTDIR)/$(RCFILE) -o $@ $(RESFLAGS)
 
 $(C_EMBED): $(T_MESSAGE)
 ifndef NO_MACRO_GENERATE
-	$(MAKE) -B version.h $(GLOBINFO)
+	$(MAKE) -B $(VERSION_H) $(GLOBINFO)
 endif
 	$(LUAEXE) $(path_run)/embed.lua embed @target=$@ @method=$(EMBED_METHOD) @compiler=$(LUAC) \
     @bootscript=$(bootscript) @luaopen=$(LUAOPEN_EMBED) -scripts $(scripts) -modules $(modules)
@@ -135,12 +143,18 @@ $(C_MAIN):
     -funclist $(LUAOPEN_LIST)
 
 ifndef NO_MACRO_GENERATE
-version.h $(GLOBINFO) $(HELP) : % : %.mcr define.lua
+$(GLOBINFO) $(HELP) : % : %.mcr define.lua
+	$(LUAEXE) -erequire([[shmuz.macro]])([[define.lua]],[[$<]],[[$@]])
+
+$(VERSION_H) : version.h.mcr define.lua
 	$(LUAEXE) -erequire([[shmuz.macro]])([[define.lua]],[[$<]],[[$@]])
 endif
 
-clean:
-	del *.o *.dll luac.out luajitc.out $(C_EMBED) $(C_MAIN)
-	del version.h
+$(OUTDIR):
+	mkdir $@
 
-.PHONY: noembed embed clean all help
+clean:
+	rmdir /s /q $(OUTDIR)
+	if exist luac.out del luac.out
+
+.PHONY: clean all help FORCE

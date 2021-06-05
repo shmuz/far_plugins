@@ -454,10 +454,6 @@ function export.Configure()
 end
 
 
-function export.Compare(object, handle, PanelItem1, PanelItem2, Mode)
-  return object:compare(PanelItem1, PanelItem2, Mode)
-end
-
 --   if oldexport then return end
 --   far.ReloadDefaultScript = false
 --   oldexport = export

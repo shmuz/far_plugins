@@ -5,6 +5,8 @@ PROJECT = polygon
 path_plugin = ..
 COMMON_MAK = $(path_plugin)\..\common.mak
 
+MYOBJECTS = polygon.o
+
 # Note: Far build >= 3.0.4364 required if -DRUN_LUAFAR_INIT is used
 MYCFLAGS = -DRUN_LUAFAR_INIT
 
@@ -27,10 +29,10 @@ modules = \
   $(path_share)*far2\settings.lua        \
   $(path_share)*far2\simpledialog.lua
 
+# Do not include COMPARE - it is in "polygon.c".
 FAR_EXPORTS = \
   ANALYSE            \
   CLOSEPANEL         \
-  COMPARE            \
   CONFIGURE          \
   DELETEFILES        \
   FREEFINDDATA       \
