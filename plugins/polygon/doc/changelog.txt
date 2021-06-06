@@ -1,3 +1,6 @@
+2021-06-06, v.1.4.1
+    1. Fix "Exclude files matching masks" configuration setting.
+
 2021-06-05, v.1.4.0
     1. Configuration dialog: added "Exclude files matching masks" setting.
     2. Configuration dialog: option "Load user modules" was split into two:

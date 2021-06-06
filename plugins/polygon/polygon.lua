@@ -207,7 +207,9 @@ end
 
 local function MatchExcludeMasks(filename)
   local mask = get_plugin_data()[settings.EXCL_MASKS]
-  return mask:find("%S") and far.ProcessName("PN_CMPNAMELIST", mask, filename, "PN_SKIPPATH")
+  return type(mask) == "string"
+    and mask:find("%S")
+    and far.ProcessName("PN_CMPNAMELIST", mask, filename, "PN_SKIPPATH")
 end
 
 
