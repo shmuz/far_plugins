@@ -18,16 +18,26 @@ LuafarAPI Api;
 // !!! PRIVATE API from LuaFAR's exported.c
 void PushPluginTable(lua_State* L, HANDLE hPlugin)
 {
-  lua_pushlightuserdata(L, hPlugin);
+  lua_pushlightuserdata(L, hPlugin);       // for LuaFAR builds >= 721
   lua_rawget(L, LUA_REGISTRYINDEX);
+  if (!lua_istable(L, -1)) {
+    lua_pop(L, 1);
+    lua_pushinteger(L, (intptr_t)hPlugin); // for LuaFAR builds < 721
+    lua_rawget(L, LUA_REGISTRYINDEX);
+  }
 }
 
 // !!! PRIVATE API from exported.c
 void PushPluginObject(lua_State* L, HANDLE hPlugin)
 {
   PushPluginTable(L, hPlugin);
-  if (lua_istable(L, -1))
-    lua_getfield(L, -1, "Panel_Object");
+  if (lua_istable(L, -1)) {
+    lua_getfield(L, -1, "Panel_Object"); // for LuaFAR builds >= 746
+    if (!lua_istable(L, -1)) {
+      lua_pop(L, 1);
+      lua_getfield(L, -1, "Object");     // for LuaFAR builds < 746
+    }
+  }
   else
     lua_pushnil(L);
   lua_remove(L, -2);

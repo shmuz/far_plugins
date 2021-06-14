@@ -30,6 +30,18 @@ function exporter.newexporter(dbx, filename, schema)
 end
 
 
+function exporter:get_destination_dir()
+  local dir = panel.GetPanelDirectory(nil, 0).Name
+  if dir == "" then -- passive panel's directory is unknown, choose host file directory
+    dir = self._filename:match(".*\\") or ""
+  end
+  if not (dir=="" or dir:sub(-1)=="\\") then
+    dir = dir .. "\\"
+  end
+  return dir
+end
+
+
 function exporter:export_data_with_dialog()
   local data = settings.load().exporter
 
@@ -39,26 +51,20 @@ function exporter:export_data_with_dialog()
     return false
   end
   local db_object_name = item.FileName
-
-  -- Get destination path
-  local dst_file_name = panel.GetPanelDirectory(nil, 0).Name
-  if not (dst_file_name == "" or dst_file_name:find("\\$")) then
-    dst_file_name = dst_file_name .. "\\"
-  end
-  dst_file_name = dst_file_name .. db_object_name
+  local dst_file_name = self:get_destination_dir() .. db_object_name
 
   local Items = {
     guid="E9F91B4F-82B2-4B36-9C4B-240D7EE7BF59";
     help="Export";
     width=72;
     {tp="dbox";   text=M.exp_title;                                          },
-    {tp="text";   text=M.exp_main:format(db_object_name);                    },
+    {tp="text";   text=utils.lang(M.exp_main, {db_object_name});             },
     {tp="edit";                                          name="targetfile";  },
     {tp="sep";                                                               },
     {tp="text";   text=M.exp_fmt;                                            },
-    {tp="rbutt";  text=M.exp_fmt_csv;   x1=21; ystep=0;  name="csv"; group=1 },
-    {tp="rbutt";  text=M.exp_fmt_text;  x1=21;           name="text";        },
-    {tp="cbox";   text=M.exp_multiline; x1=31; ystep=-1; name="multiline";   },
+    {tp="rbutt";  text=M.exp_fmt_csv;                    name="csv"; group=1 },
+    {tp="rbutt";  text=M.exp_fmt_text;                   name="text";        },
+    {tp="cbox";   text=M.exp_multiline; x1=16; ystep=-1; name="multiline";   },
     {tp="sep";                                 ystep=2;                      },
     {tp="butt";   text=M.exp_exp; centergroup=1; default=1;                  },
     {tp="butt";   text=M.cancel;  centergroup=1; cancel=1;                   },
@@ -111,36 +117,26 @@ function exporter:dump_data_with_dialog()
       table.insert(t_selected, item)
     end
   end
-
-  -- Get destination path
-  local dst_file_name = panel.GetPanelDirectory(nil, 0).Name
-  if not (dst_file_name == "" or dst_file_name:find("\\$")) then
-    dst_file_name = dst_file_name .. "\\"
-  end
-  dst_file_name = dst_file_name .. "dump1.dump"
+  local dst_file_name = self:get_destination_dir() .. "dump1.dump"
 
   local Items = {
     guid="B6EBFACA-232D-42FA-887E-66C7B03DB65D";
     help="Dump";
     width=72;
-    {tp="dbox";  text=M.dump_title;                           },
-    {tp="text";  text=M.dump_main;                            },
-    {tp="edit";                        name="targetfile";     },
-    {tp="sep";                                                },
-    {tp="cbox";  text=M.dump_dumpall;  name="dumpall";        },
-    {tp="cbox";  text=M.dump_rowids;   name="rowids";         },
-    {tp="cbox";  text=M.dump_newlines; name="newline";        },
-    {tp="sep";                                                },
-    {tp="butt";  text=M.dump_dump; centergroup=1; default=1;  },
-    {tp="butt";  text=M.cancel;    centergroup=1; cancel=1;   },
+    {tp="dbox";  text=M.dump_title;                                           },
+    {tp="text";  text=M.dump_main;                                            },
+    {tp="edit";  text=dst_file_name;   name="targetfile";                     },
+    {tp="sep";                                                                },
+    {tp="cbox";  text=M.dump_dumpall;  name="dumpall"; val=data.dump_dumpall; },
+    {tp="cbox";  text=M.dump_rowids;   name="rowids";  val=data.dump_rowids;  },
+    {tp="cbox";  text=M.dump_newlines; name="newline"; val=data.dump_newline; },
+    {tp="sep";                                                                },
+    {tp="butt";  text=M.dump_dump; centergroup=1; default=1;                  },
+    {tp="butt";  text=M.cancel;    centergroup=1; cancel=1;                   },
   }
   local Pos, _ = sdialog.Indexes(Items)
   ------------------------------------------------------------------------------
   function Items.initaction(hDlg)
-    hDlg:send(F.DM_SETTEXT,  Pos.targetfile, dst_file_name)
-    hDlg:send(F.DM_SETCHECK, Pos.dumpall, data.dump_dumpall and 1 or 0)
-    hDlg:send(F.DM_SETCHECK, Pos.rowids,  data.dump_rowids  and 1 or 0)
-    hDlg:send(F.DM_SETCHECK, Pos.newline, data.dump_newline and 1 or 0)
     if t_selected[1] == nil then
       hDlg:send(F.DM_SETCHECK, Pos.dumpall, 1)
       hDlg:send(F.DM_ENABLE,   Pos.dumpall, 0)

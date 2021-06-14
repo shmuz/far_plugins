@@ -1,3 +1,6 @@
+2021-06-14, v.1.4.2
+    1. Fixes and improvements.
+
 2021-06-06, v.1.4.1
     1. Fix "Exclude files matching masks" configuration setting.
 

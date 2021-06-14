@@ -24,4 +24,10 @@ function mod.get_temp_file_name(ext)
   return far.MkTemp() .. (ext and "."..ext or "")
 end
 
+function mod.lang(msg, trep)
+  assert(type(msg)=="string" and type(trep)=="table")
+  msg = msg:gsub("{(%d+)}", function(c) return trep[tonumber(c)] end)
+  return msg
+end
+
 return mod

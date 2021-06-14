@@ -8,6 +8,11 @@ $^ #Polygon - Help Contents#
 
  The plugin is based on SQLiteDB plugin by Artem Senichev.
 
+ The plugin requires an external sqlite3.dll (version >= 3.22)
+ having the same bitness as the plugin and located either in
+ the plugin's directory, Far Manager directory, or on the PATH.
+
+
  ~Reference of keyboard actions~@Keyboard@
  ~Multi-database mode~@MultiDbMode@
  ~Custom Panel View Dialog~@PanelView@
@@ -54,8 +59,6 @@ $^ #Invoking the plugin#
           #-e# - enable extensions
           #-F# - do not honor foreign keys
         Multiple options may be passed together (e.g. #-ue#) or separate (e.g. #-u -e#).
-        To turn off all options pass just #-#.
-        If no options argument is passed then the options are taken from the current plugin's settings.
       - If the file <filename> does not exist it will be created.
       - If no file name is specified then an in-memory database will be opened.
 

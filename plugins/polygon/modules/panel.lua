@@ -13,7 +13,6 @@ local utils    = require "modules.utils"
 local F = far.Flags
 local VK = win.GetVirtualKeys()
 local band, bor = bit64.band, bit64.bor
-local CompareString = win.CompareString
 local ErrMsg, Resize, Norm = utils.ErrMsg, utils.Resize, utils.Norm
 
 -- This file's module. Could not be called "panel" due to existing LuaFAR global "panel".
@@ -281,7 +280,7 @@ end
 
 
 function mypanel:get_open_panel_info(handle)
-  if self_language ~= win.GetEnv("FARLANG") then
+  if self._language ~= win.GetEnv("FARLANG") then
     self:prepare_panel_info()
   end
 
@@ -312,13 +311,6 @@ end
 
 -- try to avoid returning false as it closes the panel (that may cause data loss)
 function mypanel:get_find_data(handle)
-  -- Safety check (required because polygon.c uses LuaFAR implementation details)
-  local tPlugin = debug.getregistry()[handle]
-  if type(tPlugin) ~= "table" or self ~= tPlugin["Panel_Object"] then
-    ErrMsg("Plugin must be updated to work with new LuaFAR versions")
-    return false
-  end
-  ------------------------------------------------------------------------------
   self._sort_last_mode = nil
   ------------------------------------------------------------------------------
   if self._panel_mode == "root" then
@@ -724,7 +716,7 @@ local function GetKeybarStrings(panelmode)
   end
 end
 
-Keybar_mods = {
+local Keybar_mods = {
   nomods = 0;
   shift  = F.SHIFT_PRESSED;
   alt    = F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED;
@@ -774,7 +766,7 @@ function mypanel:prepare_panel_info()
     title   = M.title_short .. ": " .. self._filename:match("[^\\/]*$");
   }
   self._panel_info = info
-  self_language = win.GetEnv("FARLANG")
+  self._language = win.GetEnv("FARLANG")
   -------------------------------------------------------------------------------------------------
   if self._panel_mode == "root" then
     col_types     = "N,C0,C1"
@@ -953,7 +945,7 @@ function mypanel:handle_keyboard(handle, key_event)
       return true
     elseif shift and vcode == VK.F6 then         -- Shift-F6 ("panel filter")
       self:set_table_filter(handle)
-      return true;
+      return true
     elseif alt and vcode == VK.F6 then           -- Alt-F6 ("toggle panel filter")
       self:toggle_table_filter(handle)
       return true
@@ -1225,15 +1217,15 @@ end
 
 
 local SortMap = {
-  [ F.SM_NAME     ] = 1,
-  [ F.SM_EXT      ] = 2,
-  [ F.SM_MTIME    ] = 3,
-  [ F.SM_SIZE     ] = 4,
-  [ F.SM_UNSORTED ] = 5,
-  [ F.SM_CTIME    ] = 6,
-  [ F.SM_ATIME    ] = 7,
-  [ F.SM_DESCR    ] = 8,
-  [ F.SM_OWNER    ] = 9,
+  [ F.SM_NAME     ] = 1,  -- Ctrl-F3
+  [ F.SM_EXT      ] = 2,  -- Ctrl-F4
+  [ F.SM_MTIME    ] = 3,  -- Ctrl-F5
+  [ F.SM_SIZE     ] = 4,  -- Ctrl-F6
+--[ F.SM_UNSORTED ] Far does not call CompareW when Ctrl-F7 is pressed
+  [ F.SM_CTIME    ] = 5,  -- Ctrl-F8
+  [ F.SM_ATIME    ] = 6,  -- Ctrl-F9
+  [ F.SM_DESCR    ] = 7,  -- Ctrl-F10
+  [ F.SM_OWNER    ] = 8,  -- Ctrl-F11
 }
 
 
@@ -1259,7 +1251,7 @@ end
 -- otherwise as the 1-based index into CustomColumnData array.
 function mypanel:sort_callback(Mode)
   if self._panel_mode == "db" then
-    if Mode == F.SM_EXT then -- sort by object type
+    if Mode == F.SM_EXT then -- sort by object type ( CustomColumnData[1] )
       return 1
     else -- use Far Manager compare function
       return -2
@@ -1270,6 +1262,15 @@ function mypanel:sort_callback(Mode)
       self._sort_col_index = self:get_sort_index(Mode)
     end
     return self._sort_col_index or 0
+  end
+end
+
+
+function mypanel:get_col_names(handle)
+  if self._panel_mode == "table" or self._panel_mode == "view" then
+    local arr = {}
+    for i,v in ipairs(self._col_info) do arr[i]=v.name; end
+    return unpack(arr)
   end
 end
 

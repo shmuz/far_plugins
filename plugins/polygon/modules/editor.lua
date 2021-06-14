@@ -50,7 +50,6 @@ function myeditor:row_dialog(db_data, row_id)
   local rect = far.AdvControl("ACTL_GETFARRECT")
   local dlg_maxw   = rect and (rect.Right - rect.Left + 1) or 80
   local reserved   = 5 -- 2=box + 3=space-delimiters
-  local edge_space = 3 -- horisontal spaces (3 from each side) - do not change (problems with separators)
   local label_maxw = 0
   local value_maxw = math.floor(dlg_maxw / 2)
 
@@ -59,15 +58,14 @@ function myeditor:row_dialog(db_data, row_id)
   end
   label_maxw = math.min(label_maxw, dlg_maxw - value_maxw - reserved)
 
-  local dblbox_width = label_maxw + value_maxw + reserved
-  local dlg_width = dblbox_width + 2*edge_space
-
   -- Build dialog
+  local title = row_id and M.edit_row_title or M.insert_row_title
+  title = utils.lang(title, {self._table_name})
   local Items = {
-    guid="866927E1-60F1-4C87-A09D-D481D4189534";
-    help="EditInsertRow";
-    width=dlg_width;
-    [1]={ tp="dbox"; text=row_id and M.edit_row_title or M.insert_row_title; };
+    guid  = "866927E1-60F1-4C87-A09D-D481D4189534";
+    help  = "EditInsertRow";
+    width = label_maxw + value_maxw + reserved;
+    [1]   = { tp="dbox"; text=title; }
   }
 
   for _,v in ipairs(db_data) do

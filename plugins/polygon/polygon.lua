@@ -291,13 +291,11 @@ end
 
 
 local function OpenFromMacro(params)
-  local File
-  local Opt = {}
-
   -- Plugin.Call(<guid>, "open", <filename>[, <flags>])
   if params[1] == "open" and type(params[2]) == "string" then
-    File = params[2]
-    AddOptions(Opt, params[3])
+    local opt, filename, flags = {}, params[2], params[3]
+    AddOptions(opt, flags)
+    return filename, opt
 
   -- Plugin.Call(<guid>, "lua", [<whatpanel>], <Lua code>)
   elseif params[1] == "lua" and type(params[3]) == "string" then
@@ -313,9 +311,17 @@ local function OpenFromMacro(params)
         info.PluginObject:open_query(info.PluginHandle, code)
       end
     end
-  end
 
-  return File, Opt
+  -- Plugin.Call(<guid>, "get_col_names", <whatpanel>)
+  elseif params[1] == "get_col_names" then
+    local whatpanel = params[2]
+    if whatpanel==0 or whatpanel==1 then
+      local info = panel.GetPanelInfo(nil, whatpanel==0 and 1 or 0)
+      if info and info.PluginObject then
+        return info.PluginObject:get_col_names(info.PluginHandle)
+      end
+    end
+  end
 end
 
 
@@ -331,7 +337,11 @@ function export.Open(OpenFrom, Guid, Item)
   elseif OpenFrom == F.OPEN_COMMANDLINE then
     FileName, Opt = OpenFromCommandLine(Item)
   elseif OpenFrom == F.OPEN_FROMMACRO then
-    FileName, Opt = OpenFromMacro(Item)
+    if Item[1] == "open" then
+      FileName, Opt = OpenFromMacro(Item)
+    else
+      return OpenFromMacro(Item)
+    end
   end
 
   if FileName then
