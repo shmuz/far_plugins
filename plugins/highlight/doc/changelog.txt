@@ -2,6 +2,17 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2021-06-18, v0.5.1
+  [+] Syntax files: the table-parameter of the Class function can have the field "firstline",
+      e.g. firstline="lua". When a file is opened in the Far editor, the plugin reads its first
+      line and if that line contains highlight:<syntax> (e.g. highlight:lua) then this file is
+      highlighted according to this "Class". If this is the case the file extension is ignored.
+  [*] Menu "Select syntax": added shortcuts 1...9, 0, A...Z for ease of selecting a syntax.
+
+2020-10-31, v0.5.0
+  [+] Syntax files: colors may be specified by names, e.g. "red" or "yellow on blue".
+      Numeric color values also work.
+
 2016-04-20, v0.4.5
   [+] Syntax Menu: add the item "Highlight OFF" and a separator.
   [*] Choosing a syntax from Syntax Menu acts as if the file was just open in the editor

@@ -1,28 +1,28 @@
 ﻿local syntax_batch =
 {
-  bgcolor = 0x1;
+  bgcolor = "darkblue";
   {
-    name = "Comment1"; fgcolor = 0x7;
+    name = "Comment1"; fgcolor = "gray7";
     pattern = [[ (?i) ^ \s* @? \s* REM (?: \s+ .*)? $ ]];
   },
   {
-    name = "Comment2"; fgcolor = 0x7;
+    name = "Comment2"; fgcolor = "gray7";
     pattern = [[ ^ :: .* ]];
   },
   {
-    name = "Label"; color = 0x8F;
+    name = "Label"; color = "white on gray8";
     pattern = [[ ^ : \w+ \s* $ ]];
   },
   {
-    name = "Echo"; fgcolor = 0xD;
+    name = "Echo"; fgcolor = "purple";
     pattern = [[ (?i) ^ \s* @? \s* ECHO \.? (?: \s+ .*)? $ ]];
   },
   {
-    name = "EnvVar"; fgcolor = 0xA;
+    name = "EnvVar"; fgcolor = "green";
     pattern = [[ % \w+ % ]];
   },
   {
-    name = "Keyword"; fgcolor = 0xE;
+    name = "Keyword"; fgcolor = "yellow";
     --color = { ForegroundColor=0x00FF00; BackgroundColor=0x000080; Flags={FCF_FG_BOLD=1} };
     pattern = [[ (?i) (?<! [%.]) \b(?:
       ASSOC|BREAK|CALL|CD|CHDIR|CHCP|CLS|CMDEXTVERSION|COLOR|COPY|DATE|DEL|ERASE|ERRORLEVEL|DIR|
@@ -36,11 +36,11 @@
       )\b ]];
   },
   {
-    name = "Batch parameter"; fgcolor = 0xA;
+    name = "Batch parameter"; fgcolor = "green";
     pattern = [[ % (?: ~ [fdpnxsatz]* )? [0-9] \b | (?<!\S) %\* (?!\S) ]];
   },
   {
-    name = "MathOp"; fgcolor = 0xF;
+    name = "MathOp"; fgcolor = "white";
     pattern = [[ [^\w\s] ]];
   },
 }

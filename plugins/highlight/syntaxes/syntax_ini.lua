@@ -1,18 +1,21 @@
-﻿-- Note: false, nil, true - placed in the group of "literals" rather than "keywords".
-local syntax_ini =
+﻿local syntax_ini =
 {
-  bgcolor = 0x1;
+  bgcolor = "darkblue";
   {
-    name = "Comment"; fgcolor = 0x7;
-    pattern = [[ ^ \s* ; .* ]];
+    name = "Comment"; fgcolor = "gray7";
+    pattern = [[ ; .* ]];
   },
   {
-    name = "Section"; color = 0xB1;
+    name = "Section"; color = "darkblue on aqua";
     pattern = [=[ ^ \s* \[ [^\]]+ \] ]=];
   },
   {
-    name = "Name"; fgcolor = 0xE;
-    pattern = [[ ^ \s* ([^=]+) (?= =) ]];
+    name = "Name"; fgcolor = "yellow";
+    pattern = [[ ^ \s* \w+ \s* (?= =) ]];
+  },
+  {
+    name = "String"; fgcolor = "purple";
+    pattern = [[ " [^"]* " ]];
   },
 }
 

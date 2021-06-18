@@ -8,8 +8,7 @@ COMMON_MAK = $(path_plugin)\..\common.mak
 MYOBJECTS = highlight.o
 MYLUAOPEN_LIST = luaopen_highlight
 
-MYCFLAGS = -I$(PATH_LUAFARSRC) -DRUN_LUAFAR_INIT
-embed: MYCFLAGS = -I$(PATH_LUAFARSRC)
+MYCFLAGS = -DRUN_LUAFAR_INIT
 
 T_MESSAGE =
 

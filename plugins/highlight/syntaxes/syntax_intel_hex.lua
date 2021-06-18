@@ -1,24 +1,24 @@
 ﻿local syntax_hex =
 {
-  bgcolor = 0x1;
+  bgcolor = "darkblue";
   {
-    name = "Colon"; fgcolor = 0xF;
+    name = "Colon"; fgcolor = "white";
     pattern = [[ ^ : ]];
   },
   {
-    name = "Byte count"; fgcolor = 0xC;
+    name = "Byte count"; fgcolor = "red";
     pattern = [[ (?<= :) [0-9a-fA-F]{2} ]];
   },
   {
-    name = "Address"; fgcolor = 0xE;
+    name = "Address"; fgcolor = "yellow";
     pattern = [[ (?<= : [0-9a-fA-F]{2}) [0-9a-fA-F]{4} ]];
   },
   {
-    name = "RecordType"; fgcolor = 0xD;
+    name = "RecordType"; fgcolor = "purple";
     pattern = [[ (?<= : [0-9a-fA-F]{6}) [0-9a-fA-F]{2} ]];
   },
   {
-    name = "Checksum"; fgcolor = 0xF;
+    name = "Checksum"; fgcolor = "white";
     pattern = [[ [0-9a-fA-F]{2} \s* $ ]];
   },
 }

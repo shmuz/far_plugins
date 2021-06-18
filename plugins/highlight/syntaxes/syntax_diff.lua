@@ -1,16 +1,16 @@
 ﻿local syntax_diff =
 {
-  bgcolor = 0x1;
+  bgcolor = "darkblue";
   {
-    name = "Added"; color = 0x2E;
+    name = "Added"; color = "yellow on darkgreen";
     pattern = [[ ^ \+ .* ]];
   },
   {
-    name = "Removed"; color = 0xDF;
+    name = "Removed"; color = "yellow on darkred";
     pattern = [[ ^ \- .* ]];
   },
   {
-    name = "Chunk"; color = 0xF0;
+    name = "Chunk"; color = "black on white";
     pattern = [[ ^ @@ .* ]];
   },
 }

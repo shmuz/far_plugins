@@ -11,6 +11,7 @@ $ #Highlight - Help Contents#
  ~Highlight Extra~@HighlightExtra@
  ~Settings dialog~@Settings@
  ~Macro functions~@MacroFunctions@
+ ~Color names~@ColorNames@
 
 @Installation
 $ #Installation#
@@ -104,5 +105,37 @@ $ #Macro functions
 
  #Plugin.Call(Guid, "own", "Settings")#
  Shows the ~Settings dialog~@Settings@.
+
+ ~Contents~@Contents@
+
+@ColorNames
+$ #Color names
+
+ The following names may be used interchangeably with numeric values
+in the syntax files:
+
+  black      =0x0;
+  darkblue   =0x1;
+  darkgreen  =0x2;
+  darkaqua   =0x3;
+  darkred    =0x4;
+  darkpurple =0x5;
+  darkyellow =0x6;  gold =0x6;
+  darkwhite  =0x7;  gray7=0x7; grey7=0x7;
+
+  gray       =0x8;  grey =0x8; gray8=0x8; grey8=0x8;
+  blue       =0x9;
+  green      =0xA;
+  aqua       =0xB;
+  red        =0xC;
+  purple     =0xD;
+  yellow     =0xE;
+  white      =0xF;
+
+ #Examples:#
+
+  (1) fgcolor=#0xB# and fgcolor=#"aqua"# are equivalent.
+
+  (2) color=#0xF4# and color=#"darkred on white"# are equivalent.
 
  ~Contents~@Contents@

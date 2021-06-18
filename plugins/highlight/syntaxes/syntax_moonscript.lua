@@ -1,35 +1,35 @@
 -- Note: false, nil, true - placed in the group of "literals" rather than "keywords".
 local syntax_moonscript =
 {
-  bgcolor = 0x1;
+  bgcolor = "darkblue";
   bracketmatch = true;
   {
-    name = "LongString"; fgcolor = 0xA;
+    name = "LongString"; fgcolor = "green";
     pat_open = [[ \[(=*)\[ ]];
     pat_close = [[ \]%1\] ]];
   },
   {
-    name = "Comment"; fgcolor = 0x7;
+    name = "Comment"; fgcolor = "gray7";
     pattern = [[ \-\-.* ]];
   },
   {
-    name = "Literal"; fgcolor = 0xF;
+    name = "Literal"; fgcolor = "white";
     pattern = [[
       \b (?: 0[xX][\da-fA-F]+ | (?:\d+\.\d*|\.?\d+)(?:[eE][+-]?\d+)? | false | nil | true) \b ]];
   },
   {
-    name = "Compare"; fgcolor = 0xE;
+    name = "Compare"; fgcolor = "yellow";
     pattern = [[ == | <= | >= | ~= | != | < | > ]];
   },
   {
-    name = "String1"; fgcolor = 0xD; color_unfinished= 0xD1;
+    name = "String1"; fgcolor = "purple"; color_unfinished= "darkblue on purple";
     pat_open     = [[ " ]];
     pat_skip     = [[ (?: \\. | [^\\"] )* ]];
     pat_close    = [[ " ]];
     pat_continue = [[ \\?$ ]];
   },
   {
-    name = "String2"; fgcolor = 0xD; color_unfinished= 0xD1;
+    name = "String2"; fgcolor = "purple"; color_unfinished= "darkblue on purple";
     pat_open     = [[ ' ]];
     pat_skip     = [[ (?: \\. | [^\\'] )* ]];
     pat_close    = [[ ' ]];
@@ -37,18 +37,18 @@ local syntax_moonscript =
   },
   {
     -- https://github.com/leafo/moonscript-site/blob/master/highlight.coffee
-    name = "Keyword"; fgcolor = 0xE;
+    name = "Keyword"; fgcolor = "yellow";
     pattern = [[ \b(?:
       class|extends|if|then|super|do|with|import|export|while|elseif|return|for|in|from|when|using|
       else|and|or|not|switch|break|continue
       )\b ]];
   },
   {
-    name = "Word"; fgcolor = 0xB;
+    name = "Word"; fgcolor = "aqua";
     pattern = [[ \b\w+\b ]];
   },
   {
-    name = "MathOp"; fgcolor = 0xF;
+    name = "MathOp"; fgcolor = "white";
     pattern = [[ [^\w\s] ]];
   },
 }

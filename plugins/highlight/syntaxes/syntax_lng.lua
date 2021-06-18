@@ -1,20 +1,20 @@
 ﻿local syntax_lng =
 {
-  bgcolor = 0x1;
+  bgcolor = "darkblue";
   {
-    name = "Control"; fgcolor = 0xC;
+    name = "Control"; fgcolor = "red";
     pattern = [[ ^ \s* \. .* ]];
   },
   {
-    name = "Comment"; fgcolor = 0x7;
+    name = "Comment"; fgcolor = "gray7";
     pattern = [[ ^ \s* [^".\s] .* ]];
   },
   {
-    name = "Highlight"; fgcolor = 0xE;
+    name = "Highlight"; fgcolor = "yellow";
     pattern = [[ (?<= &) . ]];
   },
   {
-    name = "Param"; fgcolor = 0xD;
+    name = "Param"; fgcolor = "purple";
     pattern = [[ % . ]];
   },
 }

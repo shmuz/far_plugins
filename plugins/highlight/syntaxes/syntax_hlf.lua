@@ -1,32 +1,32 @@
 ﻿local syntax_hlf =
 {
-  bgcolor = 0x1;
+  bgcolor = "darkblue";
   {
-    name = "Control"; fgcolor = 0xC;
+    name = "Control"; fgcolor = "red";
     pattern = [[ ^\.(?:Language|PluginContents|Options)\b.* ]];
   },
   {
-    name = "Formatting"; color = 0xA0;
+    name = "Formatting"; color = "black on green";
     pattern = [[ ^@[\-+=] ]];
   },
   {
-    name = "Alias"; fgcolor = 0xA;
+    name = "Alias"; fgcolor = "green";
     pattern = [[ ^@.+?=.* ]];
   },
   {
-    name = "Topic"; fgcolor = 0xD;
+    name = "Topic"; fgcolor = "purple";
     pattern = [[ ^@.* ]];
   },
   {
-    name = "Header"; fgcolor = 0xD;
+    name = "Header"; fgcolor = "purple";
     pattern = [[ ^\$.* ]];
   },
   {
-    name = "Link"; fgcolor = 0xE;
+    name = "Link"; fgcolor = "yellow";
     pattern = [[ ~.*?~@.*?@ ]];
   },
   {
-    name = "Emphasize"; fgcolor = 0xF;
+    name = "Emphasize"; fgcolor = "white";
     pattern = [[ \#.*?\# ]];
   },
 }

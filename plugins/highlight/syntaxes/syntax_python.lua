@@ -1,52 +1,52 @@
 ﻿local syntax_python =
 {
-  bgcolor = 0x1;
+  bgcolor = "darkblue";
   bracketmatch = true;
   --bracketcolor = 0xE3;
   {
-    name = "LongString1"; fgcolor = 0xA; color_unfinished= 0xD1;
-    pat_open     = [[ """ ]];
+    name = "LongString1"; fgcolor = "green"; color_unfinished= "darkblue on purple";
+    pat_open     = [[ (\b[Rr])? """\\? ]];
     pat_skip     = [[ (?: \\. | [^\\"] | "{1,2} (?! ") )* ]];
     pat_close    = [[ """ ]];
     pat_continue = [[ $ ]];
   },
   {
-    name = "LongString2"; fgcolor = 0xA; color_unfinished= 0xD1;
-    pat_open     = [[ ''' ]];
+    name = "LongString2"; fgcolor = "green"; color_unfinished= "darkblue on purple";
+    pat_open     = [[ (\b[Rr])? '''\\? ]];
     pat_skip     = [[ (?: \\. | [^\\'] | '{1,2} (?! ') )* ]];
     pat_close    = [[ ''' ]];
     pat_continue = [[ $ ]];
   },
   {
-    name = "Comment"; fgcolor = 0x7;
+    name = "Comment"; fgcolor = "gray7";
     pattern = [[ \# .* ]];
   },
   {
-    name = "Literal"; fgcolor = 0xF;
+    name = "Literal"; fgcolor = "white";
     pattern = [[
       \b (?: 0[xX][\da-fA-F]+ | (?:\d+\.\d*|\.?\d+)(?:[eE][+-]?\d+)? ) \b ]];
   },
   {
-    name = "String1"; fgcolor = 0xD;
-    pattern = [[ " (?: \\. | [^\\"] )* " ]];
+    name = "String1"; fgcolor = "purple";
+    pattern = [[ (\b[Rr])? " (?: \\. | [^\\"] )* " ]];
   },
   {
-    name = "String2"; fgcolor = 0xD;
-    pattern = [[ ' (?: \\. | [^\\'] )* ' ]];
+    name = "String2"; fgcolor = "purple";
+    pattern = [[ (\b[Rr])? ' (?: \\. | [^\\'] )* ' ]];
   },
   {
-    name = "Keyword"; fgcolor = 0xE;
+    name = "Keyword"; fgcolor = "yellow";
     pattern = [[ \b(?:
-      and|as|assert|break|class|continue|def|del|elif|else|except|exec|finally|for|from|global|
-      if|import|in|is|lambda|not|or|pass|print|raise|return|try|while|with|yield
+      False|class|finally|is|return|None|continue|for|lambda|try|True|def|from|nonlocal|while|
+      and|del|global|not|with|as|elif|if|or|yield|assert|else|import|pass|break|except|in|raise
       )\b ]];
   },
   {
-    name = "Word"; fgcolor = 0xB;
+    name = "Word"; fgcolor = "aqua";
     pattern = [[ \b\w+\b ]];
   },
   {
-    name = "MathOp"; fgcolor = 0xF;
+    name = "MathOp"; fgcolor = "white";
     pattern = [[ [^\w\s] ]];
   },
 }

@@ -2,6 +2,8 @@
 -- Started: 2014-10-06
 -- Author: Shmuel Zeigerman
 
+-- luacheck: globals rex Editors MenuPos
+
 local function LOG(fmt,...) win.OutputDebugString(fmt:format(...)) end
 local function ErrMsg (msg, title, flags)
   far.Message(msg, title or "[Highlight] Error", nil, (flags or "").."w")
@@ -53,7 +55,7 @@ local function NormalizeColorPriority (p)
 end
 
 local F = far.Flags
-local band, bor, bnot, lshift = bit64.band, bit64.bor, bit64.bnot, bit64.lshift
+local band, bor, bxor, lshift = bit64.band, bit64.bor, bit64.bxor, bit64.lshift
 
 local acFlags = bor(F.ECF_TABMARKCURRENT, F.ECF_AUTODELETE)
 local AppTitle
@@ -95,10 +97,50 @@ local function template(str, ...)
   return str
 end
 
+local COLNAMES = {
+  black      =0x0;
+  darkblue   =0x1;
+  darkgreen  =0x2;
+  darkaqua   =0x3;
+  darkred    =0x4;
+  darkpurple =0x5;
+  darkyellow =0x6;  gold =0x6;
+  darkwhite  =0x7;  gray7=0x7; grey7=0x7;
+
+  gray       =0x8;  grey =0x8; gray8=0x8; grey8=0x8;
+  blue       =0x9;
+  green      =0xA;
+  aqua       =0xB;
+  red        =0xC;
+  purple     =0xD;
+  yellow     =0xE;
+  white      =0xF;
+}
+
+local function ProcessFullColor(color)
+  if type(color) == "number" then
+    return color
+  elseif type(color) == "string" then
+    local fg,bg = color:match("(%l+)[%- ]+on[%- ]+(%l+)") -- e.g. "yellow on gold"
+    if fg and COLNAMES[fg] and COLNAMES[bg] then
+      return bor(COLNAMES[fg], lshift(COLNAMES[bg],4))
+    end
+    if COLNAMES[color] then -- specified only one color, let it be frground; inverse for bkground
+      return bor(COLNAMES[color], lshift(bxor(COLNAMES[color],0x8),4))
+    end
+  end
+  return 0x0F
+end
+
 local function FormColor (syntax, elem)
-  local bgcolor = syntax.bgcolor and lshift(band(syntax.bgcolor,0xF),4) or 0x00
-  local fgcolor = elem.fgcolor and band(elem.fgcolor,0xF) or 0x0F
-  return bor(bgcolor, fgcolor)
+  if elem.color then
+    return ProcessFullColor(elem.color)
+  end
+  local fgdefault = 0x0F
+  local bgdefault = COLNAMES[syntax.bgcolor] or syntax.bgcolor or 0x00
+  local fgcolor = band( COLNAMES[elem.fgcolor] or elem.fgcolor or fgdefault, 0x0F )
+  local bgcolor = band( COLNAMES[elem.bgcolor] or elem.bgcolor or bgdefault, 0x0F )
+  return bor(fgcolor, lshift(bgcolor,4))
 end
 
 
@@ -135,8 +177,8 @@ element: #%d]]):format(msg, filename, classname, numelement)
     local pat = rex.new(v.pattern or v.pat_open) -- can throw error
     T.capstart = i==1 and 1 or (Out[i-1].capend + 1)
     T.capend = T.capstart + pat:capturecount()
-    T.color = v.color or FormColor(Syntax, v)
-    T.color_unfinished = v.color_unfinished
+    T.color = FormColor(Syntax, v)
+    T.color_unfinished = ProcessFullColor(v.color_unfinished)
   end
 
   Out.pattern = rex.new(table.concat(tPatterns,"|"), "x");
@@ -250,7 +292,7 @@ local function RedrawSyntax (Syn, ei, GetNextString, Priority, extrapattern, ext
         local from, to, capts = Syn.pattern:tfindW(str, left)
         if from == nil then break end
         local color
-        for k,v in ipairs(Syn) do
+        for _,v in ipairs(Syn) do
           if capts[v.capstart] then
             color = v.color
             if v.pat_close then
@@ -398,7 +440,7 @@ local function ShowSettings()
     local enab = Dlg.cbFastAll:GetCheck(hDlg)
     Dlg.labFastLinesAll:Enable(hDlg, enab)
     Dlg.edFastLinesAll:Enable(hDlg, enab)
-    local enab = Dlg.cbFastCur:GetCheck(hDlg)
+    enab = Dlg.cbFastCur:GetCheck(hDlg)
     Dlg.labFastLinesCur:Enable(hDlg, enab)
     Dlg.edFastLinesCur:Enable(hDlg, enab)
   end
@@ -494,6 +536,24 @@ local function GetExtraPattern (EditorID)
   return state and state.extrapattern
 end
 
+local function EnumMenuItems(items) -- add hot keys
+  local n = 1
+  for _,v in ipairs(items) do
+    if v.text and not v.separator then
+      if     n>=1 and n<=9   then v.text = "&"..n..". "..v.text
+      elseif n==10           then v.text =  "&0. "..v.text
+      elseif n>=11 and n<=36 then
+        local s = string.char(string.byte("A")+n-11)
+        v.text =  "&"..s..". "..v.text
+      else
+        break
+      end
+      n = n + 1
+    end
+  end
+  return items
+end
+
 local function MenuSelectSyntax()
   local props = { Title="Select syntax", HelpTopic="SelectSyntax" }
   local items = { {text="Highlight OFF"; checked=true}, {separator=true} }
@@ -510,7 +570,7 @@ local function MenuSelectSyntax()
     end
   end
 
-  local item = far.Menu(props, items)
+  local item = far.Menu(props, EnumMenuItems(items))
   if item then
     SetClass(ei.EditorID, item.syntax, true)
     editor.Redraw(ei.EditorID)
@@ -613,15 +673,14 @@ end
 
 function export.Open (From, Guid, Item)
   if From == F.OPEN_EDITOR then
-    local ret, pos = far.Menu({Title=AppTitle, SelectIndex=MenuPos}, {
-      {text="&1. Select syntax"},
-      {text="&2. Highlight extra"},
-      {text="&3. Settings"}
+    local item, pos = far.Menu({Title=AppTitle, SelectIndex=MenuPos}, {
+      {text="&1. Select syntax";   act=MenuSelectSyntax; },
+      {text="&2. Highlight extra"; act=HighlightExtra;   },
+      {text="&3. Settings";        act=ShowSettings;     }
     })
-    if pos then MenuPos = pos end
-    if pos == 1     then MenuSelectSyntax()
-    elseif pos == 2 then HighlightExtra()
-    elseif pos == 3 then ShowSettings()
+    if item then
+      MenuPos = pos
+      item.act()
     end
   elseif From == F.OPEN_FROMMACRO then
     if far.MacroGetArea() == F.MACROAREA_EDITOR then
@@ -635,12 +694,18 @@ function export.Open (From, Guid, Item)
   end
 end
 
+local FirstLineMap = {}
 local function OnNewEditor (id, ei)
   if ei then
-    for _,class in ipairs(Classes) do
-      if far.ProcessName("PN_CMPNAMELIST", class.filemask, ei.FileName, "PN_SKIPPATH") then
-        SetClass(id, class, false)
-        break
+    local firstline = editor.GetString(id,1,3):lower()
+    local name = firstline:match("highlight:%s*([%w_]+)")
+    if name and FirstLineMap[name] then
+      SetClass(id, FirstLineMap[name], false)
+    else
+      for _,class in ipairs(Classes) do
+        if far.ProcessName("PN_CMPNAMELIST", class.filemask, ei.FileName, "PN_SKIPPATH") then
+          SetClass(id, class, false); break
+        end
       end
     end
     if not Editors[id] then
@@ -688,6 +753,9 @@ local function AddClass (t)
                                 then error("field 'fastlines': a number expected",2) end
 
   local class = { syntax=t.syntax; name=t.name; filemask=t.filemask }
+  if type(t.firstline) == "string" then
+    FirstLineMap[t.firstline:lower()] = class
+  end
   class.filename = AddClass_filename
   class.CS = CompileSyntax(t.syntax, t.filename, t.name)
   if t.fastlines then

@@ -1,22 +1,22 @@
 ﻿local syntax_cpp =
 {
-  bgcolor = 0x1;
+  bgcolor = "darkblue";
   bracketmatch = true;
   {
-    name = "LongComment"; fgcolor = 0x7;
+    name = "LongComment"; fgcolor = "gray7";
     pat_open = [[ \/\* ]];
     pat_close = [[ \*\/ ]];
   },
   {
-    name = "Comment"; fgcolor = 0x7;
+    name = "Comment"; fgcolor = "gray7";
     pattern = [[ \/\/.* ]];
   },
   {
-    name = "Preprocessor"; fgcolor = 0xA;
+    name = "Preprocessor"; fgcolor = "green";
     pattern = [[ ^ \s* \# (?: (?! \/\/ | \/\*) .)* ]];
   },
   {
-    name = "Literal"; fgcolor = 0xF;
+    name = "Literal"; fgcolor = "white";
     pattern = [[ (?i) \b
       (?: 0x[\dA-F]+ U?L?L? |
           \d+ U?L?L?        |
@@ -25,18 +25,18 @@
     \b ]];
   },
   {
-    name = "String"; fgcolor = 0xD; color_unfinished= 0xD1;
+    name = "String"; fgcolor = "purple"; color_unfinished= "darkblue on purple";
     pat_open     = [[ " ]];
     pat_skip     = [[ (?: \\. | [^\\"] )* ]];
     pat_close    = [[ " ]];
     pat_continue = [[ \\$ ]];
   },
   {
-    name = "Char"; fgcolor = 0xD; color_unfinished= 0xD1;
+    name = "Char"; fgcolor = "purple"; color_unfinished= "darkblue on purple";
     pattern = [[ ' (?: \\. | [^\\'] ) ' ]];
   },
   {
-    name = "Keyword"; fgcolor = 0xE;
+    name = "Keyword"; fgcolor = "yellow";
     pattern = [[ \b(?:
       auto|const|double|float|int|short|struct|unsigned|break|continue|else|for|long|signed|switch|
       void|case|default|enum|goto|register|sizeof|typedef|volatile|char|do|extern|if|return|static|
@@ -47,17 +47,17 @@
       )\b ]];
   },
   {
-    name = "Word"; fgcolor = 0xB;
+    name = "Word"; fgcolor = "aqua";
     pattern = [[ \b\w+\b ]];
   },
   {
-    name = "MathOp"; fgcolor = 0xF;
+    name = "MathOp"; fgcolor = "white";
     pattern = [[ [^\w\s] ]];
   },
 }
 
 Class {
   name = "C++";
-  filemask = "*.c,*.h,*.cpp,*.hpp";
+  filemask = "*.c,*.h,*.cpp,*.cxx,*.hpp";
   syntax = syntax_cpp;
 }

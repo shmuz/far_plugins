@@ -1,27 +1,27 @@
 ﻿local syntax_pascal =
 {
-  bgcolor = 0x1;
+  bgcolor = "darkblue";
   bracketmatch = true;
   {
-    name = "Macro"; fgcolor = 0xA;
+    name = "Macro"; fgcolor = "green";
     pattern = [[ \{\$ [^}]* \} ]];
   },
   {
-    name = "LongComment1"; fgcolor = 0x7;
+    name = "LongComment1"; fgcolor = "gray7";
     pat_open = [[ \(\* ]];
     pat_close = [[ \*\) ]];
   },
   {
-    name = "LongComment2"; fgcolor = 0x7;
+    name = "LongComment2"; fgcolor = "gray7";
     pat_open = [[ \{ ]];
     pat_close = [[ \} ]];
   },
   {
-    name = "Comment"; fgcolor = 0x7;
+    name = "Comment"; fgcolor = "gray7";
     pattern = [[ \/\/.* ]];
   },
   {
-    name = "Literal"; fgcolor = 0xF;
+    name = "Literal"; fgcolor = "white";
     pattern = [[
       \b (?: (?: \d+\.\d* | \.?\d+) (?: [eE][+-]?\d+ )? ) \b |
       (?<! \w) \$[\da-fA-F]+ |
@@ -30,19 +30,19 @@
     ]];
   },
   {
-    name = "String1"; fgcolor = 0xD;
+    name = "String1"; fgcolor = "purple";
     pattern = [[ " (?> (?: [^"]+ | "" | "(?: \#\d+)+" )* ) " ]]; -- important: atomic group used
   },
   {
-    name = "String2"; fgcolor = 0xD;
+    name = "String2"; fgcolor = "purple";
     pattern = [[ ' (?> (?: [^']+ | '' | '(?: \#\d+)+' )* ) ' ]]; -- important: atomic group used
   },
   {
-    name = "Char"; fgcolor = 0xD; color_unfinished= 0xD1;
+    name = "Char"; fgcolor = "purple"; color_unfinished= "darkblue on purple";
     pattern = [[ ' (?: \\. | [^\\'] ) ' ]];
   },
   {
-    name = "Keyword"; fgcolor = 0xE;
+    name = "Keyword"; fgcolor = "yellow";
     pattern = [[ \b(?: (?i)
       Absolute|Abstract|All|And|And_then|Array|Asm|Begin|Bindable|Case|Class|Const|Constructor|
       Destructor|Div|Do|Downto|Else|End|Export|File|For|Function|Goto|If|Import|Implementation|
@@ -53,18 +53,18 @@
       )\b ]];
   },
   {
-    name = "Type"; fgcolor = 0xF;
+    name = "Type"; fgcolor = "white";
     pattern = [[ \b(?: (?i)
       Boolean|Byte|ByteBool|Cardinal|Char|Comp|Currency|Double|Extended|Int64|Integer|LongBool|
       Longint|Longword|PChar|QWord|Real|Shortint|Single|SmallInt|String|WideString|Word|WordBool
       )\b ]];
   },
   {
-    name = "Word"; fgcolor = 0xB;
+    name = "Word"; fgcolor = "aqua";
     pattern = [[ \b\w+\b ]];
   },
   {
-    name = "MathOp"; fgcolor = 0xF;
+    name = "MathOp"; fgcolor = "white";
     pattern = [[ [^\w\s] ]];
   },
 }
