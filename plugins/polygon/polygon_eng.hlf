@@ -22,6 +22,7 @@ $^ #Polygon - Help Contents#
  ~Edit Table Row~@EditInsertRow@
  ~Data Export Dialog~@Export@
  ~Data Dump Dialog~@Dump@
+ ~Queries History Menu~@queries_history@
  ~User modules~@UserModules@
  ~Misc~@Misc@
 
@@ -73,7 +74,7 @@ $^ #Invoking the plugin#
 $^ #Reference of keyboard actions#
    View mode     │ Key         │ Action
    ──────────────┼─────────────┼───────────────────────────────────────────────────
-   Any           │ F6          │ Open Editor for editing an SQL code
+   Any           │ F6          │ SQL queries history
                  │ Alt-Shift-F6│ Toggle between simple and multi-database mode
                  │ LCtrl-1     │ Two-panel view mode
                  │ LCtrl-2     │ One-panel view mode
@@ -399,6 +400,20 @@ $^ #Data Dump Dialog#
   #[x] Preserve new lines#
   If checked:    new line characters are preserved and a row may span on multiple lines.
   If unchecked:  the text is encoded in such a way that every row takes only one line.
+
+
+ ~Contents~@Contents@
+
+@queries_history
+$^ Queries History Menu
+ This menu shows the history of SQL queries.
+
+ #Enter#                         Execute the query
+ #Ctrl+Enter#                    Insert the query in the command line
+ #F4#                            Edit the query and execute if modified
+ #Shift+Del#                     Delete the query
+ #Ctrl+C, Ctrl+Ins#              Copy the query
+ #Ctrl+Shift+C, Ctrl+Shift+Ins#  Copy all queries serialized
 
 
  ~Contents~@Contents@

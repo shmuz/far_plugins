@@ -51,9 +51,9 @@ local function First_load_actions()
     local pluginDir = far.PluginStartupInfo().ModuleDir
     ReadIniFile(pluginDir.."polygon.ini")
 
-    -- Provide priority access to lsqlite3.dl residing in the plugin's folder
+    -- Provide priority access to lsqlite3.dll residing in the plugin's folder
     -- (needed for deployment of the plugin)
-    package.cpath = pluginDir.."?.dl;"..package.cpath
+    package.cpath = pluginDir.."?.dll;"..package.cpath
 
     -- Provide access to sqlite3.dll residing in the plugin's folder
     local path = win.GetEnv("PATH") or ""
@@ -309,16 +309,6 @@ local function OpenFromMacro(params)
       local info = panel.GetPanelInfo(nil, whatpanel==0 and 1 or 0)
       if info and info.PluginObject then
         info.PluginObject:open_query(info.PluginHandle, code)
-      end
-    end
-
-  -- Plugin.Call(<guid>, "get_col_names", <whatpanel>)
-  elseif params[1] == "get_col_names" then
-    local whatpanel = params[2]
-    if whatpanel==0 or whatpanel==1 then
-      local info = panel.GetPanelInfo(nil, whatpanel==0 and 1 or 0)
-      if info and info.PluginObject then
-        return info.PluginObject:get_col_names(info.PluginHandle)
       end
     end
   end

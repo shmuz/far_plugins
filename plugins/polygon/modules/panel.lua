@@ -27,7 +27,6 @@ function mypanel.open(filename, extensions, ignore_foreign_keys, multi_db)
     _col_info    = nil ;     -- array of tables: { { name=<name>; affinity=<affinity> }, ... }
     _dbx         = nil ;     -- database connection wrapper
     _filename    = filename; -- either host file name or ":memory:"
-    _last_query  = nil ;     -- SQL query last executed
     _object      = ""  ;     -- name of the current object, e.g. database table name or SQL query
     _panel_mode  = "root";   -- valid values are: "root", "db", "table", "view", "query"
 
@@ -226,7 +225,7 @@ local pragma_word2 = {
   ["table_info"       ] = true;
   ["table_xinfo"      ] = true;
 }
-function mypanel:open_query(handle, query)
+function mypanel:do_open_query(handle, query)
   local word1, word2 = FindFirstTwoWords(query)
   if not word1 then return end
   word1 = word1:lower()
@@ -248,7 +247,6 @@ function mypanel:open_query(handle, query)
       return false
     end
 
-    self._last_query = query
     self._panel_mode = "query"
     self._object = query
 
@@ -276,6 +274,47 @@ function mypanel:open_query(handle, query)
   panel.UpdatePanel(handle, nil, false)
   panel.RedrawPanel(handle, nil, position)
   return true
+end
+
+
+local q_history = { _array=nil; }
+local meta_q_history = { __index=q_history; }
+
+
+function q_history.new()
+  local self = setmetatable({}, meta_q_history)
+  self._array = history.mload("queries", "queries", "local") or {}
+  return self
+end
+
+
+function q_history:save()
+  history.msave("queries", "queries", self._array, "local")
+end
+
+
+function q_history:add(query)
+  -- add a new entry or move it down if it's a duplicate
+  for i,v in ipairs(self._array) do
+    if query == v then
+      table.remove(self._array, i)
+      break
+    end
+  end
+  table.insert(self._array, query)
+
+  -- leave 1000 entries at most (remove the oldest entries)
+  for _=1, #self._array-1000 do
+    table.remove(self._array, 1)
+  end
+
+  self:save()
+end
+
+
+function mypanel:open_query(handle, query)
+  q_history.new():add(query)
+  self:do_open_query(handle, query)
 end
 
 
@@ -464,7 +503,7 @@ function mypanel:get_panel_list_obj()
   -- If ROWID exists then select it as the leftmost column.
   local query
   if self._rowid_name then
-    query = ("select %s.%s,* from %s"):format(fullname, self._rowid_name, fullname)
+    query = ("select %s,* from %s"):format(self._rowid_name, fullname)
     local stmt = self._db:prepare(query)
     if stmt then stmt:finalize()
     else self._rowid_name = nil
@@ -855,14 +894,14 @@ function mypanel:set_table_filter(handle)
     guid="920436C2-C32D-487F-B590-0E255AD71038";
     help="PanelFilter";
     width=76;
-    --[[01]] {tp="dbox"; text=M.panel_filter;                                           },
-    --[[02]] {tp="text"; text=query;                                                    },
-    --[[03]] {tp="edit"; hist="Polygon_PanelFilterExt"; uselasthistory=1; name="extra"; },
-    --[[04]] {tp="text"; text="WHERE"                                                   },
-    --[[05]] {tp="edit"; hist="Polygon_PanelFilter";    uselasthistory=1; name="where"; },
-    --[[06]] {tp="sep";                                                                 },
-    --[[07]] {tp="butt"; text=M.ok;     centergroup=1; default=1;                       },
-    --[[08]] {tp="butt"; text=M.cancel; centergroup=1; cancel=1;                        },
+    {tp="dbox"; text=M.panel_filter;                                           },
+    {tp="text"; text=query;                                                    },
+    {tp="edit"; hist="Polygon_PanelFilterExt"; uselasthistory=1; name="extra"; },
+    {tp="text"; text="WHERE"                                                   },
+    {tp="edit"; hist="Polygon_PanelFilter";    uselasthistory=1; name="where"; },
+    {tp="sep";                                                                 },
+    {tp="butt"; text=M.ok;     centergroup=1; default=1;                       },
+    {tp="butt"; text=M.cancel; centergroup=1; cancel=1;                        },
   }
 
   function Items.closeaction(hDlg, Param1, tOut)
@@ -986,7 +1025,7 @@ function mypanel:handle_keyboard(handle, key_event)
   elseif nomods and vcode == VK.F5 then        -- F5: suppress this key
     return true
   elseif nomods and vcode == VK.F6 then        -- F6: edit and execute SQL query
-    self:edit_sql_query(handle)
+    self:sql_query_history(handle)
     return true
   elseif altshift and vcode == VK.F6 then      -- AltShiftF6: toggle multi_db mode
     self._multi_db = not self._multi_db
@@ -1178,32 +1217,86 @@ function mypanel:view_pragma_statements()
 end
 
 
-function mypanel:edit_sql_query(handle)
-  -- Create a file and save the last used query if any.
+function mypanel:sql_query_history(handle)
+  -- Prepare menu data
+  local queries = q_history.new()
+  local qarray = queries._array
+  local state = { query=""; }
+  while qarray[1] do
+    local H = far.AdvControl("ACTL_GETFARRECT")
+    H = H.Bottom - H.Top + 1
+    local props = {
+      Title=M.select_query.." ["..#qarray.."]";
+      Bottom="F1 F4 Ctrl+C Ctrl+Enter Shift+Del";
+      SelectIndex=#qarray;
+      MaxHeight = H - 8;
+      HelpTopic = "queries_history";
+    }
+    local items, brkeys = {}, {
+      { BreakKey="F4";         action="edit";       },
+      { BreakKey="C+RETURN";   action="insert";     },
+      { BreakKey="C+C";        action="copy";       },
+      { BreakKey="C+INSERT";   action="copy";       },
+      { BreakKey="CS+C";       action="copyserial"; },
+      { BreakKey="CS+INSERT";  action="copyserial"; },
+      { BreakKey="S+DELETE";   action="delete";     },
+    }
+    for i,v in ipairs(qarray) do items[i] = { text=v; } end
+
+    -- Show the menu
+    local item, pos = far.Menu(props, items, brkeys)
+    if item then
+      local query = items[pos].text
+      if item.action==nil then -- Enter pressed
+        self:open_query(handle, query)
+        state.done = true; break
+      elseif item.action == "insert" then
+        panel.SetCmdLine(handle, query)
+        state.done = true; break
+      elseif item.action == "copy" then
+        far.CopyToClipboard(query)
+        state.done = true; break
+      elseif item.action == "copyserial" then
+        -- table.concat is not OK here as individual entries may contain line feeds inside them
+        far.CopyToClipboard(history.serialize(qarray))
+        state.done = true; break
+      elseif item.action == "delete" then
+        table.remove(qarray, pos)
+        state.modified = true
+      elseif item.action == "edit" then
+        state.query = query
+        break
+      end
+    else
+      state.done = true; break
+    end
+  end
+  if state.modified then queries:save() end
+  if state.done then return end
+
+  -- Create a file containing the selected query
   local tmp_name = utils.get_temp_file_name("sql")
   local fp = io.open(tmp_name, "w")
   if fp then
-    if self._last_query then
-      fp:write(self._last_query)
-    end
+    fp:write(state.query)
     fp:close()
   else
     ErrMsg(M.err_writef.."\n"..tmp_name, nil, "we")
     return
   end
 
-  -- Open query editor.
+  -- Open query editor
   if F.EEC_MODIFIED == editor.Editor(tmp_name, "SQLite query", nil, nil, nil, nil,
                        F.EF_DISABLESAVEPOS + F.EF_DISABLEHISTORY, nil, nil, 65001)
   then
-    fp = io.open(tmp_name, "rb")
+    fp = io.open(tmp_name)
     if fp then
       local query = fp:read("*all")
-      query = string.gsub(query, "^\239\187\191", "") -- remove UTF-8 BOM
-      query = string.gsub(query, "\r\n", "\n")
       fp:close()
+      query = string.gsub(query, "^\239\187\191", "")  -- remove UTF-8 BOM
+      query = string.gsub(query, "\r\n", "\n")         -- avoid displaying \r in error message boxes
+      query = string.gsub(query, "^%s*(.-)%s*$", "%1") -- remove leading and trailing space
       if query:find("%S") then
-        self._last_query = query
         self:open_query(handle, query)
       end
     else
@@ -1262,15 +1355,6 @@ function mypanel:sort_callback(Mode)
       self._sort_col_index = self:get_sort_index(Mode)
     end
     return self._sort_col_index or 0
-  end
-end
-
-
-function mypanel:get_col_names(handle)
-  if self._panel_mode == "table" or self._panel_mode == "view" then
-    local arr = {}
-    for i,v in ipairs(self._col_info) do arr[i]=v.name; end
-    return unpack(arr)
   end
 end
 

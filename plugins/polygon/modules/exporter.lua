@@ -332,7 +332,7 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
   if not col_info then return end
 
   -- Create output file
-  local file = io.open(file_name, "wb")
+  local file = io.open(file_name, "w")
   if not file then
     ErrMsg(M.err_writef.."\n"..file_name, nil, "we")
     return
@@ -349,7 +349,7 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
       out_text = out_text .. ';'
     end
   end
-  file:write(out_text, "\r\n")
+  file:write(out_text, "\n")
 
   -- Read data
   local query = "SELECT * FROM " .. Norm(self._schema).."."..Norm(db_object)
@@ -397,7 +397,7 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
       end
     end
 
-    ok_write = file:write(out_text, "\r\n")
+    ok_write = file:write(out_text, "\n")
     if not ok_write then break end
   end
 
