@@ -23,7 +23,6 @@ modules = \
   $(path_plugin)\lfs_message.lua     \
   $(path_plugin)\lfs_mreplace.lua    \
   $(path_plugin)\lfs_panels.lua      \
-  $(path_plugin)\lfs_panels_lpat.lua \
   $(path_plugin)\lfs_rename.lua      \
   $(path_plugin)\lfs_replib.lua      \
                                      \

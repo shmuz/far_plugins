@@ -11,6 +11,7 @@ local FormatInt = Common.FormatInt
 local AppName = function() return M.MDlgMultilineReplace end
 
 local F=far.Flags
+local KEEP_DIALOG_OPEN = 0
 
 local RegexLibs = {"far", "oniguruma", "pcre", "pcre2"}
 
@@ -23,7 +24,7 @@ local function ReplaceDialog (Data)
   ------------------------------------------------------------------------------
   Dlg.dbox        = {"DI_DOUBLEBOX", 3, 1, 72,18, 0, 0, 0, 0, M.MDlgMultilineReplace}
   Dlg.lab         = {"DI_TEXT",      5, 2,  0, 0, 0, 0, 0, 0, M.MDlgSearchPat}
-  Dlg.sSearchPat  = {"DI_EDIT",      5, 3, 70, 4, 0, "SearchText", 0, hstflags, ""}
+  Dlg.sSearchPat  = {"DI_EDIT",      5, 3, 70, 0, 0, "SearchText", 0, hstflags, ""}
   Dlg.lab         = {"DI_TEXT",      5, 4,  0, 0, 0, 0, 0, 0, M.MDlgReplacePat}
   Dlg.sReplacePat = {"DI_EDIT",      5, 5, 70, 0, 0, "ReplaceText", 0, hstflags, ""}
   Dlg.bRepIsFunc  = {"DI_CHECKBOX",  9, 6,  0, 0, 0, 0, 0, 0, M.MDlgRepIsFunc}
@@ -44,11 +45,11 @@ local function ReplaceDialog (Data)
   Dlg.sep         = {"DI_TEXT",      5,12,  0, 0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
   ------------------------------------------------------------------------------
   Dlg.bAdvanced   = {"DI_CHECKBOX",  5,13,  0, 0, 0, 0, 0, 0, M.MDlgAdvanced}
-  Dlg.labInitFunc = {"DI_TEXT",      5,14,   0, 0, 0, 0, 0, 0, M.MDlgInitFunc}
-  Dlg.sInitFunc   = {"DI_EDIT",      5,15,  36, 0, 0, HIST_INITFUNC, 0, "DIF_HISTORY", "", F4=".lua"}
-  Dlg.labFinalFunc= {"DI_TEXT",     X2,14,   0, 0, 0, 0, 0, 0, M.MDlgFinalFunc}
-  Dlg.sFinalFunc  = {"DI_EDIT",     X2,15,  70, 6, 0, HIST_FINALFUNC, 0, "DIF_HISTORY", "", F4=".lua"}
-  Dlg.sep         = {"DI_TEXT",      5,16,   0, 0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
+  Dlg.labInitFunc = {"DI_TEXT",      5,14,  0, 0, 0, 0, 0, 0, M.MDlgInitFunc}
+  Dlg.sInitFunc   = {"DI_EDIT",      5,15, 36, 0, 0, HIST_INITFUNC, 0, "DIF_HISTORY", "", F4=".lua"}
+  Dlg.labFinalFunc= {"DI_TEXT",     X2,14,  0, 0, 0, 0, 0, 0, M.MDlgFinalFunc}
+  Dlg.sFinalFunc  = {"DI_EDIT",     X2,15, 70, 0, 0, HIST_FINALFUNC, 0, "DIF_HISTORY", "", F4=".lua"}
+  Dlg.sep         = {"DI_TEXT",      5,16,  0, 0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
   ------------------------------------------------------------------------------
   Dlg.btnReplace  = {"DI_BUTTON",    0,17,  0, 0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MDlgBtnReplace}
   Dlg.btnCount    = {"DI_BUTTON",    0,17,  0, 0, 0, 0, 0, F.DIF_CENTERGROUP, M.MDlgBtnCount2}
@@ -94,7 +95,7 @@ local function ReplaceDialog (Data)
           hDlg:send("DM_ADDHISTORY", Dlg.sReplacePat.id, tmpData.sReplacePat)
         else
           if Dlg[field] then Common.GotoEditField(hDlg, Dlg[field].id) end
-          return 0
+          return KEEP_DIALOG_OPEN
         end
       end
     end

@@ -12,6 +12,7 @@ local AppName = "LF Rename"
 local RegPath = "LuaFAR\\"..AppName.."\\"
 
 local F = far.Flags
+local KEEP_DIALOG_OPEN = 0
 local HistData = _Plugin.History:field("rename")
 local GsubMB = Common.GsubMB
 local Rex = Common.GetRegexLib("far")
@@ -208,13 +209,18 @@ local LogTable = {
 local UserGuid = win.Uuid("af8d7072-ff17-4407-9af4-7323273ba899")
 
 local function UserDialog (aData, aList, aDlgTitle)
-  local HIST_SEARCH = RegPath .. "Search"
+  local HIST_SEARCH  = RegPath .. "Search"
   local HIST_REPLACE = RegPath .. "Replace"
+  local HIST_INITFUNC  = _Plugin.DialogHistoryPath .. "InitFunc"
+  local HIST_FINALFUNC = _Plugin.DialogHistoryPath .. "FinalFunc"
+
   local W = 72
-  local FLAGS_SEP = {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}
-  local FLAGS_EDIT = {DIF_HISTORY=1,DIF_USELASTHISTORY=1}
   local X1 = 5 + M.MDlgFileMask:len() -- mask offset
   local X2 = 5 + math.max(M.MDlgRenameBefore:len()+4, M.MDlgRenameAfter:len())
+
+  local FLAGS_SEP = {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}
+  local FLAGS_EDIT = {DIF_HISTORY=1,DIF_USELASTHISTORY=1}
+  local FLAGS_BTNOK = {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}
   ------------------------------------------------------------------------------
   local Dlg = libDialog.NewDialog()
   Dlg._                 = {"DI_DOUBLEBOX", 3, 1,  W,22, 0, 0, 0, 0, aDlgTitle}
@@ -237,8 +243,6 @@ local function UserDialog (aData, aList, aDlgTitle)
   Dlg.bLogFile          = {"DI_CHECKBOX",    7,12,  0, 0, 1, 0, 0, 0, M.MDlgRenameLogfile }
   Dlg.sep               = {"DI_TEXT",        5,13,  0, 0, 0, 0, 0, FLAGS_SEP, ""}
 
-  local HIST_INITFUNC   = _Plugin.DialogHistoryPath .. "InitFunc"
-  local HIST_FINALFUNC  = _Plugin.DialogHistoryPath .. "FinalFunc"
   Dlg.bAdvanced         = {"DI_CHECKBOX",    5,14,  0, 0, 0, 0, 0, 0, M.MDlgAdvanced}
   Dlg.labInitFunc       = {"DI_TEXT",        5,15,  0, 0, 0, 0, 0, 0, M.MDlgInitFunc}
   Dlg.sInitFunc         = {"DI_EDIT",        5,16, 36, 0, 0, HIST_INITFUNC, 0, "DIF_HISTORY", "", F4=".lua"}
@@ -252,20 +256,20 @@ local function UserDialog (aData, aList, aDlgTitle)
   Dlg.edtAfter          = {"DI_EDIT",       X2,19,W-2, 0, 0, 0, 0, "DIF_READONLY", "", _noauto=1, skipF4=1}
   Dlg.sep               = {"DI_TEXT",        5,20,  0, 0, 0, 0, 0, FLAGS_SEP, ""}
 
-  Dlg.btnOk             = {"DI_BUTTON",      0,21,  0, 0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk, NoHilite=1}
+  Dlg.btnOk             = {"DI_BUTTON",      0,21,  0, 0, 0, 0, 0, FLAGS_BTNOK, M.MOk, NoHilite=1}
   Dlg.btnConfig         = {"DI_BUTTON",      0,21,  0, 0, 0, 0, 0, "DIF_CENTERGROUP", M.MDlgBtnConfig}
   Dlg.btnCancel         = {"DI_BUTTON",      0,21,  0, 0, 0, 0, 0, "DIF_CENTERGROUP", M.MCancel, NoHilite=1}
   ------------------------------------------------------------------------------
 
-  local index = 0    -- circular index into aList; incremented when btnBefore is pressed;
-  local uRegex       -- compiled regular expression; gets recompiled upon every change in sSearchPat field;
-  local tReplace     --
-  local fReplace     -- replace function; gets recreated upon every change in sReplacePat field;
-  local sErrSearch   -- description of error in the sSearchPat field (if any);
-  local sErrReplace  -- description of error in the sReplacePat field (if any);
-  local sErrMaxGroup -- fixed message "inexistent group" (if any);
-  local InitFunc     -- function to be executed before the operation;
-  local FinalFunc    -- function to be executed after the operation;
+  local m_index = 1    -- circular index into aList; incremented when btnBefore is pressed;
+  local m_uRegex       -- compiled regular expression; gets recompiled upon every change in sSearchPat field;
+  local m_tReplace     --
+  local m_fReplace     -- replace function; gets recreated upon every change in sReplacePat field;
+  local m_sErrSearch   -- description of error in the sSearchPat field (if any);
+  local m_sErrReplace  -- description of error in the sReplacePat field (if any);
+  local m_sErrMaxGroup -- fixed message "inexistent group" (if any);
+  local m_InitFunc     -- function to be executed before the operation;
+  local m_FinalFunc    -- function to be executed after the operation;
   ------------------------------------------------------------------------------
 
   -- Workaround Far glitch:
@@ -279,21 +283,21 @@ local function UserDialog (aData, aList, aDlgTitle)
       { LeftPos=math.max(1, len+1-(p.Right-p.Left)); CurPos=len+1; CurTabPos=len+1 })
   end
 
-  local function UpdateLabel (hDlg)
+  local function UpdatePreviewLabel (hDlg)
     local text
-    sErrMaxGroup = nil
-    if sErrSearch then
-      text = "<S> "..sErrSearch
-    elseif sErrReplace then
-      text = "<R> "..sErrReplace
-    elseif not Dlg.bRepIsFunc:GetCheck(hDlg) and tReplace.MaxGroupNumber >= uRegex:bracketscount() then
-      sErrMaxGroup = "inexistent group"
-      text = "<R> "..sErrMaxGroup
+    m_sErrMaxGroup = nil
+    if m_sErrSearch then
+      text = "<S> "..m_sErrSearch
+    elseif m_sErrReplace then
+      text = "<R> "..m_sErrReplace
+    elseif not Dlg.bRepIsFunc:GetCheck(hDlg) and m_tReplace.MaxGroupNumber >= m_uRegex:bracketscount() then
+      m_sErrMaxGroup = "inexistent group"
+      text = "<R> "..m_sErrMaxGroup
     else
-      local name = aList[index+1]:match("[^\\/]+$")
-      local ok, result = pcall(GsubMB, name, uRegex, fReplace, index+1, index, name) -- fReplace can raise error
-      if ok then text = result
-      else text = "<R> "..result
+      local name = aList[m_index]:match("[^\\/]+$")
+      local ok, res = pcall(GsubMB, name, m_uRegex, m_fReplace, m_index, m_index-1, name) -- m_fReplace can raise error
+      if ok then text = res
+      else text = "<R> "..res
       end
     end
     Dlg.edtAfter:SetText(hDlg, text)
@@ -304,8 +308,8 @@ local function UserDialog (aData, aList, aDlgTitle)
   local function UpdateSearchPat (hDlg)
     local pat = Dlg.sSearchPat:GetText(hDlg)
     local ok, res = pcall(Rex.new, pat, "i")
-    if ok then uRegex, sErrSearch = res, nil
-    else uRegex, sErrSearch = nil, res
+    if ok then m_uRegex, m_sErrSearch = res, nil
+    else m_uRegex, m_sErrSearch = nil, res
     end
   end
 
@@ -320,19 +324,19 @@ local function UserDialog (aData, aList, aDlgTitle)
 
   local function UpdateReplacePat (hDlg)
     local repl = Dlg.sReplacePat:GetText(hDlg)
-    sErrReplace = nil
+    m_sErrReplace = nil
     if Dlg.bRepIsFunc:GetCheck(hDlg) then
       local func, msg = loadstring("local T,M,R = ...\n" .. repl, M.MReplaceFunction)
-      if func then tReplace = setfenv(func, NewEnvir())
-      else sErrReplace = msg
+      if func then m_tReplace = setfenv(func, NewEnvir())
+      else m_sErrReplace = msg
       end
     else
       local ret, msg = TransformReplacePat(repl)
-      if ret then tReplace = ret
-      else sErrReplace = msg
+      if ret then m_tReplace = ret
+      else m_sErrReplace = msg
       end
     end
-    if sErrReplace==nil then fReplace = GetReplaceFunction(tReplace) end
+    if m_sErrReplace==nil then m_fReplace = GetReplaceFunction(m_tReplace) end
   end
 
   local function CheckAdvancedEnab (hDlg)
@@ -348,7 +352,7 @@ local function UserDialog (aData, aList, aDlgTitle)
       Dlg.edtBefore:SetText(hDlg, aList[1])
       UpdateSearchPat(hDlg)
       UpdateReplacePat(hDlg)
-      UpdateLabel(hDlg)
+      UpdatePreviewLabel(hDlg)
       if not (Dlg.bRenFolders:GetCheck(hDlg) or Dlg.bRenFolders:GetCheck(hDlg)) then
         Dlg.bRenFiles:SetCheck(hDlg,1)
       end
@@ -357,10 +361,10 @@ local function UserDialog (aData, aList, aDlgTitle)
     elseif msg == F.DN_EDITCHANGE then
       if param1 == Dlg.sSearchPat.id then
         UpdateSearchPat(hDlg)
-        UpdateLabel(hDlg)
+        UpdatePreviewLabel(hDlg)
       elseif param1 == Dlg.sReplacePat.id then
         UpdateReplacePat(hDlg)
-        UpdateLabel(hDlg)
+        UpdatePreviewLabel(hDlg)
       end
 
     elseif msg == F.DN_BTNCLICK then
@@ -370,59 +374,57 @@ local function UserDialog (aData, aList, aDlgTitle)
         if not Dlg.bRenFolders:GetCheck(hDlg) then Dlg.bRenFiles:SetCheck(hDlg,1) end
       elseif param1 == Dlg.bRepIsFunc.id then
         UpdateReplacePat(hDlg)
-        UpdateLabel(hDlg)
+        UpdatePreviewLabel(hDlg)
       elseif param1 == Dlg.btnBefore.id then
-        index = (index+1) % #aList
-        Dlg.edtBefore:SetText(hDlg, aList[index+1])
-        UpdateLabel(hDlg)
+        m_index = (m_index < #aList) and m_index+1 or 1
+        Dlg.edtBefore:SetText(hDlg, aList[m_index])
+        UpdatePreviewLabel(hDlg)
       elseif param1 == Dlg.bAdvanced.id then
         CheckAdvancedEnab(hDlg)
       end
-
-    elseif Common.Check_F4_On_DI_EDIT(Dlg, hDlg, msg, param1, param2) then
-      -- processed
 
     elseif msg == F.DN_CLOSE then
       if param1 == Dlg.btnOk.id then
         local mask = Dlg.sFileMask:GetText(hDlg)
         if not far.ProcessName("PN_CHECKMASK", mask, "", "PN_SHOWERRORMESSAGE") then
           Common.GotoEditField(hDlg, Dlg.sFileMask.id)
-          return 0
+          return KEEP_DIALOG_OPEN
         end
-        if sErrSearch then
-          ErrorMsg(sErrSearch, M.MSearchPattern..": "..M.MSyntaxError)
+        if m_sErrSearch then
+          ErrorMsg(m_sErrSearch, M.MSearchPattern..": "..M.MSyntaxError)
           Common.GotoEditField(hDlg, Dlg.sSearchPat.id)
-          return 0
-        elseif sErrReplace or sErrMaxGroup then
-          ErrorMsg(sErrReplace or sErrMaxGroup, M.MReplacePattern..": "..M.MSyntaxError)
+          return KEEP_DIALOG_OPEN
+        elseif m_sErrReplace or m_sErrMaxGroup then
+          ErrorMsg(m_sErrReplace or m_sErrMaxGroup, M.MReplacePattern..": "..M.MSyntaxError)
           Common.GotoEditField(hDlg, Dlg.sReplacePat.id)
-          return 0
+          return KEEP_DIALOG_OPEN
         end
         if Dlg.bAdvanced:GetCheck(hDlg) then
-          local sInitFunc, msg = Dlg.sInitFunc:GetText(hDlg), nil
-          InitFunc, msg = loadstring (sInitFunc or "", "Initial")
-          if not InitFunc then
-            ErrorMsg(msg, "Initial Function: " .. M.MSyntaxError)
+          local msg2
+          local sInitFunc = Dlg.sInitFunc:GetText(hDlg)
+          m_InitFunc, msg2 = loadstring (sInitFunc or "", "Initial")
+          if not m_InitFunc then
+            ErrorMsg(msg2, "Initial Function: " .. M.MSyntaxError)
             Common.GotoEditField(hDlg, Dlg.sInitFunc.id)
-            return 0
+            return KEEP_DIALOG_OPEN
           end
           local sFinalFunc = Dlg.sFinalFunc:GetText(hDlg)
-          FinalFunc, msg = loadstring (sFinalFunc or "", "Final")
-          if not FinalFunc then
-            ErrorMsg(msg, "Final Function: " .. M.MSyntaxError)
+          m_FinalFunc, msg2 = loadstring (sFinalFunc or "", "Final")
+          if not m_FinalFunc then
+            ErrorMsg(msg2, "Final Function: " .. M.MSyntaxError)
             Common.GotoEditField(hDlg, Dlg.sFinalFunc.id)
-            return 0
+            return KEEP_DIALOG_OPEN
           end
-          local env = type(tReplace)=="function" and getfenv(tReplace) or NewEnvir()
-          setfenv(InitFunc, env)
-          setfenv(FinalFunc, env)
+          local env = type(m_tReplace)=="function" and getfenv(m_tReplace) or NewEnvir()
+          setfenv(m_InitFunc, env)
+          setfenv(m_FinalFunc, env)
         end
       elseif param1 == Dlg.btnConfig.id then
         hDlg:send(F.DM_SHOWDIALOG, 0)
         Common.ConfigDialog()
         hDlg:send(F.DM_SHOWDIALOG, 1)
         hDlg:send(F.DM_SETFOCUS, Dlg.btnOk.id)
-        return 0
+        return KEEP_DIALOG_OPEN
       end
     end
   end
@@ -433,8 +435,8 @@ local function UserDialog (aData, aList, aDlgTitle)
     libDialog.SaveData(Dlg, aData)
     _Plugin.History:save()
     return {
-      Regex             = uRegex,
-      fReplace          = fReplace,
+      Regex             = m_uRegex,
+      fReplace          = m_fReplace,
       bRenFiles         = aData.bRenFiles,
       bRenFolders       = aData.bRenFolders,
       bRenRecurse       = aData.bRenRecurse,
@@ -442,8 +444,8 @@ local function UserDialog (aData, aList, aDlgTitle)
       rSearchInSelected = aData.rSearchInSelected,
       rSearchInAll      = aData.rSearchInAll,
       sFileMask         = aData.sFileMask,
-      InitFunc          = InitFunc,
-      FinalFunc         = FinalFunc,
+      InitFunc          = m_InitFunc,
+      FinalFunc         = m_FinalFunc,
     }
   end
 end
@@ -472,14 +474,14 @@ local function DoAction (Params, aDir, aLog)
   local nMatch, nReps = 0, 0
   local sChoice = not Params.bConfirmRename and "all"
 
-  local function RenameItem (item, fullpath)
-    if item.FileAttributes:find("d") then
+  local function RenameItem (aItem, aFullName)
+    if aItem.FileAttributes:find("d") then
       if not bRenFolders then return end
     else
       if not bRenFiles then return end
     end
     nMatch = nMatch + 1
-    local path, oldname = fullpath:match("^(.-)([^\\]+)$")
+    local path, oldname = aFullName:match("^(.-)([^\\]+)$")
     local newname = GsubMB(oldname, Regex, fReplace, nMatch, nReps, oldname)
     if newname ~= oldname then
       if sChoice ~= "all" then
@@ -487,22 +489,17 @@ local function DoAction (Params, aDir, aLog)
         if sChoice == "cancel" then return true end
       end
       if sChoice ~= "no" then
-        local newfullpath = path .. newname
-        local ExtPath = [[\\?\]] .. path
-        local ExtFullpath = [[\\?\]] .. fullpath
-        local ExtNewfullpath  = [[\\?\]] .. newfullpath
-        local res, err = win.RenameFile(ExtFullpath, ExtNewfullpath)
-        if err then
-          err = err:gsub("[\r\n]+", " ")
-          aLog:AddItem(("--%q, %q, %q, --ERROR: %s"):format(ExtPath,oldname,newname,err))
-        else
-          aLog:AddItem(("  %q, %q, %q,"):format(ExtPath,oldname,newname))
-        end
+        local prefix = [[\\?\]]
+        local newFullName = path .. newname
+        local res, err = win.RenameFile(prefix..aFullName, prefix..newFullName)
         if res then
           nReps = nReps + 1
-          return nil, newfullpath
+          aLog:AddItem(("  %q, %q, %q,"):format(prefix..path, oldname, newname))
+          return nil, newFullName
         else
-          far.Message(fullpath.."\n\n"..newfullpath.."\n\n"..err, AppName, nil, "wl")
+          err = string.gsub(err, "[\r\n]+", " ")
+          aLog:AddItem(("--%q, %q, %q, --ERROR: %s"):format(prefix..path, oldname, newname, err))
+          far.Message(aFullName.."\n\n"..newFullName.."\n\n"..err, AppName, nil, "wl")
         end
       end
     end

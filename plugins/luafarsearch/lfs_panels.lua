@@ -1,39 +1,39 @@
 -- lfs_panels.lua
 -- luacheck: globals _Plugin
 
-local Common     = require "lfs_common"
-local Editors    = require "lfs_editors"
-local M          = require "lfs_message"
+local M           = require "lfs_message"
+local libCommon   = require "lfs_common"
+local libEditors  = require "lfs_editors"
+local libReader   = require "reader"
+local libUCD      = require "ucd"
+local libCqueue   = require "shmuz.cqueue"
+local libDialog   = require "far2.dialog"
+local libMessage  = require "far2.message"
 
-local libCqueue  = require "shmuz.cqueue"
-local libDialog  = require "far2.dialog"
-local libMessage = require "far2.message"
-local libUCD     = require "ucd"
-local libReader  = require "reader"
-
-local AssignHotKeys        = Common.AssignHotKeys
-local Check_F4_On_DI_EDIT  = Common.Check_F4_On_DI_EDIT
-local CheckMask            = Common.CheckMask
-local CheckSearchArea      = Common.CheckSearchArea
-local CreateSRFrame        = Common.CreateSRFrame
-local DisplayReplaceState  = Common.DisplayReplaceState
-local DisplaySearchState   = Common.DisplaySearchState
-local ErrorMsg             = Common.ErrorMsg
-local FormatTime           = Common.FormatTime
-local GetReplaceFunction   = Common.GetReplaceFunction
-local GetSearchAreas       = Common.GetSearchAreas
-local GotoEditField        = Common.GotoEditField
-local IndexToSearchArea    = Common.IndexToSearchArea
-local NewUserBreak         = Common.NewUserBreak
-local ProcessDialogData    = Common.ProcessDialogData
-local SaveCodePageCombo    = Common.SaveCodePageCombo
-local ActivateHighlight    = Editors.ActivateHighlight
-local SetHighlightPattern  = Editors.SetHighlightPattern
-
-package.preload.tmpp_message = function() return M end
 local libTmpPanel = require "far2.tmppanel"
+libTmpPanel.SetMessageTable(M) -- message localization support
+
+local AssignHotKeys        = libCommon.AssignHotKeys
+local Check_F4_On_DI_EDIT  = libCommon.Check_F4_On_DI_EDIT
+local CheckMask            = libCommon.CheckMask
+local CheckSearchArea      = libCommon.CheckSearchArea
+local CreateSRFrame        = libCommon.CreateSRFrame
+local DisplayReplaceState  = libCommon.DisplayReplaceState
+local DisplaySearchState   = libCommon.DisplaySearchState
+local ErrorMsg             = libCommon.ErrorMsg
+local FormatTime           = libCommon.FormatTime
+local GetReplaceFunction   = libCommon.GetReplaceFunction
+local GetSearchAreas       = libCommon.GetSearchAreas
+local GotoEditField        = libCommon.GotoEditField
+local IndexToSearchArea    = libCommon.IndexToSearchArea
+local NewUserBreak         = libCommon.NewUserBreak
+local ProcessDialogData    = libCommon.ProcessDialogData
+local SaveCodePageCombo    = libCommon.SaveCodePageCombo
+local ActivateHighlight    = libEditors.ActivateHighlight
+local SetHighlightPattern  = libEditors.SetHighlightPattern
 
 local F = far.Flags
+local KEEP_DIALOG_OPEN = 0
 
 local bor, band, bxor, lshift = bit64.bor, bit64.band, bit64.bxor, bit64.lshift
 local clock = os.clock
@@ -127,9 +127,9 @@ local function Lines (aFile, aCodePage, userbreak)
 
   local read = (aCodePage == 1201) and
     function(size)
-      local chunk = aFile:read(size)
-      if chunk then chunk = SwapEndian(chunk) end
-      return chunk
+      local portion = aFile:read(size)
+      if portion then portion = SwapEndian(portion) end
+      return portion
     end or
     function(size) return aFile:read(size) end
 
@@ -216,7 +216,7 @@ end
 -- @param tRecurseGuard : table (set) for preventing repeated scanning of the same directories
 ----------------------------------------------------------------------------------------------------
 local FileIterator = _Plugin.Finder.Files
-local function RecursiveSearch (InitDir, UserFunc, Flags, FileFilter,
+local function RecursiveSearch (sInitDir, UserFunc, Flags, FileFilter,
                                 fFileMask, fDirMask, fDirExMask, tRecurseGuard)
 
   local bSymLinks = Flags and Flags.symlinks
@@ -259,7 +259,7 @@ local function RecursiveSearch (InitDir, UserFunc, Flags, FileFilter,
     return false
   end
 
-  local realDir = far.GetReparsePointInfo(InitDir) or InitDir
+  local realDir = far.GetReparsePointInfo(sInitDir) or sInitDir
   tRecurseGuard[realDir] = true
   Recurse(realDir)
 end
@@ -375,7 +375,7 @@ libTmpPanel.Panel.AS_F9 = ConfigDialog
 local function GetCodePages (aData)
   local Checked = {}
   if aData.tCheckedCodePages then
-    for i,v in ipairs(aData.tCheckedCodePages) do Checked[v]=true end
+    for _,v in ipairs(aData.tCheckedCodePages) do Checked[v]=true end
   end
   local delim = ("").char(9474)
   local function makeline(codepage, name)
@@ -406,7 +406,7 @@ local function GetCodePages (aData)
 
   -- Fill predefined code pages
   local used = {}
-  for i,v in ipairs(items) do
+  for _,v in ipairs(items) do
     if v.CodePage then
       used[v.CodePage] = true
       local info = win.GetCPInfo(v.CodePage)
@@ -426,7 +426,7 @@ local function GetCodePages (aData)
   local pages = assert(win.EnumSystemCodePages())
   for i,v in ipairs(pages) do pages[i]=tonumber(v) end
   table.sort(pages)
-  for k,v in ipairs(pages) do
+  for _,v in ipairs(pages) do
     if not used[v] then
       local info = win.GetCPInfo(v)
       if info and info.MaxCharSize == 1 then
@@ -468,15 +468,15 @@ local function DirectoryFilterDialog (aData)
 
   local function DlgProc (hDlg, msg, param1, param2)
     if msg == F.DN_CLOSE and param1 == Dlg.btnOk.id then
-      local mask = Dlg.sDirMask:GetText(hDlg) -- this mask is allowed to be empty
-      if not (mask == "" or CheckMask(mask)) then
+      local mask1 = Dlg.sDirMask:GetText(hDlg) -- this mask is allowed to be empty
+      if not (mask1 == "" or CheckMask(mask1)) then
         GotoEditField(hDlg, Dlg.sDirMask.id)
-        return 0
+        return KEEP_DIALOG_OPEN
       end
-      local mask = Dlg.sDirExMask:GetText(hDlg) -- this mask is allowed to be empty
-      if not (mask == "" or CheckMask(mask)) then
+      local mask2 = Dlg.sDirExMask:GetText(hDlg) -- this mask is allowed to be empty
+      if not (mask2 == "" or CheckMask(mask2)) then
         GotoEditField(hDlg, Dlg.sDirExMask.id)
-        return 0
+        return KEEP_DIALOG_OPEN
       end
     end
   end
@@ -562,8 +562,10 @@ if aOp == "search" then
 end
   D.btnCancel   = {"DI_BUTTON",   0, Y, 0,0, 0, 0, 0, F.DIF_CENTERGROUP, M.MCancel, NoHilite=1}
   D.dblbox.Y2   = Y+1
-  ------------------------------------------------------------------------------
+
   local function DlgProc (hDlg, msg, param1, param2)
+    local NeedCallFrame = true
+    --------------------------------------------------------------------------------------
     if msg == F.DN_INITDIALOG then
       D.btnDirFilter:Enable(hDlg, D.bUseDirFilter:GetCheck(hDlg))
       D.btnFileFilter:Enable(hDlg, D.bUseFileFilter:GetCheck(hDlg))
@@ -577,7 +579,7 @@ end
           end
         end
       end
-
+    --------------------------------------------------------------------------------------
     elseif msg == F.DN_CONTROLINPUT or msg == F.DN_INPUT then
       if param2.EventType == F.KEY_EVENT then
         if D.cmbCodePage and param1 == D.cmbCodePage.id then
@@ -595,51 +597,63 @@ end
           Check_F4_On_DI_EDIT(D, hDlg, msg, param1, param2)
         end
       end
-
+    --------------------------------------------------------------------------------------
     elseif msg == F.DN_CLOSE then
       if D.btnConfig and param1 == D.btnConfig.id then
         hDlg:send(F.DM_SHOWDIALOG, 0)
         ConfigDialog()
         hDlg:send(F.DM_SHOWDIALOG, 1)
         hDlg:send(F.DM_SETFOCUS, D.btnOk.id)
-        return 0
-      elseif (D.btnOk and param1==D.btnOk.id) or (D.btnCount and param1==D.btnCount.id) then
+        return KEEP_DIALOG_OPEN
+      end
+
+      local ok_or_count = (D.btnOk and param1==D.btnOk.id) or
+                          (D.btnCount and param1==D.btnCount.id)
+      if ok_or_count then
         if not CheckMask(D.sFileMask:GetText(hDlg)) then
           GotoEditField(hDlg, D.sFileMask.id)
-          return 0
+          return KEEP_DIALOG_OPEN
         end
         if (aOp=="replace" or aOp=="grep") and D.sSearchPat:GetText(hDlg) == "" then
           ErrorMsg(M.MSearchFieldEmpty)
           GotoEditField(hDlg, D.sSearchPat.id)
-          return 0
+          return KEEP_DIALOG_OPEN
         end
         aData.sSearchArea = IndexToSearchArea(D.cmbSearchArea:GetListCurPos(hDlg))
         D.bUseDirFilter:SaveCheck(hDlg, aData)
         D.bUseFileFilter:SaveCheck(hDlg, aData)
       end
-      --------------------------------------------------------------------------
       -- store selected code pages no matter what user pressed: OK or Esc.
-      if D.cmbCodePage then SaveCodePageCombo(hDlg, D.cmbCodePage, aData) end
-      --------------------------------------------------------------------------
-    end
-    if msg==F.DN_BTNCLICK and param1==D.btnPresets.id then
+      if D.cmbCodePage then
+        SaveCodePageCombo(hDlg, D.cmbCodePage, aData, ok_or_count)
+      end
+    --------------------------------------------------------------------------------------
+    elseif msg==F.DN_BTNCLICK and param1==D.btnPresets.id then
       Frame:DoPresets(hDlg)
       hDlg:send(F.DM_SETFOCUS, D.btnOk.id)
-      --------------------------------------------------------------------------
+      NeedCallFrame = false
+    --------------------------------------------------------------------------------------
     elseif msg==F.DN_BTNCLICK and param1==D.bUseDirFilter.id then
       D.btnDirFilter:Enable(hDlg, D.bUseDirFilter:GetCheck(hDlg))
+      NeedCallFrame = false
+    --------------------------------------------------------------------------------------
     elseif msg==F.DN_BTNCLICK and param1==D.btnDirFilter.id then
       hDlg:send(F.DM_SHOWDIALOG, 0)
       DirectoryFilterDialog(aData)
       hDlg:send(F.DM_SHOWDIALOG, 1)
-      --------------------------------------------------------------------------
+      NeedCallFrame = false
+    --------------------------------------------------------------------------------------
     elseif msg==F.DN_BTNCLICK and param1==D.bUseFileFilter.id then
       D.btnFileFilter:Enable(hDlg, D.bUseFileFilter:GetCheck(hDlg))
+      NeedCallFrame = false
+    --------------------------------------------------------------------------------------
     elseif msg==F.DN_BTNCLICK and param1==D.btnFileFilter.id then
       local filter = far.CreateFileFilter(1, "FFT_FINDFILE")
       if filter and filter:OpenFiltersMenu() then aData.FileFilter = filter end
-      --------------------------------------------------------------------------
-    else
+      NeedCallFrame = false
+    --------------------------------------------------------------------------------------
+    end
+    if NeedCallFrame then
       return Frame:DlgProc(hDlg, msg, param1, param2)
     end
   end
@@ -989,7 +1003,7 @@ local function Replace_CreateOutputFile (fullname, numlines, codepage, bom, user
   end
   if tmpname ~= nil then
     if numlines <= 0 then
-      fOut = io.open(tmpname, "wb"), tmpname
+      fOut = io.open(tmpname, "wb")
       if bom then fOut:write(bom) end
     else
       local fIn = io.open(fullname, "rb")
@@ -1116,8 +1130,8 @@ local function GetReplaceChoice(
   --================================================================
   local currclock = clock()
   local extract = bWideCharRegex and
-    function(from,to) return Utf8(sub(Line,from,to)) end or
-    function(from,to) return sub(Line,from,to) end
+    function(i1,i2) return Utf8(sub(Line,i1,i2)) end or
+    function(i1,i2) return sub(Line,i1,i2) end
 
   local callback = function (heights, maxlines, lines)
     if lines <= maxlines then return end
@@ -1333,7 +1347,7 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
   end
   cdata.nFilesProcessed = cdata.nFilesProcessed + 1
   ---------------------------------------------------------------------------
-  local nCodePageDetected, sBom = GetFileFormat(fp)
+  local nCodePageDetected = GetFileFormat(fp)
   local nCodePage = nCodePageDetected or win.GetACP() -- GetOEMCP() ?
   ---------------------------------------------------------------------------
   local bWideCharRegex, Regex, ufind_method = cdata.bWideCharRegex, cdata.Regex, cdata.ufind_method
@@ -1341,11 +1355,7 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
   local nMatches = 0
   local numline = 0
 
-  local len, sub
-  if bWideCharRegex then len, sub = win.lenW, win.subW
-  else len, sub = string.len, string.sub
-  end
-
+  local len = bWideCharRegex and win.lenW or string.len
   local grepBefore, grepAfter = cdata.tGrep.nBefore, cdata.tGrep.nAfter
   local grepInverse = not not cdata.tGrep.bInverse -- convert to boolean
   local tGrep, qLinesBefore, numline_match
@@ -1355,7 +1365,7 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
     qLinesBefore = grepBefore > 0 and libCqueue.new(grepBefore)
   end
 
-  local Convert, Reconvert = Replace_GetConvertors (bWideCharRegex, nCodePage)
+  local Convert = Replace_GetConvertors (bWideCharRegex, nCodePage)
   local lines_iter = --[[cdata.bFileAsLine and Lines2 or]] Lines
   for line, eol in lines_iter(fp, nCodePage, userbreak) do
     numline = numline + 1
@@ -1566,7 +1576,7 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
     local insert_empty_lines = cdata.tGrep.nBefore>0 or cdata.tGrep.nAfter>0
     local fname = far.MkTemp()
     local numfile = 0
-    for k,v in ipairs(cdata.tGrep) do
+    for _,v in ipairs(cdata.tGrep) do
       if v[1] then
         numfile = numfile + 1
         fp = fp or assert(io.open(fname, "wb"))
@@ -1617,9 +1627,9 @@ end
 
 
 local function InitTmpPanel()
-  local hist = _Plugin.History:field("tmppanel")
+  local history = _Plugin.History:field("tmppanel")
   for k,v in pairs(TmpPanelDefaults) do
-    if hist[k] == nil then hist[k] = v end
+    if history[k] == nil then history[k] = v end
   end
 
   libTmpPanel.PutExportedFunctions(export)

@@ -73,7 +73,6 @@ local libUtils   = require "far2.utils"
 local Common     = require "lfs_common"
 local EditMain   = require "lfs_editmain"
 local Editors    = require "lfs_editors"
-local LpatPanels = require "lfs_panels_lpat"
 local M          = require "lfs_message"
 local MReplace   = require "lfs_mreplace"
 local Panels     = require "lfs_panels" -- call only after modifying package.cpath
@@ -160,7 +159,6 @@ local function OpenFromPanels (userItems)
     {text=M.MMenuGrep,     action="grep"},
     {text=M.MMenuRename,   action="rename"},
     {text=M.MMenuTmpPanel, action="tmppanel"},
---  {text=M.MMenuFindPanelLua, action="lpatfind"}, -- not ready for release
   }
   for k,v in ipairs(items) do v.text=k..". "..v.text end
 
@@ -182,13 +180,6 @@ local function OpenFromPanels (userItems)
       Rename.main()
     elseif item.action == "tmppanel" then
       return Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
-    elseif item.action == "lpatfind" then
-      repeat
-        local list, cancel = LpatPanels.SearchFromPanel()
-        if list then
-          return Panels.CreateTmpPanel(list, History:field("tmppanel"))
-        end
-      until cancel or 1~=far.Message(M.MNoFilesFound,M.MMenuTitle,M.MButtonsNewSearch)
     end
   else
     libUtils.RunUserItem(item, item.arg)

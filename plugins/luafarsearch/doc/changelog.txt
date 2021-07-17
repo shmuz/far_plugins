@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2021-07-17, v3.44.3
+  [*] Refactoring.
+  [!] Fix the "Multi-line Replace" dialog.
+
 2020-07-12, v3.44.2
   [*] Add optimization flag "o" in Far regex operations.
 

@@ -17,6 +17,7 @@ local VK = win.GetVirtualKeys()
 local band, bor, bnot = bit64.band, bit64.bor, bit64.bnot
 local Utf8, Utf16 = win.Utf16ToUtf8, win.Utf8ToUtf16
 local TransformReplacePat = RepLib.TransformReplacePat
+local KEEP_DIALOG_OPEN = 0
 
 local function ErrorMsg (text, title)
   far.Message (text, title or M.MError, nil, "w")
@@ -95,9 +96,11 @@ local function FormatTime (tm)
   return fmt:format(tm)
 end
 
-local function SaveCodePageCombo (hDlg, combo, aData)
-  local pos = combo:GetListCurPos (hDlg)
-  aData.iSelectedCodePage = combo.ListItems[pos].CodePage
+local function SaveCodePageCombo (hDlg, combo, aData, aSaveCurPos)
+  if aSaveCurPos then
+    local pos = combo:GetListCurPos (hDlg)
+    aData.iSelectedCodePage = combo.ListItems[pos].CodePage
+  end
   aData.tCheckedCodePages = {}
   local info = hDlg:send(F.DM_LISTINFO, combo.id)
   for i=1,info.ItemsNumber do
@@ -831,7 +834,7 @@ function SRFrame:DlgProc (hDlg, msg, param1, param2)
         if Dlg.sSearchPat:GetText(hDlg) == "" then
           ErrorMsg(M.MSearchFieldEmpty)
           GotoEditField(hDlg, Dlg.sSearchPat.id)
-          return 0
+          return KEEP_DIALOG_OPEN
         end
       end
       local tmpdata, key = {}
@@ -853,7 +856,7 @@ function SRFrame:DlgProc (hDlg, msg, param1, param2)
         end
       else
         if key and Dlg[key] then GotoEditField(hDlg, Dlg[key].id) end
-        return 0 -- do not close the dialog
+        return KEEP_DIALOG_OPEN
       end
 
     end
@@ -940,7 +943,7 @@ function SRFrame:DoPresets (hDlg)
           presets[name] = data
           self.PresetName = name
           self:SaveDataDyn (hDlg, data)
-          if Dlg.cmbCodePage then SaveCodePageCombo(hDlg, Dlg.cmbCodePage, data) end
+          if Dlg.cmbCodePage then SaveCodePageCombo(hDlg, Dlg.cmbCodePage, data, true) end
           _Plugin.History:save()
           if pure_save_name then
             far.Message(M.MPresetWasSaved, M.MMenuTitle)
@@ -1032,7 +1035,8 @@ local function ConfigDialog()
       if param1 == Dlg.btnOk.id then
         local ok, errmsg = TransformLogFilePat(Dlg.sLogFileName:GetText(hDlg))
         if not ok then
-          ErrorMsg(errmsg, "Log file name"); return 0
+          ErrorMsg(errmsg, "Log file name")
+          return KEEP_DIALOG_OPEN
         end
       end
     end
@@ -1148,7 +1152,7 @@ end
 -- @param  hDlg     dialog handle
 -- @param  itempos  position of a DI_EDIT item in the dialog
 -- @param  ext      extension to give a temporary file, e.g. ".lua" (for syntax highlighting)
-local function EditInTmpFile (hDlg, itempos, ext)
+local function OpenInEditor (hDlg, itempos, ext)
   local fname = win.GetEnv("TEMP").."\\far3-"..win.Uuid(win.Uuid()):sub(1,8)..(ext or "")
   local fp = io.open(fname, "w")
   if fp then
@@ -1177,7 +1181,7 @@ local function Check_F4_On_DI_EDIT (Dlg, hDlg, msg, param1, param2)
       if (item[1]==F.DI_EDIT or item[1]=="DI_EDIT") and not item.skipF4 then
         local ext = item.F4 or
           (item==Dlg.sReplacePat and Dlg.bRepIsFunc and Dlg.bRepIsFunc:GetCheck(hDlg) and ".lua")
-        EditInTmpFile(hDlg, param1, ext)
+        OpenInEditor(hDlg, param1, ext)
         return true
       end
     end
