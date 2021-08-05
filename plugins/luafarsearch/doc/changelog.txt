@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2021-08-05, v3.45.0
+  [+] User function lfsearch.EditorAction: new field bHighlight in Data parameter.
+
 2021-07-17, v3.44.3
   [*] Refactoring.
   [!] Fix the "Multi-line Replace" dialog.

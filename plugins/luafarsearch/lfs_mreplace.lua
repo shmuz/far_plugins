@@ -36,7 +36,7 @@ local function ReplaceDialog (Data)
   Dlg.bRegExpr    = {"DI_CHECKBOX",  5, 8,  0, 0, 0, 0, 0, 0, M.MDlgRegExpr}
   Dlg.lab         = {"DI_TEXT",     X2, 8,  0, 0, 0, 0, 0, 0, M.MDlgRegexLib}
   Dlg.cmbRegexLib = {"DI_COMBOBOX", X3, 8, X4, 0, {{Text="Far regex"},{Text="Oniguruma"},{Text="PCRE"},{Text="PCRE2"}},
-                                                     0, 0, {DIF_DROPDOWNLIST=1}, "", _noauto=true}
+                                                     0, 0, {DIF_DROPDOWNLIST=1}, "", _noautoload=true}
   Dlg.bCaseSens   = {"DI_CHECKBOX",  5, 9,  0, 0, 0, 0, 0, 0, M.MDlgCaseSens}
   Dlg.bFileAsLine = {"DI_CHECKBOX", X2, 9,  0, 0, 0, 0, 0, 0, M.MDlgFileAsLine}
   Dlg.bWholeWords = {"DI_CHECKBOX",  5,10,  0, 0, 0, 0, 0, 0, M.MDlgWholeWords}

@@ -251,9 +251,9 @@ local function UserDialog (aData, aList, aDlgTitle)
   Dlg.sep               = {"DI_TEXT",        5,17,  0, 0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
 
   Dlg.btnBefore         = {"DI_BUTTON",      5,18,  0, 0, 0, 0, 0, "DIF_BTNNOCLOSE", M.MDlgRenameBefore}
-  Dlg.edtBefore         = {"DI_EDIT",       X2,18,W-2, 0, 0, 0, 0, "DIF_READONLY", "", _noauto=1, skipF4=1}
+  Dlg.edtBefore         = {"DI_EDIT",       X2,18,W-2, 0, 0, 0, 0, "DIF_READONLY", "", _noautoload=1, skipF4=1}
   Dlg.lab               = {"DI_TEXT",        5,19,  0, 0, 0, 0, 0, 0, M.MDlgRenameAfter}
-  Dlg.edtAfter          = {"DI_EDIT",       X2,19,W-2, 0, 0, 0, 0, "DIF_READONLY", "", _noauto=1, skipF4=1}
+  Dlg.edtAfter          = {"DI_EDIT",       X2,19,W-2, 0, 0, 0, 0, "DIF_READONLY", "", _noautoload=1, skipF4=1}
   Dlg.sep               = {"DI_TEXT",        5,20,  0, 0, 0, 0, 0, FLAGS_SEP, ""}
 
   Dlg.btnOk             = {"DI_BUTTON",      0,21,  0, 0, 0, 0, 0, FLAGS_BTNOK, M.MOk, NoHilite=1}

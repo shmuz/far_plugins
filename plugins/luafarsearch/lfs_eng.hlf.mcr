@@ -314,6 +314,7 @@ $ #lfsearch.EditorAction#
        "bWholeWords"     : whole word search
        "bExtended"       : ignore whitespace in regexp
        "bSearchBack"     : search in reverse direction
+       "bHighlight"      : highlight all matches in the editor
 
        "bRepIsFunc"      : Function mode
        "bDelEmptyLine"   : delete empty line after replacement

@@ -1,12 +1,12 @@
 -- lfs_common.lua
 -- luacheck: globals _Plugin
 
-local Editors    = require "lfs_editors"
 local M          = require "lfs_message"
 local RepLib     = require "lfs_replib"
 
 local libDialog  = require "far2.dialog"
 local libHistory = require "far2.history"
+local fHilite    = require "shmuz.hilite"
 
 local DefaultLogFileName = "\\D{%Y%m%d-%H%M%S}.log"
 
@@ -401,6 +401,7 @@ local function ProcessDialogData (aData, bReplace, bInEditor, bUseMultiPatterns,
   params.bSearchBack = aData.bSearchBack
   params.bDelEmptyLine = aData.bDelEmptyLine
   params.bDelNonMatchLine = aData.bDelNonMatchLine
+  params.bHighlight = aData.bHighlight
   params.sOrigin = aData.sOrigin
   params.sSearchPat = aData.sSearchPat or ""
   params.FileFilter = aData.bUseFileFilter and aData.FileFilter
@@ -572,7 +573,7 @@ function SRFrame:InsertInDialog (aPanelsDialog, Y, aOp)
                        {Text="Oniguruma"},
                        {Text="PCRE"},
                        {Text="PCRE2"},
-                     }, 0, 0, {DIF_DROPDOWNLIST=1}, "", _noauto=true}
+                     }, 0, 0, {DIF_DROPDOWNLIST=1}, "", _noautoload=true}
   Y = Y + 1
   Dlg.bCaseSens   = {"DI_CHECKBOX",     5,Y,  0, 0, 0, 0, 0, 0, M.MDlgCaseSens}
   Dlg.bExtended   = {"DI_CHECKBOX",    X2,Y,  0, 0, 0, 0, 0, 0, M.MDlgExtended}
@@ -847,13 +848,6 @@ function SRFrame:DlgProc (hDlg, msg, param1, param2)
         hDlg:send("DM_ADDHISTORY", Dlg.sSearchPat.id, Data.sSearchPat)
         if Dlg.sReplacePat then hDlg:send("DM_ADDHISTORY", Dlg.sReplacePat.id, Data.sReplacePat) end
         if Dlg.sSkipPat    then hDlg:send("DM_ADDHISTORY", Dlg.sSkipPat.id,    Data.sSkipPat)    end
-        if Dlg.bHighlight then
-          local checked = Dlg.bHighlight:GetCheck(hDlg)
-          if checked or not Editors.IsHighlightGrep() then
-            Editors.SetHighlightPattern(self.close_params.Regex)
-            Editors.ActivateHighlight(checked)
-          end
-        end
       else
         if key and Dlg[key] then GotoEditField(hDlg, Dlg[key].id) end
         return KEEP_DIALOG_OPEN
@@ -1062,9 +1056,9 @@ local function EditorConfigDialog()
   Dlg.bSelectFound    = {"DI_CHECKBOX",    5, 3, 0, 0,  0, 0, 0,  0,  M.MOptSelectFound}
   Dlg.bShowSpentTime  = {"DI_CHECKBOX",    5, 4, 0, 0,  0, 0, 0,  0,  M.MOptShowSpentTime}
   Dlg.lab             = {"DI_TEXT",        5, 6, 0, 0,  0, 0, 0,  0,  M.MOptPickFrom}
-  Dlg.rPickEditor     = {"DI_RADIOBUTTON", 7, 7, 0, 0,  0, 0, 0,  "DIF_GROUP", M.MOptPickEditor, _noauto=1}
-  Dlg.rPickHistory    = {"DI_RADIOBUTTON",27, 7, 0, 0,  0, 0, 0,  0,           M.MOptPickHistory, _noauto=1}
-  Dlg.rPickNowhere    = {"DI_RADIOBUTTON",47, 7, 0, 0,  0, 0, 0,  0,           M.MOptPickNowhere, _noauto=1}
+  Dlg.rPickEditor     = {"DI_RADIOBUTTON", 7, 7, 0, 0,  0, 0, 0,  "DIF_GROUP", M.MOptPickEditor, _noautoload=1}
+  Dlg.rPickHistory    = {"DI_RADIOBUTTON",27, 7, 0, 0,  0, 0, 0,  0,           M.MOptPickHistory, _noautoload=1}
+  Dlg.rPickNowhere    = {"DI_RADIOBUTTON",47, 7, 0, 0,  0, 0, 0,  0,           M.MOptPickNowhere, _noautoload=1}
 
   Dlg.sep             = {"DI_TEXT",       -1, 9, 0, 0,  0, 0, 0,  {DIF_BOXCOLOR=nil,DIF_SEPARATOR=1,DIF_CENTERTEXT=1}, M.MSepHighlightColors}
   Dlg.btnHighlight    = {"DI_BUTTON",      5,10, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.MBtnHighlightColor}
@@ -1129,7 +1123,6 @@ end
 -- @param Dlg : an array of dialog items (tables);
 --              an item may have a boolean field 'NoHilite' that means no automatic highlighting;
 local function AssignHotKeys (Dlg)
-  local fHilite = require "shmuz.hilite"
   local typeIndex = 1  -- index of the "Type" element in a dialog item (Far 3 API)
   local dataIndex = 10 -- index of the "Data" element in a dialog item (Far 3 API)
   local types = { [F.DI_BUTTON]=1;[F.DI_CHECKBOX]=1;[F.DI_RADIOBUTTON]=1;[F.DI_TEXT]=1;[F.DI_VTEXT]=1; }

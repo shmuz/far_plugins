@@ -50,16 +50,16 @@ local function EditorDialog (aData, aReplace, aScriptCall)
   Dlg.sep = {"DI_TEXT", 5,Y,0,0, 0,0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
   ------------------------------------------------------------------------------
   Y = Y + 1
-  Dlg.lab         = {"DI_TEXT",        5,Y,   0, 0, 0, 0, 0, 0, M.MDlgScope}
+  Dlg.lab         = {"DI_TEXT",        5,Y,   0, 0, 0, 0, 0, 0, M.MDlgScope, NoHilite=1}
   Dlg.rScopeGlobal= {"DI_RADIOBUTTON", 6,Y+1, 0, 0, 0, 0, 0, "DIF_GROUP",
-                                              M.MDlgScopeGlobal, _noauto=true}
+                                              M.MDlgScopeGlobal, _noautoload=true}
   Dlg.rScopeBlock = {"DI_RADIOBUTTON", 6,Y+2, 0, 0, 0, 0, 0, 0,
-                                              M.MDlgScopeBlock, _noauto=true}
-  Dlg.lab         = {"DI_TEXT",       26,Y,0, 0, 0, 0, 0, 0,    M.MDlgOrigin}
+                                              M.MDlgScopeBlock, _noautoload=true}
+  Dlg.lab         = {"DI_TEXT",       26,Y,0, 0, 0, 0, 0, 0,    M.MDlgOrigin, NoHilite=1}
   Dlg.rOriginCursor={"DI_RADIOBUTTON",27,Y+1, 0, 0, 0, 0, 0, "DIF_GROUP",
-                                              M.MDlgOrigCursor, _noauto=true}
+                                              M.MDlgOrigCursor, _noautoload=true}
   Dlg.rOriginScope= {"DI_RADIOBUTTON",27,Y+2, 0, 0, 0, 0, 0, 0,
-                                              M.MDlgOrigScope, _noauto=true}
+                                              M.MDlgOrigScope, _noautoload=true}
   Dlg.bWrapAround = {"DI_CHECKBOX",   50,Y,   0, 0, 0, 0, 0, "DIF_3STATE", M.MDlgWrapAround}
   Dlg.bSearchBack = {"DI_CHECKBOX",   50,Y+1, 0, 0, 0, 0, 0, 0, M.MDlgReverseSearch}
   Dlg.bHighlight  = {"DI_CHECKBOX",   50,Y+2, 0, 0, 0, 0, 0, 0, M.MDlgHighlightAll}
@@ -268,6 +268,11 @@ local function EditorAction (aOp, aData, aScriptCall)
     if sChoice == "newsearch" then
       return EditorAction(aOp, aData, aScriptCall)
     else
+      local checked = tParams.bHighlight
+      if checked or not Editors.IsHighlightGrep() then
+        Editors.SetHighlightPattern(tParams.Regex)
+        Editors.ActivateHighlight(checked)
+      end
       return nFound, nReps, sChoice, nElapsed
     end
   end

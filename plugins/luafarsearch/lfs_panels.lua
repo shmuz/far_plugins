@@ -505,12 +505,12 @@ if aOp == "search" then
   Y = Y + 1
   D.lab         = {"DI_TEXT",     5, Y, 0,0, 0, 0, 0, 0, M.MDlgCodePages}
   Y = Y + 1
-  D.cmbCodePage = {"DI_COMBOBOX", 5, Y,70,0, GetCodePages(aData), 0, 0, F.DIF_DROPDOWNLIST, "", _noauto=1}
+  D.cmbCodePage = {"DI_COMBOBOX", 5, Y,70,0, GetCodePages(aData), 0, 0, F.DIF_DROPDOWNLIST, "", _noautoload=1}
 end
   Y = Y + 1
   D.lab         = {"DI_TEXT",     5, Y, 0,0, 0, 0, 0, 0, M.MDlgSearchArea}
   Y = Y + 1
-  D.cmbSearchArea={"DI_COMBOBOX", 5, Y,36,0, GetSearchAreas(aData), 0, 0, F.DIF_DROPDOWNLIST, "", _noauto=1}
+  D.cmbSearchArea={"DI_COMBOBOX", 5, Y,36,0, GetSearchAreas(aData), 0, 0, F.DIF_DROPDOWNLIST, "", _noautoload=1}
 if aOp == "search" then
   D.bSearchFolders ={"DI_CHECKBOX",40,Y-1,0,0,  0,0,0,0, M.MDlgSearchFolders}
 end
