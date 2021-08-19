@@ -154,6 +154,9 @@ function myeditor:edit_row(handle)
         table.insert(db_data, { colname=stmt:get_name(i); coltype=coltype; value=value; })
       end
 
+      -- finalize before popping up the dialog otherwise other
+      -- connections may have hard time trying to access this DB
+      stmt:finalize()
       if self:row_dialog(db_data, row_id) then
         panel.UpdatePanel(handle)
         panel.RedrawPanel(handle)
@@ -161,7 +164,7 @@ function myeditor:edit_row(handle)
     else
       ErrMsg(M.err_read .. "\n" .. self._dbx:last_error())
     end
-    stmt:finalize()
+    if stmt:isopen() then stmt:finalize() end
   end
 end
 

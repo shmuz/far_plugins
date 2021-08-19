@@ -154,7 +154,7 @@ local function LoadUserModules(object, aLoadCommon, aLoadIndividual)
             if filedata then
               LoadOneUserFile(filedata, fullname, AddModule)
             else
-              ErrMsg(fullname, M.module_not_found)
+              ErrMsg(M.module_not_found .. "\n" .. fullname)
             end
           end
         end

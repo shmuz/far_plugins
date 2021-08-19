@@ -1,3 +1,6 @@
+2021-08-19, v.1.4.4
+    1. A couple of fixes; minor refactoring.
+
 2021-07-01, v.1.4.3
     1. Added History of SQL queries (activated with F6 in any view mode).
     2. Minimal required Far build changed: 4401 -> 5416.

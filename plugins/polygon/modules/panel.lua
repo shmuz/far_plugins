@@ -12,7 +12,7 @@ local utils    = require "modules.utils"
 
 local F = far.Flags
 local VK = win.GetVirtualKeys()
-local band, bor = bit64.band, bit64.bor
+local bor = bit64.bor
 local ErrMsg, Resize, Norm = utils.ErrMsg, utils.Resize, utils.Norm
 
 -- This file's module. Could not be called "panel" due to existing LuaFAR global "panel".
@@ -33,7 +33,7 @@ function mypanel.open(filename, extensions, ignore_foreign_keys, multi_db)
   -- Members added since this plugin started.
     _col_masks      = nil ;  -- col_masks table (non-volatile): _col_masks[<colname>]=<col_width>|nil
     _col_masks_used = nil ;  -- boolean value
-    _db             = nil ;  -- database connection (extracted from _dbx for convience sake)
+    _db             = nil ;  -- database connection (extracted from _dbx for convenience sake)
     _exiting        = nil;   -- boolean (Enter pressed on .. in database mode and _multi_db==false).
                              -- Without it TopPanelItem of the Far panel might not be preserved
                              -- as Far will try to place the host file at the bottom of the visible
@@ -377,11 +377,11 @@ function mypanel:get_find_data(handle)
         return self:get_find_data(handle)
       end
     else
-      ErrMsg("Invalid panel mode: "..tostring(self._panel_mode)) -- should never get here
+      ErrMsg(M.invalid_panel_mode..": "..tostring(self._panel_mode)) -- should never get here
     end
   ------------------------------------------------------------------------------
   else
-    ErrMsg("Database not found: "..tostring(self._schema))
+    ErrMsg(M.database_not_found..": "..tostring(self._schema))
     self:set_root_mode()
     return self:get_find_data(handle) -- go root level
   end
@@ -482,7 +482,7 @@ function mypanel:get_panel_list_obj()
       end
       for _,name in ipairs {"rowid", "oid", "_rowid_"} do
         if map[name] == nil then
-          self._rowid_name = name
+          self._rowid_name = fullname.."."..name
           break
         end
       end
@@ -936,39 +936,31 @@ end
 
 
 function mypanel:handle_keyboard(handle, key_event)
-  local vcode  = key_event.VirtualKeyCode
-  local cstate = key_event.ControlKeyState
-  local nomods = (cstate == 0) or (cstate == F.ENHANCED_KEY)
-  local alt    = cstate == F.LEFT_ALT_PRESSED  or cstate == F.RIGHT_ALT_PRESSED
-  local ctrl   = cstate == F.LEFT_CTRL_PRESSED or cstate == F.RIGHT_CTRL_PRESSED
-  local shift  = cstate == F.SHIFT_PRESSED
-  local altshift = band(cstate, F.LEFT_CTRL_PRESSED+F.RIGHT_CTRL_PRESSED) == 0 and
-                   band(cstate, F.LEFT_ALT_PRESSED+F.RIGHT_ALT_PRESSED) ~= 0 and
-                   band(cstate, F.SHIFT_PRESSED) ~= 0
+  local key = far.InputRecordToName(key_event)
 
   -- Database mode -------------------------------------------------------------
   if self._panel_mode == "db" then
-    if nomods and vcode == VK.F3 then            -- F3: view table/view data
+    if key == "F3" then            -- F3: view table/view data
       self:view_db_object()
       return true
-    elseif nomods and vcode == VK.F4 then        -- F4: view create statement
+    elseif key == "F4" then        -- F4: view create statement
       self:view_db_create_sql()
       return true
-    elseif shift and vcode == VK.F4 then         -- ShiftF4: view pragma statement
+    elseif key == "ShiftF4" then   -- view pragma statement
       self:view_pragma_statements()
       return true
-    elseif nomods and vcode == VK.F5 then        -- F5: export table/view data
+    elseif key == "F5" then        -- export table/view data
       local ex = exporter.newexporter(self._dbx, self._filename, self._schema)
       if ex:export_data_with_dialog() then
         panel.UpdatePanel(nil,0)
         panel.RedrawPanel(nil,0)
       end
       return true
-    elseif shift and vcode == VK.F5 then
+    elseif key == "ShiftF5" then
       local ex = exporter.newexporter(self._dbx, self._filename, self._schema)
       ex:dump_data_with_dialog()
       return true
-    elseif nomods and vcode == VK.RETURN and not self._multi_db then
+    elseif key == "Enter" and not self._multi_db then
       local item = panel.GetCurrentPanelItem(handle)
       if item.FileName == ".." then self._exiting=true; end
     end
@@ -976,16 +968,16 @@ function mypanel:handle_keyboard(handle, key_event)
 
   -- Table or view mode --------------------------------------------------------
   if self._panel_mode == "table" or self._panel_mode == "view" then
-    if shift and vcode == VK.F3 then
+    if key == "ShiftF3" then
       self:set_column_mask(handle)
       return true
-    elseif alt and vcode == VK.F3 then
+    elseif key=="AltF3" or key=="RAltF3" then
       self:toggle_column_mask(handle)
       return true
-    elseif shift and vcode == VK.F6 then         -- Shift-F6 ("panel filter")
+    elseif key == "ShiftF6" then                  -- "panel filter"
       self:set_table_filter(handle)
       return true
-    elseif alt and vcode == VK.F6 then           -- Alt-F6 ("toggle panel filter")
+    elseif key == "AltF6" or key == "RAltF6" then -- "toggle panel filter"
       self:toggle_table_filter(handle)
       return true
     end
@@ -993,10 +985,10 @@ function mypanel:handle_keyboard(handle, key_event)
 
   -- Table mode ----------------------------------------------------------------
   if self._panel_mode == "table" then
-    if nomods and (vcode == VK.F4 or vcode == VK.RETURN) then -- F4 or Enter: edit row
-      if vcode == VK.RETURN then
+    if key == "F4" or key == "Enter" then -- edit row
+      if key == "Enter" then
         local item = panel.GetCurrentPanelItem(nil, 1)
-        if not (item and item.FileName ~= "..") then          -- skip action for ".."
+        if not (item and item.FileName ~= "..") then     -- skip action for ".."
           return false
         end
       end
@@ -1007,11 +999,11 @@ function mypanel:handle_keyboard(handle, key_event)
       else
         ErrMsg(M.err_edit_norowid)
       end
-    elseif shift and vcode == VK.F4 then         -- ShiftF4: insert row
+    elseif key == "ShiftF4" then         -- insert row
       local ed = myeditor.neweditor(self._dbx, self._schema, self._object, self._rowid_name)
       ed:insert_row(handle)
       return true
-    elseif shift and vcode == VK.F5 then         -- Shift-F5 ("show/hide columns affinity")
+    elseif key == "ShiftF5" then         -- "show/hide columns affinity"
       self._show_affinity = not self._show_affinity
       self:prepare_panel_info()
       panel.RedrawPanel(handle)
@@ -1020,23 +1012,15 @@ function mypanel:handle_keyboard(handle, key_event)
   end
 
   -- All modes -----------------------------------------------------------------
-  if shift and vcode == VK.F4 then             -- ShiftF4: suppress this key
-    return true
-  elseif nomods and vcode == VK.F5 then        -- F5: suppress this key
-    return true
-  elseif nomods and vcode == VK.F6 then        -- F6: edit and execute SQL query
+  if key == "F6" then        -- edit and execute SQL query
     self:sql_query_history(handle)
     return true
-  elseif altshift and vcode == VK.F6 then      -- AltShiftF6: toggle multi_db mode
+  elseif key == "AltShiftF6" or key == "RAltShiftF6" then -- toggle multi_db mode
     self._multi_db = not self._multi_db
     self:prepare_panel_info()
     panel.RedrawPanel(handle)
     return false
-  elseif shift and vcode == VK.F6 then         -- ShiftF6: suppress this key
-    return true
-  elseif nomods and vcode == VK.F7 then        -- F7: suppress this key
-    return true
-  elseif nomods and vcode == VK.F8 then -- intercept F8 to avoid panel-reread in case of user cancel
+  elseif key == "F8" then -- intercept F8 to avoid panel-reread in case of user cancel
     if panel.GetPanelInfo(handle).SelectedItemsNumber > 0 then
       local guid = win.Uuid("4472C7D8-E2B2-46A0-A005-B10B4141EBBD") -- for macros
       if self._panel_mode == "root" then
@@ -1051,10 +1035,9 @@ function mypanel:handle_keyboard(handle, key_event)
       end
     end
     return true
-  elseif shift and vcode == VK.F8 then         -- ShiftF8: suppress this key
-    return true
-  elseif ctrl and vcode == ("A"):byte() then   -- CtrlA: suppress this key
-    return true
+  elseif key=="ShiftF4" or key=="F5" or key=="ShiftF6" or key=="F7"
+      or key=="ShiftF8" or key=="CtrlA" or key=="RCtrlA" then -- suppress these keys
+    return true -- suppress these keys
   end
 end
 
@@ -1217,87 +1200,31 @@ function mypanel:view_pragma_statements()
 end
 
 
-function mypanel:sql_query_history(handle)
-  -- Prepare menu data
-  local queries = q_history.new()
-  local qarray = queries._array
-  local state = { query=""; }
-  while qarray[1] do
-    local H = far.AdvControl("ACTL_GETFARRECT")
-    H = H.Bottom - H.Top + 1
-    local props = {
-      Title=M.select_query.." ["..#qarray.."]";
-      Bottom="F1 F4 Ctrl+C Ctrl+Enter Shift+Del";
-      SelectIndex=#qarray;
-      MaxHeight = H - 8;
-      HelpTopic = "queries_history";
-    }
-    local items, brkeys = {}, {
-      { BreakKey="F4";         action="edit";       },
-      { BreakKey="C+RETURN";   action="insert";     },
-      { BreakKey="C+C";        action="copy";       },
-      { BreakKey="C+INSERT";   action="copy";       },
-      { BreakKey="CS+C";       action="copyserial"; },
-      { BreakKey="CS+INSERT";  action="copyserial"; },
-      { BreakKey="S+DELETE";   action="delete";     },
-    }
-    for i,v in ipairs(qarray) do items[i] = { text=v; } end
-
-    -- Show the menu
-    local item, pos = far.Menu(props, items, brkeys)
-    if item then
-      local query = items[pos].text
-      if item.action==nil then -- Enter pressed
-        self:open_query(handle, query)
-        state.done = true; break
-      elseif item.action == "insert" then
-        panel.SetCmdLine(handle, query)
-        state.done = true; break
-      elseif item.action == "copy" then
-        far.CopyToClipboard(query)
-        state.done = true; break
-      elseif item.action == "copyserial" then
-        -- table.concat is not OK here as individual entries may contain line feeds inside them
-        far.CopyToClipboard(history.serialize(qarray))
-        state.done = true; break
-      elseif item.action == "delete" then
-        table.remove(qarray, pos)
-        state.modified = true
-      elseif item.action == "edit" then
-        state.query = query
-        break
-      end
-    else
-      state.done = true; break
-    end
-  end
-  if state.modified then queries:save() end
-  if state.done then return end
-
+function mypanel:edit_query(query)
   -- Create a file containing the selected query
   local tmp_name = utils.get_temp_file_name("sql")
   local fp = io.open(tmp_name, "w")
   if fp then
-    fp:write(state.query)
+    fp:write(query)
     fp:close()
   else
     ErrMsg(M.err_writef.."\n"..tmp_name, nil, "we")
-    return
+    return nil
   end
 
   -- Open query editor
+  query = nil
   if F.EEC_MODIFIED == editor.Editor(tmp_name, "SQLite query", nil, nil, nil, nil,
                        F.EF_DISABLESAVEPOS + F.EF_DISABLEHISTORY, nil, nil, 65001)
   then
     fp = io.open(tmp_name)
     if fp then
-      local query = fp:read("*all")
+      query = fp:read("*all")
       fp:close()
       query = string.gsub(query, "^\239\187\191", "")  -- remove UTF-8 BOM
-      query = string.gsub(query, "\r\n", "\n")         -- avoid displaying \r in error message boxes
       query = string.gsub(query, "^%s*(.-)%s*$", "%1") -- remove leading and trailing space
-      if query:find("%S") then
-        self:open_query(handle, query)
+      if not query:find("%S") then
+        query = nil
       end
     else
       ErrMsg(M.err_read.."\n"..tmp_name, nil, "we")
@@ -1306,6 +1233,73 @@ function mypanel:sql_query_history(handle)
 
   -- Delete the file.
   win.DeleteFile(tmp_name)
+  return query
+end
+
+
+function mypanel:sql_query_history(handle)
+  -- Prepare menu data
+  local queries = q_history.new()
+  local qarray = queries._array
+  local state = { query=""; }
+
+  local props = {
+    Bottom = "F1 F4 Ctrl+C Ctrl+Enter Shift+Del";
+    SelectIndex = #qarray;
+    HelpTopic = "queries_history";
+  }
+  local brkeys = {
+    { BreakKey="F4";         action="edit";       },
+    { BreakKey="C+RETURN";   action="insert";     },
+    { BreakKey="C+C";        action="copy";       },
+    { BreakKey="C+INSERT";   action="copy";       },
+    { BreakKey="CS+C";       action="copyserial"; },
+    { BreakKey="CS+INSERT";  action="copyserial"; },
+    { BreakKey="S+DELETE";   action="delete";     },
+  }
+
+  while qarray[1] do
+    local H = far.AdvControl("ACTL_GETFARRECT")
+    props.MaxHeight = (H.Bottom - H.Top + 1) - 8
+    props.Title = M.select_query.." ["..#qarray.."]"
+    local items = {}
+    for i,v in ipairs(qarray) do items[i] = { text=v; } end
+
+    -- Show the menu
+    local item, pos = far.Menu(props, items, brkeys)
+    if item then
+      local query = items[pos].text
+      if item.action==nil then -- Enter pressed
+        self:open_query(handle, query)
+        break
+      elseif item.action == "insert" then
+        panel.SetCmdLine(handle, query)
+        break
+      elseif item.action == "copy" then
+        far.CopyToClipboard(query)
+        break
+      elseif item.action == "copyserial" then
+        -- table.concat is not OK here as individual entries may contain line feeds inside them
+        far.CopyToClipboard(history.serialize(qarray))
+        break
+      elseif item.action == "delete" then
+        table.remove(qarray, pos)
+        props.SelectIndex = #qarray
+        state.modified = true
+      elseif item.action == "edit" then
+        query = self:edit_query(query)
+        if query then
+          self:open_query(handle, query) -- it saves the history internally
+          return
+        else
+          props.SelectIndex = pos
+        end
+      end
+    else
+      break
+    end
+  end
+  if state.modified then queries:save() end
 end
 
 
