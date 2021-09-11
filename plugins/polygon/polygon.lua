@@ -404,6 +404,10 @@ end
 
 
 function export.ProcessPanelEvent (object, handle, Event, Param)
+  if Event == F.FE_REDRAW then
+    polygon_ResetSort()
+  end
+
   local ret = false
   for _,mod in ipairs(object.LoadedModules) do
     if type(mod.ProcessPanelEvent) == "function" then

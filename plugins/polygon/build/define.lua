@@ -1,7 +1,7 @@
 -- Definitions
 VER_MAJOR = "1"
-VER_MINOR = "4"
-VER_MICRO = "4"
+VER_MINOR = "5"
+VER_MICRO = "0"
 
 -- Far >= 3.0.4364 required if -DRUN_LUAFAR_INIT is used
 -- Far >= 3.0.4401 required if more than 10 DB table columns must be supported

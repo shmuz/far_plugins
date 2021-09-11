@@ -1,3 +1,8 @@
+2021-09-11, v.1.5.0
+    1. "Edit row" dialog: a new shortcut Ctrl-O for (de)normalizing strings.
+    2. A new menu "Select sort compare mode" (shortcut Ctrl-N in the panel).
+    3. Further increase in sorting speed (by about 1.5 times).
+
 2021-08-19, v.1.4.4
     1. A couple of fixes; minor refactoring.
 

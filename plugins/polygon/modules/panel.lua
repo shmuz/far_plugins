@@ -12,6 +12,7 @@ local utils    = require "modules.utils"
 
 local F = far.Flags
 local VK = win.GetVirtualKeys()
+local CMP_ALPHA, CMP_INT, CMP_FLOAT = 0,1,2 -- must match the enum in polygon.c
 local bor = bit64.bor
 local ErrMsg, Resize, Norm = utils.ErrMsg, utils.Resize, utils.Norm
 
@@ -45,6 +46,7 @@ function mypanel.open(filename, extensions, ignore_foreign_keys, multi_db)
     _show_affinity  = nil ;  -- boolean value
     _sort_col_index = nil ;  -- number of column counting from the left
     _sort_last_mode = nil ;  -- F.SM_NAME...F.SM_OWNER (1...9)
+    _sort_compare   = 0   ;  -- 0=lexical; 1=numeric
     _tab_filter     = { enabled=false; text=nil; }; -- current table filter
     _language       = nil ;  -- current Far language
   }
@@ -937,6 +939,8 @@ end
 
 function mypanel:handle_keyboard(handle, key_event)
   local key = far.InputRecordToName(key_event)
+  if not key then return end
+  key = key:gsub("RCtrl","Ctrl"):gsub("RAlt","Alt")
 
   -- Database mode -------------------------------------------------------------
   if self._panel_mode == "db" then
@@ -971,13 +975,13 @@ function mypanel:handle_keyboard(handle, key_event)
     if key == "ShiftF3" then
       self:set_column_mask(handle)
       return true
-    elseif key=="AltF3" or key=="RAltF3" then
+    elseif key=="AltF3" then
       self:toggle_column_mask(handle)
       return true
-    elseif key == "ShiftF6" then                  -- "panel filter"
+    elseif key == "ShiftF6" then        -- "panel filter"
       self:set_table_filter(handle)
       return true
-    elseif key == "AltF6" or key == "RAltF6" then -- "toggle panel filter"
+    elseif key == "AltF6" then          -- "toggle panel filter"
       self:toggle_table_filter(handle)
       return true
     end
@@ -1012,10 +1016,10 @@ function mypanel:handle_keyboard(handle, key_event)
   end
 
   -- All modes -----------------------------------------------------------------
-  if key == "F6" then        -- edit and execute SQL query
+  if key == "F6" then             -- edit and execute SQL query
     self:sql_query_history(handle)
     return true
-  elseif key == "AltShiftF6" or key == "RAltShiftF6" then -- toggle multi_db mode
+  elseif key == "AltShiftF6" then -- toggle multi_db mode
     self._multi_db = not self._multi_db
     self:prepare_panel_info()
     panel.RedrawPanel(handle)
@@ -1036,8 +1040,28 @@ function mypanel:handle_keyboard(handle, key_event)
     end
     return true
   elseif key=="ShiftF4" or key=="F5" or key=="ShiftF6" or key=="F7"
-      or key=="ShiftF8" or key=="CtrlA" or key=="RCtrlA" then -- suppress these keys
+      or key=="ShiftF8" or key=="CtrlA" then -- suppress these keys
     return true -- suppress these keys
+  elseif key=="CtrlN" then
+    ------ Toggle between alphabetical and numerical sort modes ------
+    local curr = self._sort_compare
+    local item = far.Menu( { Title=M.title_sort_compare_mode }, {
+      { text="&1. Alphabetic";       checked=(curr==CMP_ALPHA); selected=(curr==CMP_ALPHA); Cmp=CMP_ALPHA; },
+      { text="&2. Numeric: integer"; checked=(curr==CMP_INT);   selected=(curr==CMP_INT);   Cmp=CMP_INT;   },
+      { text="&3. Numeric: float";   checked=(curr==CMP_FLOAT); selected=(curr==CMP_FLOAT); Cmp=CMP_FLOAT; },
+    })
+    if item then
+      self._sort_compare = item.Cmp
+      local info = panel.GetPanelInfo(handle)
+      if self._panel_mode ~= "db" and info.SortMode < F.SM_USER then
+        -- SetSortMode() called with the current sort mode reverses the sort order, thus we
+        -- call SetSortOrder() requesting the current sort order. Hopefully, the future Far Manager
+        -- versions won't optimize such a case out and will always initiate sorting operation.
+        -- As for Far 3.0.5886 (September 2021) it is OK.
+        panel.SetSortOrder(handle, nil, bit64.band(info.Flags, F.PFLAGS_REVERSESORTORDER)~=0)
+      end
+    end
+    return true
   end
 end
 
@@ -1348,14 +1372,10 @@ function mypanel:sort_callback(Mode)
       self._sort_last_mode = Mode
       self._sort_col_index = self:get_sort_index(Mode)
     end
-    return self._sort_col_index or 0
+    return
+      self._sort_col_index or 0,
+      self._sort_compare
   end
-end
-
-
-local function get_rowid(PanelItem)
-  local fname = PanelItem and PanelItem.FileName
-  return fname and fname~=".." and PanelItem.AllocationSize
 end
 
 
@@ -1368,7 +1388,7 @@ function mypanel:get_info()
     panel_mode  = self._panel_mode;
     curr_object = self._object;
     rowid_name  = self._rowid_name;
-    get_rowid   = get_rowid;
+    get_rowid   = utils.get_rowid;
   }
 end
 

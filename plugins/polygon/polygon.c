@@ -43,28 +43,79 @@ void PushPluginObject(lua_State* L, HANDLE hPlugin)
   lua_remove(L, -2);
 }
 
+enum { CMP_ALPHA=0, CMP_INT=1, CMP_FLOAT=2, };
+
+struct {
+  int valid;
+  intptr_t index;
+  intptr_t mode;
+} SortParams;
+
 intptr_t LUAPLUG CompareW(const struct CompareInfo *Info)
 {
-  intptr_t ret = 0, index;
+  intptr_t index, ret;
   lua_State *L = GetLuaState();
 
-  PushPluginObject(L, Info->hPanel); //+1
-  if (!lua_istable(L, -1)) {
-    lua_pop(L, 1);
-    return 0;
+  if (!SortParams.valid)
+  {
+    // This is the first CompareW() call in the current sort operation.
+    // Retrieve parameters from the Lua script and set SortParams.valid=1 to ensure
+    // the parameters are retrieved only once for the current sort operation.
+    PushPluginObject(L, Info->hPanel); //+1
+    if (!lua_istable(L, -1))
+    {
+      lua_pop(L, 1);
+      return 0;
+    }
+    lua_getfield(L, -1, "sort_callback");          //+2
+    lua_pushvalue(L, -2);                          //+3
+    lua_pushinteger(L, Info->Mode);                //+4
+    lua_call(L, 2, 2);                             //+3
+    SortParams.index = lua_tointeger(L, -2);
+    SortParams.mode = lua_tointeger(L, -1);
+    lua_pop(L, 3);                                 //+0
+    SortParams.valid = 1;
   }
-  lua_getfield(L, -1, "sort_callback");          //+2
-  lua_pushvalue(L, -2);                          //+3
-  lua_pushinteger(L, Info->Mode);                //+4
-  lua_call(L, 2, 1);                             //+2
-  index = lua_tointeger(L, -1);
-  lua_pop(L, 2);                                 //+0
+  index = SortParams.index;
   if (index < 1) // index < 1 is treated as the return value (either 0 or -2)
+  {
     return index;
-  else {
-    --index;
-    ret = CompareStringW(LOCALE_USER_DEFAULT, NORM_IGNORECASE | SORT_STRINGSORT,
-      Info->Item1->CustomColumnData[index], -1, Info->Item2->CustomColumnData[index], -1);
+  }
+  else
+  {
+    const wchar_t *str1 = Info->Item1->CustomColumnData[--index];
+    const wchar_t *str2 = Info->Item2->CustomColumnData[index];
+    long long i1, i2;
+    double d1, d2;
+    switch(SortParams.mode)
+    {
+      case CMP_INT:
+        if (swscanf(str1, L"%lld", &i1) && swscanf(str2, L"%lld", &i2))
+          return i1<i2 ? -1 : i1>i2 ? 1 : 0;
+        break;
+      case CMP_FLOAT:
+        if (swscanf(str1, L"%lf", &d1) && swscanf(str2, L"%lf", &d2))
+          return d1<d2 ? -1 : d1>d2 ? 1 : 0;
+        break;
+    }
+    ret = CompareStringW(LOCALE_USER_DEFAULT, NORM_IGNORECASE | SORT_STRINGSORT, str1, -1, str2, -1);
     return ret==0 ? 0 : ret-2;
   }
+}
+
+// This function is called whenever ProcessPanelEvent(FE_REDRAW) comes from Far.
+// The idea is that FE_REDRAW is always called after sort operation is finished
+// but is never called in the middle of a sort operation.
+static int ResetSort(lua_State *L)
+{
+  (void) L;
+  SortParams.valid = 0;
+  return 0;
+}
+
+int luaopen_polygon (lua_State *L)
+{
+  lua_pushcfunction(L, ResetSort);
+  lua_setglobal(L, "polygon_ResetSort");
+  return 0;
 }

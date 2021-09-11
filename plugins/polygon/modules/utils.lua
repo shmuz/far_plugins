@@ -30,4 +30,9 @@ function mod.lang(msg, trep)
   return msg
 end
 
+function mod.get_rowid(PanelItem)
+  local fname = PanelItem and PanelItem.FileName
+  return fname and fname~=".." and PanelItem.AllocationSize
+end
+
 return mod

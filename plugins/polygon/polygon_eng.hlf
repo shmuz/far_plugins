@@ -78,6 +78,7 @@ $^ #Reference of keyboard actions#
                  │ Alt-Shift-F6│ Toggle between simple and multi-database mode
                  │ LCtrl-1     │ Two-panel view mode
                  │ LCtrl-2     │ One-panel view mode
+                 │ Ctrl-N      │ Menu: select sort compare mode
    ──────────────┼─────────────┼───────────────────────────────────────────────────
    Database      │ F3          │ Show contents of an item under cursor
                  │ F4          │ Show create statement of an item under cursor
@@ -326,6 +327,7 @@ $^ #Edit Table Row#
    - NULL values are displayed as       #NULL#
 
  To toggle a field between NULL and the initial value, press #Ctrl-N#.
+ To toggle a field between plain and normalized string, press #Ctrl-O#.
  To view a field in the viewer press #F3#.
  To edit a field in the editor press #F4#.
 
