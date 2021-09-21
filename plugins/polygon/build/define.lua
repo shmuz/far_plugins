@@ -1,6 +1,6 @@
 -- Definitions
 VER_MAJOR = "1"
-VER_MINOR = "5"
+VER_MINOR = "6"
 VER_MICRO = "0"
 
 -- Far >= 3.0.4364 required if -DRUN_LUAFAR_INIT is used

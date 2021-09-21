@@ -6,6 +6,7 @@ local M        = require "modules.string_rc"
 local progress = require "modules.progress"
 local settings = require "modules.settings"
 local utils    = require "modules.utils"
+local dbx      = require "modules.sqlite"
 
 -- settings --
 local MAX_BLOB_LENGTH = 100
@@ -24,8 +25,8 @@ local exporter = {}
 local mt_exporter = {__index=exporter}
 
 
-function exporter.newexporter(dbx, filename, schema)
-  local self = {_dbx=dbx; _db=dbx:db(); _filename=filename, _schema=schema}
+function exporter.newexporter(db, filename, schema)
+  local self = {_db=db; _filename=filename, _schema=schema}
   return setmetatable(self, mt_exporter)
 end
 
@@ -178,13 +179,12 @@ end
 
 
 function exporter:export_data_as_text(file_name, db_object)
-  local dbx = self._dbx
-  local db = dbx:db()
+  local db = self._db
 
-  local row_count = dbx:get_row_count(self._schema, db_object)
+  local row_count = dbx.get_row_count(self._db, self._schema, db_object)
   if not row_count then return end
 
-  local col_info = dbx:read_columns_info(self._schema, db_object)
+  local col_info = dbx.read_columns_info(self._db, self._schema, db_object)
   if not col_info then return end
 
   local col_count = #col_info
@@ -192,17 +192,13 @@ function exporter:export_data_as_text(file_name, db_object)
 
   -- Get maximum width for each column
   local col_widths = {}
-  local query_val, query_len = "select ", "select "
+  local query_val, query_len = utils.StringBuffer(), utils.StringBuffer()
   for i = 1, col_count do
-    if i > 1 then
-      query_val = query_val .. ", "
-      query_len = query_len .. ", "
-    end
-    query_val = query_val .. "[" .. col_info[i].name .. "]"
-    query_len = query_len .. "length([" .. col_info[i].name .. "])"
+    query_val:Add("[" .. col_info[i].name .. "]")
+    query_len:Add("length([" .. col_info[i].name .. "])")
   end
-  query_val = ("%s from %s.%s"):format(query_val, Norm(self._schema), Norm(db_object))
-  query_len = ("%s from %s.%s"):format(query_len, Norm(self._schema), Norm(db_object))
+  query_val = ("SELECT %s FROM %s.%s"):format(query_val:Concat(","), Norm(self._schema), Norm(db_object))
+  query_len = ("SELECT %s FROM %s.%s"):format(query_len:Concat(","), Norm(self._schema), Norm(db_object))
 
   for i = 1, col_count do
     col_widths[i] = col_info[i].name:len() -- initialize with widths of titles
@@ -258,31 +254,27 @@ function exporter:export_data_as_text(file_name, db_object)
   file:write(out_text, "\r\n")
 
   -- Read data
-  local query = "select * from " .. Norm(self._schema).."."..Norm(db_object) .. ";"
+  local query = "SELECT * FROM " .. Norm(self._schema).."."..Norm(db_object) .. ";"
   local stmt = db:prepare(query)
   if not stmt then
     prg_wnd:hide()
     file:close()
-    ErrMsg(M.err_read.."\n"..dbx:last_error())
+    ErrMsg(M.err_read.."\n"..dbx.last_error(self._db))
     return false
   end
 
   local count = 0
-  local state
-  while true do
-    state = stmt:step()
-    if state ~= sql3.ROW then
-      break
-    end
+  local state = stmt:step()
+  while state == sql3.ROW do
     count = count + 1
     if count % 100 == 0 then
       prg_wnd:update(count)
-    end
-    if progress.aborted() then
-      prg_wnd:hide()
-      stmt:finalize()
-      file:close()
-      return false
+      if progress.aborted() then
+        prg_wnd:hide()
+        stmt:finalize()
+        file:close()
+        return false
+      end
     end
 
     out_text = ""
@@ -308,6 +300,7 @@ function exporter:export_data_as_text(file_name, db_object)
       ErrMsg(M.err_writef.."\n"..file_name, nil, "we")
       return false
     end
+    state = stmt:step()
   end
 
   file:close()
@@ -317,7 +310,7 @@ function exporter:export_data_as_text(file_name, db_object)
   if state == sql3.DONE then
     return true
   else
-    ErrMsg(M.err_read.."\n"..dbx:last_error())
+    ErrMsg(M.err_read.."\n"..dbx.last_error(self._db))
     return false
   end
 end
@@ -325,10 +318,10 @@ end
 
 function exporter:export_data_as_csv(file_name, db_object, multiline)
   -- Get row count and columns info
-  local row_count = self._dbx:get_row_count(self._schema, db_object)
+  local row_count = dbx.get_row_count(self._db, self._schema, db_object)
   if not row_count then return end
 
-  local col_info = self._dbx:read_columns_info(self._schema, db_object)
+  local col_info = dbx.read_columns_info(self._db, self._schema, db_object)
   if not col_info then return end
 
   -- Create output file
@@ -342,14 +335,11 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
   local prg_wnd = progress.newprogress(M.reading, row_count)
 
   -- Write header (columns names)
-  local out_text = ""
+  local out_text = utils.StringBuffer()
   for i = 1, col_count do
-    out_text = out_text .. col_info[i].name
-    if i ~= col_count then
-      out_text = out_text .. ';'
-    end
+    out_text:Add(col_info[i].name)
   end
-  file:write(out_text, "\n")
+  file:write(out_text:Concat(";"), "\n")
 
   -- Read data
   local query = "SELECT * FROM " .. Norm(self._schema).."."..Norm(db_object)
@@ -357,60 +347,50 @@ function exporter:export_data_as_csv(file_name, db_object, multiline)
   if not stmt then
     prg_wnd:hide()
     file:close()
-    local err_descr = self._dbx:last_error()
+    local err_descr = dbx.last_error(self._db)
     ErrMsg(M.err_read.."\n"..err_descr)
     return false
   end
 
   local count = 0
-  local state
   local ok_write = true
-  while true do
-    state = stmt:step()
-    if state ~= sql3.ROW then
-      break
-    end
+  local state = stmt:step()
+  while state == sql3.ROW do
     count = count + 1
     if count % 100 == 0 then
       prg_wnd:update(count)
-    end
-    if progress.aborted() then
-      file:close()
-      return false
+      if progress.aborted() then break end
     end
 
-    out_text = ""
+    out_text = utils.StringBuffer()
     for i = 1, col_count do
       local col_data = exporter.get_text(stmt, i-1, multiline)
       local use_quote = col_data:find("[;\"\n\r]")
       if use_quote then
-        out_text = out_text .. '"'
+        out_text:Add('"')
         -- Replace quote by double quote
         col_data = col_data:gsub('"', '""')
       end
-      out_text = out_text .. col_data
-      if use_quote then
-        out_text = out_text .. '"'
-      end
-      if i < col_count then
-        out_text = out_text .. ';'
-      end
+      out_text:Add(col_data)
+      if use_quote then out_text:Add('"') end
+      if i < col_count then out_text:Add(';') end
     end
 
-    ok_write = file:write(out_text, "\n")
+    ok_write = file:write(out_text:Concat(), "\n")
     if not ok_write then break end
+    state = stmt:step()
   end
 
   file:close()
   prg_wnd:hide()
   stmt:finalize()
 
-  if state == sql3.DONE and ok_write then
+  if state == sql3.DONE then
     return true
   elseif not ok_write then
     ErrMsg(M.err_writef.."\n"..file_name, nil, "we")
-  else
-    ErrMsg(M.err_read.."\n"..self._dbx:last_error())
+  elseif state ~= sql3.ROW then
+    ErrMsg(M.err_read.."\n"..dbx.last_error(self._db))
   end
   return false
 end

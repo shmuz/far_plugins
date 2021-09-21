@@ -23,6 +23,7 @@ $^ #Polygon - Help Contents#
  ~Data Export Dialog~@Export@
  ~Data Dump Dialog~@Dump@
  ~Queries History Menu~@queries_history@
+ ~Create table dialog~@CreateTableDialog@
  ~User modules~@UserModules@
  ~Misc~@Misc@
 
@@ -85,6 +86,7 @@ $^ #Reference of keyboard actions#
                  │ Shift-F4    │ Show pragma statements
                  │ F5          │ Dialog: export data of an item under cursor
                  │ Shift-F5    │ Dialog: make data dump
+                 │ F7          │ Dialog: create a new table
                  │ F8          │ Dialog: delete selected database items
    ──────────────┼─────────────┼───────────────────────────────────────────────────
    Table         │ F4, Enter   │ Dialog: edit a row
@@ -319,17 +321,25 @@ $^ #Table tInfo#
 @EditInsertRow
 $^ #Edit Table Row#
  This dialog allows to edit either an existing or new table row.
+ It is possible to insert multiple rows at once (see #Quantity# field).
 
  Each edit field displays its contents as text, numeric, BLOB or NULL.
+
    - Text values are displayed like     #'some text'#
    - Numeric values are displayed like  #15#, #0.35# or #2.35e6#
    - BLOB values are displayed like     #x'13E6BC64'#
    - NULL values are displayed as       #NULL#
+   
+   If the #OK# button is pressed and a field is detected that does not match
+   any of the above formats then such a field is treated as a text one
+   and is normalized by the plugin.
 
- To toggle a field between NULL and the initial value, press #Ctrl-N#.
- To toggle a field between plain and normalized string, press #Ctrl-O#.
- To view a field in the viewer press #F3#.
- To edit a field in the editor press #F4#.
+ The following keys are available:
+   #Ctrl-N#  toggle between NULL and the initial value
+   #Ctrl-O#  toggle between plain and normalized representation
+   #F3#      view a field in the internal viewer
+   #F4#      edit a field in the internal editor
+   #Alt-F3#  convert blob to text and show in a message box 
 
 
  ~Contents~@Contents@
@@ -428,6 +438,24 @@ to any database connection. This collation can be used in SQL schemas and statem
  2. SQLite core functions #lower#, #upper# and #like# are replaced by their UTF-8 equivalents.
 
  3. Added #regexp# user function. It makes possible the #REGEXP# operator in SQL expressions.
+
+
+ ~Contents~@Contents@
+
+@CreateTableDialog
+$^ #Create Table dialog#
+
+ This dialog assists in creation of a new table.
+
+ - Enter the table name and column definitions into their dedicated input fields.
+
+ - If additional conditions (e.g. CHECK, UNIQUE, etc.) are needed, they can be entered
+   into the next available column definition fields.
+
+ - Empty column fields are ignored but at least one of them must be non-empty.
+
+ - The entered names are used with no processing. If the syntax requires enclosing some names
+   in quotes then it should be done by the user.
 
 
  ~Contents~@Contents@

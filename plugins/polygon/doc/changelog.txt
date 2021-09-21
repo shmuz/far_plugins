@@ -1,3 +1,11 @@
+2021-09-21, v.1.6.0
+    1. Table view mode   : indicate the sorted column by 
+    2. Edit row dialog   : text values may be entered unquoted (see the help file)
+    3. Edit row dialog   : a new shortcut Alt-F3 for viewing blob as text
+    4. Insert row dialog : multiple rows can be added at once
+    5. New dialog added  : "Create a table"
+    6. Performance       : reading tables from database sped up by about 7 times (due to a fix)
+
 2021-09-11, v.1.5.0
     1. "Edit row" dialog: a new shortcut Ctrl-O for (de)normalizing strings.
     2. A new menu "Select sort compare mode" (shortcut Ctrl-N in the panel).

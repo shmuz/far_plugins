@@ -68,12 +68,13 @@ intptr_t LUAPLUG CompareW(const struct CompareInfo *Info)
       return 0;
     }
     lua_getfield(L, -1, "sort_callback");          //+2
-    lua_pushvalue(L, -2);                          //+3
-    lua_pushinteger(L, Info->Mode);                //+4
-    lua_call(L, 2, 2);                             //+3
+    lua_insert(L, -2);                             //+2
+    lua_pushlightuserdata(L, Info->hPanel);        //+3
+    lua_pushinteger(L, Info->Mode);                //+4  func,obj,handle,mode
+    lua_call(L, 3, 2);                             //+2
     SortParams.index = lua_tointeger(L, -2);
     SortParams.mode = lua_tointeger(L, -1);
-    lua_pop(L, 3);                                 //+0
+    lua_pop(L, 2);                                 //+0
     SortParams.valid = 1;
   }
   index = SortParams.index;
@@ -90,12 +91,12 @@ intptr_t LUAPLUG CompareW(const struct CompareInfo *Info)
     switch(SortParams.mode)
     {
       case CMP_INT:
-        if (swscanf(str1, L"%lld", &i1) && swscanf(str2, L"%lld", &i2))
-          return i1<i2 ? -1 : i1>i2 ? 1 : 0;
+        if (swscanf(str1, L"%lld", &i1) && swscanf(str2, L"%lld", &i2) && i1 != i2)
+          return i1<i2 ? -1 : 1;
         break;
       case CMP_FLOAT:
-        if (swscanf(str1, L"%lf", &d1) && swscanf(str2, L"%lf", &d2))
-          return d1<d2 ? -1 : d1>d2 ? 1 : 0;
+        if (swscanf(str1, L"%lf", &d1) && swscanf(str2, L"%lf", &d2) && d1 != d2)
+          return d1<d2 ? -1 : 1;
         break;
     }
     ret = CompareStringW(LOCALE_USER_DEFAULT, NORM_IGNORECASE | SORT_STRINGSORT, str1, -1, str2, -1);

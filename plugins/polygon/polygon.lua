@@ -1,6 +1,6 @@
 -- coding: UTF-8
 -- Started: 2018-01-13
--- luacheck: globals  AppIdToSkip  package  require
+-- luacheck: globals  AppIdToSkip  package  require polygon_ResetSort
 
 AppIdToSkip = AppIdToSkip or {} -- must be global to withstand script reloads
 local band, bor, rshift = bit64.band, bit64.bor, bit64.rshift
@@ -73,7 +73,7 @@ First_load_actions()
 local M        = require "modules.string_rc"
 local mypanel  = require "modules.panel"
 local settings = require "modules.settings"
-local sqlite   = require "modules.sqlite"
+local dbx      = require "modules.sqlite"
 local utils    = require "modules.utils"
 
 local F = far.Flags
@@ -159,7 +159,7 @@ local function LoadUserModules(object, aLoadCommon, aLoadIndividual)
           end
         end
       else
-        ErrMsg("Table "..tablename..":\n"..object._dbx:last_error(), M.err_sql)
+        ErrMsg("Table "..tablename..":\n"..dbx.last_error(object._db), M.err_sql)
       end
     end
   end
@@ -219,7 +219,7 @@ function export.Analyse(info)
     band(info.OpMode,F.OPM_TOPLEVEL) == 0 -- not supposed to process ShiftF1/F2/F3
     and info.FileName
     and info.FileName ~= ""
-    and sqlite.format_supported(info.Buffer, #info.Buffer)
+    and dbx.format_supported(info.Buffer, #info.Buffer)
     and not AppIdToSkip[string.sub(info.Buffer,69,72)]
     and not MatchExcludeMasks(info.FileName)
 end
@@ -385,7 +385,7 @@ function export.ClosePanel(object, handle)
       if not ok then ErrMsg(msg) end
     end
   end
-  object._dbx:close()
+  object._db:close()
 end
 
 
