@@ -766,7 +766,7 @@ local function GetKeybarStrings(panelmode)
   }
   elseif panelmode == "db" then return {
   --           F1        F2        F3         F4           F5           F6            F7     F8
-    nomods = { false,    false,    M.kb_view, "DDL",       M.kb_export, "SQL",        "",    M.kb_delete },
+    nomods = { false,    false,    M.kb_view, "DDL",       M.kb_export, "SQL", M.kb_table,   M.kb_delete },
     shift  = { "",       "",       "",        M.kb_pragma, "Dump",      "",           "",    ""    },
     alt    = { false,    false,    "",        "",          "",          "",           "",    false },
     ctrl   = { "",       "",       "",        "",          "",          "",           "",    ""    },
@@ -1465,6 +1465,7 @@ function mypanel:get_info()
     curr_object = self._object;
     rowid_name  = self._rowid_name;
     get_rowid   = utils.get_rowid;
+    __self      = self; -- BEWARE: direct access to self; the code using it will break on API changes
   }
 end
 

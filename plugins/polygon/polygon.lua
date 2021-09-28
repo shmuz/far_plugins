@@ -1,6 +1,6 @@
 -- coding: UTF-8
 -- Started: 2018-01-13
--- luacheck: globals  AppIdToSkip  package  require polygon_ResetSort
+-- luacheck: globals  AppIdToSkip  package  require  polygon_ResetSort
 
 AppIdToSkip = AppIdToSkip or {} -- must be global to withstand script reloads
 local band, bor, rshift = bit64.band, bit64.bor, bit64.rshift
@@ -70,11 +70,12 @@ end
 -- First_load_actions() must precede other require() calls.
 First_load_actions()
 
-local M        = require "modules.string_rc"
-local mypanel  = require "modules.panel"
-local settings = require "modules.settings"
-local dbx      = require "modules.sqlite"
-local utils    = require "modules.utils"
+local M         = require "modules.string_rc"
+local mypanel   = require "modules.panel"
+local settings  = require "modules.settings"
+local dbx       = require "modules.sqlite"
+local utils     = require "modules.utils"
+local plugdebug = require "far2.plugdebug"
 
 local F = far.Flags
 local PluginGuid = export.GetGlobalInfo().Guid -- plugin GUID
@@ -241,7 +242,10 @@ local function OpenFromCommandLine(str)
   local Opt = {}
   for pos, word in str:gmatch("()(%S+)") do
     if word:sub(1,1) == "-" then
-      AddOptions(Opt, word:sub(2))
+      if     word == "-startdebug" then plugdebug.Start() -- undocumented
+      elseif word == "-stopdebug"  then plugdebug.Stop()  -- undocumented
+      else AddOptions(Opt, word:sub(2))
+      end
     else
       File = str:sub(pos)
       break
@@ -311,6 +315,10 @@ local function OpenFromMacro(params)
         info.PluginObject:open_query(info.PluginHandle, code)
       end
     end
+
+  elseif params[1] == "startdebug" then plugdebug.Start() -- undocumented
+  elseif params[1] == "stopdebug"  then plugdebug.Stop()  -- undocumented
+
   end
 end
 
@@ -460,13 +468,7 @@ function export.Configure()
 end
 
 
---   if oldexport then return end
---   far.ReloadDefaultScript = false
---   oldexport = export
---   export = {}
---   local mt = {}
---   mt.__index = function(t,name)
---     win.OutputDebugString(name)
---     return oldexport[name]
---   end
---   setmetatable(export, mt)
+if plugdebug.Running() then
+  plugdebug.Start()
+  win.OutputDebugString("On_Default_Script_Loaded")
+end

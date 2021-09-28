@@ -1,3 +1,8 @@
+2021-09-28, v.1.6.1
+    1. Add undocumented command-line options: "-startdebug" and "-stopdebug".
+    2. Add undocumented macro call commands: "startdebug" and "stopdebug".
+    3. Insert row dialog : fix the case when COMMIT fails.
+
 2021-09-21, v.1.6.0
     1. Table view mode   : indicate the sorted column by 
     2. Edit row dialog   : text values may be entered unquoted (see the help file)

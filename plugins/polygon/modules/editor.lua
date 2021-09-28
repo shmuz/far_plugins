@@ -41,16 +41,20 @@ local function exec_update(db, schema, table_name, rowid_name, row_id, db_data)
     query = ("INSERT INTO %s.%s (%s) VALUES (%s)"):format(
         Norm(schema), Norm(table_name), table.concat(t1,","), table.concat(t2,","))
   end
+  local ok = true
   db:exec("BEGIN")
   for _=1,db_data.quan do
     if db:exec(query) ~= sql3.OK then
-      dbx.err_message(db, query)
-      db:exec("ROLLBACK")
-      return false
+      ok = false; break
     end
   end
-  db:exec("COMMIT")
-  return true
+  if ok and db:exec("COMMIT") == sql3.OK then
+    return true
+  else
+    dbx.err_message(db, query)
+    db:exec("ROLLBACK")
+    return false
+  end
 end
 
 

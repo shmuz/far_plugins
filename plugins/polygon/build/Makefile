@@ -27,6 +27,7 @@ modules = \
   $(path_plugin)*modules\sqlite.lua      \
   $(path_plugin)*modules\string_rc.lua   \
   $(path_plugin)*modules\utils.lua       \
+  $(path_share)*far2\plugdebug.lua       \
   $(path_share)*far2\settings.lua        \
   $(path_share)*far2\simpledialog.lua
 
