@@ -22,6 +22,7 @@ $^ #Polygon - Help Contents#
  ~Edit Table Row~@EditInsertRow@
  ~Data Export Dialog~@Export@
  ~Data Dump Dialog~@Dump@
+ ~Data Recovery Dialog~@Recovery@
  ~Queries History Menu~@queries_history@
  ~Create table dialog~@CreateTableDialog@
  ~User modules~@UserModules@
@@ -73,33 +74,35 @@ $^ #Invoking the plugin#
 
 @Keyboard
 $^ #Reference of keyboard actions#
-   View mode     │ Key         │ Action
-   ──────────────┼─────────────┼───────────────────────────────────────────────────
-   Any           │ F6          │ SQL queries history
-                 │ Alt-Shift-F6│ Toggle between simple and multi-database mode
-                 │ LCtrl-1     │ Two-panel view mode
-                 │ LCtrl-2     │ One-panel view mode
-                 │ Ctrl-N      │ Menu: select sort compare mode
-   ──────────────┼─────────────┼───────────────────────────────────────────────────
-   Database      │ F3          │ Show contents of an item under cursor
-                 │ F4          │ Show create statement of an item under cursor
-                 │ Shift-F4    │ Show pragma statements
-                 │ F5          │ Dialog: export data of an item under cursor
-                 │ Shift-F5    │ Dialog: make data dump
-                 │ F7          │ Dialog: create a new table
-                 │ F8          │ Dialog: delete selected database items
-   ──────────────┼─────────────┼───────────────────────────────────────────────────
-   Table         │ F4, Enter   │ Dialog: edit a row
-                 │ Shift-F4    │ Dialog: insert a row
-                 │ Shift-F5    │ Show/hide columns affinity
-                 │             │   (i=integer, t=text, b=blob, r=real, n=numeric)
-                 │ F8          │ Dialog: delete selected rows
-   ──────────────┼─────────────┼───────────────────────────────────────────────────
-   Table or View │ Shift-F3    │ Dialog: custom panel view mode
-                 │ Alt-F3      │ Toggle panel view mode: full/custom
-                 │ Shift-F6    │ Dialog: panel filter
-                 │ Alt-F6      │ Toggle panel filter: on/off
-   ──────────────┴─────────────┴───────────────────────────────────────────────────
+   #View mode#     │ #Key#                 │ #Action#
+   ──────────────┼─────────────────────┼───────────────────────────────────────────────────
+   Any           │ F6                  │ SQL queries history
+                 │ Alt-Shift-F6        │ Toggle between simple and multi-database mode
+                 │ LCtrl-1             │ Two-panel view mode
+                 │ LCtrl-2             │ One-panel view mode
+                 │ Ctrl-N              │ Menu: select sort compare mode
+                 │ Ctrl-Shift-BackSlash│ Close the plugin panel
+   ──────────────┼─────────────────────┼───────────────────────────────────────────────────
+   Database      │ F3                  │ Show contents of an item under cursor
+                 │ F4                  │ Show create statement of an item under cursor
+                 │ Shift-F4            │ Show pragma statements
+                 │ F5                  │ Dialog: export data of an item under cursor
+                 │ Shift-F5            │ Dialog: make data dump
+                 │ Shift-F6            │ Dialog: recover data
+                 │ F7                  │ Dialog: create a new table
+                 │ F8                  │ Dialog: delete selected database items
+   ──────────────┼─────────────────────┼───────────────────────────────────────────────────
+   Table         │ F4, Enter           │ Dialog: edit a row
+                 │ Shift-F4            │ Dialog: insert a row
+                 │ Shift-F5            │ Show/hide columns affinity
+                 │                     │   (i=integer, t=text, b=blob, r=real, n=numeric)
+                 │ F8                  │ Dialog: delete selected rows
+   ──────────────┼─────────────────────┼───────────────────────────────────────────────────
+   Table or View │ Shift-F3            │ Dialog: custom panel view mode
+                 │ Alt-F3              │ Toggle panel view mode: full/custom
+                 │ Shift-F6            │ Dialog: panel filter
+                 │ Alt-F6              │ Toggle panel filter: on/off
+   ──────────────┴─────────────────────┴───────────────────────────────────────────────────
 
 ^#Command line execution in the plugin's panel#
 
@@ -416,6 +419,18 @@ $^ #Data Dump Dialog#
 
  ~Contents~@Contents@
 
+@Recovery
+$^ #Data Recovery Dialog#
+  #IMPORTANT NOTE:#
+  The plugin requires #sqlite3.exe# for making recovery.
+  sqlite3.exe should be placed either on the PATH or in the plugin's directory.
+
+  There are 2 options:
+    #(•) Recover as dump  #
+    #( ) Recover as database#
+
+ ~Contents~@Contents@
+
 @queries_history
 $^ Queries History Menu
  This menu shows the history of SQL queries.
@@ -423,6 +438,7 @@ $^ Queries History Menu
  #Enter#                         Execute the query
  #Ctrl+Enter#                    Insert the query in the command line
  #F4#                            Edit the query and execute if modified
+ #F6#                            Open an empty editor
  #Shift+Del#                     Delete the query
  #Ctrl+C, Ctrl+Ins#              Copy the query
  #Ctrl+Shift+C, Ctrl+Shift+Ins#  Copy all queries serialized

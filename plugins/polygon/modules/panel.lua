@@ -767,7 +767,7 @@ local function GetKeybarStrings(panelmode)
   elseif panelmode == "db" then return {
   --           F1        F2        F3         F4           F5           F6            F7     F8
     nomods = { false,    false,    M.kb_view, "DDL",       M.kb_export, "SQL", M.kb_table,   M.kb_delete },
-    shift  = { "",       "",       "",        M.kb_pragma, "Dump",      "",           "",    ""    },
+    shift  = { "",       "",       "",        M.kb_pragma, "Dump",      "Recover",    "",    ""    },
     alt    = { false,    false,    "",        "",          "",          "",           "",    false },
     ctrl   = { "",       "",       "",        "",          "",          "",           "",    ""    },
   }
@@ -1032,6 +1032,10 @@ function mypanel:handle_keyboard(handle, key_event)
       local ex = exporter.newexporter(self._db, self._filename, self._schema)
       ex:dump_data_with_dialog()
       return true
+    elseif key == "ShiftF6" then
+      local ex = exporter.newexporter(self._db, self._filename, self._schema)
+      ex:recover_data_with_dialog()
+      return true
     elseif key == "Enter" and not self._multi_db then
       local item = panel.GetCurrentPanelItem(handle)
       if item.FileName == ".." then self._exiting=true; end
@@ -1137,6 +1141,8 @@ function mypanel:handle_keyboard(handle, key_event)
       end
     end
     return true
+  elseif key=="CtrlShiftBackSlash" then
+    panel.ClosePanel(handle)
   end
 end
 
@@ -1313,9 +1319,8 @@ function mypanel:edit_query(query)
 
   -- Open query editor
   query = nil
-  if F.EEC_MODIFIED == editor.Editor(tmp_name, "SQLite query", nil, nil, nil, nil,
-                       F.EF_DISABLESAVEPOS + F.EF_DISABLEHISTORY, nil, nil, 65001)
-  then
+  local flags = F.EF_DISABLESAVEPOS + F.EF_DISABLEHISTORY
+  if F.EEC_MODIFIED==editor.Editor(tmp_name,"SQLite query",nil,nil,nil,nil,flags,nil,nil,65001) then
     fp = io.open(tmp_name)
     if fp then
       query = fp:read("*all")
@@ -1343,12 +1348,13 @@ function mypanel:sql_query_history(handle)
   local state = { query=""; }
 
   local props = {
-    Bottom = "F1 F4 Ctrl+C Ctrl+Enter Shift+Del";
+    Bottom = "F1 F4 F6 Ctrl+C Ctrl+Enter Shift+Del";
     SelectIndex = #qarray;
     HelpTopic = "queries_history";
   }
   local brkeys = {
     { BreakKey="F4";         action="edit";       },
+    { BreakKey="F6";         action="newedit";    },
     { BreakKey="C+RETURN";   action="insert";     },
     { BreakKey="C+C";        action="copy";       },
     { BreakKey="C+INSERT";   action="copy";       },
@@ -1385,8 +1391,8 @@ function mypanel:sql_query_history(handle)
         table.remove(qarray, pos)
         props.SelectIndex = #qarray
         state.modified = true
-      elseif item.action == "edit" then
-        query = self:edit_query(query)
+      elseif item.action == "edit" or item.action == "newedit" then
+        query = self:edit_query(item.action=="edit" and query or "")
         if query then
           self:open_query(handle, query) -- it saves the history internally
           return

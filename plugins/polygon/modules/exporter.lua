@@ -19,6 +19,7 @@ local CHAR_CROSS = ("").char(9532) -->  ┼
 
 
 local F = far.Flags
+local KEEP_DIALOG_OPEN = 0
 local ErrMsg, Resize, Norm = utils.ErrMsg, utils.Resize, utils.Norm
 
 local exporter = {}
@@ -57,7 +58,6 @@ function exporter:export_data_with_dialog()
   local Items = {
     guid="E9F91B4F-82B2-4B36-9C4B-240D7EE7BF59";
     help="Export";
-    width=72;
     {tp="dbox";   text=M.exp_title;                                          },
     {tp="text";   text=utils.lang(M.exp_main, {db_object_name});             },
     {tp="edit";                                          name="targetfile";  },
@@ -123,7 +123,6 @@ function exporter:dump_data_with_dialog()
   local Items = {
     guid="B6EBFACA-232D-42FA-887E-66C7B03DB65D";
     help="Dump";
-    width=72;
     {tp="dbox";  text=M.dump_title;                                           },
     {tp="text";  text=M.dump_main;                                            },
     {tp="edit";  text=dst_file_name;   name="targetfile";                     },
@@ -150,12 +149,16 @@ function exporter:dump_data_with_dialog()
     if win.GetFileAttr(fname) then
       local r = far.Message(M.already_exists..":\n"..fname, M.warning,
                             M.overwrite..";"..M.cancel, "w")
-      if r~=1 then return 0; end
+      if r~=1 then return KEEP_DIALOG_OPEN; end
     end
     -- check that the output file can be created
     local fp = io.open(fname, "w")
-    if fp then fp:close(); win.DeleteFile(fname)
-    else ErrMsg(M.err_openfile..":\n"..fname); return 0
+    if fp then
+      fp:close()
+      win.DeleteFile(fname)
+    else
+      ErrMsg(M.err_openfile..":\n"..fname)
+      return KEEP_DIALOG_OPEN
     end
   end
   ------------------------------------------------------------------------------
@@ -174,6 +177,68 @@ function exporter:dump_data_with_dialog()
       }
   else
     return false
+  end
+end
+
+
+function exporter:recover_data_with_dialog()
+  local Items = {
+    guid="26B9D06E-53F9-4F96-AD1B-C5DB7A041732";
+    help="Recover";
+    {tp="dbox";  text=M.recover_title;                               },
+    {tp="text";  text=M.recover_out_file;                            },
+    {tp="edit";  name="targetfile";                                  },
+    {tp="sep";                                                       },
+    {tp="rbutton"; text=M.recover_as_dump;   name="as_dump"; val=1;  },
+    {tp="rbutton"; text=M.recover_as_db;     name="as_db";           },
+    {tp="sep";                                                       },
+    {tp="butt";  text=M.ok;     centergroup=1; default=1;            },
+    {tp="butt";  text=M.cancel; centergroup=1; cancel=1;             },
+  }
+  local Pos, Elem = sdialog.Indexes(Items)
+  ------------------------------------------------------------------------------
+  local function set_output_name(hDlg)
+    local as_dump = 1==hDlg:send("DM_GETCHECK", Pos.as_dump)
+    local fname = self._filename:match("[^\\]+$"):gsub("(.*)%.[^.]*$", "%1")
+    local target = ("%s%s.recovered.%s"):format(
+      self:get_destination_dir(), fname, as_dump and "dump" or "db")
+    hDlg:send("DM_SETTEXT", Pos.targetfile, target)
+  end
+
+  Items.initaction = set_output_name
+  Elem.as_dump.action = set_output_name
+  Elem.as_db.action = set_output_name
+
+  function Items.closeaction(hDlg, Param1, tOut)
+    -- check if the output file already exists
+    local fname = tOut.targetfile
+    if win.GetFileAttr(fname) then
+      local r = far.Message(M.already_exists..":\n"..fname, M.warning,
+                            M.overwrite..";"..M.cancel, "w")
+      if r~=1 then return KEEP_DIALOG_OPEN; end
+    end
+    -- check that the output file can be created
+    local fp = io.open(fname, "w")
+    if fp then
+      fp:close()
+      win.DeleteFile(fname)
+    else
+      ErrMsg(M.err_openfile..":\n"..fname)
+      return KEEP_DIALOG_OPEN
+    end
+  end
+  ------------------------------------------------------------------------------
+  local rc = sdialog.Run(Items)
+  if rc then
+    local t_execs = { far.PluginStartupInfo().ModuleDir.."sqlite3.exe", "sqlite3.exe" }
+    for _, exec in ipairs(t_execs) do
+      local cmd = rc.as_dump and
+        ([[""%s" "%s" .recover 1> "%s" 2>NUL"]]):format(exec, self._filename, rc.targetfile) or
+        ([[""%s" "%s" .recover 2>NUL | "%s" "%s" 2>NUL"]]):format(exec, self._filename, exec, rc.targetfile)
+      if 0==win.system(cmd) then break end
+    end
+    panel.UpdatePanel(nil,0)
+    panel.RedrawPanel(nil,0)
   end
 end
 

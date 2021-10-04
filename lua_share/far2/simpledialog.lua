@@ -224,7 +224,7 @@ local function Run (inData)
       if f then flags = bor(flags,f); end
     end
 
-    local text = type(v.val)=="string" and v.val or v.text or ""
+    local text = v.text or (type(v.val)=="string" and v.val) or ""
     local hist = v.hist or ""
     local mask = v.mask or ""
 

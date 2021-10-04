@@ -283,13 +283,15 @@ function List:Draw (x, y)
         local ss = self.searchstart - 1
         local br1 = ss + floor((maxlen - ss) * self.ellipsis/3 + 0.5)
         local br2 = tlen - (maxlen - br1) + 1
-        local offs = br2 - 1 - br1 - 3
         text2 = text:sub(1, br1) .. "..." .. v.text:sub(br2)
-        if fr >= br2-1 then fr = fr - offs
-        elseif fr > br1+1 then fr = br1 + 2
-        end
-        if to >= br2-1 then to = to - offs
-        elseif to > br1+1 then to = br1 + 2
+        if fr and to >= fr then
+          local offs = br2 - 1 - br1 - 3
+          if fr >= br2-1 then fr = fr - offs
+          elseif fr > br1+1 then fr = br1 + 2
+          end
+          if to >= br2-1 then to = to - offs
+          elseif to > br1+1 then to = br1 + 2
+          end
         end
       end
       far.Text(x, y+i, color, self.margin)

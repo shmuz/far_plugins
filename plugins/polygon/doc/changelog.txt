@@ -1,3 +1,8 @@
+2021-10-04, v.1.6.2
+    1. SQL queries history: new shortcut F6 (opens an empty editor).
+    2. Ctrl-Shift-BackSlash closes the panel from any panel mode.
+    3. Added new dialog: "Recover" (Shift-F6 from database panel mode).
+
 2021-09-28, v.1.6.1
     1. Add undocumented command-line options: "-startdebug" and "-stopdebug".
     2. Add undocumented macro call commands: "startdebug" and "stopdebug".
