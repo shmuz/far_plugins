@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2021-11-11, v3.9.2
+  [*] "searchmenu" module updated.
+
 2020-02-17, v3.9.1
   [!] Rebuild the plugin due to a fix in luaplug.c.
 

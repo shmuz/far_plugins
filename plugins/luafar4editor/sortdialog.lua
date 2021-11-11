@@ -43,7 +43,7 @@ function Package.SortDialog (aData, columntype)
   D.btnColPat = {"DI_BUTTON",  59, 9, 0,0, 0, 0,             0, "DIF_BTNNOCLOSE",    M.MDefault}
   D.sep       = {"DI_TEXT",     5,10, 0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},""}
   D.labFileName={"DI_TEXT",     5,11,0,0,  0, 0,             0, 0,                   M.MFileName}
-  D.edtFileName={"DI_EDIT",    21,11,55,6, 0, HIST_FILENAME, 0, "DIF_HISTORY",       ""}
+  D.edtFileName={"DI_EDIT",    21,11,55,11,0, HIST_FILENAME, 0, "DIF_HISTORY",       ""}
   D.cbxFileName={"DI_CHECKBOX",58,11, 0,0, 0, 0,             0, 0,                   M.MEnable4}
   D.sep       = {"DI_TEXT",     5,12, 0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},""}
   D.btnOk     = {"DI_BUTTON",   0,13, 0,0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
