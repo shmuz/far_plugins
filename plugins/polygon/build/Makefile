@@ -23,7 +23,7 @@ modules = \
   $(path_plugin)*modules\exporter.lua    \
   $(path_plugin)*modules\panel.lua       \
   $(path_plugin)*modules\progress.lua    \
-  $(path_plugin)*modules\settings.lua    \
+  $(path_plugin)*modules\config.lua      \
   $(path_plugin)*modules\sqlite.lua      \
   $(path_plugin)*modules\string_rc.lua   \
   $(path_plugin)*modules\utils.lua       \

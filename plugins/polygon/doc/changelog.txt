@@ -1,3 +1,9 @@
+2021-11-13, v.1.7.0
+    1. Keep selection in the panel after editing a record.
+    2. Column masks are turned on/off individually per table (was: globally for all tables).
+    3. Column masks persistent settings are changed. The already existing saved masks won't work.
+    4. Minimal required Far version is (again) 3.0.4401.
+
 2021-10-04, v.1.6.2
     1. SQL queries history: new shortcut F6 (opens an empty editor).
     2. Ctrl-Shift-BackSlash closes the panel from any panel mode.
@@ -9,7 +15,7 @@
     3. Insert row dialog : fix the case when COMMIT fails.
 
 2021-09-21, v.1.6.0
-    1. Table view mode   : indicate the sorted column by 
+    1. Table view mode   : indicate the sorted column by ♦
     2. Edit row dialog   : text values may be entered unquoted (see the help file)
     3. Edit row dialog   : a new shortcut Alt-F3 for viewing blob as text
     4. Insert row dialog : multiple rows can be added at once

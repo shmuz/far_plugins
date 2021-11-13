@@ -1,7 +1,7 @@
 -- coding: UTF-8
 
 local sql3     = require "lsqlite3"
-local history  = require "far2.settings"
+local settings = require "far2.settings"
 local sdialog  = require "far2.simpledialog"
 local M        = require "modules.string_rc"
 local exporter = require "modules.exporter"
@@ -14,6 +14,7 @@ local ErrMsg, Resize, Norm = utils.ErrMsg, utils.Resize, utils.Norm
 local F = far.Flags
 local VK = win.GetVirtualKeys()
 local KEEP_DIALOG_OPEN = 0
+local SM_USER = F.SM_USER or 100 -- SM_USER appeared in Far 3.0.5655
 
 local CMP_ALPHA, CMP_INT, CMP_FLOAT = 0,1,2 -- CRITICAL: must match the enum in polygon.c
 local SECTION_FILES = "files" -- keys in this section are lower-cased full file names
@@ -29,11 +30,11 @@ local function RemoveOldHistoryRecords()
   local pSection, pKey, pLocation = "general", "last_check", "local"
   ------------------------------------------------------------------------
   local now = win.GetSystemTimeAsFileTime()
-  local last = history.mload(pSection, pKey, pLocation)
+  local last = settings.mload(pSection, pKey, pLocation)
   if last and (now - last) < CHECK_PERIOD then
     return
   end
-  history.msave(pSection, pKey, now, pLocation)
+  settings.msave(pSection, pKey, now, pLocation)
 
   ------------------------------------------------------------------------
   pSection, pKey, pLocation = SECTION_FILES, nil, "local" -- luacheck: no unused
@@ -45,19 +46,19 @@ local function RemoveOldHistoryRecords()
     obj:Free()
     for _, v in ipairs(items) do
       pKey = v.Name
-      local pData = history.mload(pSection, pKey, pLocation)
+      local pData = settings.mload(pSection, pKey, pLocation)
       if pData then
         local last = pData["time"]
         if last then
           if now - last > RETAIN_TIME then
-            history.mdelete(pSection, pKey, pLocation) -- delete expired data
+            settings.mdelete(pSection, pKey, pLocation) -- delete expired data
           end
         else
           pData["time"] = now
-          history.msave(pSection, pKey, pData, pLocation) -- set current time and save
+          settings.msave(pSection, pKey, pData, pLocation) -- set current time and save
         end
       else
-        history.mdelete(pSection, pKey, pLocation) -- delete corrupted data
+        settings.mdelete(pSection, pKey, pLocation) -- delete corrupted data
       end
     end
   else
@@ -72,31 +73,28 @@ local mypanel = {}
 
 function mypanel.open(filename, extensions, ignore_foreign_keys, multi_db)
   local self = {
-
-  -- Members come from the original plugin SQLiteDB (renamed).
-    _col_info    = nil ;     -- array of tables: { { name=<name>; affinity=<affinity> }, ... }
-    _filename    = filename; -- either host file name or ":memory:"
-    _object      = ""  ;     -- name of the current object, e.g. database table name or SQL query
-    _panel_mode  = "root";   -- valid values are: "root", "db", "table", "view", "query"
-
-  -- Members added since this plugin started.
-    _col_masks      = nil ;  -- col_masks table (non-volatile): _col_masks[<colname>]=<col_width>|nil
-    _col_masks_used = nil ;  -- boolean value
-    _db             = nil ;  -- database connection
-    _exiting        = nil;   -- boolean (Enter pressed on .. in database mode and _multi_db==false).
-                             -- Without it TopPanelItem of the Far panel might not be preserved
-                             -- as Far will try to place the host file at the bottom of the visible
-                             -- part of the panel.
-    _histfile       = nil ;  -- files[<filename>] in the plugin's non-volatile settings
-    _multi_db       = multi_db; -- boolean value
-    _rowid_name     = nil ;  -- either "rowid", "oid", "_rowid_", or nil
-    _schema         = ""  ;  -- either "main", "temp", or the name of an attached database
-    _show_affinity  = nil ;  -- boolean value
-    _sort_col_index = nil ;  -- number of column counting from the left
+    _col_info       = nil;       -- array of tables: { { name=<name>; affinity=<affinity> }, ... }
+    _filename       = filename;  -- either host file name or ":memory:"
+    _objname        = "";        -- name of the current object, e.g. database table name or SQL query
+    _panel_mode     = "root";    -- valid values are: "root", "db", "table", "view", "query"
+    _col_masks_used = {};        -- _col_masks_used[<table_name>] = <boolean>
+    _db             = nil;       -- database connection
+    _exiting        = nil;       -- boolean (Enter pressed on .. in database mode and _multi_db==false).
+                                    -- Without it TopPanelItem of the Far panel might not be preserved
+                                    -- as Far will try to place the host file at the bottom of the visible
+                                    -- part of the panel.
+    _histfile       = nil;       -- files[<filename>] in the plugin's non-volatile local settings
+    _tables         = nil;       -- shortcut for _histfile.tables
+    _multi_db       = multi_db;  -- boolean value
+    _rowid_name     = nil;       -- either "rowid", "oid", "_rowid_", or nil
+    _schema         = "";        -- either "main", "temp", or the name of an attached database
+    _show_affinity  = nil;       -- boolean value
+    _sort_col_index = nil;       -- number of column counting from the left
     _sort_compare   = CMP_ALPHA; -- alphabetic compare
-    _tab_filter     = { enabled=false; text=nil; }; -- current table filter
-    _language       = nil ;  -- current Far language
-    _panel_info     = nil ;  -- panel info
+    _tab_filter                  -- current table filter
+                    = { enabled=false; text=nil; };
+    _language       = nil;       -- current Far language
+    _panel_info     = nil;       -- panel info
   }
 
   setmetatable(self, { __index=mypanel })
@@ -115,14 +113,19 @@ function mypanel.open(filename, extensions, ignore_foreign_keys, multi_db)
       self._db:exec("PRAGMA foreign_keys = ON;")
     end
     RemoveOldHistoryRecords()
-    self._histfile = history.mload(SECTION_FILES, filename:lower(), "local") or { col_masks={} }
-    self._col_masks = self._histfile.col_masks
-    self._col_masks_used = false
+    self._histfile = settings.mload(SECTION_FILES, filename:lower(), "local") or {}
+    self._histfile.tables = self._histfile.tables or {}
+    self._tables = self._histfile.tables
     return self
   else
     ErrMsg(M.err_open.."\n"..filename)
     return nil
   end
+end
+
+
+function mypanel:invalidate_panel_info()
+  self._panel_info = nil
 end
 
 
@@ -195,7 +198,7 @@ end
 
 function mypanel:set_root_mode()
   self._schema = ""
-  self._object = ""
+  self._objname = ""
   self._panel_mode = "root"
   self:invalidate_panel_info()
 end
@@ -205,7 +208,7 @@ function mypanel:set_database_mode(aSchema)
   if aSchema then
     self._schema = aSchema
   end
-  self._object = ""
+  self._objname = ""
   self._panel_mode = "db"
   self:invalidate_panel_info()
 end
@@ -223,11 +226,11 @@ function mypanel:open_object(aHandle, aSchema, aObject)
     local col_info = dbx.read_columns_info(self._db, aSchema, aObject)
     if col_info then
       self._schema     = aSchema
-      self._object     = aObject
+      self._objname    = aObject
       self._panel_mode = tp
       self._col_info   = col_info
 
-      local count = dbx.get_row_count(self._db, self._schema, self._object)
+      local count = dbx.get_row_count(self._db, self._schema, self._objname)
       if count and count >= 50000 then -- sorting is very slow on big tables
         panel.SetSortMode(aHandle, nil, "SM_UNSORTED")
         panel.SetSortOrder(aHandle, nil, false)
@@ -291,7 +294,7 @@ function mypanel:do_open_query(handle, query)
     end
 
     self._panel_mode = "query"
-    self._object = query
+    self._objname = query
 
     stmt:reset()
     self._col_info = {}
@@ -326,13 +329,13 @@ local meta_q_history = { __index=q_history; }
 
 function q_history.new()
   local self = setmetatable({}, meta_q_history)
-  self._array = history.mload("queries", "queries", "local") or {}
+  self._array = settings.mload("queries", "queries", "local") or {}
   return self
 end
 
 
 function q_history:save()
-  history.msave("queries", "queries", self._array, "local")
+  settings.msave("queries", "queries", self._array, "local")
 end
 
 
@@ -361,11 +364,6 @@ function mypanel:open_query(handle, query)
 end
 
 
-function mypanel:invalidate_panel_info()
-  self._panel_info = nil
-end
-
-
 function mypanel:get_open_panel_info(handle)
   if not (self._panel_info and self._language == win.GetEnv("FARLANG")) then
     self:prepare_panel_info(handle)
@@ -376,7 +374,7 @@ function mypanel:get_open_panel_info(handle)
     CurDir = ""
   else
     CurDir = self._schema
-    if self._object ~= "" then CurDir = CurDir.."\\"..self._object; end
+    if self._objname ~= "" then CurDir = CurDir.."\\"..self._objname; end
     if CurDir ~= "" then CurDir = "\\"..CurDir; end
   end
 
@@ -503,7 +501,7 @@ end
 
 
 function mypanel:get_panel_list_obj()
-  local fullname = Norm(self._schema).."."..Norm(self._object)
+  local fullname = Norm(self._schema).."."..Norm(self._objname)
 
   -- Find a name to use for ROWID (self._rowid_name)
   self._rowid_name = nil
@@ -630,7 +628,7 @@ function mypanel:get_panel_list_query()
   dot_item.CustomColumnData = dot_custom_column_data
   table.insert(buff, dot_item)
 
-  local stmt = self._db:prepare(self._object)
+  local stmt = self._db:prepare(self._objname)
   if not stmt then
     local err_descr = dbx.last_error(self._db)
     ErrMsg(M.err_read.."\n"..err_descr)
@@ -683,11 +681,13 @@ function mypanel:set_column_mask(handle)
     width=dlg_width;
     [1]={ tp="dbox"; text=M.title_select_columns };
   }
-  local mask = self._col_masks[self._object]
-  for i = 1,col_num do
-    local text = mask and mask[self._col_info[i].name]
+  local curtable = self._tables[self._objname] or {}
+  self._tables[self._objname] = curtable
+  local masks = curtable.col_masks
+  for i,col in ipairs(self._col_info) do
+    local text = masks and masks[col.name]
     local check = text and true
-    local name = self._col_info[i].name
+    local name = col.name
     if name:len() > dlg_width-18 then
       name = name:sub(1,dlg_width-21).."..."
     end
@@ -716,10 +716,10 @@ function mypanel:set_column_mask(handle)
       SetEnable(hDlg)
       hDlg:send(F.DM_SETFOCUS, 3)
     elseif Msg == F.DN_BTNCLICK then
-      local check = Param1==btnSet and F.BSTATE_CHECKED or Param1==btnReset and F.BSTATE_UNCHECKED
-      if check then
+      local state = Param1==btnSet and F.BSTATE_CHECKED or Param1==btnReset and F.BSTATE_UNCHECKED
+      if state then
         hDlg:send(F.DM_ENABLEREDRAW, 0)
-        for pos = 1,col_num do hDlg:send(F.DM_SETCHECK, 2*pos+1, check); end
+        for pos = 1,col_num do hDlg:send(F.DM_SETCHECK, 2*pos+1, state); end
         hDlg:send(F.DM_ENABLEREDRAW, 1)
       end
       SetEnable(hDlg)
@@ -728,19 +728,19 @@ function mypanel:set_column_mask(handle)
 
   local res = sdialog.Run(Items)
   if res then
-    mask = {}
-    self._col_masks[self._object] = mask
+    local masks = {}
+    curtable.col_masks = masks
     for k=1,col_num do
       if res[2*k+1] then -- if checkbox is checked
-        mask[self._col_info[k].name] = res[2*k] -- take data from fixedit
+        masks[self._col_info[k].name] = res[2*k] -- take data from fixedit
       end
     end
-    if next(mask) == nil and col_num > 0 then -- all columns should not be hidden - show the 1-st column
-      mask[self._col_info[1].name] = "0"
+    if next(masks) == nil and col_num > 0 then -- all columns should not be hidden - show the 1-st column
+      masks[self._col_info[1].name] = "0"
     end
-    self._col_masks_used = true
+    self._col_masks_used[self._objname] = true
     self._histfile["time"] = win.GetSystemTimeAsFileTime()
-    history.msave(SECTION_FILES, self._filename:lower(), self._histfile, "local")
+    settings.msave(SECTION_FILES, self._filename:lower(), self._histfile, "local")
     self:invalidate_panel_info()
     panel.RedrawPanel(handle,nil)
   end
@@ -748,8 +748,9 @@ end
 
 
 function mypanel:toggle_column_mask(handle)
-  if self._col_masks[self._object] then
-    self._col_masks_used = not self._col_masks_used
+  local cur = self._tables[self._objname]
+  if cur and cur.col_masks then
+    self._col_masks_used[self._objname] = not self._col_masks_used[self._objname]
     self:invalidate_panel_info()
     panel.RedrawPanel(handle,nil)
   end
@@ -858,7 +859,8 @@ function mypanel:prepare_panel_info(handle)
     self:FillKeyBar(info.key_bar, "db")
   -------------------------------------------------------------------------------------------------
   else -- self._panel_mode == "table"/"view"/"query"
-    local masks = self._col_masks_used and self._col_masks[self._object]
+    local cur = self._tables[self._objname]
+    local masks = self._col_masks_used[self._objname] and cur and cur.col_masks
     local show_affinity = self._panel_mode=="table" and self._show_affinity
     for i,descr in ipairs(self._col_info) do
       local width = not masks and "0" or masks[descr.name]
@@ -875,10 +877,10 @@ function mypanel:prepare_panel_info(handle)
       end
     end
     if self._panel_mode == "query" then
-      info.title = ("%s [%s]"):format(info.title, self._object)
+      info.title = ("%s [%s]"):format(info.title, self._objname)
       self:FillKeyBar(info.key_bar, "query")
     else
-      info.title = ("%s [%s.%s]"):format(info.title, self._schema, self._object)
+      info.title = ("%s [%s.%s]"):format(info.title, self._schema, self._objname)
       self:FillKeyBar(info.key_bar, "table")
     end
   -------------------------------------------------------------------------------------------------
@@ -911,14 +913,14 @@ function mypanel:delete_items(handle, items)
       ErrMsg(M.err_del_norowid)
       return false
     end
-    return myeditor.remove(self._db, self._schema, self._object, self._rowid_name, items)
+    return myeditor.remove(self._db, self._schema, self._objname, self._rowid_name, items)
   end
   return false
 end
 
 
 function mypanel:set_table_filter(handle)
-  local query = "SELECT * FROM "..Norm(self._schema).."."..Norm(self._object)
+  local query = "SELECT * FROM "..Norm(self._schema).."."..Norm(self._objname)
   local Items = {
     guid="920436C2-C32D-487F-B590-0E255AD71038";
     help="PanelFilter";
@@ -1078,13 +1080,13 @@ function mypanel:handle_keyboard(handle, key_event)
         end
       end
       if self._rowid_name then
-        myeditor.edit_row(self._db, self._schema, self._object, self._rowid_name, handle)
+        myeditor.edit_row(self._db, self._schema, self._objname, self._rowid_name, handle)
         return true
       else
         ErrMsg(M.err_edit_norowid)
       end
     elseif key == "ShiftF4" then         -- insert row
-      myeditor.insert_row(self._db, self._schema, self._object, self._rowid_name, handle)
+      myeditor.insert_row(self._db, self._schema, self._objname, self._rowid_name, handle)
       return true
     elseif key == "ShiftF5" then         -- "show/hide columns affinity"
       self._show_affinity = not self._show_affinity
@@ -1132,7 +1134,7 @@ function mypanel:handle_keyboard(handle, key_event)
     if item then
       self._sort_compare = item.Cmp
       local info = panel.GetPanelInfo(handle)
-      if self._panel_mode ~= "db" and info.SortMode < F.SM_USER then
+      if self._panel_mode ~= "db" and info.SortMode < SM_USER then
         -- SetSortMode() called with the current sort mode reverses the sort order, thus we
         -- call SetSortOrder() requesting the current sort order. Hopefully, the future Far Manager
         -- versions won't optimize such a case out and will always initiate sorting operation.
@@ -1385,7 +1387,7 @@ function mypanel:sql_query_history(handle)
         break
       elseif item.action == "copyserial" then
         -- table.concat is not OK here as individual entries may contain line feeds inside them
-        far.CopyToClipboard(history.serialize(qarray))
+        far.CopyToClipboard(settings.serialize(qarray))
         break
       elseif item.action == "delete" then
         table.remove(qarray, pos)
@@ -1438,26 +1440,28 @@ end
 
 
 -- This function is called from polygon.c from CompareW exported function.
--- CRITICAL: its name and semantics must be in accordance with polygon.c.
--- Its return value if < 1 is treated as CompareW return value,
+-- CRITICAL: its semantics must be in accordance with polygon.c.
+-- Its return value (ret) if < 1 is treated as CompareW return value,
 -- otherwise as the 1-based index into CustomColumnData array.
-function mypanel:sort_callback(handle, Mode)
+function export.Compare (self, handle, PanelItem1, PanelItem2, Mode)
+  local ret
+  local compare = CMP_ALPHA
   self:prepare_panel_info(handle)
   if self._panel_mode == "db" then
     if Mode == F.SM_EXT then -- sort by object type ( CustomColumnData[1] )
-      return 1
+      ret = 1
     else -- use Far Manager compare function
-      return -2
+      ret = -2
     end
   else
     if self._sort_col_index == nil then
       self._sort_col_index = self:get_sort_index(Mode)
     end
     self:prepare_panel_info(handle)
-    return
-      self._sort_col_index or 0,
-      self._sort_compare
+    ret = self._sort_col_index or 0
+    compare = self._sort_compare
   end
+  return bit64.bor(ret+2, bit64.lshift(compare,8)) -- (ret + 2) | (compare << 8)
 end
 
 
@@ -1468,7 +1472,7 @@ function mypanel:get_info()
     multi_db    = self._multi_db;
     schema      = self._schema;
     panel_mode  = self._panel_mode;
-    curr_object = self._object;
+    curr_object = self._objname;
     rowid_name  = self._rowid_name;
     get_rowid   = utils.get_rowid;
     __self      = self; -- BEWARE: direct access to self; the code using it will break on API changes

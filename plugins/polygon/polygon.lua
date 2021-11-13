@@ -72,7 +72,7 @@ First_load_actions()
 
 local M         = require "modules.string_rc"
 local mypanel   = require "modules.panel"
-local settings  = require "modules.settings"
+local config    = require "modules.config"
 local dbx       = require "modules.sqlite"
 local utils     = require "modules.utils"
 local plugdebug = require "far2.plugdebug"
@@ -83,7 +83,7 @@ local ErrMsg, Norm = utils.ErrMsg, utils.Norm
 
 
 local function get_plugin_data()
-  return settings.load().plugin
+  return config.load().plugin
 end
 
 
@@ -189,13 +189,13 @@ function export.GetPluginInfo()
   local info = { Flags=0 }
   local PluginData = get_plugin_data()
 
-  local prefix = PluginData[settings.PREFIX]
+  local prefix = PluginData[config.PREFIX]
   if prefix ~= "" then info.CommandPrefix = prefix; end
 
   info.PluginConfigGuids = PluginGuid
   info.PluginConfigStrings = { M.title }
 
-  if PluginData[settings.ADD_TO_MENU] then
+  if PluginData[config.ADD_TO_MENU] then
     info.PluginMenuGuids = PluginGuid;
     info.PluginMenuStrings = { M.title }
   else
@@ -207,7 +207,7 @@ end
 
 
 local function MatchExcludeMasks(filename)
-  local mask = get_plugin_data()[settings.EXCL_MASKS]
+  local mask = get_plugin_data()[config.EXCL_MASKS]
   return type(mask) == "string"
     and mask:find("%S")
     and far.ProcessName("PN_CMPNAMELIST", mask, filename, "PN_SKIPPATH")
@@ -228,10 +228,10 @@ end
 
 local function AddOptions(Opt, Str)
   if type(Str) == "string" then
-    if Str:find("u") then Opt[settings.COMMON_USER_MODULES]  = true; end
-    if Str:find("i") then Opt[settings.INDIVID_USER_MODULES] = true; end
-    if Str:find("e") then Opt[settings.EXTENSIONS]           = true; end
-    if Str:find("F") then Opt[settings.IGNORE_FOREIGN_KEYS]  = true; end
+    if Str:find("u") then Opt[config.COMMON_USER_MODULES]  = true; end
+    if Str:find("i") then Opt[config.INDIVID_USER_MODULES] = true; end
+    if Str:find("e") then Opt[config.EXTENSIONS]           = true; end
+    if Str:find("F") then Opt[config.IGNORE_FOREIGN_KEYS]  = true; end
   end
 end
 
@@ -345,13 +345,13 @@ function export.Open(OpenFrom, Guid, Item)
   if FileName then
     Opt = Opt or get_plugin_data()
     local object = mypanel.open(FileName,
-                   Opt[settings.EXTENSIONS],
-                   Opt[settings.IGNORE_FOREIGN_KEYS],
-                   Opt[settings.MULTIDB_MODE])
+                   Opt[config.EXTENSIONS],
+                   Opt[config.IGNORE_FOREIGN_KEYS],
+                   Opt[config.MULTIDB_MODE])
     if object then
       object.LoadedModules = LoadUserModules(object,
-                   Opt[settings.COMMON_USER_MODULES],
-                   Opt[settings.INDIVID_USER_MODULES])
+                   Opt[config.COMMON_USER_MODULES],
+                   Opt[config.INDIVID_USER_MODULES])
       if OpenFrom == F.OPEN_FROMMACRO then
         return { type="panel", [1]=object }
       else
@@ -432,7 +432,7 @@ function export.ProcessPanelEvent (object, handle, Event, Param)
   if not ret then
     if Event == F.FE_CLOSE then
       -- work around the Far bug: FE_CLOSE is called twice after a folder shortcut was pressed
-      if get_plugin_data()[settings.CONFIRM_CLOSE] and not object.close_confirmed then
+      if get_plugin_data()[config.CONFIRM_CLOSE] and not object.close_confirmed then
         ret = 1 ~= far.Message(M.confirm_close, M.title_short, M.yes_no, "w", nil, Guid_ConfirmClose)
         object.close_confirmed = not ret
       end
@@ -464,7 +464,7 @@ end
 
 
 function export.Configure()
-  settings.configure();
+  config.showdialog();
 end
 
 

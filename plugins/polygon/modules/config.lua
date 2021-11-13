@@ -1,8 +1,8 @@
 -- coding: UTF-8
 
-local history = require "far2.settings"
-local sdialog = require "far2.simpledialog"
-local M       = require "modules.string_rc"
+local settings = require "far2.settings"
+local sdialog  = require "far2.simpledialog"
+local M        = require "modules.string_rc"
 
 local Data
 local mod = {} -- this module
@@ -25,8 +25,8 @@ mod.EXCL_MASKS=            "excl_masks"
 
 function mod.load()
   Data = Data or {}
-  Data.plugin   = history.mload("root", "plugin") or {}
-  Data.exporter = history.mload("root", "exporter") or {}
+  Data.plugin   = settings.mload("root", "plugin") or {}
+  Data.exporter = settings.mload("root", "exporter") or {}
 
   InitSetting(Data.plugin,  mod.PREFIX,               "polygon")
   InitSetting(Data.plugin,  mod.ADD_TO_MENU,          false)
@@ -43,7 +43,7 @@ function mod.load()
   return Data
 end
 
-function mod.configure()
+function mod.showdialog()
   Data = Data or mod.load()
   local Pdata = Data.plugin
   local Items = {
@@ -69,7 +69,6 @@ function mod.configure()
   }
 
   -- initialize the dialog
-  local _, Elem = sdialog.Indexes(Items)
   for _,v in ipairs(Items) do
     v.val = v.name and Pdata[v.name]
   end
@@ -78,14 +77,14 @@ function mod.configure()
   -- save the dialog data
   if rc then
     for k,v in pairs(rc) do Pdata[k] = v; end
-    history.msave("root", "plugin", Pdata)
+    settings.msave("root", "plugin", Pdata)
   end
 end
 
 function mod.save()
   if Data then
-    history.msave("root", "plugin", Data.plugin)
-    history.msave("root", "exporter", Data.exporter)
+    settings.msave("root", "plugin", Data.plugin)
+    settings.msave("root", "exporter", Data.exporter)
   end
 end
 

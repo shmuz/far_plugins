@@ -4,7 +4,7 @@ local sql3     = require "lsqlite3"
 local sdialog  = require "far2.simpledialog"
 local M        = require "modules.string_rc"
 local progress = require "modules.progress"
-local settings = require "modules.settings"
+local config   = require "modules.config"
 local utils    = require "modules.utils"
 local dbx      = require "modules.sqlite"
 
@@ -26,6 +26,30 @@ local exporter = {}
 local mt_exporter = {__index=exporter}
 
 
+local function check_output_file(fname)
+  -- check if the output file already exists
+  if win.GetFileAttr(fname) then
+    local r = far.Message(M.already_exists..":\n"..fname, M.warning, M.overwrite..";"..M.cancel, "w")
+    if r~=1 then return; end
+  end
+  -- check that the output file can be created
+  local fp = io.open(fname, "w")
+  if fp then
+    fp:close()
+    win.DeleteFile(fname)
+    return true
+  end
+  ErrMsg(M.err_openfile..":\n"..fname)
+end
+
+
+local function get_sqlite_exe()
+  local t_execs = { far.PluginStartupInfo().ModuleDir.."sqlite3.exe", "sqlite3.exe" }
+  local i = 0
+  return function() i=i+1; return t_execs[i]; end
+end
+
+
 function exporter.newexporter(db, filename, schema)
   local self = {_db=db; _filename=filename, _schema=schema}
   return setmetatable(self, mt_exporter)
@@ -45,7 +69,7 @@ end
 
 
 function exporter:export_data_with_dialog()
-  local data = settings.load().exporter
+  local data = config.load().exporter
 
   -- Get source table/view name
   local item = panel.GetCurrentPanelItem(nil, 1)
@@ -91,7 +115,7 @@ function exporter:export_data_with_dialog()
   if rc then
     data.format = rc.csv and "csv" or "text"
     data.multiline = rc.multiline
-    settings.save()
+    config.save()
     if data.format == "csv" then
       return self:export_data_as_csv(rc.targetfile, db_object_name, rc.multiline)
     else
@@ -103,7 +127,7 @@ end
 
 
 function exporter:dump_data_with_dialog()
-  local data = settings.load().exporter
+  local data = config.load().exporter
 
   -- Collect selected items for dump
   local t_selected = {}
@@ -144,20 +168,7 @@ function exporter:dump_data_with_dialog()
   end
 
   function Items.closeaction(hDlg, Param1, tOut)
-    -- check if the output file already exists
-    local fname = tOut.targetfile
-    if win.GetFileAttr(fname) then
-      local r = far.Message(M.already_exists..":\n"..fname, M.warning,
-                            M.overwrite..";"..M.cancel, "w")
-      if r~=1 then return KEEP_DIALOG_OPEN; end
-    end
-    -- check that the output file can be created
-    local fp = io.open(fname, "w")
-    if fp then
-      fp:close()
-      win.DeleteFile(fname)
-    else
-      ErrMsg(M.err_openfile..":\n"..fname)
+    if not check_output_file(tOut.targetfile) then
       return KEEP_DIALOG_OPEN
     end
   end
@@ -167,7 +178,7 @@ function exporter:dump_data_with_dialog()
     data.dump_dumpall = rc.dumpall
     data.dump_rowids  = rc.rowids
     data.dump_newline = rc.newline
-    settings.save()
+    config.save()
     return self:export_data_as_dump {
         items     = t_selected;
         file_name = rc.targetfile;
@@ -210,28 +221,14 @@ function exporter:recover_data_with_dialog()
   Elem.as_db.action = set_output_name
 
   function Items.closeaction(hDlg, Param1, tOut)
-    -- check if the output file already exists
-    local fname = tOut.targetfile
-    if win.GetFileAttr(fname) then
-      local r = far.Message(M.already_exists..":\n"..fname, M.warning,
-                            M.overwrite..";"..M.cancel, "w")
-      if r~=1 then return KEEP_DIALOG_OPEN; end
-    end
-    -- check that the output file can be created
-    local fp = io.open(fname, "w")
-    if fp then
-      fp:close()
-      win.DeleteFile(fname)
-    else
-      ErrMsg(M.err_openfile..":\n"..fname)
+    if not check_output_file(tOut.targetfile) then
       return KEEP_DIALOG_OPEN
     end
   end
   ------------------------------------------------------------------------------
   local rc = sdialog.Run(Items)
   if rc then
-    local t_execs = { far.PluginStartupInfo().ModuleDir.."sqlite3.exe", "sqlite3.exe" }
-    for _, exec in ipairs(t_execs) do
+    for exec in get_sqlite_exe() do
       local cmd = rc.as_dump and
         ([[""%s" "%s" .recover 1> "%s" 2>NUL"]]):format(exec, self._filename, rc.targetfile) or
         ([[""%s" "%s" .recover 2>NUL | "%s" "%s" 2>NUL"]]):format(exec, self._filename, exec, rc.targetfile)
@@ -478,8 +475,7 @@ function exporter:export_data_as_dump(Args)
   local cmd = table.concat(t, " ")
   ------------------------
   far.Message("Please wait...", "", "")
-  local t_execs = { far.PluginStartupInfo().ModuleDir.."sqlite3.exe", "sqlite3.exe" }
-  for _, exec in ipairs(t_execs) do
+  for exec in get_sqlite_exe() do
     -- use win.system because win.ShellExecute wouldn't reuse Far console.
     if 0 == win.system('""'..exec..'" '..cmd..'"') then break; end
   end
