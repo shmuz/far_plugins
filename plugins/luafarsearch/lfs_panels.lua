@@ -338,7 +338,7 @@ local function ConfigDialog()
   Dlg._                  = {"DI_TEXT",    5, 4, 0,0,  0,0,0,0,M.MColumnWidths}
   Dlg.ColumnWidths       = {"DI_EDIT",    5, 5,36,5,  0,0,0,0,""}
   Dlg._                  = {"DI_TEXT",    5, 6, 0,0,  0,0,0,0,M.MStartSorting}
-  Dlg.StartSorting       = {"DI_EDIT",    5, 7,36,5,  0,0,0,0,""}
+  Dlg.StartSorting       = {"DI_EDIT",    5, 7,36,7,  0,0,0,0,""}
   Dlg._                  = {"DI_TEXT",   DC, 2, 0,0,  0,0,0,0,M.MStatusColumnTypes}
   Dlg.StatusColumnTypes  = {"DI_EDIT",   DC, 3,72,3,  0,0,0,0,""}
   Dlg._                  = {"DI_TEXT",   DC, 4, 0,0,  0,0,0,0,M.MStatusColumnWidths}

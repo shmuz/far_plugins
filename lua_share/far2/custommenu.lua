@@ -913,6 +913,16 @@ function List:Sort (fCompare)
   self:SetIndexData()
 end
 
+-- use this function to mimic dialogs that have their 1-st element DI_DOUBLEBOX
+local function ChangeConsoleTitle(aTitle)
+  if not jit then return end
+  local ffi = require "ffi"
+  ffi.cdef [[int SetConsoleTitleW(const wchar_t* lpConsoleTitle);]]
+  local t = { far.AdvControl("ACTL_GETFARMANAGERVERSION", true) }
+  local title = ("%s - Far %d.%d.%d %s\0"):format(aTitle, t[1], t[2], t[4], jit.arch)
+  ffi.C.SetConsoleTitleW(ffi.cast("wchar_t*", win.Utf8ToUtf16(title)))
+end
+
 local function Menu (props, list)
   assert(type(props) == "table")
   assert(type(list) == "table")
@@ -962,6 +972,7 @@ local function Menu (props, list)
     elseif msg == F.DN_DRAWDLGITEM then
       if param1 == UId then
         list:OnDrawDlgItem (Rect.Left, Rect.Top)
+        far.Timer(10, function(h) h:Close(); ChangeConsoleTitle(list.fulltitle); end)
       end
 
     elseif msg == F.DN_CONTROLINPUT or msg == F.DN_INPUT then

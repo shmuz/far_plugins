@@ -557,6 +557,7 @@ local function DoSearch (
       if type(bWrapAround)=="number" then
         update_info(nFound)
         if not NeedWrapTheSearch(bForward, timing) then
+          sChoice = "cancel"
           break
         end
       end
@@ -970,6 +971,7 @@ local function DoReplace (
       if type(bWrapAround)=="number" then
         update_info(nFound)
         if not NeedWrapTheSearch(bForward, timing) then
+          sChoice = "cancel"
           break
         end
       end
