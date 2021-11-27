@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2021-11-27, v3.45.2
+  [!] Prevent console title blinking when cursor position in "Show All" dialog changes.
+
 2021-11-26, v3.45.1
   [!] Show no final message box when the user cancels the "wrap around" prompt in the editor.
   [*] Mimic the usual change in console title when "Show All" dialog is displayed.

@@ -6,6 +6,7 @@
 local F = far.Flags
 local min, max, floor, ceil = math.min, math.max, math.floor, math.ceil
 local band, bor = bit64.band, bit64.bor
+local DlgSend = far.SendDlgMessage
 
 -- Some color indexes; taken from far.Colors;
 local COL_MENUTEXT, COL_MENUSELECTEDTEXT, COL_MENUHIGHLIGHT,
@@ -16,7 +17,7 @@ local function GetColor (index)
 end
 
 local function SendRedrawMessage (hDlg)
-  hDlg:send("DM_REDRAW", 0, 0)
+  DlgSend(hDlg, "DM_REDRAW", 0, 0)
 end
 
 local function FlagsToInt (input)
@@ -149,7 +150,7 @@ function List:OnResizeConsole (hDlg, consoleSize)
     self.wmax, self.hmax = max(4, consoleSize.X - 8), max(1, consoleSize.Y - 6)
     self:SetSize()
     self:SetUpperItem()
-    hDlg:send("DM_RESIZEDIALOG", 0, {X=self.w + 6, Y=self.h + 4})
+    DlgSend(hDlg, "DM_RESIZEDIALOG", 0, {X=self.w + 6, Y=self.h + 4})
   end
 end
 
@@ -412,7 +413,7 @@ function List:MouseEvent (hDlg, Ev, x, y)
     if LEFT then
       if MOVED then
         if self.clickX then
-          hDlg:send("DM_MOVEDIALOG", 0,
+          DlgSend(hDlg, "DM_MOVEDIALOG", 0,
             { X = X - self.clickX, Y = Y - self.clickY })
           self.clickX, self.clickY = X, Y
         end
@@ -507,7 +508,7 @@ function List:UpdateSizePos (hDlg)
 
   local dim
   if self.resizeW or self.resizeH then
-    dim = hDlg:send("DM_RESIZEDIALOG",
+    dim = DlgSend(hDlg, "DM_RESIZEDIALOG",
       0, { X=self.w+6, Y=self.h+4 })
     self.w = min (dim.X-6, self.w)
     self.h = min (dim.Y-4, self.h)
@@ -515,10 +516,10 @@ function List:UpdateSizePos (hDlg)
   self:SetUpperItem()
 
   if self.autocenter then
-    hDlg:send("DM_MOVEDIALOG", 1, { X=-1, Y=-1 })
+    DlgSend(hDlg, "DM_MOVEDIALOG", 1, { X=-1, Y=-1 })
   end
   if self.resizeW or self.resizeH then
-    hDlg:send("DM_SETITEMPOSITION", self.startId,
+    DlgSend(hDlg, "DM_SETITEMPOSITION", self.startId,
       { Left=2, Top=1, Right=dim.X-3, Bottom=dim.Y-2 })
   end
 end
@@ -913,16 +914,6 @@ function List:Sort (fCompare)
   self:SetIndexData()
 end
 
--- use this function to mimic dialogs that have their 1-st element DI_DOUBLEBOX
-local function ChangeConsoleTitle(aTitle)
-  if not jit then return end
-  local ffi = require "ffi"
-  ffi.cdef [[int SetConsoleTitleW(const wchar_t* lpConsoleTitle);]]
-  local t = { far.AdvControl("ACTL_GETFARMANAGERVERSION", true) }
-  local title = ("%s - Far %d.%d.%d %s\0"):format(aTitle, t[1], t[2], t[4], jit.arch)
-  ffi.C.SetConsoleTitleW(ffi.cast("wchar_t*", win.Utf8ToUtf16(title)))
-end
-
 local function Menu (props, list)
   assert(type(props) == "table")
   assert(type(list) == "table")
@@ -935,20 +926,23 @@ local function Menu (props, list)
   list.autocenter = (list.autocenter ~= false)
   list.resizeW    = (list.resizeW ~= false)
   list.resizeH    = (list.resizeH ~= false)
-  local UId = 1
-  list.startId = UId
 
   local ret_item, ret_pos
   local Rect
-  local D = { list:CreateDialogItems (2, 1) }
+  local Items = {
+    { F.DI_TEXT,  1,1,8,1,  0,0,0,F.DIF_HIDDEN, "" }, -- a hidden element for setting console title
+    list:CreateDialogItems(2, 1),
+  }
+  local pos_title, pos_usercontrol = 1, 2
+  list.startId = pos_usercontrol
   ------------------------------------------------------------------------------
   local function DlgProc (hDlg, msg, param1, param2)
     if msg == F.DN_INITDIALOG then
-      hDlg:send("DM_SETMOUSEEVENTNOTIFY", 1, 0)
+      DlgSend(hDlg, F.DM_SETINPUTNOTIFY or F.DM_SETMOUSEEVENTNOTIFY, 1) -- keep flag backward compatibility
       list:OnInitDialog (hDlg)
 
     elseif msg == F.DN_GETVALUE then
-      if param1 == 1 then
+      if param1 == pos_usercontrol then
         local tp = param2.GetType
         if tp == 7 then                             -- get CurPos
           return { ValType=F.FMVT_INTEGER, Value=list.sel }
@@ -961,23 +955,20 @@ local function Menu (props, list)
       end
 
     elseif msg == F.DN_DRAWDIALOG then
-      Rect = hDlg:send("DM_GETDLGRECT", 0, 0)
+      Rect = DlgSend(hDlg, "DM_GETDLGRECT")
 
     elseif msg == F.DN_CTLCOLORDIALOG then
       return list.col_text
 
-    elseif msg == F.DN_CTLCOLORDLGITEM then
---       if param1 == IdDbox then return 0x003F003F end
-
     elseif msg == F.DN_DRAWDLGITEM then
-      if param1 == UId then
+      if param1 == pos_usercontrol then
         list:OnDrawDlgItem (Rect.Left, Rect.Top)
-        far.Timer(10, function(h) h:Close(); ChangeConsoleTitle(list.fulltitle); end)
+        DlgSend(hDlg, "DM_SETTEXT", pos_title, list.fulltitle)
       end
 
     elseif msg == F.DN_CONTROLINPUT or msg == F.DN_INPUT then
       if param2.EventType == F.KEY_EVENT then
-        if param1 == UId then
+        if param1 == pos_usercontrol then
           local key = far.InputRecordToName(param2)
           -- far.Show(
           --   "far.InputRecordToName(param2): "..tostring(key),
@@ -995,7 +986,7 @@ local function Menu (props, list)
             return true
           elseif ret_item then
             if key~="Enter" and key~="NumEnter" then -- prevent DN_CLOSE from coming twice
-              hDlg:send("DM_CLOSE")
+              DlgSend(hDlg, "DM_CLOSE")
             end
           else
             SendRedrawMessage(hDlg)
@@ -1005,7 +996,7 @@ local function Menu (props, list)
         if param1 ~= -1 then --> -1 = click outside the dialog
           local ret
           ret, ret_item, ret_pos = list:MouseEvent(hDlg, param2, Rect.Left, Rect.Top)
-          if ret_item then hDlg:send("DM_CLOSE") end
+          if ret_item then DlgSend(hDlg, "DM_CLOSE") end
           return ret
         end
       end
@@ -1022,7 +1013,7 @@ local function Menu (props, list)
 
     elseif msg == F.DN_CLOSE then
       local canclose = true
-      if param1 == UId and type(list.CanClose) == "function" and ret_item and ret_pos then
+      if param1 == pos_usercontrol and type(list.CanClose) == "function" and ret_item and ret_pos then
         canclose = list:CanClose(list.items[ret_pos], ret_item.BreakKey)
       end
       if canclose then
@@ -1039,8 +1030,8 @@ local function Menu (props, list)
     X1, Y1 = props.X, props.Y
     X2, Y2 = X1+X2-1, Y1+Y2-1
   end
-  local ret = far.Dialog(id, X1, Y1, X2, Y2, props.HelpTopic, D, 0, DlgProc)
-  if ret == UId then
+  local ret = far.Dialog(id, X1, Y1, X2, Y2, props.HelpTopic, Items, 0, DlgProc)
+  if ret == pos_usercontrol then
     return ret_item, ret_pos
   end
   return nil
