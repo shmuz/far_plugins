@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<farconfig version="3.0.5629">
+    <generalconfig>
+        <setting key="Panel.Left" name="ViewMode" type="qword" value="0000000000000003"/>
+        <setting key="Panel.Right" name="ViewMode" type="qword" value="0000000000000003"/>
+    </generalconfig>
+</farconfig>
