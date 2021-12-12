@@ -143,9 +143,10 @@ local function create_dialog_items()
     {tp="text";  text="Known &bad  build";                                         },
     {tp="fixedit"; y1=""; x1=22; x2=26; mask="99999";         name="badbuild";     },
     {tp="text";  text="Internet:"; ystep=-1; x1=c2;                                },
-    {tp="rbutt"; text="None";                x1=c2; val=1;    name="web_none";     },
-    {tp="rbutt"; text="Wget";      y1="";    x1=c2+9;         name="web_wget";     },
-    {tp="rbutt"; text="Luasec";    y1="";    x1=c2+18;        name="web_luasec";   },
+    {tp="rbutt"; text="None";      ystep=0;  x1=c2+10; val=1; name="web_none";     },
+    {tp="rbutt"; text="FFI";       ystep=0;  x1=c2+19;        name="web_ffi";      },
+    {tp="rbutt"; text="Wget";                x1=c2+10;        name="web_wget";     },
+    {tp="rbutt"; text="Luasec";    ystep=0;  x1=c2+19;        name="web_luasec";   },
     ------------------------------------------------------------------------------
     {tp="sep";   text="Install:";                                                  },
     {tp="chbox"; text="&1 Default.farconfig";                 name="farconfig";    },
@@ -194,7 +195,7 @@ local function get_data_from_dialog()
     local nGood, nBad = tonumber(out.goodbuild), tonumber(out.badbuild)
     out.goodbuild = out.goodbuild:find("^0") and math.min(nGood-FAR1_OFFSET,-1) or nGood
     out.badbuild  = out.badbuild:find("^0")  and math.min(nBad-FAR1_OFFSET,-1)  or nBad
-    out.web = out.web_wget and "wget" or out.web_luasec and "luasec" or "none"
+    out.web = out.web_ffi and "ffi" or out.web_wget and "wget" or out.web_luasec and "luasec" or "none"
   end
   return out
 end
@@ -368,7 +369,18 @@ end
 
 function State:Download(url, dir)
   local ret = false
-  if self.web == "wget" then
+  if self.web == "ffi" then
+    far.Message(url, "Downloading...", "")
+    local ffi = require "ffi"
+    ffi.cdef [[ HRESULT URLDownloadToFileW(void* pCaller, const wchar_t* szURL,
+                const wchar_t* szFileName, DWORD dwReserved, void* lpfnCB); ]]
+    local lib = assert( ffi.load("Urlmon.dll") )
+    local file = url:match("[^/]+$")
+    if not dir:find("\\$") then dir = dir.."\\" end
+    url = win.Utf8ToUtf16(url)  .. "\0"
+    file = win.Utf8ToUtf16(dir..file) .. "\0"
+    ret = 0==lib.URLDownloadToFileW(nil, ffi.cast("wchar_t*",url), ffi.cast("wchar_t*",file), 0, nil)
+  elseif self.web == "wget" then
     far.Message(url, "Downloading...", "")
     ret = 0==win.system(("%s %s -P %s 2>nul"):format(Opt.Wget, url, dir))
   elseif self.web == "luasec" then

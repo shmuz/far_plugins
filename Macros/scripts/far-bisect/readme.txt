@@ -22,8 +22,8 @@
   ║ Known good build .....           ║ Known good build (e.g. 3456). May be left empty (see Note 1).
   ║ Known bad  build .....           ║ Known  bad build (e.g. 4567). May be left empty (see Note 1).
 
-  ║ Internet                         ║ Use/don't use Internet for downloading Far builds.
-  ║ (•) None ( ) Wget ( ) Luasec     ║ Don't use / Use wget.exe / Use LuaSec library
+  ║ Internet: (•) None ( ) FFI       ║ Use Internet for downloading Far builds.
+  ║           ( ) Wget ( ) Luasec    ║ Options: Don't use / Use FFI / Use wget.exe / Use LuaSec library
 
   ╟──── Install: ────────────────────╢
   ║ [x] 1 Default.farconfig          ║ Copy file Default.farconfig to the tested %FARHOME% directory.
