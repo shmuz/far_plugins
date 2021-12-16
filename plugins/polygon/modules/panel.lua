@@ -214,15 +214,9 @@ function mypanel:set_database_mode(aSchema)
 end
 
 
-function mypanel:invalidate_sort_index()
-  self._sort_col_index = nil
-end
-
-
 function mypanel:open_object(aHandle, aSchema, aObject)
   local tp = dbx.get_object_type(self._db, aSchema, aObject)
   if tp=="table" or tp=="view" then
-    self:invalidate_sort_index()
     local col_info = dbx.read_columns_info(self._db, aSchema, aObject)
     if col_info then
       self._schema     = aSchema
@@ -314,7 +308,6 @@ function mypanel:do_open_query(handle, query)
     prg_wnd:hide()
   end
 
-  self:invalidate_sort_index()
   local position = word1~="update" and {CurrentItem=1} or nil -- don't reset position on update
   self:invalidate_panel_info()
   panel.UpdatePanel(handle, nil, false)
@@ -364,8 +357,25 @@ function mypanel:open_query(handle, query)
 end
 
 
+local SortMap = {
+  [ F.SM_NAME     ] = 1,  -- Ctrl-F3
+  [ F.SM_EXT      ] = 2,  -- Ctrl-F4
+  [ F.SM_MTIME    ] = 3,  -- Ctrl-F5
+  [ F.SM_SIZE     ] = 4,  -- Ctrl-F6
+--[ F.SM_UNSORTED ] Far does not call CompareW when Ctrl-F7 is pressed
+  [ F.SM_CTIME    ] = 5,  -- Ctrl-F8
+  [ F.SM_ATIME    ] = 6,  -- Ctrl-F9
+  [ F.SM_DESCR    ] = 7,  -- Ctrl-F10
+  [ F.SM_OWNER    ] = 8,  -- Ctrl-F11
+}
+
+
 function mypanel:get_open_panel_info(handle)
-  if not (self._panel_info and self._language == win.GetEnv("FARLANG")) then
+  local sm = panel.GetPanelInfo(handle).SortMode
+  if not SortMap[sm] then
+    self._sort_col_index = nil
+    self:prepare_panel_info(handle)
+  elseif not (self._panel_info and self._language == win.GetEnv("FARLANG")) then
     self:prepare_panel_info(handle)
   end
 
@@ -966,12 +976,6 @@ function mypanel:toggle_table_filter(handle)
 end
 
 
-local function IsSortKey(key)
-  local c = tonumber(key:match("^CtrlF(%d+)$"))
-  return c and c >= 3 and c <= 11
-end
-
-
 function mypanel:create_table()
   local items = {
     width=80;
@@ -1007,121 +1011,68 @@ function mypanel:create_table()
 end
 
 
-function mypanel:handle_keyboard(handle, key_event)
-  local key = far.InputRecordToName(key_event)
-  if not key then return end
-  key = key:gsub("RCtrl","Ctrl"):gsub("RAlt","Alt")
+local SuppressedKeys = {
+  AltF3   = true;
+  CtrlA   = true;
+  CtrlN   = true;
+  F5      = true;
+  F7      = true;
+  ShiftF4 = true;
+  ShiftF6 = true;
+  ShiftF8 = true;
+}
 
-  -- Database mode -------------------------------------------------------------
-  if self._panel_mode == "db" then
-    if key == "F3" then            -- F3: view table/view data
-      self:view_db_object()
-      return true
-    elseif key == "F4" then        -- F4: view create statement
-      self:view_db_create_sql()
-      return true
-    elseif key == "ShiftF4" then   -- view pragma statement
-      self:view_pragma_statements()
-      return true
-    elseif key == "F5" then        -- export table/view data
-      local ex = exporter.newexporter(self._db, self._filename, self._schema)
-      if ex:export_data_with_dialog() then
-        panel.UpdatePanel(nil,0)
-        panel.RedrawPanel(nil,0)
-      end
-      return true
-    elseif key == "ShiftF5" then
-      local ex = exporter.newexporter(self._db, self._filename, self._schema)
-      ex:dump_data_with_dialog()
-      return true
-    elseif key == "ShiftF6" then
-      local ex = exporter.newexporter(self._db, self._filename, self._schema)
-      ex:recover_data_with_dialog()
-      return true
-    elseif key == "Enter" and not self._multi_db then
-      local item = panel.GetCurrentPanelItem(handle)
-      if item.FileName == ".." then self._exiting=true; end
-    elseif key == "F7" then
-      if self:create_table() then
-        panel.UpdatePanel(handle)
-        panel.RedrawPanel(handle)
-      end
-      return true
-    end
-  end
 
-  -- Table or view mode --------------------------------------------------------
-  if self._panel_mode == "table" or self._panel_mode == "view" then
-    if key == "ShiftF3" then
-      self:set_column_mask(handle)
-      return true
-    elseif key=="AltF3" then
-      self:toggle_column_mask(handle)
-      return true
-    elseif key == "ShiftF6" then        -- "panel filter"
-      self:set_table_filter(handle)
-      return true
-    elseif key == "AltF6" then          -- "toggle panel filter"
-      self:toggle_table_filter(handle)
-      return true
-    elseif IsSortKey(key) then
-      self:invalidate_sort_index()
-      self:invalidate_panel_info()
-    end
-  end
-
-  -- Table mode ----------------------------------------------------------------
-  if self._panel_mode == "table" then
-    if key == "F4" or key == "Enter" then -- edit row
-      if key == "Enter" then
-        local item = panel.GetCurrentPanelItem(nil, 1)
-        if not (item and item.FileName ~= "..") then     -- skip action for ".."
-          return false
-        end
-      end
-      if self._rowid_name then
-        myeditor.edit_row(self._db, self._schema, self._objname, self._rowid_name, handle)
-        return true
-      else
-        ErrMsg(M.err_edit_norowid)
-      end
-    elseif key == "ShiftF4" then         -- insert row
-      myeditor.insert_row(self._db, self._schema, self._objname, self._rowid_name, handle)
-      return true
-    elseif key == "ShiftF5" then         -- "show/hide columns affinity"
-      self._show_affinity = not self._show_affinity
-      self:invalidate_panel_info()
-      panel.RedrawPanel(handle)
-      return true
-    end
-  end
-
-  -- All modes -----------------------------------------------------------------
-  if key=="AltF3" or key=="CtrlA" or key=="F5" or key=="F7"
-    or key=="ShiftF4" or key=="ShiftF6" or key=="ShiftF8"
-    then return true -- suppress these keys
-  elseif key == "F6" then             -- edit and execute SQL query
-    self:sql_query_history(handle)
+function mypanel:handle_key_db(handle, key)
+  if key == "F3" then            -- F3: view table/view data
+    self:view_db_object()
     return true
-  elseif key == "AltShiftF6" then -- toggle multi_db mode
-    self._multi_db = not self._multi_db
-    self:invalidate_panel_info()
-    panel.RedrawPanel(handle)
-    return false
-  elseif key == "F8" then -- intercept F8 to avoid panel-reread in case of user cancel
-    if panel.GetPanelInfo(handle).SelectedItemsNumber > 0 then
-      local guid = win.Uuid("4472C7D8-E2B2-46A0-A005-B10B4141EBBD") -- for macros
-      if self._panel_mode == "root" then
-        if far.Message(M.detach_question, M.title_short, ";YesNo", "w", nil, guid) == 1 then
-          return nil
-        end
-      end
-      if self._panel_mode == "db" or self._panel_mode == "table" then
-        if far.Message(M.drop_question, M.title_short, ";YesNo", "w", nil, guid) == 1 then
-          return nil
-        end
-      end
+  elseif key == "F4" then        -- F4: view create statement
+    self:view_db_create_sql()
+    return true
+  elseif key == "ShiftF4" then   -- view pragma statement
+    self:view_pragma_statements()
+    return true
+  elseif key == "F5" then        -- export table/view data
+    local ex = exporter.newexporter(self._db, self._filename, self._schema)
+    if ex:export_data_with_dialog() then
+      panel.UpdatePanel(nil,0)
+      panel.RedrawPanel(nil,0)
     end
+    return true
+  elseif key == "ShiftF5" then
+    local ex = exporter.newexporter(self._db, self._filename, self._schema)
+    ex:dump_data_with_dialog()
+    return true
+  elseif key == "ShiftF6" then
+    local ex = exporter.newexporter(self._db, self._filename, self._schema)
+    ex:recover_data_with_dialog()
+    return true
+  elseif key == "Enter" and not self._multi_db then
+    local item = panel.GetCurrentPanelItem(handle)
+    if item.FileName == ".." then self._exiting=true; end
+  elseif key == "F7" then
+    if self:create_table() then
+      panel.UpdatePanel(handle)
+      panel.RedrawPanel(handle)
+    end
+    return true
+  end
+end
+
+
+function mypanel:handle_key_tbview(handle, key)
+  if key == "ShiftF3" then
+    self:set_column_mask(handle)
+    return true
+  elseif key=="AltF3" then
+    self:toggle_column_mask(handle)
+    return true
+  elseif key == "ShiftF6" then        -- "panel filter"
+    self:set_table_filter(handle)
+    return true
+  elseif key == "AltF6" then          -- "toggle panel filter"
+    self:toggle_table_filter(handle)
     return true
   elseif key=="CtrlN" then
     ------ Toggle between alphabetical and numerical sort modes ------
@@ -1143,8 +1094,84 @@ function mypanel:handle_keyboard(handle, key_event)
       end
     end
     return true
+  end
+end
+
+
+function mypanel:handle_key_table(handle, key)
+  if key == "F4" or key == "Enter" then -- edit row
+    if key == "Enter" then
+      local item = panel.GetCurrentPanelItem(nil, 1)
+      if not (item and item.FileName ~= "..") then     -- skip action for ".."
+        return false
+      end
+    end
+    if self._rowid_name then
+      myeditor.edit_row(self._db, self._schema, self._objname, self._rowid_name, handle)
+      return true
+    else
+      ErrMsg(M.err_edit_norowid)
+    end
+  elseif key == "ShiftF4" then         -- insert row
+    myeditor.insert_row(self._db, self._schema, self._objname, self._rowid_name, handle)
+    return true
+  elseif key == "ShiftF5" then         -- "show/hide columns affinity"
+    self._show_affinity = not self._show_affinity
+    self:invalidate_panel_info()
+    panel.RedrawPanel(handle)
+    return true
+  end
+end
+
+
+function mypanel:handle_key_all(handle, key)
+  if SuppressedKeys[key] then
+    return true
+  elseif key == "F6" then           -- edit and execute SQL query
+    self:sql_query_history(handle)
+    return true
+  elseif key == "AltShiftF6" then   -- toggle multi_db mode
+    self._multi_db = not self._multi_db
+    self:invalidate_panel_info()
+    panel.RedrawPanel(handle)
+    return false
+  elseif key == "F8" then -- intercept F8 to avoid panel-reread in case of user cancel
+    if panel.GetPanelInfo(handle).SelectedItemsNumber > 0 then
+      local guid = win.Uuid("4472C7D8-E2B2-46A0-A005-B10B4141EBBD") -- for macros
+      if self._panel_mode == "root" then
+        if far.Message(M.detach_question, M.title_short, ";YesNo", "w", nil, guid) == 1 then
+          return false
+        end
+      end
+      if self._panel_mode == "db" or self._panel_mode == "table" then
+        if far.Message(M.drop_question, M.title_short, ";YesNo", "w", nil, guid) == 1 then
+          return false
+        end
+      end
+    end
+    return true
   elseif key=="CtrlShiftBackSlash" then
     panel.ClosePanel(handle)
+  end
+end
+
+
+function mypanel:handle_keyboard(handle, key_event)
+  local key = far.InputRecordToName(key_event)
+  if key then
+    key = key:gsub("RCtrl","Ctrl"):gsub("RAlt","Alt")
+    if self._panel_mode == "db" then
+      local ret = self:handle_key_db(handle,key)
+      if ret ~= nil then return ret end
+    elseif self._panel_mode == "table" or self._panel_mode == "view" then
+      local ret = self:handle_key_tbview(handle,key)
+      if ret ~= nil then return ret end
+      if self._panel_mode == "table" then
+        ret = self:handle_key_table(handle, key)
+        if ret ~= nil then return ret end
+      end
+    end
+    return self:handle_key_all(handle, key)
   end
 end
 
@@ -1365,7 +1392,7 @@ function mypanel:sql_query_history(handle)
     { BreakKey="S+DELETE";   action="delete";     },
   }
 
-  while qarray[1] do
+  while true do
     local H = far.AdvControl("ACTL_GETFARRECT")
     props.MaxHeight = (H.Bottom - H.Top + 1) - 8
     props.Title = M.select_query.." ["..#qarray.."]"
@@ -1375,24 +1402,27 @@ function mypanel:sql_query_history(handle)
     -- Show the menu
     local item, pos = far.Menu(props, items, brkeys)
     if item then
-      local query = items[pos].text
-      if item.action==nil then -- Enter pressed
-        self:open_query(handle, query)
-        break
+      local query = items[pos] and items[pos].text
+      if item.action == nil then -- Enter pressed
+        if query then self:open_query(handle, query); break; end
+
       elseif item.action == "insert" then
-        panel.SetCmdLine(handle, query)
-        break
+        if query then panel.SetCmdLine(handle, query); break; end
+
       elseif item.action == "copy" then
-        far.CopyToClipboard(query)
-        break
+        if query then far.CopyToClipboard(query); break; end
+
       elseif item.action == "copyserial" then
         -- table.concat is not OK here as individual entries may contain line feeds inside them
-        far.CopyToClipboard(settings.serialize(qarray))
-        break
+        if query then far.CopyToClipboard(settings.serialize(qarray)); break; end
+
       elseif item.action == "delete" then
-        table.remove(qarray, pos)
-        props.SelectIndex = #qarray
-        state.modified = true
+        if query then
+          table.remove(qarray, pos)
+          props.SelectIndex = #qarray
+          state.modified = true
+        end
+
       elseif item.action == "edit" or item.action == "newedit" then
         query = self:edit_query(item.action=="edit" and query or "")
         if query then
@@ -1402,25 +1432,13 @@ function mypanel:sql_query_history(handle)
           props.SelectIndex = pos
         end
       end
+
     else
       break
     end
   end
   if state.modified then queries:save() end
 end
-
-
-local SortMap = {
-  [ F.SM_NAME     ] = 1,  -- Ctrl-F3
-  [ F.SM_EXT      ] = 2,  -- Ctrl-F4
-  [ F.SM_MTIME    ] = 3,  -- Ctrl-F5
-  [ F.SM_SIZE     ] = 4,  -- Ctrl-F6
---[ F.SM_UNSORTED ] Far does not call CompareW when Ctrl-F7 is pressed
-  [ F.SM_CTIME    ] = 5,  -- Ctrl-F8
-  [ F.SM_ATIME    ] = 6,  -- Ctrl-F9
-  [ F.SM_DESCR    ] = 7,  -- Ctrl-F10
-  [ F.SM_OWNER    ] = 8,  -- Ctrl-F11
-}
 
 
 function mypanel:get_sort_index(Mode)
@@ -1447,16 +1465,19 @@ function export.Compare (self, handle, PanelItem1, PanelItem2, Mode)
   local ret
   local compare = CMP_ALPHA
   self:prepare_panel_info(handle)
-  if self._panel_mode == "db" then
+  if self._panel_mode == "root" then
+    if     Mode==F.SM_EXT   then ret,compare = 1,CMP_INT
+    elseif Mode==F.SM_MTIME then ret,compare = 2,CMP_ALPHA
+    else                         ret,compare = 0,CMP_ALPHA
+    end
+  elseif self._panel_mode == "db" then
     if Mode == F.SM_EXT then -- sort by object type ( CustomColumnData[1] )
       ret = 1
     else -- use Far Manager compare function
       ret = -2
     end
   else
-    if self._sort_col_index == nil then
-      self._sort_col_index = self:get_sort_index(Mode)
-    end
+    self._sort_col_index = self:get_sort_index(Mode)
     self:prepare_panel_info(handle)
     ret = self._sort_col_index or 0
     compare = self._sort_compare

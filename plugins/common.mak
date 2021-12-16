@@ -34,9 +34,7 @@ else
 #---------------------------- END OF Shmuel's SETTINGS -----------------------
 endif
 
-ifndef EMBED_METHOD
-EMBED_METHOD = luasrcdiet
-endif
+EMBED_METHOD ?= luasrcdiet
 
 # Location of LuaFAR source directory
 PATH_LUAFARSRC = $(farsource)/plugins/luamacro/luafar
@@ -78,13 +76,12 @@ else
   OUTDIR = Out$(DIRBIT)
   LUAOPEN_LIST = $(MYLUAOPEN_LIST)
   TARGETS = $(T_NOEMBED) $(T_MESSAGE) $(GLOBINFO) $(HELP)
+  MYCFLAGS += -DRUN_LUAFAR_INIT
 endif
 
 MYOBJECTS_D = $(MYOBJECTS:%.o=$(OUTDIR)/%.o)
 
-ifndef LUAPLUG
-LUAPLUG = $(PATH_LUAFARSRC)\luaplug.c
-endif
+LUAPLUG ?= $(PATH_LUAFARSRC)\luaplug.c
 
 LUAOPEN_EMBED = luaopen_embed
 LUAOPEN_MAIN = luaopen_main
@@ -111,6 +108,7 @@ LDFLAGS = -Wl,--kill-at -shared -s $(ARCH) -static-libgcc
 
 all:     $(OUTDIR) $(TARGETS)
 help:    $(HELP)
+lng:     $(T_MESSAGE)
 
 $(OUTDIR)/%.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -151,10 +149,10 @@ $(VERSION_H) : version.h.mcr define.lua
 endif
 
 $(OUTDIR):
-	mkdir $@
+	IF NOT EXIST "$@" mkdir "$@"
 
 clean:
 	rmdir /s /q $(OUTDIR)
 	if exist luac.out del luac.out
 
-.PHONY: clean all help FORCE
+.PHONY: clean all help lng FORCE

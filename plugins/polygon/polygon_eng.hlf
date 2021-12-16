@@ -80,7 +80,6 @@ $^ #Reference of keyboard actions#
                  │ Alt-Shift-F6        │ Toggle between simple and multi-database mode
                  │ LCtrl-1             │ Two-panel view mode
                  │ LCtrl-2             │ One-panel view mode
-                 │ Ctrl-N              │ Menu: select sort compare mode
                  │ Ctrl-Shift-BackSlash│ Close the plugin panel
    ──────────────┼─────────────────────┼───────────────────────────────────────────────────
    Database      │ F3                  │ Show contents of an item under cursor
@@ -92,16 +91,17 @@ $^ #Reference of keyboard actions#
                  │ F7                  │ Dialog: create a new table
                  │ F8                  │ Dialog: delete selected database items
    ──────────────┼─────────────────────┼───────────────────────────────────────────────────
+   Table or View │ Shift-F3            │ Dialog: custom panel view mode
+                 │ Alt-F3              │ Toggle panel view mode: full/custom
+                 │ Shift-F6            │ Dialog: panel filter
+                 │ Alt-F6              │ Toggle panel filter: on/off
+                 │ Ctrl-N              │ Menu: select sort compare mode
+   ──────────────┼─────────────────────┼───────────────────────────────────────────────────
    Table         │ F4, Enter           │ Dialog: edit a row
                  │ Shift-F4            │ Dialog: insert a row
                  │ Shift-F5            │ Show/hide columns affinity
                  │                     │   (i=integer, t=text, b=blob, r=real, n=numeric)
                  │ F8                  │ Dialog: delete selected rows
-   ──────────────┼─────────────────────┼───────────────────────────────────────────────────
-   Table or View │ Shift-F3            │ Dialog: custom panel view mode
-                 │ Alt-F3              │ Toggle panel view mode: full/custom
-                 │ Shift-F6            │ Dialog: panel filter
-                 │ Alt-F6              │ Toggle panel filter: on/off
    ──────────────┴─────────────────────┴───────────────────────────────────────────────────
 
 ^#Command line execution in the plugin's panel#

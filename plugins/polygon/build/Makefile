@@ -8,9 +8,6 @@ COMMON_MAK = $(path_plugin)\..\common.mak
 MYOBJECTS = polygon.o
 MYLUAOPEN_LIST = luaopen_polygon
 
-# Note: Far build >= 3.0.4364 required if -DRUN_LUAFAR_INIT is used
-MYCFLAGS = -DRUN_LUAFAR_INIT
-
 T_MESSAGE = $(path_plugin)\modules\string_rc.lua
 
 bootscript = $(path_plugin)\$(PROJECT).lua

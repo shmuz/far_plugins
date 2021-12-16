@@ -1,3 +1,8 @@
+2021-12-16, v.1.7.1
+    1. Make panel.SetSortMode() work on this plugin's panels.
+    2. Heavy refactoring and some logical changes.
+    3. Fix "History of SQL queries" in the case it is empty.
+
 2021-11-13, v.1.7.0
     1. Keep selection in the panel after editing a record.
     2. Column masks are turned on/off individually per table (was: globally for all tables).
