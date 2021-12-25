@@ -37,7 +37,6 @@ FAR_EXPORTS = \
   PROCESSEDITORINPUT  \
   PROCESSVIEWEREVENT
 
-MYCFLAGS  = -DRUN_LUAFAR_INIT
 RCFILE    = lf4ed.rc
 TEMPL     = lf4ed_lang.templ
 TEMPL_SCR = lf4ed_lang.lua

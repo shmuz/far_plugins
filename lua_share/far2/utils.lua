@@ -345,7 +345,7 @@ Available commands:
 ]]
 
   syn = syn:format(pluginInfo.CommandPrefix, win.Uuid(globalInfo.Guid))
-  if next(tCommands) then
+  if tCommands and next(tCommands) then
     local arr = {}
     for k in pairs(tCommands) do arr[#arr+1] = k end
     table.sort(arr)

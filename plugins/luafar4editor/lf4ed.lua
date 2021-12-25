@@ -23,7 +23,7 @@ local DefaultConfig = {
 local Utils = require "far2.utils"
 local LibHistory = require "far2.history"
 
-local FirstRun = ... --> this works with Far >= 3.0.4425
+local FirstRun = not _Plugin
 if FirstRun then
   _Plugin = Utils.InitPlugin()
   package.path = _Plugin.ModuleDir.."?.lua;".._Plugin.ModuleDir.."scripts\\?.lua;"..package.path
@@ -146,7 +146,9 @@ local EditorMenuItems = {
 }
 
 local function RunExitScriptHandlers()
-  for _,f in ipairs(_Plugin.Handlers.ExitScript) do f() end
+  if _Plugin.Handlers then
+    for _,f in ipairs(_Plugin.Handlers.ExitScript) do f() end
+  end
 end
 
 local function fReloadUserFile()
@@ -156,8 +158,8 @@ local function fReloadUserFile()
   end
   package.path = _Plugin.PackagePath -- restore to original value
   -----------------------------------------------------------------------------
-  _Plugin.UserItems, _Plugin.CommandTable, _Plugin.HotKeyTable, _Plugin.Handlers =
-    Utils.LoadUserMenu("_usermenu.lua")
+  local a,b,c,d = Utils.LoadUserMenu("_usermenu.lua")
+  _Plugin.UserItems, _Plugin.CommandTable, _Plugin.HotKeyTable, _Plugin.Handlers = a,b,c,d
 end
 
 local function traceback3(msg)
@@ -187,7 +189,9 @@ local function Configure (aArg)
     { text=M.MPluginSettings, action=fPluginConfig },
     { text=M.MReloadUserFile, action=fReloadUserFile },
   }
-  for _,v in ipairs(_Plugin.UserItems.config) do items[#items+1]=v end
+  if _Plugin.UserItems then
+    for _,v in ipairs(_Plugin.UserItems.config) do items[#items+1]=v end
+  end
   while true do
     local item, pos = far.Menu(properties, items)
     if not item then return end
@@ -211,7 +215,9 @@ local function MakeMainMenu(aFrom)
   --------
   local items = {}
   if aFrom == "editor" then Utils.AddMenuItems(items, EditorMenuItems, M) end
-  Utils.AddMenuItems(items, _Plugin.UserItems[aFrom], M)
+  if _Plugin.UserItems then
+    Utils.AddMenuItems(items, _Plugin.UserItems[aFrom], M)
+  end
   --------
   local keys = {{ BreakKey="AS+F9", action=Configure },}
   return properties, items, keys
@@ -301,7 +307,7 @@ end
 
 local function export_ProcessEditorInput (Rec)
   local EventType = Rec.EventType
-  if EventType == F.KEY_EVENT then
+  if EventType == F.KEY_EVENT and _Plugin.HotKeyTable then
     local item = _Plugin.HotKeyTable[KeyComb(Rec)]
     if item then
       if Rec.KeyDown then
@@ -311,20 +317,26 @@ local function export_ProcessEditorInput (Rec)
       return true
     end
   end
-  for _,f in ipairs(_Plugin.Handlers.EditorInput) do
-    if f(Rec) then return true end
+  if _Plugin.Handlers then
+    for _,f in ipairs(_Plugin.Handlers.EditorInput) do
+      if f(Rec) then return true end
+    end
   end
 end
 
 local function export_ProcessEditorEvent (EditorId, Event, Param)
-  for _,f in ipairs(_Plugin.Handlers.EditorEvent) do
-    f(EditorId, Event, Param)
+  if _Plugin.Handlers then
+    for _,f in ipairs(_Plugin.Handlers.EditorEvent) do
+      f(EditorId, Event, Param)
+    end
   end
 end
 
 local function export_ProcessViewerEvent (ViewerId, Event, Param)
-  for _,f in ipairs(_Plugin.Handlers.ViewerEvent) do
-    f(ViewerId, Event, Param)
+  if _Plugin.Handlers then
+    for _,f in ipairs(_Plugin.Handlers.ViewerEvent) do
+      f(ViewerId, Event, Param)
+    end
   end
 end
 
@@ -348,7 +360,11 @@ do
   InitUpvalues(_Plugin)
   SetExportFunctions()
   if FirstRun then
-    fReloadUserFile()
+    local ok, msg = pcall(fReloadUserFile) -- here pcall leaves plugin alive in case of errors in the user file
+    if not ok then
+      msg = msg:gsub("\t", "    ")
+      far.Message(msg, M.MPluginName, nil, "wl")
+    end
     FirstRun = false -- needed when (ReloadDefaultScript == false)
   end
 end

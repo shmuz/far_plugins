@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2021-12-25, v3.9.3
+  [!] The plugin now withstands errors in _usermenu.lua.
+
 2021-11-11, v3.9.2
   [*] "searchmenu" module updated.
 
