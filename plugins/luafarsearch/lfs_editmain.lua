@@ -239,24 +239,26 @@ local function EditorAction (aOp, aData, aScriptCall)
         aData.fUserChoiceFunc)
     if aData.bAdvanced then tParams.FinalFunc() end
     ---------------------------------------------------------------------------
-    local function GetTitle()
-      if _Plugin.History:field("config").bShowSpentTime then
-        return ("%s [ %s s ]"):format(M.MMenuTitle, Common.FormatTime(nElapsed))
-      else
-        return M.MMenuTitle
+    if not aScriptCall then
+      local function GetTitle()
+        if _Plugin.History:field("config").bShowSpentTime then
+          return ("%s [ %s s ]"):format(M.MMenuTitle, Common.FormatTime(nElapsed))
+        else
+          return M.MMenuTitle
+        end
       end
-    end
-    if not bTest and sOperation ~= "searchword" and sChoice ~= "broken" and sChoice ~= "cancel" then
-      if nFound == 0 and nReps == 0 then
-        ErrorMsg (M.MNotFound .. aData.sSearchPat .. "\"", GetTitle())
-      elseif sOperation == "count" then
-        far.Message (M.MTotalFound .. FormatInt(nFound), GetTitle())
-      elseif bReplace and (sChoice=="initial" or sChoice=="all") then
-        libMessage.TableBox( {
-          { M.MTotalFound,    FormatInt(nFound) },
-          { M.MTotalReplaced, FormatInt(nReps) },
-        },
-        GetTitle(), nil, "T")
+      if not bTest and sOperation ~= "searchword" and sChoice ~= "broken" and sChoice ~= "cancel" then
+        if nFound == 0 and nReps == 0 then
+          ErrorMsg (M.MNotFound .. aData.sSearchPat .. "\"", GetTitle())
+        elseif sOperation == "count" then
+          far.Message (M.MTotalFound .. FormatInt(nFound), GetTitle())
+        elseif bReplace and (sChoice=="initial" or sChoice=="all") then
+          libMessage.TableBox( {
+            { M.MTotalFound,    FormatInt(nFound) },
+            { M.MTotalReplaced, FormatInt(nReps) },
+          },
+          GetTitle(), nil, "T")
+        end
       end
     end
     return nFound, nReps, sChoice, nElapsed
@@ -264,7 +266,9 @@ local function EditorAction (aOp, aData, aScriptCall)
 
   local ok, nFound, nReps, sChoice, nElapsed = xpcall(Work, debug.traceback)
   if ok then
-    editor.SetTitle(nil, "")
+    if not aScriptCall then
+      editor.SetTitle(nil, "")
+    end
     if sChoice == "newsearch" then
       return EditorAction(aOp, aData, aScriptCall)
     else
@@ -276,8 +280,10 @@ local function EditorAction (aOp, aData, aScriptCall)
       return nFound, nReps, sChoice, nElapsed
     end
   end
-  ErrorMsg(nFound,nil,nil,"wl")
-  editor.SetTitle(nil, "")
+  if not aScriptCall then
+    ErrorMsg(nFound,nil,nil,"wl")
+    editor.SetTitle(nil, "")
+  end
 end
 
 

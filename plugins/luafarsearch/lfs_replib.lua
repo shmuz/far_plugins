@@ -3,8 +3,6 @@
 
 local M = require "lfs_message"
 
-local RepLib = {}
-
 local function CreateTable()
   return { MaxGroupNumber=0 }
 end
@@ -137,7 +135,7 @@ local ReplacePatTable = {
   IsChar             -- "."
 }
 
-function RepLib.TransformReplacePat (aStr)
+local function TransformReplacePat (aStr)
   local T = CreateTable()
   local offs = 1
   while offs <= #aStr do
@@ -150,7 +148,7 @@ function RepLib.TransformReplacePat (aStr)
   return T
 end
 
-function RepLib.GetReplaceFunction (aReplacePat, is_wide)
+local function GetReplaceFunction (aReplacePat, is_wide)
   if type(aReplacePat) ~= "table" then
     error("invalid type of replace pattern")
   end
@@ -224,4 +222,7 @@ function RepLib.GetReplaceFunction (aReplacePat, is_wide)
   end
 end
 
-return RepLib
+return {
+  GetReplaceFunction  = GetReplaceFunction;
+  TransformReplacePat = TransformReplacePat;
+}

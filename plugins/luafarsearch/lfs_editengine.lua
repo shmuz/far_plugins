@@ -215,7 +215,7 @@ end
 local function SelectItemInEditor (item)
   local offset = item.seloffset - item.offset
   local fr, to = item.fr + offset, item.to + offset
-  ScrollToPosition(item.lineno, to, fr, to, -10)
+  ScrollToPosition(item.lineno, to+1, fr, to, -10)
   editor.Select(nil, "BTYPE_STREAM", item.lineno, fr, to<=fr and 1 or to-fr+1, 1)
   editor.Redraw()
 end
@@ -389,8 +389,9 @@ local function GetInvariantTable (tRegex)
   }
 end
 
-local function update_info (nFound, y)
-  editor.SetTitle(nil, M.MCurrentlyFound .. nFound)
+local function make_update_info (aScriptCall)
+  return aScriptCall and function() end
+    or function(nFound, y) editor.SetTitle(nil, M.MCurrentlyFound .. nFound) end
 end
 
 local function NeedWrapTheSearch (bForward, timing)
@@ -414,6 +415,7 @@ local function DoSearch (
     sSearchPat        -- [in]     search pattern (for display purpose only)
   )
 
+  local update_info = make_update_info(bScriptCall)
   local timing = NewTiming()
   bWrapAround = (not bScopeIsBlock) and (not bOriginIsScope) and bWrapAround
 
@@ -453,17 +455,15 @@ local function DoSearch (
     function() sLineU8 = sLineU8 or win.Utf16ToUtf8(sLine); return sLineU8; end or
     function() return sLine; end
 
-  local x, y, egs, part1, part3
+  local x, y, egs, part1
 
   local function SetStartBlockParam (y)
     egs = TT.EditorGetString(nil, y, 0)
     part1 = TT.sub(egs.StringText, 1, egs.SelStart-1)
     if egs.SelEnd == -1 then
       set_sLine(TT.sub(egs.StringText, egs.SelStart))
-      part3 = TT.empty
     else
       set_sLine(TT.sub(egs.StringText, egs.SelStart, egs.SelEnd))
-      part3 = TT.sub(egs.StringText, egs.SelEnd+1)
     end
   end
 
@@ -476,7 +476,7 @@ local function DoSearch (
       y = bForward and 1 or tInfo.TotalLines
       set_sLine(TT.EditorGetString(nil, y, 3))
       x = bForward and 1 or sLineLen+1
-      part1, part3 = TT.empty, TT.empty
+      part1 = TT.empty
     end
   else -- "cursor"
     if tBlockInfo then
@@ -508,7 +508,7 @@ local function DoSearch (
         x = min(tInfo.CurPos, sLineLen+1)
       end
 
-      part1, part3 = TT.empty, TT.empty
+      part1 = TT.empty
     end
   end
   tRepeat.bSearchBack = bSearchBack
@@ -676,6 +676,7 @@ local function DoReplace (
     fReplaceChoice    -- [in]     either function or nil
   )
 
+  local update_info = make_update_info(bScriptCall)
   local timing = NewTiming()
   bWrapAround = (not bScopeIsBlock) and (not bOriginIsScope) and bWrapAround
 

@@ -312,10 +312,8 @@ $ #lfsearch.EditorAction#
        "sRegexLib"       : библиотека регулярных выражений:
                            "far" (по умолчанию), "oniguruma",
                            "pcre" или "pcre2"
-       "sScope"          : область поиска: "global" (по умолчанию)
-                           или "block"
-       "sOrigin"         : начало поиска: "cursor" (по умолчанию)
-                           или "scope"
+       "sScope"          : область поиска: "global" (по умолчанию) или "block"
+       "sOrigin"         : начало поиска: "cursor" (по умолчанию) или "scope"
        "bWrapAround"     : искать по кругу в области поиска;
                            параметр учитывается только если
                            sScope=="global" и sOrigin=="cursor"

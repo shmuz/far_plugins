@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2022-05-12, v3.45.3
+  [*] Editor: when the plugin is called from a script it avoids writing to editor status line.
+
 2021-11-27, v3.45.2
   [!] Prevent console title blinking when cursor position in "Show All" dialog changes.
 

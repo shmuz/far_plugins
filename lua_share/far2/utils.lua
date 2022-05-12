@@ -500,26 +500,7 @@ local function OpenMacro (Args, CommandTable, fConfig)
   return false
 end
 
--- Add function unicode.utf8.cfind:
--- same as find, but offsets are in characters rather than bytes
--- DON'T REMOVE: it's documented in LF4Ed manual and must be available to user scripts.
-local function AddCfindFunction()
-  local ulib = getmetatable("").__index
-  if type(ulib) == "table" then
-    local usub, ssub = ulib.sub, string.sub
-    local ulen, slen = ulib.len, string.len
-    local ufind = ulib.find
-    ulib.cfind = function(s, patt, init, plain)
-      init = init and slen(usub(s, 1, init-1)) + 1
-      local t = { ufind(s, patt, init, plain) }
-      if t[1] == nil then return nil end
-      return ulen(ssub(s, 1, t[1]-1)) + 1, ulen(ssub(s, 1, t[2])), unpack(t, 3)
-    end
-  end
-end
-
 local function InitPlugin()
-  AddCfindFunction()
   export.OnError = OnError
   local plugin = {}
   plugin.ModuleDir = PluginDir
@@ -531,7 +512,6 @@ local function GetPluginVersion()
 end
 
 return {
-  AddCfindFunction = AddCfindFunction,
   OnError = OnError,
   AddMenuItems = AddMenuItems,
   GetPluginVersion = GetPluginVersion,

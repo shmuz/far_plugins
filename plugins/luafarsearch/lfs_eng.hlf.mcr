@@ -301,10 +301,8 @@ $ #lfsearch.EditorAction#
        "sReplacePat"     : replace pattern
        "sRegexLib"       : regular expression library, either of:
                            "far" (default), "oniguruma", "pcre" or "pcre2"
-       "sScope"          : search scope: "global" (default) or
-                           "block"
-       "sOrigin"         : search origin: "cursor" (default) or
-                           "scope"
+       "sScope"          : search scope: "global" (default) or "block"
+       "sOrigin"         : search origin: "cursor" (default) or "scope"
        "bWrapAround"     : wrap search around the scope;
                            it is taken into account only if
                            sScope=="global" and sOrigin=="cursor"

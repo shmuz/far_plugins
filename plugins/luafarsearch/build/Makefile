@@ -49,7 +49,6 @@ FAR_EXPORTS =       \
   PUTFILES          \
   SETDIRECTORY
 
-MYCFLAGS  = -DRUN_LUAFAR_INIT
 RCFILE    = lfsearch.rc
 TEMPL     = lfs_lang.templ tmpp_lang2.templ
 TEMPL_SCR = lfs_lang.lua

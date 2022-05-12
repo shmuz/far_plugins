@@ -1183,7 +1183,7 @@ end
 
 -- use as a script (rather than a module)
 local arg = ...
-if arg == "run" then
+if arg == "run" or type(arg)=="table" then
   selftest.test_all()
   --far.Message("All tests OK", "LuaFAR Search")
 end

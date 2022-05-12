@@ -67,15 +67,16 @@ local function MakeLang (aModuleFileName, aDescriptions, ...)
 
     local n = 0
     local dflt
-    for line in (sMessages.."\n\n"):gmatch("([^\n]*)\n") do
-      if not line:match("^%s*//") then
+    for line in (sMessages.."\n\n"):gmatch("([^\r\n]*)\r?\n") do
+      if not line:match("^%s*//") then -- comment lines are always skipped
         if line:match("%S") then
           n = n + 1
           if n > #t_out then
             error("extra line in block: " .. line)
           elseif n == 1 then
-            if line:match("^[%a_][%w_]*$") then
-              table.insert(t_out[n], line)
+            local ident = line:match("^([%a_][%w_]*)%s*$")
+            if ident then
+              table.insert(t_out[n], ident)
             else
               error("bad message name: `" .. line .. "'")
             end
@@ -86,12 +87,14 @@ local function MakeLang (aModuleFileName, aDescriptions, ...)
             table.insert(t_out[n],
                          line:match("^upd:") and "// need translation:\n"..dflt or get_quoted(line))
           end
-        elseif n > 0 then
-          if n < #t_out then
-            local t = t_out[1]
-            error("too few lines in block `" .. t[#t] .. "'")
+        else -- empty line: serves as a delimiter between blocks
+          if n > 0 then
+            if n < #t_out then
+              local t = t_out[1]
+              error("too few lines in block `" .. t[#t] .. "'")
+            end
+            n = 0
           end
-          n = 0
         end
       end
     end
