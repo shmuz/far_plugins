@@ -2,6 +2,11 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2023-03-04, v3.45.4
+  [+] Presets can be exported and imported.
+  [!] A few fixes.
+  [+] Grep output: added number of matches per file.
+
 2022-05-12, v3.45.3
   [*] Editor: when the plugin is called from a script it avoids writing to editor status line.
 

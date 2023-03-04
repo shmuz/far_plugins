@@ -82,7 +82,7 @@ local function ReplaceDialog (Data)
       elseif param1==Dlg.bAdvanced.id then CheckAdvancedEnab (hDlg)
       end
     elseif Common.Check_F4_On_DI_EDIT(Dlg, hDlg, msg, param1, param2) then
-      -- processed
+      return -- processed
     elseif msg == F.DN_CLOSE then
       if param1==Dlg.btnReplace.id or param1==Dlg.btnCount.id then
         local tmpData = {}

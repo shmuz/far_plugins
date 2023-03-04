@@ -30,15 +30,13 @@ $ #LuaFAR Search (version #{VER_STRING})#
    ~Presets~@Presets@
    ~User Scripts~@UserScripts@
 
- #Details on regular exression libraries#
+ #Details on regular expression libraries#
    ~Far regular expressions~@:RegExp@
    ~Oniguruma~@Oniguruma@
    ~PCRE~@PCRE@
    ~Syntax of Replace pattern~@SyntaxReplace@
 
 ^#LIBRARIES USED BY THE PLUGIN#
- #Lua 5.1#                    : lua51.dll
- #LuaFAR#                     : luafar3.dll
  #Universal Charset Detector# : ucd.dll
  #Lrexlib#                    : rex_onig.dll, rex_pcre.dll, rex_pcre2.dll (optional)
  #Oniguruma#                  : onig.dll (optional)
@@ -235,12 +233,14 @@ $ #Presets#
  Pressing the #Presets# button from the Search or Replace dialog invokes a menu
 for handling presets: create, load, rename and delete them.
 
- #Del#   - delete a preset
- #Enter# - load the selected preset into the dialog
- #Esc#   - close the menu and return to the dialog
- #F2#    - save the loaded preset under the same name
- #F6#    - rename a preset
- #Ins#   - save the current dialog settings as a new preset
+ #Del#    - delete a preset
+ #Enter#  - load the selected preset into the dialog
+ #Esc#    - close the menu and return to the dialog
+ #F2#     - save the loaded preset under the same name
+ #F6#     - rename a preset
+ #Ins#    - save the current dialog settings as a new preset
+ #Ctrl+O# - import presets from a file
+ #Ctrl+S# - export presets to a file
 
  ~Contents~@Contents@
 

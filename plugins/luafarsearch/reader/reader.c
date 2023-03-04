@@ -127,15 +127,18 @@ int Reader_openfile (lua_State *L)
   int ret = 0;
   TReader *ud = CheckReader(L, 1);
 
+  if (ud->fp) {
+    fclose(ud->fp);
+    ud->fp = NULL;
+  }
+
   (void)luaL_checkstring(L, 2);
   lua_pushvalue(L, 2);
   lua_pushliteral(L, "\0");
   lua_concat(L, 2);
 
-  FILE *fp = _wfopen((const wchar_t*)lua_tostring(L, -1), L"rb");
-  if (fp) {
-    if (ud->fp) fclose(ud->fp);
-    ud->fp = fp;
+  ud->fp = _wfopen((const wchar_t*)lua_tostring(L, -1), L"rb");
+  if (ud->fp) {
     ud->top = 0;
     ret = 1;
   }

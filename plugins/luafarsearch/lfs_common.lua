@@ -7,6 +7,7 @@ local RepLib     = require "lfs_replib"
 local libDialog  = require "far2.dialog"
 local libHistory = require "far2.history"
 local fHilite    = require "shmuz.hilite"
+local serial     = require "shmuz.serial"
 
 local DefaultLogFileName = "\\D{%Y%m%d-%H%M%S}.log"
 
@@ -862,9 +863,10 @@ function SRFrame:DoPresets (hDlg)
   local Dlg = self.Dlg
   local HistPresetNames = _Plugin.DialogHistoryPath .. "Presets"
   hDlg:send("DM_SHOWDIALOG", 0)
-  local props = { Title=M.MTitlePresets, Bottom = "Esc,Enter,F2,Ins,F6,Del", HelpTopic="Presets", }
+  local props = { Title=M.MTitlePresets, Bottom = "F1", HelpTopic="Presets", }
   local presets = _Plugin.History:field("presets")
-  local bkeys = { {BreakKey="F2"}, {BreakKey="INSERT"}, {BreakKey="DELETE"}, {BreakKey="F6"} }
+  local bkeys = { {BreakKey="F2"},  {BreakKey="INSERT"}, {BreakKey="DELETE"}, {BreakKey="F6"},
+                  {BreakKey="C+S"}, {BreakKey="C+O"}, }
 
   while true do
     local items = {}
@@ -970,6 +972,55 @@ function SRFrame:DoPresets (hDlg)
         end
       end
     ----------------------------------------------------------------------------
+    elseif item.BreakKey == "C+S" and items[1] then
+      local fname = far.InputBox(nil, M.MPresetExportTitle, M.MPresetExportPrompt)
+      if fname then
+        fname = far.ConvertPath(fname)
+        if not win.GetFileAttr(fname) or 1==far.Message(
+          fname.."\n"..M.MPresetOverwriteQuery, M.MWarning, ";YesNo", "w")
+        then
+          local fp = io.open(fname, "w")
+          if fp then
+            fp:write("local presets\n", serial.SaveToString("presets",presets), "\nreturn presets")
+            fp:close()
+            far.Message(M.MPresetExportSuccess, M.MMenuTitle)
+          else
+            ErrorMsg(M.MPresetExportFailure)
+          end
+        end
+      end
+    ----------------------------------------------------------------------------
+    elseif item.BreakKey == "C+O" then
+      local fname = far.InputBox(nil, M.MPresetImportTitle, M.MPresetImportPrompt)
+      if fname then
+        local func, msg = loadfile(far.ConvertPath(fname))
+        if func then
+          local t = setfenv(func, {})()
+          if type(t) == "table" then
+            for k,v in pairs(t) do
+              if type(k)=="string" and type(v)=="table" then
+                if not presets[k] then
+                  presets[k] = v
+                else
+                  local root = k:match("%(%d+%)(.*)") or k
+                  for m=1,1000 do
+                    local k2 = ("(%d)%s"):format(m, root)
+                    if not presets[k2] then
+                      presets[k2] = v; break
+                    end
+                  end
+                end
+              end
+            end
+            _Plugin.History:save()
+          else
+            ErrorMsg(M.MPresetImportDataNotTable)
+          end
+        else
+          ErrorMsg(msg)
+        end
+      end
+    ----------------------------------------------------------------------------
     end
   end
   hDlg:send("DM_SHOWDIALOG", 1)
@@ -1060,7 +1111,7 @@ local function EditorConfigDialog()
   Dlg.rPickHistory    = {"DI_RADIOBUTTON",27, 7, 0, 0,  0, 0, 0,  0,           M.MOptPickHistory, _noautoload=1}
   Dlg.rPickNowhere    = {"DI_RADIOBUTTON",47, 7, 0, 0,  0, 0, 0,  0,           M.MOptPickNowhere, _noautoload=1}
 
-  Dlg.sep             = {"DI_TEXT",       -1, 9, 0, 0,  0, 0, 0,  {DIF_BOXCOLOR=nil,DIF_SEPARATOR=1,DIF_CENTERTEXT=1}, M.MSepHighlightColors}
+  Dlg.sep             = {"DI_TEXT",       -1, 9, 0, 0,  0, 0, 0,  {DIF_SEPARATOR=1,DIF_CENTERTEXT=1}, M.MSepHighlightColors}
   Dlg.btnHighlight    = {"DI_BUTTON",      5,10, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.MBtnHighlightColor}
   Dlg.labHighlight    = {"DI_TEXT",   offset,10, 0, 0,  0, 0, 0,  0,  M.MTextSample}
   Dlg.btnGrepLNum1    = {"DI_BUTTON",      5,11, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.MBtnGrepLineNumMatchedColor}

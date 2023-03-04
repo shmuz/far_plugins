@@ -145,7 +145,7 @@ local function Lines (aFile, aCodePage, userbreak)
     local line, eol, tb
     aFile:seek("set", posInner)
     while chunk do
-      local fr, to
+      local fr, to -- luacheck:ignore ('fr' is never accessed)
       fr, to, line, eol = find(chunk, aPattern, start)
       if eol ~= EMPTY then
         if eol == CR and to == #chunk/CHARSIZE then
@@ -265,11 +265,11 @@ local function RecursiveSearch (sInitDir, UserFunc, Flags, FileFilter,
 end
 
 
-local BomPatterns = {
-  ["^\255\254"] = 1200,
-  ["^\254\255"] = 1201,
-  ["^\239\187\191"] = 65001,
-  ["^%+/v[89+/]"] = 65000,
+local BOMs = {
+  { codepage= 1200; pattern="^\255\254";     },
+  { codepage= 1201; pattern="^\254\255";     },
+  { codepage=65001; pattern="^\239\187\191"; },
+  { codepage=65000; pattern="^%+/v[89+/]";   },
 }
 
 local function GetFileFormat (file, nBytes)
@@ -277,11 +277,11 @@ local function GetFileFormat (file, nBytes)
   file:seek("set", 0)
   local sTemp = file:read(8)
   if sTemp then
-    for pattern, codepage in pairs(BomPatterns) do
-      local bom = string.match(sTemp, pattern)
+    for _,item in ipairs(BOMs) do
+      local bom = string.match(sTemp, item.pattern)
       if bom then
         file:seek("set", #bom)
-        return codepage, bom
+        return item.codepage, bom
       end
     end
   end
@@ -369,7 +369,7 @@ local function ConfigDialog()
     return true
   end
 end
-libTmpPanel.Panel.AS_F9 = ConfigDialog
+libTmpPanel.Panel.ConfigFunction = ConfigDialog
 
 
 local function GetCodePages (aData)
@@ -762,11 +762,11 @@ end
 
 local function CheckBoms (str)
   if str then
-    local find = string.find
-    if find(str, "^\254\255")         then return { 1201  }, 2 -- UTF16BE
-    elseif find(str, "^\255\254")     then return { 1200  }, 2 -- UTF16LE
-    elseif find(str, "^%+/v[89+/]")   then return { 65000 }, 4 -- UTF7
-    elseif find(str, "^\239\187\191") then return { 65001 }, 3 -- UTF8
+    for _, item in ipairs(BOMs) do
+      local bom = string.match(str, item.pattern)
+      if bom then
+        return item.codepage, #bom
+      end
     end
   end
 end
@@ -816,13 +816,13 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
     ---------------------------------------------------------------------------
     if not reader:openfile(Utf16(fullname)) then return end
     local str = reader:get_next_overlapped_chunk()
-    local currCodePages, len = CheckBoms(str)
-    if currCodePages then
+    local currCodePages = activeCodePages
+    local page, len = CheckBoms(str)
+    if page then
+      currCodePages = { page }
       str = string.sub(str, len+1)
-    else
-      currCodePages = activeCodePages
     end
-
+    ---------------------------------------------------------------------------
     local found, stop
     local tPlus, uMinus, uUsual
     if tParams.tMultiPatterns then
@@ -833,7 +833,6 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
 
     while str do
       if userbreak:ConfirmEscape("in_file") then
-        reader:closefile()
         return userbreak.fullcancel and "break"
       end
       for _, cp in ipairs(currCodePages) do
@@ -875,7 +874,7 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
         DisplaySearchState(fullname, #tFoundFiles, nTotalFiles, pos/fdata.FileSize)
       end
       if #str > 0x100000 then
-        str = nil; collectgarbage("collect")
+        str = nil; collectgarbage("collect") -- luacheck:ignore
       end
       str = reader:get_next_overlapped_chunk()
     end
@@ -885,7 +884,6 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
     if not found ~= not tParams.bInverseSearch then
       tFoundFiles[#tFoundFiles+1] = fullname
     end
-    reader:closefile()
   end
 
   local area = CheckSearchArea(aData.sSearchArea) -- can throw error
@@ -925,6 +923,7 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
     end
   end
 
+  if reader then reader:closefile() end
   far.RestoreScreen(hScreen)
   if tFoundFiles[1] then
     far.Message(M.MFilesFound..#tFoundFiles.."/"..nTotalFiles, M.MSearchIsOver, "")
@@ -1245,10 +1244,10 @@ local function Replace_ProcessFile (fdata, fullname, cdata)
                   Line, fr, to, sRepFinal, bWideCharRegex, fullname,
                   numline, nCodePageDetected, nCodePage)
               cdata.last_clock = cdata.last_clock + (nElapsed or 0)
-              if     sUserChoice == "yes"     then -- do nothing
+              if     sUserChoice == "yes"     then -- luacheck:ignore
               elseif sUserChoice == "fAll"    then bReplaceAll = true
               elseif sUserChoice == "all"     then bReplaceAll,cdata.bReplaceAll = true,true
-              elseif sUserChoice == "no"      then -- do nothing                        -- "skip"
+              elseif sUserChoice == "no"      then -- luacheck:ignore                   -- "skip"
               elseif sUserChoice == "fCancel" then bSkipAll = true                      -- "skip in this file"
               else                            bSkipAll,userbreak.fullcancel = true,true -- "cancel"
               end
@@ -1367,7 +1366,7 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
 
   local Convert = Replace_GetConvertors (bWideCharRegex, nCodePage)
   local lines_iter = --[[cdata.bFileAsLine and Lines2 or]] Lines
-  for line, eol in lines_iter(fp, nCodePage, userbreak) do
+  for line, _ in lines_iter(fp, nCodePage, userbreak) do
     numline = numline + 1
     -------------------------------------------------------------------------
     local Line = Convert(line)
@@ -1385,7 +1384,7 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
           end
         end
         ----------------------------------------------------------------------
-        if cdata.sOp == "grep" then
+        if cdata.sOp == "grep" and x == 1 then
           if (not bFound) == grepInverse then -- 'not' needed for conversion to boolean
             if qLinesBefore then
               local size = qLinesBefore:size()
@@ -1406,7 +1405,6 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
               qLinesBefore:push(Line)
             end
           end
-          break
         end
         ----------------------------------------------------------------------
         if not fr then break end
@@ -1426,6 +1424,9 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
     end
   end -- for line, eol in lines_iter(...)
   if nMatches > 0 then
+    if tGrep then
+      tGrep.nMatches = nMatches
+    end
     cdata.nMatchesTotal = cdata.nMatchesTotal + nMatches
     cdata.nFilesWithMatches = cdata.nFilesWithMatches + 1
   end
@@ -1512,7 +1513,7 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
           M.MPanelRO_Readonly..fullname..M.MPanelRO_Question,
           M.MWarning, M.MPanelRO_Buttons, "w")
         cdata.last_clock = cdata.last_clock + clock() - currclock
-        if res == 1 then -- do nothing
+        if     res == 1 then -- luacheck:ignore
         elseif res == 2 then sProcessReadonly="all"
         elseif res == 3 then bCanProcess=false
         elseif res == 4 then bCanProcess=false; sProcessReadonly="none"
@@ -1580,7 +1581,7 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
       if v[1] then
         numfile = numfile + 1
         fp = fp or assert(io.open(fname, "wb"))
-        fp:write("[", tostring(numfile), "] ", v.FileName, "\r\n")
+        fp:write(("[%d] %s : %d\r\n"):format(numfile, v.FileName, v.nMatches))
         local last_numline = -1
         for m=1,#v,2 do
           local lnum, line = v[m], v[m+1]
@@ -1632,8 +1633,17 @@ local function InitTmpPanel()
     if history[k] == nil then history[k] = v end
   end
 
-  libTmpPanel.PutExportedFunctions(export)
-  export.SetFindList = nil
+  for _, name in ipairs {
+    "ClosePanel",
+    "GetFindData",
+    "GetOpenPanelInfo",
+    "ProcessPanelEvent",
+    "ProcessPanelInput",
+    "PutFiles",
+    "SetDirectory" }
+  do
+    export[name] = libTmpPanel.Panel[name]
+  end
 
   local tpGetOpenPanelInfo = export.GetOpenPanelInfo
   export.GetOpenPanelInfo = function (Panel, Handle)

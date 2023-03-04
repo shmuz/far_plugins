@@ -1,5 +1,5 @@
 -- lfsearch.lua
--- luacheck: globals lfsearch _finder
+-- luacheck: globals lfsearch _Plugin _finder
 
 -- Minimal required Far Manager build changed from 4425 to 4878 after some testing.
 -- The reason: FSF.GetReparsePointInfo() did not work in the range of builds [4425-4876].
@@ -31,12 +31,6 @@ local function NormDataOnFirstRun()
   data.bUseDirFilter      = false
   data.bUseFileFilter     = false
   data.sSearchArea        = "FromCurrFolder"
-  ------------------------------------------------
-  data = _Plugin.History:field("lua_pattern")
-  data.bMultiLine         = true
-  data.bOnlyCurrFolder    = true
-  data.bInverseSearch     = false
-  ------------------------------------------------
 end
 
 
@@ -67,6 +61,7 @@ end
 
 local FirstRun = ... --> this works with LuaFAR builds >= 529 (Far >= 3.0.4425)
 if FirstRun then FirstRunActions() end
+local History = _Plugin.History
 
 
 local libUtils   = require "far2.utils"
@@ -77,8 +72,6 @@ local M          = require "lfs_message"
 local MReplace   = require "lfs_mreplace"
 local Panels     = require "lfs_panels" -- call only after modifying package.cpath
 local Rename     = require "lfs_rename"
-
-local History = _Plugin.History
 
 
 local function ForcedRequire (name)
@@ -223,16 +216,16 @@ local function OpenFromMacro (aItem, commandTable)
       if area==F.MACROAREA_SHELL or area==F.MACROAREA_TREEPANEL or
          area==F.MACROAREA_QVIEWPANEL or area==F.MACROAREA_INFOPANEL
       then
-        if Cmd=="search" then
-          local panel = GUI_SearchFromPanels(data)
-          return panel and { panel, type="panel" }
-        elseif Cmd=="replace" then
+        if Cmd == "search" then
+          local pan = GUI_SearchFromPanels(data)
+          return pan and { pan, type="panel" }
+        elseif Cmd == "replace" then
           Panels.ReplaceFromPanel(data, true, false)
-        elseif Cmd=="grep" then
+        elseif Cmd == "grep" then
           Panels.GrepFromPanel(data, true, false)
-        elseif Cmd=="rename" then
+        elseif Cmd == "rename" then
           Rename.main()
-        elseif Cmd=="panel" then
+        elseif Cmd == "panel" then
           local pan = Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
           return { [1]=pan; type="panel" }
         end
