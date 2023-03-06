@@ -155,7 +155,7 @@ local function row_dialog(db, schema, table_name, rowid_name, db_data, row_id)
     end
   end
 
-  return sdialog.Run(Items) and true
+  return sdialog.New(Items):Run() and true
 end
 
 
@@ -164,8 +164,8 @@ local function edit_row(db, schema, table_name, rowid_name, handle)
   local item = panel.GetCurrentPanelItem(handle)
   if not item or item.FileName == ".." then return; end
 
-  local row_id = item.AllocationSize
-  local query = ("SELECT * FROM %s.%s WHERE %s=%d"):
+  local row_id = item.Owner
+  local query = ("SELECT * FROM %s.%s WHERE %s=%s"):
     format(Norm(schema), Norm(table_name), rowid_name, row_id)
   local stmt = db:prepare(query)
   if stmt then
@@ -266,7 +266,7 @@ local function remove(db, schema, table_name, rowid_name, items)
       prg_wnd:update(cnt)
       local sbuf = utils.StringBuffer()
       local upper = math.min(cnt+1000, items_count) -- process up to 1000 rows at a time
-      for i = cnt+1, upper do sbuf:Add(items[i].AllocationSize); end
+      for i = cnt+1, upper do sbuf:Add(items[i].Owner); end
       local query = query_start .. sbuf:Concat(",") .. ")"
       if not dbx.execute_query(db, query, true) then
         break

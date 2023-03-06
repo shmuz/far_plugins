@@ -51,20 +51,20 @@ function mod.showdialog()
     help = "ConfigDialog";
     width = 60;
     { tp="dbox";  text=M.title                                                     },
-    { tp="cbox";  text=M.cfg_add_pm;                name=mod.ADD_TO_MENU;          },
-    { tp="cbox";  text=M.cfg_confirm_close;         name=mod.CONFIRM_CLOSE;        },
-    { tp="cbox";  text=M.cfg_multidb_mode;          name=mod.MULTIDB_MODE;         },
+    { tp="chbox"; text=M.cfg_add_pm;                name=mod.ADD_TO_MENU;          },
+    { tp="chbox"; text=M.cfg_confirm_close;         name=mod.CONFIRM_CLOSE;        },
+    { tp="chbox"; text=M.cfg_multidb_mode;          name=mod.MULTIDB_MODE;         },
     { tp="text";  text=M.cfg_prefix;                                               },
     { tp="edit";                                    name=mod.PREFIX;               },
     { tp="text";  text=M.cfg_excl_masks;                                           },
     { tp="edit";                                    name=mod.EXCL_MASKS;           },
     { tp="sep";                                                                    },
-    { tp="cbox";  text=M.cfg_common_user_modules;   name=mod.COMMON_USER_MODULES;  },
-    { tp="cbox";  text=M.cfg_individ_user_modules;  name=mod.INDIVID_USER_MODULES; },
-    { tp="cbox";  text=M.cfg_extensions;            name=mod.EXTENSIONS;           },
-    { tp="cbox";  text=M.cfg_ignore_foreign_keys;   name=mod.IGNORE_FOREIGN_KEYS;  },
+    { tp="chbox"; text=M.cfg_common_user_modules;   name=mod.COMMON_USER_MODULES;  },
+    { tp="chbox"; text=M.cfg_individ_user_modules;  name=mod.INDIVID_USER_MODULES; },
+    { tp="chbox"; text=M.cfg_extensions;            name=mod.EXTENSIONS;           },
+    { tp="chbox"; text=M.cfg_ignore_foreign_keys;   name=mod.IGNORE_FOREIGN_KEYS;  },
     { tp="sep";                                                                    },
-    { tp="butt";  text=M.save;   centergroup=1; defaultbutton=1;                   },
+    { tp="butt";  text=M.save;   centergroup=1; default=1;                         },
     { tp="butt";  text=M.cancel; centergroup=1; cancel=1;                          },
   }
 
@@ -73,7 +73,7 @@ function mod.showdialog()
     v.val = v.name and Pdata[v.name]
   end
   -- run the dialog
-  local rc = sdialog.Run(Items)
+  local rc = sdialog.New(Items):Run()
   -- save the dialog data
   if rc then
     for k,v in pairs(rc) do Pdata[k] = v; end

@@ -51,7 +51,7 @@ local function First_load_actions()
     local pluginDir = far.PluginStartupInfo().ModuleDir
     ReadIniFile(pluginDir.."polygon.ini")
 
-    -- Provide priority access to lsqlite3.dll residing in the plugin's folder
+    -- Provide priority access to lsqlite3 DLL residing in the plugin's folder
     -- (needed for deployment of the plugin)
     package.cpath = pluginDir.."?.dll;"..package.cpath
 
@@ -214,15 +214,38 @@ local function MatchExcludeMasks(filename)
 end
 
 
-function export.Analyse(info)
-  -- far.Show(info.OpMode)
+local function CreatePanel(FileName, Opt, OpenFrom)
+  Opt = Opt or get_plugin_data()
+  local object = mypanel.open(FileName,
+                 Opt[config.EXTENSIONS],
+                 Opt[config.IGNORE_FOREIGN_KEYS],
+                 Opt[config.MULTIDB_MODE])
+  if object then
+    object.LoadedModules = LoadUserModules(object,
+                 Opt[config.COMMON_USER_MODULES],
+                 Opt[config.INDIVID_USER_MODULES])
+    if OpenFrom == F.OPEN_FROMMACRO then
+      return { type="panel", [1]=object }
+    else
+      return object
+    end
+  end
+end
+
+
+local function Analyse(FileName, Buffer, OpMode)
   return
-    band(info.OpMode,F.OPM_TOPLEVEL) == 0 -- not supposed to process ShiftF1/F2/F3
-    and info.FileName
-    and info.FileName ~= ""
-    and dbx.format_supported(info.Buffer, #info.Buffer)
-    and not AppIdToSkip[string.sub(info.Buffer,69,72)]
-    and not MatchExcludeMasks(info.FileName)
+    band(OpMode,F.OPM_TOPLEVEL) == 0 -- not supposed to process ShiftF1/F2/F3
+    and FileName
+    and FileName ~= ""
+    and dbx.format_supported(Buffer, #Buffer)
+    and not AppIdToSkip[string.sub(Buffer,69,72)]
+    and not MatchExcludeMasks(FileName)
+end
+
+
+function export.Analyse(info)
+  return Analyse(info.FileName, info.Buffer, info.OpMode)
 end
 
 
@@ -343,21 +366,7 @@ function export.Open(OpenFrom, Guid, Item)
   end
 
   if FileName then
-    Opt = Opt or get_plugin_data()
-    local object = mypanel.open(FileName,
-                   Opt[config.EXTENSIONS],
-                   Opt[config.IGNORE_FOREIGN_KEYS],
-                   Opt[config.MULTIDB_MODE])
-    if object then
-      object.LoadedModules = LoadUserModules(object,
-                   Opt[config.COMMON_USER_MODULES],
-                   Opt[config.INDIVID_USER_MODULES])
-      if OpenFrom == F.OPEN_FROMMACRO then
-        return { type="panel", [1]=object }
-      else
-        return object
-      end
-    end
+    return CreatePanel(FileName, Opt, OpenFrom)
   end
 end
 

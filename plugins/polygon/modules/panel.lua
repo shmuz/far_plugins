@@ -369,10 +369,10 @@ local SortMap = {
   [ F.SM_OWNER    ] = 8,  -- Ctrl-F11
 }
 
+local PMODES = { table=1; view=1; query=1; }
 
 function mypanel:get_open_panel_info(handle)
-  local sm = panel.GetPanelInfo(handle).SortMode
-  if not SortMap[sm] then
+  if PMODES[self._panel_mode] and not SortMap[panel.GetPanelInfo(handle).SortMode] then
     self._sort_col_index = nil
     self:prepare_panel_info(handle)
   elseif not (self._panel_info and self._language == win.GetEnv("FARLANG")) then
@@ -487,7 +487,7 @@ function mypanel:get_panel_list_db()
   local items = { { FileName=".."; FileAttributes="d"; } }
   for i,obj in ipairs(db_objects) do
     local item = {
-      AllocationSize = obj.type;  -- This field is used as type id
+      AllocationSize = obj.type;  -- IMPORTANT: 'AllocationSize' field is used as type id
       CustomColumnData = {};
       FileAttributes = "";
       FileName = obj.name;
@@ -507,6 +507,15 @@ function mypanel:get_panel_list_db()
 
   prg_wnd:hide()
   return items
+end
+
+
+local function rowid_tostring(rowid)
+  if type(rowid)=="string" then
+    return rowid
+  else -- rowid is a number
+    return tostring(bit64.new(rowid))
+  end
 end
 
 
@@ -604,10 +613,11 @@ function mypanel:get_panel_list_obj()
       end
       -- the leftmost column is ROWID (according to the query used)
       local rowid = stmt:get_value(0)
-      -- this field is used for holding ROWID
-      item.AllocationSize = rowid
+      rowid = rowid_tostring(rowid)
+      -- IMPORTANT: field 'Owner' is used for holding ROWID
+      item.Owner = rowid
       -- use ROWID as file name, otherwise FAR cannot properly handle selections on the panel
-      item.FileName = ("%010d"):format(rowid)
+      item.FileName = ("%010s"):format(rowid)
     else
       for i = 1,#self._col_info do
         item.CustomColumnData[i] = exporter.get_text(stmt, i-1, true)
@@ -702,7 +712,7 @@ function mypanel:set_column_mask(handle)
       name = name:sub(1,dlg_width-21).."..."
     end
     table.insert(Items, { tp="fixedit"; text=text or "0"; x1=5; x2=7;        name=2*i;   })
-    table.insert(Items, { tp="cbox";    text=name; x1=9; ystep=0; val=check; name=2*i+1; })
+    table.insert(Items, { tp="chbox";   text=name; x1=9; ystep=0; val=check; name=2*i+1; })
   end
   table.insert(Items, { tp="sep";                                                     })
   table.insert(Items, { tp="butt"; text=M.ok;            centergroup=1; default=1;    })
@@ -736,7 +746,7 @@ function mypanel:set_column_mask(handle)
     end
   end
 
-  local res = sdialog.Run(Items)
+  local res = sdialog.New(Items):Run()
   if res then
     local masks = {}
     curtable.col_masks = masks
@@ -960,7 +970,7 @@ function mypanel:set_table_filter(handle)
     end
   end
 
-  if sdialog.Run(Items) then
+  if sdialog.New(Items):Run() then
     panel.UpdatePanel(handle)
     panel.RedrawPanel(handle)
   end
@@ -1007,7 +1017,7 @@ function mypanel:create_table()
     end
   end
 
-  return sdialog.Run(items)
+  return sdialog.New(items):Run()
 end
 
 
@@ -1322,7 +1332,7 @@ function mypanel:view_pragma_statements()
 
   if items[1] then
     local W = 65
-    sdialog.Run {
+    local items = {
       guid = "FF769EE0-2643-48F1-A8A2-239CD3C6691F";
       width = W;
       { tp="dbox"; text=("%s [%s]"):format(M.title_pragma, self._schema);              },
@@ -1330,6 +1340,7 @@ function mypanel:view_pragma_statements()
       { tp="sep";                                                                      },
       { tp="butt"; text=M.ok; centergroup=1; default=1;                                },
     }
+    sdialog.New(items):Run()
   end
 end
 

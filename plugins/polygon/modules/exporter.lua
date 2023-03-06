@@ -89,12 +89,13 @@ function exporter:export_data_with_dialog()
     {tp="text";   text=M.exp_fmt;                                            },
     {tp="rbutt";  text=M.exp_fmt_csv;                    name="csv"; group=1 },
     {tp="rbutt";  text=M.exp_fmt_text;                   name="text";        },
-    {tp="cbox";   text=M.exp_multiline; x1=16; ystep=-1; name="multiline";   },
+    {tp="chbox";  text=M.exp_multiline; x1=16; ystep=-1; name="multiline";   },
     {tp="sep";                                 ystep=2;                      },
     {tp="butt";   text=M.exp_exp; centergroup=1; default=1;                  },
     {tp="butt";   text=M.cancel;  centergroup=1; cancel=1;                   },
   }
-  local Pos, _ = sdialog.Indexes(Items)
+  local dlg = sdialog.New(Items)
+  local Pos = dlg:Indexes()
   ------------------------------------------------------------------------------
   Items.proc = function(hDlg, Msg, Param1, Param2)
     if Msg == F.DN_INITDIALOG then
@@ -111,7 +112,7 @@ function exporter:export_data_with_dialog()
     end
   end
   ------------------------------------------------------------------------------
-  local rc = sdialog.Run(Items)
+  local rc = dlg:Run()
   if rc then
     data.format = rc.csv and "csv" or "text"
     data.multiline = rc.multiline
@@ -151,14 +152,15 @@ function exporter:dump_data_with_dialog()
     {tp="text";  text=M.dump_main;                                            },
     {tp="edit";  text=dst_file_name;   name="targetfile";                     },
     {tp="sep";                                                                },
-    {tp="cbox";  text=M.dump_dumpall;  name="dumpall"; val=data.dump_dumpall; },
-    {tp="cbox";  text=M.dump_rowids;   name="rowids";  val=data.dump_rowids;  },
-    {tp="cbox";  text=M.dump_newlines; name="newline"; val=data.dump_newline; },
+    {tp="chbox"; text=M.dump_dumpall;  name="dumpall"; val=data.dump_dumpall; },
+    {tp="chbox"; text=M.dump_rowids;   name="rowids";  val=data.dump_rowids;  },
+    {tp="chbox"; text=M.dump_newlines; name="newline"; val=data.dump_newline; },
     {tp="sep";                                                                },
     {tp="butt";  text=M.dump_dump; centergroup=1; default=1;                  },
     {tp="butt";  text=M.cancel;    centergroup=1; cancel=1;                   },
   }
-  local Pos, _ = sdialog.Indexes(Items)
+  local dlg = sdialog.New(Items)
+  local Pos = dlg:Indexes()
   ------------------------------------------------------------------------------
   function Items.initaction(hDlg)
     if t_selected[1] == nil then
@@ -173,7 +175,7 @@ function exporter:dump_data_with_dialog()
     end
   end
   ------------------------------------------------------------------------------
-  local rc = sdialog.Run(Items)
+  local rc = dlg:Run()
   if rc then
     data.dump_dumpall = rc.dumpall
     data.dump_rowids  = rc.rowids
@@ -196,17 +198,18 @@ function exporter:recover_data_with_dialog()
   local Items = {
     guid="26B9D06E-53F9-4F96-AD1B-C5DB7A041732";
     help="Recover";
-    {tp="dbox";  text=M.recover_title;                               },
-    {tp="text";  text=M.recover_out_file;                            },
-    {tp="edit";  name="targetfile";                                  },
-    {tp="sep";                                                       },
-    {tp="rbutton"; text=M.recover_as_dump;   name="as_dump"; val=1;  },
-    {tp="rbutton"; text=M.recover_as_db;     name="as_db";           },
-    {tp="sep";                                                       },
-    {tp="butt";  text=M.ok;     centergroup=1; default=1;            },
-    {tp="butt";  text=M.cancel; centergroup=1; cancel=1;             },
+    {tp="dbox";  text=M.recover_title;                             },
+    {tp="text";  text=M.recover_out_file;                          },
+    {tp="edit";  name="targetfile";                                },
+    {tp="sep";                                                     },
+    {tp="rbutt"; text=M.recover_as_dump;   name="as_dump"; val=1;  },
+    {tp="rbutt"; text=M.recover_as_db;     name="as_db";           },
+    {tp="sep";                                                     },
+    {tp="butt";  text=M.ok;     centergroup=1; default=1;          },
+    {tp="butt";  text=M.cancel; centergroup=1; cancel=1;           },
   }
-  local Pos, Elem = sdialog.Indexes(Items)
+  local dlg = sdialog.New(Items)
+  local Pos, Elem = dlg:Indexes()
   ------------------------------------------------------------------------------
   local function set_output_name(hDlg)
     local as_dump = 1==hDlg:send("DM_GETCHECK", Pos.as_dump)
@@ -226,7 +229,7 @@ function exporter:recover_data_with_dialog()
     end
   end
   ------------------------------------------------------------------------------
-  local rc = sdialog.Run(Items)
+  local rc = dlg:Run()
   if rc then
     for exec in get_sqlite_exe() do
       local cmd = rc.as_dump and

@@ -30,7 +30,7 @@ end
 
 local function get_rowid(PanelItem)
   local fname = PanelItem and PanelItem.FileName
-  return fname and fname~=".." and PanelItem.AllocationSize
+  return fname and fname~=".." and PanelItem.Owner
 end
 
 local StrBuffer = {}

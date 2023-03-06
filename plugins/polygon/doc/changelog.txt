@@ -1,3 +1,6 @@
+2023-03-06, v.1.7.2
+    1. Fix inability of editing records having very big ROWID values.
+
 2021-12-16, v.1.7.1
     1. Make panel.SetSortMode() work on this plugin's panels.
     2. Heavy refactoring and some logical changes.
