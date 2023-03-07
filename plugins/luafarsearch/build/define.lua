@@ -3,7 +3,7 @@
 -- Definitions
 VER_MAJOR = "3"
 VER_MINOR = "45"
-VER_MICRO = "4"
+VER_MICRO = "5"
 
 MINFARVERSION = "{ 3, 0, 0, 4878 }"
 

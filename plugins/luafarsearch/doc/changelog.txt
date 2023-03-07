@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2023-03-07, v3.45.5
+  [!] Panels (search): fix error of conversion invalid UTF-8 to UTF-16 (occurs on Windows XP).
+
 2023-03-04, v3.45.4
   [+] Presets can be exported and imported.
   [!] A few fixes.

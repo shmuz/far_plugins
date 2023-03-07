@@ -841,9 +841,12 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
                   MultiByteToWideChar(str, cp)
         if s then
           if Regex.ufindW then
-            if cp == 65001 then s = win.Utf8ToUtf16(s) end
+            if cp == 65001 then
+              local ok, s2 = pcall(Utf16, s) -- may throw on Windows XP and Wine
+              s = ok and s2
+            end
           else
-            if cp ~= 65001 then s = win.Utf16ToUtf8(s) end
+            if cp ~= 65001 then s = Utf8(s) end
           end
           if s then
             if tPlus == nil then
