@@ -220,7 +220,13 @@ local function read_columns_info(db, schema, object)
       elseif ct:find("blob") or (ct == "")                         then affinity = "BLOB"
       elseif ct:find("real") or ct:find("floa") or ct:find("doub") then affinity = "REAL"
       end
-      table.insert(columns, { name=stmt:get_value(1); affinity=affinity; })
+      table.insert(columns, {
+        name       = stmt:get_value(1);
+        affinity   = affinity;
+        notnull    = stmt:get_value(3);
+        dflt_value = stmt:get_value(4);
+        pk         = stmt:get_value(5);
+      })
     end
     stmt:finalize()
     return columns

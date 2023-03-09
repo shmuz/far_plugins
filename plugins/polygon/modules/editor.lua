@@ -24,6 +24,18 @@ local function process_field(text)
 end
 
 
+local function get_default_value(affinity)
+  local val = 0
+  if     affinity == "NUMERIC" then val = 0
+  elseif affinity == "INTEGER" then val = 0
+  elseif affinity == "TEXT"    then val = "'text'" -- make it visible
+  elseif affinity == "BLOB"    then val = "x'00'"
+  elseif affinity == "REAL"    then val = 0.0
+  end
+  return val
+end
+
+
 local function exec_update(db, schema, table_name, rowid_name, row_id, db_data)
   local query
   if row_id then -- compose "Update" query
@@ -35,11 +47,29 @@ local function exec_update(db, schema, table_name, rowid_name, row_id, db_data)
     query = ("UPDATE %s.%s SET %s WHERE %s=%s"):format(
         Norm(schema), Norm(table_name), table.concat(t,","), rowid_name, row_id)
   else -- compose "Insert" query
-    local t1, t2 = {},{}
-    for i,v in ipairs(db_data) do t1[i] = Norm(v.colname) end
-    for i,v in ipairs(db_data) do t2[i] = process_field(v.value) end
-    query = ("INSERT INTO %s.%s (%s) VALUES (%s)"):format(
-        Norm(schema), Norm(table_name), table.concat(t1,","), table.concat(t2,","))
+    local info = dbx.read_columns_info(db, schema, table_name)
+    if not info then
+      return false
+    end
+    local t1, t2, j = {},{},0
+    for i,v in ipairs(db_data) do
+      local val = v.value:upper()
+      if val ~= "NULL" or info[i].notnull==0 then
+        j = j + 1
+        t1[j] = Norm(v.colname)
+        t2[j] = process_field(v.value)
+      elseif not info[i].dflt_value then
+        j = j + 1
+        t1[j] = Norm(v.colname)
+        t2[j] = get_default_value(info[i].affinity)
+      end
+    end
+    if next(t1) then
+      query = ("INSERT INTO %s.%s (%s) VALUES (%s)"):format(
+          Norm(schema), Norm(table_name), table.concat(t1,","), table.concat(t2,","))
+    else
+      query = ("INSERT INTO %s.%s DEFAULT VALUES"):format(Norm(schema), Norm(table_name))
+    end
   end
   local ok = true
   db:exec("BEGIN")
@@ -209,14 +239,17 @@ local function insert_row(db, schema, table_name, rowid_name, handle)
   if info then
     local col_data = {}
     for _,v in ipairs(info) do
-      table.insert(col_data, { colname=v.name; coltype=sql3.NULL; value=NULLTEXT; })
+      table.insert(col_data, {
+        colname = v.name;
+        value = v.dflt_value or (v.notnull~=0 and get_default_value(v.affinity)) or NULLTEXT;
+      })
     end
     if row_dialog(db, schema, table_name, rowid_name, col_data, nil) then
-      local pos
       panel.UpdatePanel(handle, nil, true) -- keep selection
 
       -- Find position of the newly inserted item in order to place the cursor on it.
       -- Don't search on very big tables to avoid slow operation.
+      local pos
       local pInfo = panel.GetPanelInfo(handle)
       if pInfo.ItemsNumber <= 10000 then
         local row_id = db:last_insert_rowid()

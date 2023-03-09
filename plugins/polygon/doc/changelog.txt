@@ -1,3 +1,8 @@
+2023-03-10, v.1.8.0
+    1. Insert Rows dialog.
+       - on open: fill with non-NULL values when it makes sense
+       - on close: replace NULL values with some defaults when NULLs aren't allowed
+
 2023-03-06, v.1.7.2
     1. Fix inability of editing records having very big ROWID values.
 

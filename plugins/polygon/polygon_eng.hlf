@@ -333,7 +333,7 @@ $^ #Edit Table Row#
    - BLOB values are displayed like     #x'13E6BC64'#
    - NULL values are displayed as       #NULL#
    
-   If the #OK# button is pressed and a field is detected that does not match
+   If the #Save# button is pressed and a field is detected that does not match
    any of the above formats then such a field is treated as a text one
    and is normalized by the plugin.
 
