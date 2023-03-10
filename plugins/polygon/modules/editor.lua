@@ -58,7 +58,7 @@ local function exec_update(db, schema, table_name, rowid_name, row_id, db_data)
         j = j + 1
         t1[j] = Norm(v.colname)
         t2[j] = process_field(v.value)
-      elseif not info[i].dflt_value then
+      elseif (not info[i].dflt_value) and (info[i].pk == 0) then
         j = j + 1
         t1[j] = Norm(v.colname)
         t2[j] = get_default_value(info[i].affinity)
@@ -273,7 +273,9 @@ local function insert_row(db, schema, table_name, rowid_name, handle)
     for _,v in ipairs(info) do
       table.insert(col_data, {
         colname = v.name;
-        value = v.dflt_value or (v.notnull~=0 and get_default_value(v.affinity)) or NULLTEXT;
+        value = v.dflt_value
+          or (v.pk==0 and v.notnull~=0 and get_default_value(v.affinity))
+          or NULLTEXT;
       })
     end
     call_insert_dialog(db, schema, table_name, rowid_name, col_data, handle)

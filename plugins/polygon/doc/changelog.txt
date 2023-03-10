@@ -1,3 +1,6 @@
+2023-03-10, v.1.8.2
+    1. Insert rows dialog: don't autoreplace NULLs in primary key columns
+
 2023-03-10, v.1.8.1
     1. Fix a bug in lsqlite3
     2. Fix cursor position after insertion of a new record (broken since v1.7.2)
