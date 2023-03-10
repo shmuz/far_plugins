@@ -795,8 +795,8 @@ local function GetKeybarStrings(panelmode)
   elseif panelmode == "table" then return {
   --           F1        F2        F3         F4           F5           F6            F7     F8
     nomods = { false,    false,    "",        "Update",    "",          "SQL",        "",    M.kb_delete },
-    shift  = { "",       "",       "Custom",  "Insert",    "Affinit",   M.kb_filter,  "",    ""    },
-    alt    = { false,    false,    "Custom",  "",          "",          M.kb_filter,  "",    false },
+    shift  = { "",       "",       "Custom",  "Insert",    "Copy",      M.kb_filter,  "",    ""    },
+    alt    = { false,    false,    "Custom",  "",          "Affinit",   M.kb_filter,  "",    false },
     ctrl   = { "",       "",       "",        "",          "",          "",           "",      ""  },
   }
   elseif panelmode == "query" then return {
@@ -1125,7 +1125,10 @@ function mypanel:handle_key_table(handle, key)
   elseif key == "ShiftF4" then         -- insert row
     myeditor.insert_row(self._db, self._schema, self._objname, self._rowid_name, handle)
     return true
-  elseif key == "ShiftF5" then         -- "show/hide columns affinity"
+  elseif key == "ShiftF5" then         -- copy row
+    myeditor.copy_row(self._db, self._schema, self._objname, self._rowid_name, handle)
+    return true
+  elseif key == "AltF5" then           -- "show/hide columns affinity"
     self._show_affinity = not self._show_affinity
     self:invalidate_panel_info()
     panel.RedrawPanel(handle)

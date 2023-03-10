@@ -1,3 +1,9 @@
+2023-03-10, v.1.8.1
+    1. Fix a bug in lsqlite3
+    2. Fix cursor position after insertion of a new record (broken since v1.7.2)
+    3. New operation: copy a row under cursor (ShiftF5)
+    4. Show columns affinity: hot key changed (ShiftF5 -> AltF5)
+
 2023-03-10, v.1.8.0
     1. Insert Rows dialog.
        - on open: fill with non-NULL values when it makes sense

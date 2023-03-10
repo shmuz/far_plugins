@@ -35,7 +35,7 @@ simple mode and multi-database mode.
 
  In the simple mode the plugin "sees" only #main# database and ignores any other database
 that may be attached to the open database connection.
- 
+
  In the multi-database mode it is possible to navigate between all attached databases.
 
  Pressing #Ctrl+BackSlash# or pressing #Enter# on #..# directory item behave differently
@@ -97,9 +97,10 @@ $^ #Reference of keyboard actions#
                  │ Alt-F6              │ Toggle panel filter: on/off
                  │ Ctrl-N              │ Menu: select sort compare mode
    ──────────────┼─────────────────────┼───────────────────────────────────────────────────
-   Table         │ F4, Enter           │ Dialog: edit a row
-                 │ Shift-F4            │ Dialog: insert a row
-                 │ Shift-F5            │ Show/hide columns affinity
+   Table         │ F4, Enter           │ Edit a row under cursor
+                 │ Shift-F4            │ Insert a new row
+                 │ Shift-F5            │ Copy a row under cursor
+                 │ Alt-F5              │ Show/hide columns affinity
                  │                     │   (i=integer, t=text, b=blob, r=real, n=numeric)
                  │ F8                  │ Dialog: delete selected rows
    ──────────────┴─────────────────────┴───────────────────────────────────────────────────
@@ -332,7 +333,7 @@ $^ #Edit Table Row#
    - Numeric values are displayed like  #15#, #0.35# or #2.35e6#
    - BLOB values are displayed like     #x'13E6BC64'#
    - NULL values are displayed as       #NULL#
-   
+
    If the #Save# button is pressed and a field is detected that does not match
    any of the above formats then such a field is treated as a text one
    and is normalized by the plugin.
@@ -342,7 +343,7 @@ $^ #Edit Table Row#
    #Ctrl-O#  toggle between plain and normalized representation
    #F3#      view a field in the internal viewer
    #F4#      edit a field in the internal editor
-   #Alt-F3#  convert blob to text and show in a message box 
+   #Alt-F3#  convert blob to text and show in a message box
 
 
  ~Contents~@Contents@

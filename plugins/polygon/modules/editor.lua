@@ -189,7 +189,7 @@ local function row_dialog(db, schema, table_name, rowid_name, db_data, row_id)
 end
 
 
-local function edit_row(db, schema, table_name, rowid_name, handle)
+local function get_row_data(db, schema, table_name, rowid_name, handle)
   -- Get edited row id
   local item = panel.GetCurrentPanelItem(handle)
   if not item or item.FileName == ".." then return; end
@@ -222,14 +222,46 @@ local function edit_row(db, schema, table_name, rowid_name, handle)
       -- finalize before popping up the dialog otherwise other
       -- connections may have hard time trying to access this DB
       stmt:finalize()
-      if row_dialog(db, schema, table_name, rowid_name, db_data, row_id) then
-        panel.UpdatePanel(handle, nil, true) -- keep selection
-        panel.RedrawPanel(handle)
-      end
+      return db_data, row_id
     else
       ErrMsg(M.err_read .. "\n" .. dbx.last_error(db))
     end
     if stmt:isopen() then stmt:finalize() end
+  end
+end
+
+
+local function edit_row(db, schema, table_name, rowid_name, handle)
+  local db_data, row_id = get_row_data(db, schema, table_name, rowid_name, handle)
+  if db_data then
+    if row_dialog(db, schema, table_name, rowid_name, db_data, row_id) then
+      panel.UpdatePanel(handle, nil, true) -- keep selection
+      panel.RedrawPanel(handle)
+    end
+  end
+end
+
+
+local function call_insert_dialog(db, schema, table_name, rowid_name, col_data, handle)
+  if row_dialog(db, schema, table_name, rowid_name, col_data, nil) then
+    panel.UpdatePanel(handle, nil, true) -- keep selection
+
+    -- Find position of the newly inserted item in order to place the cursor on it.
+    -- Don't search on very big tables to avoid slow operation.
+    local pos
+    local pInfo = panel.GetPanelInfo(handle)
+    if pInfo.ItemsNumber <= 10000 then
+      local row_id = db:last_insert_rowid()
+      if row_id then
+        row_id = tostring(bit64.new(row_id))
+        for k=1,pInfo.ItemsNumber do
+          local item = panel.GetPanelItem(handle,nil,k)
+          if utils.get_rowid(item) == row_id then pos=k; break; end
+        end
+      end
+    end
+
+    panel.RedrawPanel(handle, nil, pos and { CurrentItem=pos; })
   end
 end
 
@@ -244,25 +276,15 @@ local function insert_row(db, schema, table_name, rowid_name, handle)
         value = v.dflt_value or (v.notnull~=0 and get_default_value(v.affinity)) or NULLTEXT;
       })
     end
-    if row_dialog(db, schema, table_name, rowid_name, col_data, nil) then
-      panel.UpdatePanel(handle, nil, true) -- keep selection
+    call_insert_dialog(db, schema, table_name, rowid_name, col_data, handle)
+  end
+end
 
-      -- Find position of the newly inserted item in order to place the cursor on it.
-      -- Don't search on very big tables to avoid slow operation.
-      local pos
-      local pInfo = panel.GetPanelInfo(handle)
-      if pInfo.ItemsNumber <= 10000 then
-        local row_id = db:last_insert_rowid()
-        if row_id and row_id ~= 0 then
-          for k=1,pInfo.ItemsNumber do
-            local item = panel.GetPanelItem(handle,nil,k)
-            if utils.get_rowid(item) == row_id then pos=k; break; end
-          end
-        end
-      end
 
-      panel.RedrawPanel(handle, nil, pos and { CurrentItem=pos; })
-    end
+local function copy_row(db, schema, table_name, rowid_name, handle)
+  local db_data = get_row_data(db, schema, table_name, rowid_name, handle)
+  if db_data then
+    call_insert_dialog(db, schema, table_name, rowid_name, db_data, handle)
   end
 end
 
@@ -323,6 +345,7 @@ end
 
 
 return {
+  copy_row   = copy_row;
   edit_row   = edit_row;
   insert_row = insert_row;
   remove     = remove;
