@@ -179,7 +179,7 @@ local function get_data_from_dialog()
   end
 
   -- call the dialog
-  local out = sdialog.Run(items)
+  local out = sdialog.New(items):Run()
   if out then
     -- first save the resulting dialog values
     out.Info = Info
@@ -307,7 +307,7 @@ local function assess_build(farstr)
     {tp="butt"; text="&Cancel"; centergroup=1; cancel=1;                  },
   }
   while true do
-    local out,pos = sdialog.Run(items)
+    local out,pos = sdialog.New(items):Run()
     if out then
       return items[pos].Name
     elseif 1 == far.Message("Are you sure to quit the script?", Title, "&Yes;&No", "w") then
