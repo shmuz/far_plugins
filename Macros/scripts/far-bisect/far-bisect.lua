@@ -577,7 +577,7 @@ end
 function State:MakeBuildList(arch)
   local buildlist = self:Make_Local_Build_List(arch)
   if self.web ~= "none" then
-    local map = self:Make_Web_Build_List(arch)
+    local map = self:Make_Web_Build_List(arch) or {}
     for build,name in pairs(map) do
       if not self.mArchiveMap[build] then
         self.mArchiveMap[build] = Opt.FarNightlyDir .. name
