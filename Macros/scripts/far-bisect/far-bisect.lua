@@ -24,7 +24,7 @@ local Info = {
   Title         = Title;
 }
 
-local ThisDir = (...):match(".+\\")
+local ThisDir = (_filename or ...):match(".+\\")
 local Opt = {}
 do
   local fOpt, fOptMsg = loadfile(ThisDir.."far-bisect.cfg")
@@ -672,17 +672,26 @@ function State:Main()
   end
 end
 
-Macro {
-  description=Title;
-  area="Shell"; key=MacroKey;
-  action=function()
-    local data = get_data_from_dialog()
-    if data then CreateState(data):Main(); end
-  end;
-}
-
-package.loaded["farbisect"] = {
+local M = {
   FAR1_OFFSET = FAR1_OFFSET;
   AUTO_GOOD = AUTO_GOOD;
   Main = function(data) mf.postmacro(function() CreateState(data):Main() end) end;
 }
+
+local function dlgBisect()
+  local data = get_data_from_dialog()
+  if data then CreateState(data):Main(); end
+end
+
+if Macro then
+  package.loaded["farbisect"] = M
+  Macro {
+    description=Title;
+    area="Shell"; key=MacroKey;
+    action=dlgBisect;
+  }
+elseif _cmdline then
+  mf.postmacro(dlgBisect)
+else
+  return M
+end
