@@ -553,6 +553,32 @@ function State:Make_Local_Build_List(arch)
   return buildlist
 end
 
+local function parseGithubList(fname,arch,map)
+  local build
+  for line in io.lines(fname) do
+    local b = line:match"^v3%.0%.(%d+)"
+    if b then
+      b = assert(tonumber(b,10),b)
+      build = map[b] and "skip" or b
+    elseif build~="skip" then
+      if line:match("."..arch..".",1,true) then
+        map[build] = line
+        build = "skip"
+      end
+    end
+  end
+end
+
+function State:Make_Github_Build_List(arch)
+  if not Opt.ListReleasesCmd then return end
+
+  local map = {}
+  local fname = Opt.InstallDir.."\\"..Opt.ListFileTmp
+  win.system(Opt.ListReleasesCmd..">"..fname)
+  parseGithubList(fname,arch,map)
+  return map
+end
+
 function State:Make_Web_Build_List(arch)
   local fname = Opt.InstallDir.."\\"..Opt.FarNightlyPage:match("[^/]+$")
   win.DeleteFile(fname) -- prevent wget from creating files with suffixes
@@ -581,7 +607,7 @@ end
 function State:MakeBuildList(arch)
   local buildlist = self:Make_Local_Build_List(arch)
   if self.web ~= "none" then
-    local map = self:Make_Web_Build_List(arch) or {}
+    local map = State:Make_Github_Build_List(arch) or self:Make_Web_Build_List(arch) or {}
     for build,name in pairs(map) do
       if not self.mArchiveMap[build] then
         self.mArchiveMap[build] = name
