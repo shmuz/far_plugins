@@ -61,11 +61,13 @@ local START_DEFAULT_FARCONFIG = 2917  -- Default.farconfig invented
 local START_LUAFARSTABLE      = 3300  -- LuaFAR and Macro API become more or less stable
 local START_LUAPREFIX         = 3880  -- command line prefix "lua:" instead of "macro:post"
 local START_BIGREFACTOR_DONE  = 3924  -- completion of refactoring started in 3896
+local START_GITHUB            = 5342  -- first available at Github release
+
 
 -- indexes into the dialog's combobox: must be consecutive and start with 1
 local INDEX_FAR1, INDEX_FAR2, INDEX_FAR3,
       INDEX_LUAMACRO, INDEX_LUAFARSTABLE,
-      INDEX_BIGREFACTOR = 1,2,3,4,5,6
+      INDEX_BIGREFACTOR, INDEX_GITHUB = 1,2,3,4,5,6,7
 
 local MinBuilds = {
   [INDEX_FAR1         ] = nil;
@@ -74,6 +76,7 @@ local MinBuilds = {
   [INDEX_LUAMACRO     ] = START_LUAMACRO;
   [INDEX_LUAFARSTABLE ] = START_LUAFARSTABLE;
   [INDEX_BIGREFACTOR  ] = START_BIGREFACTOR_DONE;
+  [INDEX_GITHUB       ] = START_GITHUB;
 }
 
 local PLUG_LF4ED     = { ApiName="lf4ed";     Dir="lf4ed";     }
@@ -130,6 +133,7 @@ local function create_dialog_items()
                  [INDEX_LUAMACRO     ] = {Text=">= 3.0.2851 (LuaMacro)"};
                  [INDEX_LUAFARSTABLE ] = {Text=">= 3.0.3300 (LuaFAR stable)"};
                  [INDEX_BIGREFACTOR  ] = {Text=">= 3.0.3924 (Big Refactoring completed)"};
+                 [INDEX_GITHUB       ] = {Text=">= 3.0.5342 (First release at Github)"};
                };                                                                  },
     ------------------------------------------------------------------------------
     {tp="text";  text="&Command line arguments:";                                  },
