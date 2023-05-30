@@ -554,12 +554,14 @@ function State:Make_Local_Build_List(arch)
 end
 
 local function parseGithubList(fname,arch,map)
-  local build
+  local build, overlap
+  local first = true
   for line in io.lines(fname) do
     local b = line:match"^v3%.0%.(%d+)"
     if b then
       b = assert(tonumber(b,10),b)
       build = map[b] and "skip" or b
+      if first then overlap = map[b]; first = false end
     elseif build~="skip" then
       if line:match("."..arch..".",1,true) then
         map[build] = line
@@ -567,6 +569,7 @@ local function parseGithubList(fname,arch,map)
       end
     end
   end
+  return overlap
 end
 
 function State:Make_Github_Build_List(arch)
@@ -576,6 +579,14 @@ function State:Make_Github_Build_List(arch)
   local fname = Opt.InstallDir.."\\"..Opt.ListFileTmp
   win.system(Opt.ListReleasesCmd..">"..fname)
   parseGithubList(fname,arch,map)
+
+  fname = Opt.ListFile:find":" and Opt.ListFile or ThisDir..Opt.ListFile
+  if win.GetFileAttr(fname) then
+    local overlap = parseGithubList(fname,arch,map)
+    if not overlap then
+      far.Message("'github.releases' file needs to be updated!", Title, nil, "w")
+    end
+  end
   return map
 end
 
