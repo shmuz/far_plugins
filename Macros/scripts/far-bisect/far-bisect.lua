@@ -543,8 +543,8 @@ function State:Make_Local_Build_List(arch)
       end)
   end
   if buildlist[1] == nil then
-    far.Message("No Far builds are found.", Title, nil, "w")
-    mf.exit()
+    --far.Message("No Far builds are found.", Title, nil, "w") --fixme
+    --mf.exit()
   end
   return buildlist
 end
