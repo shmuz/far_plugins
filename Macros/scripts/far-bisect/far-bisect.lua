@@ -571,7 +571,7 @@ function State:Make_Web_Build_List(arch)
   for name, build, date in page:gmatch(patt) do
     build = tonumber(build)
     if not dates[build] or dates[build] > date then
-      map[build] = name
+      map[build] = Opt.FarNightlyDir..name
       dates[build] = date
     end
   end
@@ -584,7 +584,7 @@ function State:MakeBuildList(arch)
     local map = self:Make_Web_Build_List(arch) or {}
     for build,name in pairs(map) do
       if not self.mArchiveMap[build] then
-        self.mArchiveMap[build] = Opt.FarNightlyDir .. name
+        self.mArchiveMap[build] = name
         table.insert(buildlist, build)
       end
     end
