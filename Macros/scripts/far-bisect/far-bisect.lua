@@ -506,7 +506,7 @@ function State:Test_build(build)
     end
   end
   if cmdline:find("^%S") then cmdline = " "..cmdline; end
-  cmdline = ("cd %s && Far.exe%s"):format(install_path, cmdline)
+  cmdline = ("cd /D %s && Far.exe%s"):format(install_path, cmdline)
   -- /compose command line for Far.exe
   while true do
     panel.GetUserScreen()
