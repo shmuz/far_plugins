@@ -502,7 +502,7 @@ function State:Test_build(build)
   if self.macrocode and self.macrocode:find("%S") then
     if build >= 1515 then -- Mantis#0001338: Префикс в параметрах ком.строки
       local macrocode = (build < START_LUAPREFIX and "macro:post " or "lua:")..self.macrocode
-      cmdline = ('%s "%s"'):format(cmdline, macrocode)
+      cmdline = ('%s "%s"'):format(cmdline, macrocode:gsub('"','\\"'))
     end
   end
   if cmdline:find("^%S") then cmdline = " "..cmdline; end
