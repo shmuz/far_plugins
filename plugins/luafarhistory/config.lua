@@ -1,67 +1,77 @@
 -- file created: 2010-03-16
 
 local F = far.Flags
-local dialog = require "far2.dialog"
-local Cfg, M = ...
+local sd = require "far2.simpledialog"
+local DlgSend = far.SendDlgMessage
 
-local Guid1 = win.Uuid("05d16094-0735-426c-a421-62dae2db6b1a")
-local function ExecuteDialog (aData, aMsgTitle)
-  local D = dialog.NewDialog()
+local function ConfigDialog (aData, M)
   local offset = 5 + math.max(M.mBtnHighTextColor:len(), M.mBtnSelHighTextColor:len()) + 10
-  D._            = {"DI_DOUBLEBOX", 3, 1,62,12,  0, 0,  0, 0,  aMsgTitle}
-  D.lab          = {"DI_TEXT",      5, 2, 0, 0,  0, 0,  0, 0,  M.mMaxHistorySizes}
-  D.lab          = {"DI_TEXT",      6, 3, 0, 0,  0, 0,  0, 0,  M.mSizeCmd}
-  D.iSizeCmd     = {"DI_FIXEDIT",  20, 3,24, 0,  0, 0,  0, 0,  ""}
-  D.lab          = {"DI_TEXT",      6, 4, 0, 0,  0, 0,  0, 0,  M.mSizeView}
-  D.iSizeView    = {"DI_FIXEDIT",  20, 4,24, 0,  0, 0,  0, 0,  ""}
-  D.lab          = {"DI_TEXT",      6, 5, 0, 0,  0, 0,  0, 0,  M.mSizeFold}
-  D.iSizeFold    = {"DI_FIXEDIT",  20, 5,24, 0,  0, 0,  0, 0,  ""}
+  local swid = M.mTextSample:len()
+  local Items = {
+    guid = "05d16094-0735-426c-a421-62dae2db6b1a";
+    help = "PluginConfig";
+    width = 66;
+    { tp="dbox"; text=M.mPluginTitle..": "..M.mSettings; },
 
-  D.lab          = {"DI_TEXT",     34,2,  0, 0,  0, 0,  0, 0, M.mWinProperties}
-  D.bDynResize   = {"DI_CHECKBOX", 35,3,  0, 0,  0, 0,  0, 0, M.mDynResize}
-  D.bAutoCenter  = {"DI_CHECKBOX", 35,4,  0, 0,  0, 0,  0, 0, M.mAutoCenter}
+    { tp="text"; text=M.mMaxHistorySizes;                      },
+    { tp="text"; text=M.mSizeCmd; x1=6;                        },
+    { tp="fixedit"; x1=20; width=5; name="iSizeCmd"; ystep=0;  },
+    { tp="text"; text=M.mSizeView; x1=6;                       },
+    { tp="fixedit"; x1=20; width=5; name="iSizeView"; ystep=0; },
+    { tp="text"; text=M.mSizeFold; x1=6;                       },
+    { tp="fixedit"; x1=20; width=5; name="iSizeFold"; ystep=0; },
 
-  D.sep                 = {"DI_TEXT",       -1, 7, 0, 0,  0, 0, 0,  {DIF_BOXCOLOR=1,DIF_SEPARATOR=1,DIF_CENTERTEXT=1}, M.mSepColors}
-  D.btnHighTextColor    = {"DI_BUTTON",      5, 8, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.mBtnHighTextColor}
-  D.labHighTextColor    = {"DI_TEXT",   offset, 8, 0, 0,  0, 0, 0,  0,  M.mTextSample}
-  D.btnSelHighTextColor = {"DI_BUTTON",      5, 9, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.mBtnSelHighTextColor}
-  D.labSelHighTextColor = {"DI_TEXT",   offset, 9, 0, 0,  0, 0, 0,  0,  M.mTextSample}
+    { tp="text";  text=M.mWinProperties; x1=34; ystep=-3;        },
+    { tp="chbox"; text=M.mDynResize;  x1=35; name="bDynResize";  },
+    { tp="chbox"; text=M.mAutoCenter; x1=35; name="bAutoCenter"; },
+    { tp="chbox"; text=M.mShowDates;  x1=35; name="bShowDates";  },
 
-  D.sep          = {"DI_TEXT",     0,10, 0,  0,  0, 0,  0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  D.btnOk        = {"DI_BUTTON",   0,11, 0,  0,  0, 0,  0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.mOk}
-  D.btnCancel    = {"DI_BUTTON",   0,11, 0,  0,  0, 0,  0, "DIF_CENTERGROUP", M.mCancel}
+    { tp="sep";  text=M.mSepColors; centertext=1;                                                   },
+    { tp="butt"; text=M.mBtnHighTextColor;    btnnoclose=1; name="btnHighTextColor";                },
+    { tp="text"; text=M.mTextSample; x1=offset; ystep=0;    name="labHighTextColor";    width=swid; },
+    { tp="butt"; text=M.mBtnSelHighTextColor; btnnoclose=1; name="btnSelHighTextColor";             },
+    { tp="text"; text=M.mTextSample; x1=offset; ystep=0;    name="labSelHighTextColor"; width=swid; },
+    { tp="sep"; },
+
+    { tp="chbox"; text=M.mKeepSelectedItem; name="bKeepSelectedItem"; },
+
+    { tp="butt"; text=M.mOk;     centergroup=1; default=1; ystep=2; },
+    { tp="butt"; text=M.mCancel; centergroup=1; cancel=1;  },
+  }
   ------------------------------------------------------------------------------
-  dialog.LoadData(D, aData)
+  local dlg = sd.New(Items)
+  local Pos = dlg:Indexes()
+  dlg:LoadData(aData)
 
-  local hColor0 = aData.HighTextColor    or 0x3A
-  local hColor1 = aData.SelHighTextColor or 0x0A
+  local hColor0 = aData.HighTextColor
+  local hColor1 = aData.SelHighTextColor
 
-  local function DlgProc (hDlg, msg, param1, param2)
+  Items.proc = function (hDlg, msg, param1, param2)
     if msg == F.DN_BTNCLICK then
-      if param1 == D.btnHighTextColor.id then
+      if param1 == Pos.btnHighTextColor then
         local c = far.ColorDialog(hColor0)
-        if c then hColor0 = c; hDlg:send(F.DM_REDRAW); end
-      elseif param1 == D.btnSelHighTextColor.id then
+        if c then hColor0 = c; DlgSend(hDlg,F.DM_REDRAW); end
+      elseif param1 == Pos.btnSelHighTextColor then
         local c = far.ColorDialog(hColor1)
-        if c then hColor1 = c; hDlg:send(F.DM_REDRAW); end
+        if c then hColor1 = c; DlgSend(hDlg,F.DM_REDRAW); end
       end
 
     elseif msg == F.DN_CTLCOLORDLGITEM then
-      if param1 == D.labHighTextColor.id then param2[1] = hColor0; return param2; end
-      if param1 == D.labSelHighTextColor.id then param2[1] = hColor1; return param2; end
+      if param1 == Pos.labHighTextColor    then param2[1] = hColor0; return param2; end
+      if param1 == Pos.labSelHighTextColor then param2[1] = hColor1; return param2; end
     end
   end
 
-  local ret = far.Dialog (Guid1,-1,-1,66,14,"PluginConfig",D,nil,DlgProc)
-  if ret == D.btnOk.id then
-    dialog.SaveData(D, aData)
-    aData.iSizeCmd  = tonumber(D.iSizeCmd.Data)
-    aData.iSizeView = tonumber(D.iSizeView.Data)
-    aData.iSizeFold = tonumber(D.iSizeFold.Data)
+  local out = dlg:Run()
+  if out then
+    dlg:SaveData(out, aData)
+    aData.iSizeCmd  = tonumber(aData.iSizeCmd)
+    aData.iSizeView = tonumber(aData.iSizeView)
+    aData.iSizeFold = tonumber(aData.iSizeFold)
     aData.HighTextColor    = hColor0
     aData.SelHighTextColor = hColor1
     return true
   end
 end
 
-return ExecuteDialog(Cfg, M.mPluginTitle .. ": " .. M.mSettings)
+return ConfigDialog

@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2023-06-30, v3.11.0
+  [+] Add option "Show dates"
+  [+] Add option "Keep selected item"
+
 2020-04-14, v3.10.9
   [!] Fix "lua" filter method (was broken since adoption of luautf8 library in LuaFAR).
 

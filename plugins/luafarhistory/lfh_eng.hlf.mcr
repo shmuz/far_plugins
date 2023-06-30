@@ -68,31 +68,29 @@ title. There are 4 switchable filtering methods available:
    #Alt-F3#             View modally, return to the menu.
    #Alt-F4#             Edit modally, return to the menu.
 
- Technical topics:
+ See also:
      ~Plugin's Configuration Dialog~@PluginConfig@
 
 @PluginConfig
 $ #Plugin's Configuration Dialog#
- #Max. History Size#
-
-    Maximal amount of records:
-
+ \3BMaximal History Size\-
+   Maximal amount of records:
    #Commands#           in the history of commands
    #View/Edit#          in the history of viewed/edited files
    #Folders#            in the history of folders
 
- #Window properties#
+ \3BWindow properties\-
+   #[x] Dynamic resize#
+       A history window will change its size according to amount and content
+       of records in the history.
+   #[x] Auto center#
+       A history window will be shown centered in FAR window.
+   #[x] Show dates#
+       Groups of items having the same date will be delimitered with separators.
 
-    These options affect history window.
-
-   #[x] Dynamic Resize#
-
-    With this option checked, history window will change its size
-according to amount and content of records in the history.
-
-   #[x] Auto Center#
-
-    With this option checked, history window will be shown centered
-in FAR window.
+ \3BOther properties\-
+   #[x] Keep selected item#
+       Keep the current selected item as selected (if possible) when the filter
+       changes.
 
  ~Contents~@Contents@

@@ -13,12 +13,16 @@ local FarId      = ("\0"):rep(16)
 local PlugTitleCache = {}
 
 local DefaultCfg = {
-  bDynResize  = true,
-  bAutoCenter = true,
-  bDirectSort = true,
-  iSizeCmd    = 1000,
-  iSizeView   = 1000,
-  iSizeFold   = 1000,
+  bDynResize        = true,
+  bAutoCenter       = true,
+  bShowDates        = true,
+  bKeepSelectedItem = false,
+  bDirectSort       = true,
+  iSizeCmd          = 1000,
+  iSizeView         = 1000,
+  iSizeFold         = 1000,
+  HighTextColor     = 0x3A,
+  SelHighTextColor  = 0x0A,
 }
 
 local cfgView = {
@@ -68,6 +72,11 @@ local cfgLocateFile = {
   },
   bDynResize = true,
 }
+
+local function ConfigValue(Cfg, Key)
+  if Cfg[Key] ~= nil then return Cfg[Key] end
+  return _Plugin.Cfg[Key]
+end
 
 local function GetFileAttrEx(fname)
   return win.GetFileAttr(fname) or win.GetFileAttr([[\\?\]]..fname)
@@ -256,7 +265,7 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
   end
 end
 
-local function ViewHistory_CanClose (self, item, breakkey)
+function cfgView.CanClose (self, item, breakkey)
   if item and (IsCtrlPgUp(breakkey) or IsCtrlPgDn(breakkey)) and not LocateFile(item.text) then
     TellFileNotExist(item.text)
     return false
@@ -264,7 +273,7 @@ local function ViewHistory_CanClose (self, item, breakkey)
   return true
 end
 
-local function FoldersHistory_CanClose (self, item, breakkey)
+function cfgFolders.CanClose (self, item, breakkey)
   if not item then
     return true
   end
@@ -317,7 +326,8 @@ local function FoldersHistory_CanClose (self, item, breakkey)
   end
 end
 
-local function MakeMenuParams (aCommonConfig, aHistTypeConfig, aHistTypeData, aItems, aHistObject)
+local function MakeMenuParams (aHistTypeConfig, aHistTypeData, aItems, aHistObject)
+  local Cfg = _Plugin.Cfg
   local menuProps = {
     DialogId      = win.Uuid("d853e243-6b82-4b84-96cd-e733d77eeaa1"),
     Flags         = {FMENU_WRAPMODE=1},
@@ -326,22 +336,22 @@ local function MakeMenuParams (aCommonConfig, aHistTypeConfig, aHistTypeData, aI
     SelectIndex   = #aItems,
   }
   local listProps = {
-    autocenter    = aCommonConfig.bAutoCenter,
-    resizeW       = aHistTypeConfig.bDynResize or aCommonConfig.bDynResize,
-    resizeH       = aHistTypeConfig.bDynResize or aCommonConfig.bDynResize,
+    autocenter    = Cfg.bAutoCenter,
+    resizeW       = ConfigValue(aHistTypeConfig, "bDynResize"),
+    resizeH       = ConfigValue(aHistTypeConfig, "bDynResize"),
     resizeScreen  = true,
-    col_highlight = aCommonConfig.HighTextColor or 0x3A,
-    col_selectedhighlight = aCommonConfig.SelHighTextColor or 0x0A,
+    col_highlight = Cfg.HighTextColor,
+    col_selectedhighlight = Cfg.SelHighTextColor,
     selalign      = "bottom",
-    selignore     = true,
+    selignore     = not Cfg.bKeepSelectedItem,
     searchmethod  = aHistTypeData.searchmethod or "dos",
     filterlines   = true,
     xlat          = aHistTypeData.xlat,
+    showdates     = aHistTypeConfig ~= cfgLocateFile and Cfg.bShowDates,
   }
   local list = custommenu.NewList(listProps, aItems)
   list.keyfunction = GetListKeyFunction(aHistTypeConfig, aHistObject)
-  list.CanClose = (aHistTypeConfig == cfgFolders) and FoldersHistory_CanClose or
-                  (aHistTypeConfig == cfgView) and ViewHistory_CanClose
+  list.CanClose = aHistTypeConfig.CanClose
   return menuProps, list
 end
 
@@ -453,7 +463,7 @@ local function get_history (aConfig, obj)
   end
 
   -- execute the menu
-  local menuProps, list = MakeMenuParams(_Plugin.Cfg, aConfig, settings, menu_items, hst)
+  local menuProps, list = MakeMenuParams(aConfig, settings, menu_items, hst)
   list.pattern = obj.pattern
   SortListItems(list, _Plugin.Cfg.bDirectSort, nil)
   local item, itempos = custommenu.Menu(menuProps, list)
@@ -547,7 +557,7 @@ local function LocateFile2()
   local hst = LibHistory.newsettings(nil, cfgLocateFile.PluginHistoryType, "PSL_ROAMING")
   local settings = hst:field("settings")
 
-  local menuProps, list = MakeMenuParams(_Plugin.Cfg, cfgLocateFile, settings, items, hst)
+  local menuProps, list = MakeMenuParams(cfgLocateFile, settings, items, hst)
   list.searchstart = 2
 
   local item, itempos = custommenu.Menu(menuProps, list)
@@ -586,7 +596,8 @@ local function export_GetPluginInfo()
 end
 
 local function export_Configure()
-  if Utils.RunInternalScript("config", _Plugin.Cfg, M) then
+  local ConfigDialog = Utils.RunInternalScript("config")
+  if ConfigDialog and ConfigDialog(_Plugin.Cfg, M) then
     _Plugin.History:save()
   end
 end
@@ -607,7 +618,7 @@ local function RunCycle (op)
 end
 
 local function export_Open (From, Guid, Item)
-  local userItems, commandTable, hotKeyTable = Utils.LoadUserMenu("_usermenu.lua")
+  local userItems, commandTable = Utils.LoadUserMenu("_usermenu.lua")
   ------------------------------------------------------------------------------
   if From == F.OPEN_FROMMACRO then
     return Utils.OpenMacro(Item, commandTable, nil)
@@ -653,8 +664,7 @@ local function SetExportFunctions()
 end
 
 do
-  local FirstRun = ... --> this works with Far >= 3.0.4425
-  if FirstRun then
+  if not _Plugin then
     _Plugin = Utils.InitPlugin()
     _Plugin.History = LibHistory.newsettings(nil, "config", "PSL_ROAMING")
     _Plugin.Cfg = _Plugin.History:field("config")
