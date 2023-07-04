@@ -123,7 +123,7 @@ local function create_dialog_items()
     {tp="rbutt"; text="x86";     y1=""; x1=c2+8; val=1;       name="x86";          },
     {tp="rbutt"; text="x64";     y1=""; x1=c2+16;             name="x64";          },
     {tp="text";  text="&Which builds to test:";                                    },
-    {tp="combobox", dropdownlist=1,                           name="minbuild",
+    {tp="combobox", dropdown=1,                               name="minbuild",
         list = { [INDEX_FAR1         ] = {Text="Far1 and above"};
                  [INDEX_FAR2         ] = {Text="Far2 and above"};
                  [INDEX_FAR3         ] = {Text="Far3 and above"};
