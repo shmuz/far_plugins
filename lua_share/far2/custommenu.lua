@@ -80,7 +80,7 @@ local function NewList (props, items, bkeys, startId)
     self = setmetatable ({}, ListMetaDebug)
     self.debug = true
     self.depth = 1
-    self.Log = far.Log
+    self.Log = osWindows and win.OutputDebugString or far.Log --luacheck: no global
   else
     self = setmetatable ({}, ListMeta)
     self.Log = function() end
@@ -131,6 +131,7 @@ local function NewList (props, items, bkeys, startId)
   SetParam(self, P, "selignore")
   SetParam(self, P, "xlat")
   SetParam(self, P, "showdates")
+  SetParam(self, P, "dateformat", "%Y-%m-%d")
 
   SetParam(self, P, "keys_searchmethod",      "F5")
   SetParam(self, P, "keys_ellipsis",          "F6")
@@ -548,7 +549,7 @@ local function ProcessSearchMethod (method, pattern)
   ----------------------------------------------------------
   local ok, cregex = pcall(regex.new, pattern, "i")
   if ok then
-    return function (text, pattern, start)
+    return function (text, patt, start)
       return cregex:find(text, start)
     end
   end
@@ -617,7 +618,7 @@ function List:ChangePattern (hDlg, pattern)
                              or (self.selalign=="top" and groupdate > date) then
               groupdate = date
               ft.year,ft.month,ft.day = ft.wYear,ft.wMonth,ft.wDay
-              local text = os.date("%x %a", os.time(ft))
+              local text = os.date(self.dateformat, os.time(ft))
               self.drawitems[#self.drawitems+1] = { separator=true; text=text; }
             end
           end

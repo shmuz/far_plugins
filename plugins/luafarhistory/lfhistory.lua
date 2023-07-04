@@ -23,6 +23,7 @@ local DefaultCfg = {
   iSizeFold         = 1000,
   HighTextColor     = 0x3A,
   SelHighTextColor  = 0x0A,
+  iDateFormat       = 2,
 }
 
 local cfgView = {
@@ -71,6 +72,14 @@ local cfgLocateFile = {
     "CtrlEnter", "RCtrlEnter", "CtrlNumEnter", "RCtrlNumEnter",
   },
   bDynResize = true,
+}
+
+local DateFormats = {
+  false,         -- don't show dates
+  "%Y-%m-%d",    -- 2023-07-04
+  "%Y-%m-%d %a", -- 2023-07-04 Tue
+  "%x",          -- 04/07/23
+  "%x %a",       -- 04/07/23 Tue
 }
 
 local function ConfigValue(Cfg, Key)
@@ -328,6 +337,7 @@ end
 
 local function MakeMenuParams (aHistTypeConfig, aHistTypeData, aItems, aHistObject)
   local Cfg = _Plugin.Cfg
+  local dateformat = DateFormats[Cfg.iDateFormat]
   local menuProps = {
     DialogId      = win.Uuid("d853e243-6b82-4b84-96cd-e733d77eeaa1"),
     Flags         = {FMENU_WRAPMODE=1},
@@ -336,6 +346,7 @@ local function MakeMenuParams (aHistTypeConfig, aHistTypeData, aItems, aHistObje
     SelectIndex   = #aItems,
   }
   local listProps = {
+--  debug         = true,
     autocenter    = Cfg.bAutoCenter,
     resizeW       = ConfigValue(aHistTypeConfig, "bDynResize"),
     resizeH       = ConfigValue(aHistTypeConfig, "bDynResize"),
@@ -347,7 +358,8 @@ local function MakeMenuParams (aHistTypeConfig, aHistTypeData, aItems, aHistObje
     searchmethod  = aHistTypeData.searchmethod or "dos",
     filterlines   = true,
     xlat          = aHistTypeData.xlat,
-    showdates     = aHistTypeConfig ~= cfgLocateFile and Cfg.bShowDates,
+    showdates     = aHistTypeConfig ~= cfgLocateFile and dateformat,
+    dateformat    = dateformat,
   }
   local list = custommenu.NewList(listProps, aItems)
   list.keyfunction = GetListKeyFunction(aHistTypeConfig, aHistObject)
@@ -597,7 +609,7 @@ end
 
 local function export_Configure()
   local ConfigDialog = Utils.RunInternalScript("config")
-  if ConfigDialog and ConfigDialog(_Plugin.Cfg, M) then
+  if ConfigDialog and ConfigDialog(_Plugin.Cfg, M, DateFormats) then
     _Plugin.History:save()
   end
 end

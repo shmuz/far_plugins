@@ -85,10 +85,10 @@ $ #Plugin's Configuration Dialog#
        of records in the history.
    #[x] Auto center#
        A history window will be shown centered in FAR window.
-   #[x] Show dates#
-       Groups of items having the same date will be delimitered with separators.
 
  \3BOther properties\-
+   #Date format#
+       Select format of dates dhown on the separators.
    #[x] Keep selected item#
        Keep the current selected item as selected (if possible) when the filter
        changes.
