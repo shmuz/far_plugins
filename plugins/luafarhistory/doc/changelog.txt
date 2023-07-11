@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2023-07-11, v3.11.2
+  [!] Configuration dialog: fixes
+
 2023-07-04, v3.11.1
   [+] Configuration dialog: date format selector
 

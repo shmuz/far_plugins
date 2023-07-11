@@ -59,15 +59,15 @@ local function ConfigDialog (aData, M, aDateFormats)
     if msg == F.DN_BTNCLICK then
       if param1 == Pos.btnHighTextColor then
         local c = far.ColorDialog(hColor0)
-        if c then hColor0 = c; hDlg:Redraw(); end
+        if c then hColor0 = c; DlgSend(hDlg,F.DM_REDRAW); end
       elseif param1 == Pos.btnSelHighTextColor then
         local c = far.ColorDialog(hColor1)
-        if c then hColor1 = c; hDlg:Redraw(); end
+        if c then hColor1 = c; DlgSend(hDlg,F.DM_REDRAW); end
       end
 
     elseif msg == F.DN_CTLCOLORDLGITEM then
-      if param1 == Pos.labHighTextColor then return hColor0; end
-      if param1 == Pos.labSelHighTextColor then return hColor1; end
+      if param1 == Pos.labHighTextColor    then param2[1] = hColor0; return param2; end
+      if param1 == Pos.labSelHighTextColor then param2[1] = hColor1; return param2; end
     end
   end
 
