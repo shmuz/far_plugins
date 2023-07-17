@@ -235,7 +235,6 @@ end
 
 local function WrapWithDialog (aData)
   if not ExecuteWrapDialog(aData) then return end
-  local code = aData.cbxProcess and aData.edtExpress or ""
 
   if aData.cbxReformat then
     local offs1 = assert(tonumber(aData.edtColumn1), "start column is not a number")
@@ -247,7 +246,8 @@ local function WrapWithDialog (aData)
     Wrap (offs1, offs2, aData.cbxJustify, 2.0)
     editor.UndoRedo(nil, "EUR_END")
 
-  else
+  elseif aData.cbxProcess then
+    local code = aData.edtExpress or ""
     editor.UndoRedo(nil, "EUR_BEGIN")
     ProcessBlock(code)
     editor.UndoRedo(nil, "EUR_END")

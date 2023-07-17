@@ -1346,6 +1346,26 @@ mtime=3577278175
 </article>
 </node>
 <node>
+id=97
+lv=1
+dt=Text
+nm=Another syntax
+ctime=3851951553
+mtime=3851951574
+<article>
+#_<markdown>
+#_
+#_###Syntax
+#_      lfe: = <expression_list>
+#_
+#_This syntax allows to display an expression list, e.g.
+#_      lfe: = 5, 6+44, "apple"
+#_is equivalent to
+#_      far.Show(5, 6+44, "apple")
+#_
+</article>
+</node>
+<node>
 id=92
 lv=0
 dt=Text

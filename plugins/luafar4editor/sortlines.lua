@@ -7,13 +7,10 @@
 local sd = require "sortdialog"
 local SortDialog = sd.SortDialog
 
-local type, tonumber = type, tonumber
 local tinsert = table.insert
 local F = far.Flags
 local M = require "lf4ed_message"
-local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
-local EditorSetPosition = editor.SetPosition
-local EditorSetString = editor.SetString
+local band = bit64.band
 local CompareString = win.CompareString
 
 -- Depends on: FAR API
@@ -79,8 +76,8 @@ local function PutLines(arr_compare, arr_index, arr_target, OnlySelection)
   local pstart = editInfo.BlockStartLine - 1
   local BlockSelStart, BlockSelEnd, BlockSelWidth
   if OnlySelection then
-    EditorSetPosition(nil, editInfo.BlockStartLine)
-    local line = editor.GetString(nil, nil)
+    editor.SetPosition(nil, editInfo.BlockStartLine)
+    local line = editor.GetString()
     BlockSelStart = editor.RealToTab(nil, nil, line.SelStart)
     BlockSelEnd   = editor.RealToTab(nil, nil, line.SelEnd)
     BlockSelWidth = BlockSelEnd - BlockSelStart + 1
@@ -108,8 +105,8 @@ local function PutLines(arr_compare, arr_index, arr_target, OnlySelection)
       else
         newtext, newEOL = arr_target[v].StringText, arr_target[v].StringEOL
       end
-      EditorSetPosition(nil, pstart + i)
-      EditorSetString(nil, nil, newtext, newEOL)
+      editor.SetPosition(nil, pstart + i)
+      editor.SetString(nil, nil, newtext, newEOL)
     end
   end
 end
@@ -131,8 +128,6 @@ local NC = function(n) return N(C(n)) end
 return function(a, i) _A=a return %s end
 ]]
 
--- Depends on: data names, namely, on the following strings:
--- "expr", "func", "rev".
 local function DoSort (arr_compare, arr_index, arr_dialog)
   local function cmp(i1, i2)
     local a, b = arr_compare[i1], arr_compare[i2]
@@ -161,7 +156,6 @@ local function compile(expr, fieldname, env, colpat)
   return func(Column, colpat, far.LLowerBuf)
 end
 
--- Depends on: win.wcscmp, win.CompareString
 -- Depends on: data names, namely, on the following strings:
 --    edtColPat
 --    cbxFileName, edtFileName

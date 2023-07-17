@@ -1,7 +1,7 @@
 License of LuaFAR for Editor v3.x.x
 ------------------------------------
 
-Copyright (C) Shmuel Zeigerman 2007-2021
+Copyright (C) Shmuel Zeigerman 2007-2023
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated

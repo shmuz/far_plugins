@@ -1,7 +1,7 @@
 -- Definitions
 VER_MAJOR = "3"
 VER_MINOR = "9"
-VER_MICRO = "3"
+VER_MICRO = "4"
 
 MINFARVERSION = "{ 3, 0, 0, 3300 }" -- 3.0.0.4364 for non-embedded plugin build (-DRUN_LUAFAR_INIT)
 

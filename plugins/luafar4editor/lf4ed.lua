@@ -1,6 +1,7 @@
 -------------------------------------------------------------------------------
 -- LuaFAR for Editor: main script
 -------------------------------------------------------------------------------
+-- luacheck: globals _Plugin lf4ed require
 
 -- CONFIGURATION : keep it at the file top !!
 local DefaultConfig = {
@@ -25,19 +26,23 @@ local LibHistory = require "far2.history"
 
 local FirstRun = not _Plugin
 if FirstRun then
-  _Plugin = Utils.InitPlugin()
-  package.path = _Plugin.ModuleDir.."?.lua;".._Plugin.ModuleDir.."scripts\\?.lua;"..package.path
-  _Plugin.PackagePath = package.path
-  _Plugin.OriginalRequire = require
-  _Plugin.History = LibHistory.newsettings(nil, "alldata")
+  local dir = far.PluginStartupInfo().ModuleDir
+  package.path = dir.."?.lua;"..dir.."scripts\\?.lua;"..package.path
+  _Plugin = {
+    ModuleDir = dir;
+    PackagePath = package.path;
+    OriginalRequire = require;
+    History = LibHistory.newsettings(nil, "alldata");
+  }
+  export.OnError = Utils.OnError
 end
 
 local M = require "lf4ed_message"
 local F = far.Flags
 local VK = win.GetVirtualKeys()
-local band, bor, bxor, bnot = bit64.band, bit64.bor, bit64.bxor, bit64.bnot
+local band, bor = bit64.band, bit64.bor
 lf4ed = lf4ed or {}
-local _ModuleDir, _History = _Plugin.ModuleDir, _Plugin.History
+local _History = _Plugin.History
 
 local CurrentConfig
 
@@ -228,7 +233,15 @@ local function export_Open (aFrom, aGuid, aItem) -- TODO
   if aFrom == F.OPEN_FROMMACRO then
     return Utils.OpenMacro(aItem, _Plugin.CommandTable, lf4ed.config)
   elseif aFrom == F.OPEN_COMMANDLINE then
-    return Utils.OpenCommandLine(aItem, _Plugin.CommandTable, lf4ed.config)
+    local to_show = aItem:match("^%s*=(.*)")
+    if to_show then
+      local f = assert(loadstring("far.Show(".. to_show..")"))
+      local env = setmetatable({}, {__index=_G})
+      setfenv(f,env)()
+      return
+    else
+      return Utils.OpenCommandLine(aItem, _Plugin.CommandTable, lf4ed.config)
+    end
   end
 
   -- Called from a not supported source

@@ -22,12 +22,12 @@ function Package.SortDialog (aData, columntype)
   local D = far2_dialog.NewDialog()
   D._         = {"DI_DOUBLEBOX",3,1,72,14, 0, 0,             0, 0,                   M.MSortLines}
   D.labExpr1  = {"DI_TEXT",     5, 2,0,0,  0, 0,             0, 0,                   M.MExpr1}
-  D.edtExpr1  = {"DI_EDIT",    13, 2,69,6, 0, HIST_EXPR,     0, "DIF_HISTORY",       ""}
+  D.edtExpr1  = {"DI_EDIT",    13, 2,69,2, 0, HIST_EXPR,     0, "DIF_HISTORY",       ""}
   D.cbxUse1   = {"DI_CHECKBOX",15, 3,0,0,  0, 0,             0, 0,                   M.MEnable1} --!!! CHECKED !!!
   D.cbxCase1  = {"DI_CHECKBOX",40, 3,0,0,  0, 0,             0, "DIF_3STATE",        M.MCase1}
   D.cbxRev1   = {"DI_CHECKBOX",58, 3,0,0,  0, 0,             0, 0,                   M.MReverse1}
   D.labExpr2  = {"DI_TEXT",     5, 4,0,0,  0, 0,             0, 0,                   M.MExpr2}
-  D.edtExpr2  = {"DI_EDIT",    13, 4,69,6, 0, HIST_EXPR,     0, "DIF_HISTORY",       ""}
+  D.edtExpr2  = {"DI_EDIT",    13, 4,69,4, 0, HIST_EXPR,     0, "DIF_HISTORY",       ""}
   D.cbxUse2   = {"DI_CHECKBOX",15, 5,0,0,  0, 0,             0, 0,                   M.MEnable2}
   D.cbxCase2  = {"DI_CHECKBOX",40, 5,0,0,  0, 0,             0, "DIF_3STATE",        M.MCase2}
   D.cbxRev2   = {"DI_CHECKBOX",58, 5,0,0,  0, 0,             0, 0,                   M.MReverse2}
@@ -39,7 +39,7 @@ function Package.SortDialog (aData, columntype)
   D.sep       = {"DI_TEXT",     5, 8, 0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},""}
   D.cbxOnlySel= {"DI_CHECKBOX", 5, 9,0,0,  0, 0,             0, 0,                   M.MOnlySel}
   D.lab       = {"DI_TEXT",    28, 9,0,0,  0, 0,             0, 0,                   M.MColPat}
-  D.edtColPat = {"DI_EDIT",    44, 9,56,6, 0, HIST_COLPAT,   0, "DIF_HISTORY",       COLPAT_DEFAULT}
+  D.edtColPat = {"DI_EDIT",    44, 9,56,9, 0, HIST_COLPAT,   0, "DIF_HISTORY",       COLPAT_DEFAULT}
   D.btnColPat = {"DI_BUTTON",  59, 9, 0,0, 0, 0,             0, "DIF_BTNNOCLOSE",    M.MDefault}
   D.sep       = {"DI_TEXT",     5,10, 0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},""}
   D.labFileName={"DI_TEXT",     5,11,0,0,  0, 0,             0, 0,                   M.MFileName}

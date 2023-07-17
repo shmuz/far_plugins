@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2023-07-17, v3.9.4
+  [!] Fix Sort Lines dialog.
+
 2021-12-25, v3.9.3
   [!] The plugin now withstands errors in _usermenu.lua.
 
