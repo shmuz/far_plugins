@@ -559,18 +559,26 @@ function List:UpdateSizePos (hDlg)
   self:SetSize()
 
   local dim
-  if self.resizeW or self.resizeH then
+  local resize = self.resizeW or self.resizeH
+
+  if resize then
     dim = DlgSend(hDlg, "DM_RESIZEDIALOG", 0, { X=self.w+6, Y=self.h+4 })
     self.w = min (dim.X-6, self.w)
     self.h = min (dim.Y-4, self.h)
   end
+
   self:SetUpperItem()
 
   if self.autocenter then
     DlgSend(hDlg, "DM_MOVEDIALOG", 1, { X=-1, Y=-1 })
   end
-  if self.resizeW or self.resizeH then
+
+  if resize then
     DlgSend(hDlg, "DM_SETITEMPOSITION", self.startId, { Left=2, Top=1, Right=dim.X-3, Bottom=dim.Y-2 })
+  end
+
+  if not (resize or self.autocenter) then
+    DlgSend(hDlg, "DM_REDRAW") -- ensure this function always causes a redraw
   end
 end
 
