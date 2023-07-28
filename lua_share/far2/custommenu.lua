@@ -214,7 +214,7 @@ function List:SetUpperItem ()
     if self.selignore then
       self.sel = self:FindUpperItem()
     end
-    self.upper = min(self.sel, max(1, #self.drawitems-self.h+1))
+    self.upper = max(1, self.sel-self.h+1)
   elseif self.selalign == "bottom" then
     if self.selignore then
       self.sel = self:FindLowerItem()
