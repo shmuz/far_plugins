@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2023-10-19, v0.6.0
+  [*] Refactoring: use far2.simpledialog instead of far2.dialog
+
 2021-06-18, v0.5.1
   [+] Syntax files: the table-parameter of the Class function can have the field "firstline",
       e.g. firstline="lua". When a file is opened in the Far editor, the plugin reads its first

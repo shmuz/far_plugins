@@ -15,7 +15,7 @@
   },
   {
     name = "Echo"; fgcolor = "purple";
-    pattern = [[ (?i) ^ \s* @? \s* ECHO \.? (?: \s+ .*)? $ ]];
+    pattern = [[ (?i) @? \s* \b ECHO \.? (?: \s+ .*)? $ ]];
   },
   {
     name = "EnvVar"; fgcolor = "green";

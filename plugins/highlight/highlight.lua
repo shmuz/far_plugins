@@ -30,13 +30,14 @@ if not rex.new then
   end
 
   local methods = getmetatable(orig_new(".")).__index
+  local sz = 2 -- sizeof(wchar_t)
   methods.findW = function(r, s, init) -- simplified method: only 1-st capture
-    local from, to, cap = r:find(s, 2*init-1)
-    if from then from, to = (from+1)/2, to/2; return from, to, cap; end
+    local from, to, cap = r:find(s, sz*(init-1)+1)
+    if from then from, to = (from-1)/sz+1, to/sz; return from, to, cap; end
   end
   methods.tfindW = function(r, s, init)
-    local from, to, t = r:tfind(s, 2*init-1)
-    if from then from, to = (from+1)/2, to/2; return from, to, t; end
+    local from, to, t = r:tfind(s, sz*(init-1)+1)
+    if from then from, to = (from-1)/sz+1, to/sz; return from, to, t; end
   end
 end
 
@@ -64,7 +65,7 @@ local Hist_Extra, Extra
 local Owner
 local PatEndLine = rex.new("$")
 local Classes = {}
-local libDialog = require "far2.dialog"
+local sd = require "far2.simpledialog"
 local libHistory = require "far2.history"
 
 -- initialize AppTitle, Owner, Hist_Config, Config.
@@ -203,21 +204,29 @@ local function RedrawSyntax (Syn, ei, GetNextString, Priority, extrapattern, ext
   local pat_close
   local ID = ei.EditorID
 
-  local openbracket, bstack, bpattern, opattern
+  local openbracket, bstack, bpattern, opattern, posbracket
   if Syn.bracketmatch then
-    local char = editor.GetString(ID, nil, 3):sub(ei.CurPos, ei.CurPos)
-    openbracket = char=="(" or char=="[" or char=="{"
-    local closebracket = char==")" or char=="]" or char=="}"
-    bstack = openbracket and 0 or closebracket and {}
-    if bstack then
-      if char=="(" or char==")" then
-        bpattern, opattern = rex.new("([()])"), "(\0"
-      elseif char=="[" or char=="]" then
-        bpattern, opattern = rex.new("([\\[\\]])"), "[\0"
-      else
-        bpattern, opattern = rex.new("([{}])"), "{\0"
+    -- Try 2 positions: current and previous to current.
+    -- The current position is checked first.
+    local curstr = editor.GetString(ID, nil, 3)
+    for k=0, ei.CurPos==1 and 0 or 1 do
+      posbracket = ei.CurPos-k
+      local char = curstr:sub(posbracket, posbracket)
+      openbracket = char=="(" or char=="[" or char=="{"
+      local closebracket = char==")" or char=="]" or char=="}"
+      if openbracket or closebracket then
+        bstack = openbracket and 0 or {}
+        if char=="(" or char==")" then
+          bpattern, opattern = rex.new("([()])"), "(\0"
+        elseif char=="[" or char=="]" then
+          bpattern, opattern = rex.new("([\\[\\]])"), "[\0"
+        else
+          bpattern, opattern = rex.new("([{}])"), "{\0"
+        end
+        editor.AddColor(ID, ei.CurLine, posbracket, posbracket, acFlags,
+                        Syn.bracketcolor, Priority+1, Owner)
+        break
       end
-      editor.AddColor(ID,ei.CurLine,ei.CurPos,ei.CurPos,acFlags,Syn.bracketcolor,Priority+1,Owner)
     end
   end
 
@@ -225,7 +234,7 @@ local function RedrawSyntax (Syn, ei, GetNextString, Priority, extrapattern, ext
     if bstack and need_paint then
       if openbracket then
         if y >= ei.CurLine then
-          local start = (y == ei.CurLine) and ei.CurPos+1 or 1
+          local start = (y == ei.CurLine) and posbracket+1 or 1
           while true do
             local from, to, br = bpattern:findW(str, start)
             if not from then break end
@@ -253,20 +262,21 @@ local function RedrawSyntax (Syn, ei, GetNextString, Priority, extrapattern, ext
               break
             end
             start = to + 1
-            if y == ei.CurLine and from == ei.CurPos then
-              if bstack[1] then
-                editor.AddColor(ID, bstack[#bstack-1], bstack[#bstack], bstack[#bstack],
+            local N = #bstack
+            if y == ei.CurLine and from == posbracket then
+              if N ~= 0 then
+                editor.AddColor(ID, bstack[N-1], bstack[N], bstack[N],
                                 acFlags, Syn.bracketcolor, Priority+1, Owner)
               end
               bstack = nil
               break
             else
               if br == opattern then
-                bstack[#bstack+1] = y
-                bstack[#bstack+1] = from
-              else
-                bstack[#bstack] = nil
-                bstack[#bstack] = nil
+                bstack[N+1] = y
+                bstack[N+2] = from
+              elseif N ~= 0 then
+                bstack[N]   = nil
+                bstack[N-1] = nil
               end
             end
           end
@@ -387,94 +397,99 @@ local function RedrawExtraPattern (ei, Priority, extrapattern, extracolor)
 end
 
 local function ShowSettings()
-  local Guid = win.Uuid("77D9B9B8-162A-4DEC-BF8F-16079D5F79E7")
   local Width = 73
   local X1, X2 = 5, math.floor(Width/2-1)
   local X3, X4 = X2+1, Width-6
-  local Dlg = libDialog.NewDialog()
 
-  Dlg.dbox            = {F.DI_DOUBLEBOX,     3,  1, Width-4, 12, 0,0,0,0, AppTitle}
+  local Items = {
+    guid = "77D9B9B8-162A-4DEC-BF8F-16079D5F79E7";
+    help = "Settings";
+    width = Width;
+    {tp="dbox"; text=AppTitle; },
 
-  Dlg.sboxAll         = {F.DI_SINGLEBOX,    X1,  2,      X2,  7, 0,0,0,0, "All files"}
-  Dlg.cbHighAll       = {F.DI_CHECKBOX,   X1+1,  3,       0,  0, 0,0,0,0, "&Highlight"}
-  Dlg.cbFastAll       = {F.DI_CHECKBOX,   X1+1,  4,       0,  0, 0,0,0,0, "&Fast rendering"}
-  Dlg.labFastLinesAll = {F.DI_TEXT,       X1+5,  5,       0,  0, 0,0,0,0, "&Lines"}
-  Dlg.edFastLinesAll  = {F.DI_FIXEDIT,   X2-11,  5,    X2-2,  0, 0,0,"999999",F.DIF_MASKEDIT, ""}
-  Dlg.label           = {F.DI_TEXT,       X1+1,  6,       0,  0, 0,0,0,0, "Color &priority"}
-  Dlg.edPriorAll      = {F.DI_FIXEDIT,   X2-11,  6,    X2-2,  0, 0,0,"9999999999",F.DIF_MASKEDIT, ""}
+    {tp="sbox";    x1=X1; x2=X2; text="All files"; y1=2; y2=7; },
+    {tp="chbox";   x1=X1+1; text="&Highlight"; y1=3;  name="cbHighAll"; },
+    {tp="chbox";   x1=X1+1; text="&Fast rendering";   name="cbFastAll"; },
+    {tp="text";    x1=X1+5, text="&Lines"; x2=X2-13;  name="labFastLinesAll"; },
+    {tp="fixedit"; x1=X2-11, x2=X2-2; ystep=0; mask="999999"; name="edFastLinesAll"; },
+    {tp="text";    x1=X1+1; text="Color &priority"; x2=X2-13;                        },
+    {tp="fixedit"; x1=X2-11, x2=X2-2; ystep=0; mask="9999999999"; name="edPriorAll"; },
 
-  Dlg.sboxCur         = {F.DI_SINGLEBOX,    X3,  2,      X4,  7, 0,0,0,0, "Current file"}
-  Dlg.cbHighCur       = {F.DI_CHECKBOX,   X3+1,  3,       0,  0, 0,0,0,0, "H&ighlight"}
-  Dlg.cbFastCur       = {F.DI_CHECKBOX,   X3+1,  4,       0,  0, 0,0,0,0, "F&ast rendering"}
-  Dlg.labFastLinesCur = {F.DI_TEXT,       X3+5,  5,       0,  0, 0,0,0,0, "Li&nes"}
-  Dlg.edFastLinesCur  = {F.DI_FIXEDIT,   X4-11,  5,    X4-2,  0, 0,0,"999999",F.DIF_MASKEDIT, ""}
-  Dlg.label           = {F.DI_TEXT,       X3+1,  6,       0,  0, 0,0,0,0, "Color p&riority"}
-  Dlg.edPriorCur      = {F.DI_FIXEDIT,   X4-11,  6,    X4-2,  0, 0,0,"9999999999",F.DIF_MASKEDIT, ""}
+    {tp="sbox";    x1=X3; x2=X4; text="Current file"; name="sboxCur"; y1=2; y2=7; },
+    {tp="chbox";   x1=X3+1; text="H&ighlight"; y1=3;  name="cbHighCur";       },
+    {tp="chbox";   x1=X3+1; text="F&ast rendering";   name="cbFastCur";       },
+    {tp="text";    x1=X3+5, text="Li&nes"; x2=X2-13;  name="labFastLinesCur"; },
+    {tp="fixedit"; x1=X4-11, x2=X4-2; ystep=0; mask="999999"; name="edFastLinesCur"; },
+    {tp="text";    x1=X3+1; text="Color p&riority"; x2=X4-13;                        },
+    {tp="fixedit"; x1=X4-11, x2=X4-2; ystep=0; mask="9999999999"; name="edPriorCur"; },
 
-  Dlg.btBench         = {F.DI_BUTTON,        5,  8,       0,  0, 0, 0,0,F.DIF_BTNNOCLOSE,"&Benchmark"}
-  Dlg.edBench         = {F.DI_EDIT,         19,  8, Width-7,  0, 0, 0,0,F.DIF_READONLY, ""}
-  Dlg.cbDebug         = {F.DI_CHECKBOX,      5,  9,       0,  0, 0,0,0,0, "&Debug mode"}
-  Dlg.sep             = {F.DI_TEXT,         -1, 10,       0,  0, 0, 0,0,F.DIF_SEPARATOR,""}
-  Dlg.btOk            = {F.DI_BUTTON,        0, 11,       0,  0, 0, 0,0,{DIF_DEFAULTBUTTON=1,DIF_CENTERGROUP=1},"OK"}
-  Dlg.btCancel        = {F.DI_BUTTON,        0, 11,       0,  0, 0, 0,0,F.DIF_CENTERGROUP,"Cancel"}
+    {tp="butt";    ystep=2; text="&Benchmark";        name="btBench"; btnnoclose=1; },
+    {tp="edit";    ystep=0; x1=19; x2=Width-7;        name="edBench"; readonly=1;   },
+    {tp="chbox";   text="&Debug mode";                name="cbDebug"; },
+    {tp="sep" },
+    {tp="butt";    default=1; centergroup=1; text="OK";    },
+    {tp="butt";    cancel=1; centergroup=1; text="Cancel"; },
+  }
+  local dlg = sd.New(Items)
+  local Pos,Elem = dlg:Indexes()
 
-  Dlg.cbHighAll.Selected = Config.On and 1 or 0
-  Dlg.cbFastAll.Selected = Config.bFastMode and 1 or 0
-  Dlg.edFastLinesAll.Data = Config.nFastLines
-  Dlg.edPriorAll.Data = Config.nColorPriority
-  Dlg.cbDebug.Selected = Config.bDebugMode and 1 or 0
+  Elem.cbHighAll.val = Config.On
+  Elem.cbFastAll.val = Config.bFastMode
+  Elem.edFastLinesAll.val = Config.nFastLines
+  Elem.edPriorAll.val = Config.nColorPriority
+  Elem.cbDebug.val = Config.bDebugMode
 
   local ei = editor.GetInfo()
   local state = Editors[ei.EditorID]
   if state and state.Class then
-    Dlg.cbHighCur.Selected = state.On and 1 or 0
-    Dlg.cbFastCur.Selected = state.bFastMode and 1 or 0
-    Dlg.edFastLinesCur.Data = state.nFastLines
-    Dlg.edPriorCur.Data = state.nColorPriority
+    Elem.cbHighCur.val = state.On
+    Elem.cbFastCur.val = state.bFastMode
+    Elem.edFastLinesCur.val = state.nFastLines
+    Elem.edPriorCur.val = state.nColorPriority
   else
-    for i=Dlg.sboxCur.id, Dlg.edPriorCur.id do Dlg[i][9] = "DIF_DISABLE" end
+    for i=Pos.sboxCur, Pos.edPriorCur do Items[i].disable=1 end
   end
 
   local function CheckEnableFastLines (hDlg)
     if not state then return end
-    local enab = Dlg.cbFastAll:GetCheck(hDlg)
-    Dlg.labFastLinesAll:Enable(hDlg, enab)
-    Dlg.edFastLinesAll:Enable(hDlg, enab)
-    enab = Dlg.cbFastCur:GetCheck(hDlg)
-    Dlg.labFastLinesCur:Enable(hDlg, enab)
-    Dlg.edFastLinesCur:Enable(hDlg, enab)
+    local enab = hDlg:send(F.DM_GETCHECK, Pos.cbFastAll)
+    hDlg:send(F.DM_ENABLE, Pos.labFastLinesAll, enab)
+    hDlg:send(F.DM_ENABLE, Pos.edFastLinesAll, enab)
+    enab = hDlg:send(F.DM_GETCHECK, Pos.cbFastCur)
+    hDlg:send(F.DM_ENABLE, Pos.labFastLinesCur, enab)
+    hDlg:send(F.DM_ENABLE, Pos.edFastLinesCur, enab)
   end
 
   local function RereadEditFields (hDlg)
     if not state then return end
-    state.nFastLines = NormalizeFastLines(Dlg.edFastLinesCur:GetText(hDlg))
-    Dlg.edFastLinesCur:SetText(hDlg, state.nFastLines)
-    state.nColorPriority = NormalizeColorPriority(Dlg.edPriorCur:GetText(hDlg))
-    Dlg.edPriorCur:SetText(hDlg, state.nColorPriority)
+    state.nFastLines = NormalizeFastLines(hDlg:send(F.DM_GETTEXT, Pos.edFastLinesCur))
+    hDlg:send(F.DM_SETTEXT, Pos.edFastLinesCur, state.nFastLines)
+    state.nColorPriority = NormalizeColorPriority(hDlg:send(F.DM_GETTEXT, Pos.edPriorCur))
+    hDlg:send(F.DM_SETTEXT, Pos.edPriorCur, state.nColorPriority)
   end
 
-  local function DlgProc (hDlg,Msg,Param1,Param2)
+  function Items.proc (hDlg,Msg,Param1,Param2)
     if Msg == F.DN_INITDIALOG then
       CheckEnableFastLines(hDlg)
     elseif Msg == F.DN_BTNCLICK then
-      if Param1 == Dlg.cbFastAll.id then
+      if Param1 == Pos.cbFastAll then
         CheckEnableFastLines(hDlg)
-      elseif Param1 == Dlg.cbHighCur.id then
+      elseif Param1 == Pos.cbHighCur then
         if state then
           RereadEditFields(hDlg)
           state.On = not state.On
           editor.Redraw()
         end
-      elseif Param1 == Dlg.cbFastCur.id then
+      elseif Param1 == Pos.cbFastCur then
         if state then
           CheckEnableFastLines(hDlg)
           state.bFastMode = not state.bFastMode
           RereadEditFields(hDlg)
           editor.Redraw()
         end
-      elseif Param1 == Dlg.btBench.id then
+      elseif Param1 == Pos.btBench then
         RereadEditFields(hDlg)
-        Dlg.edBench:SetText(hDlg, "")
+        hDlg:send(F.DM_SETTEXT, Pos.edBench, "")
         local t1 = os.clock()
         for k=1,math.huge do
           editor.Redraw()
@@ -483,20 +498,21 @@ local function ShowSettings()
             t1=(t2-t1)*1000/k; break
           end
         end
-        Dlg.edBench:SetText(hDlg, ("%f msec"):format(t1))
+        hDlg:send(F.DM_SETTEXT, Pos.edBench, ("%f msec"):format(t1))
       end
     end
   end
 
-  if Dlg.btOk.id == far.Dialog (Guid,-1,-1,Width,14,"Settings",Dlg,nil,DlgProc) then
-    Config.On = (Dlg.cbHighAll.Selected ~= 0)
-    Config.bFastMode = (Dlg.cbFastAll.Selected ~= 0)
-    Config.nFastLines = NormalizeFastLines(Dlg.edFastLinesAll.Data)
-    Config.nColorPriority = NormalizeColorPriority(Dlg.edPriorAll.Data)
-    Config.bDebugMode = (Dlg.cbDebug.Selected ~= 0)
+  local out = dlg:Run()
+  if out then
+    Config.On = out.cbHighAll
+    Config.bFastMode = out.cbFastAll
+    Config.nFastLines = NormalizeFastLines(out.edFastLinesAll)
+    Config.nColorPriority = NormalizeColorPriority(out.edPriorAll)
+    Config.bDebugMode = out.cbDebug
     if state then
-      state.nFastLines = NormalizeFastLines(Dlg.edFastLinesCur.Data)
-      state.nColorPriority = NormalizeColorPriority(Dlg.edPriorCur.Data)
+      state.nFastLines = NormalizeFastLines(out.edFastLinesCur)
+      state.nColorPriority = NormalizeColorPriority(out.edPriorCur)
     end
 
     far.ReloadDefaultScript = Config.bDebugMode
@@ -581,94 +597,99 @@ local function HighlightExtra()
   local ei = editor.GetInfo()
   local state = Editors[ei.EditorID]
   local extracolor = state.extracolor
-
-  local sepflags = bor(F.DIF_BOXCOLOR, F.DIF_SEPARATOR)
-  local editflags = bor(F.DIF_HISTORY, F.DIF_USELASTHISTORY)
-  local Dlg = libDialog.NewDialog()
   local s1 = "&Search for:"
   local x = s1:len()
 
-  Dlg.frame       = {"DI_DOUBLEBOX", 3, 1, 72, 8, 0, 0, 0, 0, "Highlight extra"}
-  Dlg.lab         = {"DI_TEXT",      5, 2,  0, 2, 0, 0, 0, 0, s1}
-  Dlg.sSearchPat  = {"DI_EDIT",    5+x, 2, 70, 2, 0, "SearchText", 0, editflags, ""}
-  Dlg.sep         = {"DI_TEXT",      5, 3,  0, 0, 0, 0, 0, sepflags, ""}
-  Dlg.bCaseSens   = {"DI_CHECKBOX",  5, 4,  0, 0, 0, 0, 0, 0, "&Case sensitive"}
-  Dlg.bRegExpr    = {"DI_CHECKBOX", 26, 4,  0, 0, 0, 0, 0, 0, "Re&g. expression"}
-  Dlg.labColor    = {"DI_TEXT",     54, 4,  0, 0, 0, 0, 0, 0, "Text Text"}
-  Dlg.bWholeWords = {"DI_CHECKBOX",  5, 5,  0, 0, 0, 0, 0, 0, "&Whole words"}
-  Dlg.bExtended   = {"DI_CHECKBOX", 26, 5,  0, 0, 0, 0, 0, 0, "&Ignore spaces"}
-  Dlg.btColor     = {"DI_BUTTON",   54, 5,  0, 0, 0, 0, 0, F.DIF_BTNNOCLOSE, "C&olor"}
-  Dlg.sep         = {"DI_TEXT",     -1, 6,  0, 0, 0, 0, 0, sepflags,""}
-  Dlg.btOk        = {"DI_BUTTON",    0, 7,  0, 0, 0, 0, 0, {DIF_DEFAULTBUTTON=1,DIF_CENTERGROUP=1},"OK"}
-  Dlg.btReset     = {"DI_BUTTON",    0, 7,  0, 0, 0, 0, 0, F.DIF_CENTERGROUP,"&Reset"}
-  Dlg.btCancel    = {"DI_BUTTON",    0, 7,  0, 0, 0, 0, 0, F.DIF_CENTERGROUP,"Cancel"}
+  local Items = {
+    guid = "A6E9A4FF-E9B4-4F16-9404-D5B8A515D16E";
+    help = "HighlightExtra";
+    width = 76;
+    {tp="dbox"; text="Highlight extra"; },
+    {tp="text"; text=s1; },
+    {tp="edit"; x1=5+x, x2=70; ystep=0; hist="SearchText"; name="sSearchPat"; uselasthistory=1; },
+    {tp="sep"; },
+
+    {tp="chbox"; x1=5;  text="&Case sensitive";   name="bCaseSens";          },
+    {tp="chbox"; x1=26; text="Re&g. expression";  name="bRegExpr"; ystep=0;  },
+    {tp="text";  x1=54, text="Text Text"; x2=62;  name="labColor"; ystep=0;  },
+
+    {tp="chbox"; x1=5;  text="&Whole words";      name="bWholeWords";        },
+    {tp="chbox"; x1=26; text="&Ignore spaces";    name="bExtended"; ystep=0; },
+    {tp="butt";  x1=54, text="C&olor";            name="btColor";   ystep=0; btnnoclose=1; },
+    {tp="sep"; },
+
+    {tp="butt"; centergroup=1; default=1; text="OK";     name="btOk";        },
+    {tp="butt"; centergroup=1;            text="&Reset"; name="btReset";     },
+    {tp="butt"; centergroup=1; cancel=1;  text="Cancel";                     },
+  }
+  local dlg = sd.New(Items)
+  local Pos,Elem = dlg:Indexes()
 
   local function CheckRegexChange (hDlg)
-    local bRegex = Dlg.bRegExpr:GetCheck(hDlg)
+    local bRegex = hDlg:send(F.DM_GETCHECK, Pos.bRegExpr) ~= 0
 
-    if bRegex then Dlg.bWholeWords:SetCheck(hDlg, false) end
-    Dlg.bWholeWords:Enable(hDlg, not bRegex)
+    if bRegex then hDlg:send(F.DM_SETCHECK, Pos.bWholeWords, 0) end
+    hDlg:send(F.DM_ENABLE, Pos.bWholeWords, bRegex and 0 or 1)
 
-    --if not bRegex then Dlg.bExtended:SetCheck(hDlg, false) end
-    --Dlg.bExtended:Enable(hDlg, bRegex)
+    if not bRegex then hDlg:send(F.DM_SETCHECK, Pos.bExtended, 0) end
+    hDlg:send(F.DM_ENABLE, Pos.bExtended, bRegex and 1 or 0)
   end
 
-  local function DlgProc (hDlg, msg, param1, param2)
+  function Items.closeaction(hDlg, param1, data)
+    if param1 == Pos.btReset then
+      SetExtraPattern(editor.GetInfo().EditorID, nil)
+    elseif param1 == Pos.btOk then
+      local sSearchPat = data.sSearchPat
+      local flags, syn = "", nil
+      if not data.bCaseSens then flags = flags.."i" end
+      if data.bExtended     then flags = flags.."x" end
+      if not data.bRegExpr  then syn = "ASIS" end
+      if data.bWholeWords then
+        syn = nil
+        local sNeedEscape = "[~!@#$%%^&*()%-+[%]{}\\|:;'\",<.>/?]"
+        sSearchPat = "\\b" .. sSearchPat:gsub(sNeedEscape, "\\%1") .. "\\b"
+      end
+      local ok, r = pcall(rex.new, sSearchPat, flags, syn)
+      if ok then
+        SetExtraPattern(editor.GetInfo().EditorID, r)
+        for k,v in pairs(data) do Extra[k]=v end
+        state.extracolor = extracolor
+        Extra.Color = extracolor
+        Hist_Extra:save()
+      else
+        ErrMsg(r)
+        return 0
+      end
+    end
+  end
+
+  function Items.proc (hDlg, msg, param1, param2)
     if msg == F.DN_INITDIALOG then
       CheckRegexChange (hDlg)
     elseif msg == F.DN_BTNCLICK then
-      if param1 == Dlg.btColor.id then
+      if param1 == Pos.btColor then
         local c = far.ColorDialog(extracolor)
         if c then
           extracolor = c
           hDlg:send(F.DM_REDRAW)
         end
       else
-        CheckRegexChange (hDlg)
+        CheckRegexChange(hDlg)
       end
     elseif msg == F.DN_CTLCOLORDLGITEM then
-      if param1 == Dlg.labColor.id then
+      if param1 == Pos.labColor then
         param2[1] = extracolor
         return param2
-      end
-    elseif msg == F.DN_CLOSE then
-      if param1 == Dlg.btReset.id then
-        SetExtraPattern(editor.GetInfo().EditorID, nil)
-      elseif param1 == Dlg.btOk.id then
-        local data = {}
-        libDialog.SaveDataDyn(hDlg, Dlg, data)
-        local sSearchPat = data.sSearchPat
-        local flags, syn = "", nil
-        if not data.bCaseSens then flags = flags.."i" end
-        if data.bExtended     then flags = flags.."x" end
-        if not data.bRegExpr  then syn = "ASIS" end
-        if data.bWholeWords then
-          syn = nil
-          local sNeedEscape = "[~!@#$%%^&*()%-+[%]{}\\|:;'\",<.>/?]"
-          sSearchPat = "\\b" .. sSearchPat:gsub(sNeedEscape, "\\%1") .. "\\b"
-        end
-        local ok, r = pcall(rex.new, sSearchPat, flags, syn)
-        if ok then
-          SetExtraPattern(editor.GetInfo().EditorID, r)
-          for k,v in pairs(data) do Extra[k]=v end
-          state.extracolor = extracolor
-          Extra.Color = extracolor
-          Hist_Extra:save()
-        else
-          ErrMsg(r)
-          return 0
-        end
       end
     end
   end
 
-  Dlg.bCaseSens.Selected   = Extra.bCaseSens   and 1 or 0
-  Dlg.bRegExpr.Selected    = Extra.bRegExpr    and 1 or 0
-  Dlg.bWholeWords.Selected = Extra.bWholeWords and 1 or 0
-  Dlg.bExtended.Selected   = Extra.bExtended   and 1 or 0
+  Elem.bCaseSens.val   = Extra.bCaseSens
+  Elem.bRegExpr.val    = Extra.bRegExpr
+  Elem.bWholeWords.val = Extra.bWholeWords
+  Elem.bExtended.val   = Extra.bExtended
 
-  local Guid = win.Uuid("A6E9A4FF-E9B4-4F16-9404-D5B8A515D16E")
-  far.Dialog (Guid,-1,-1,76,10,"HighlightExtra",Dlg,0,DlgProc)
+  dlg:Run()
 end
 
 function export.Open (From, Guid, Item)
