@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2023-10-20, v0.6.1
+  [*] Refactoring: use far2.settings instead of far2.history
+
 2023-10-19, v0.6.0
   [*] Refactoring: use far2.simpledialog instead of far2.dialog
 

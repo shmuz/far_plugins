@@ -144,8 +144,19 @@ local function mload (key, name, location)
   return val, err
 end
 
+local function field (t, seq)
+  checkarg(t, 1, "table")
+  checkarg(seq, 2, "string")
+  for key in seq:gmatch("[^.]+") do
+    t[key] = t[key] or {}
+    t = t[key]
+  end
+  return t
+end
+
 return {
   deserialize = deserialize;
+  field = field;
   mdelete = mdelete;
   mload = mload;
   msave = msave;

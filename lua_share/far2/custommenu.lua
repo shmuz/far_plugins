@@ -1055,8 +1055,7 @@ local function Menu (props, list)
   local ret, ret_item, ret_pos
   local Rect
   local Items = {  -- a hidden element for setting console title
-    osWindows and { F.DI_TEXT,  1,1,8,1,  0,0,0,F.DIF_HIDDEN, "" }
-               or { F.DI_TEXT,  1,1,8,1,  0,0,F.DIF_HIDDEN,0, "" },
+    { F.DI_TEXT,  1,1,8,1,  0,0,0,F.DIF_HIDDEN, "" },
     list:CreateDialogItems(2, 1),
   }
   local pos_title, pos_usercontrol = 1, 2
@@ -1067,10 +1066,6 @@ local function Menu (props, list)
       list.Log("DN_INITDIALOG")
       DlgSend(hDlg, F.DM_SETINPUTNOTIFY or F.DM_SETMOUSEEVENTNOTIFY, 1) -- keep flag backward compatibility
       list:OnInitDialog (hDlg)
-
-    elseif not osWindows and msg == F.DN_GETDIALOGINFO then
-      list.Log("DN_GETDIALOGINFO")
-      return props.DialogId
 
     elseif osWindows and msg == F.DN_GETVALUE then
       if param1 == pos_usercontrol then
@@ -1190,12 +1185,7 @@ local function Menu (props, list)
     X2, Y2 = X1+X2-1, Y1+Y2-1
   end
 
-  if osWindows then
-    local id = props.DialogId or ("\0"):rep(16)
-    ret = far.Dialog(id, X1, Y1, X2, Y2, props.HelpTopic, Items, 0, DlgProc)
-  else
-    ret = far.Dialog(X1, Y1, X2, Y2, props.HelpTopic, Items, 0, DlgProc)
-  end
+  ret = far.Dialog(props.DialogId, X1, Y1, X2, Y2, props.HelpTopic, Items, 0, DlgProc)
   if ret == pos_usercontrol then
     return ret_item, ret_pos
   end

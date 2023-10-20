@@ -15,13 +15,11 @@ local Send      = far.SendDlgMessage
 local Colors    = far.Colors or F
 
 local IND_TYPE, IND_X1, IND_Y1, IND_X2, IND_Y2, IND_HISTORY, IND_DATA = 1,2,3,4,5,7,10
-local IND_FOCUS    = (FarVer==2) and 6 or nil
-local IND_SELECTED = (FarVer==2) and 7 or 6
-local IND_MASK     = (FarVer==2) and 7 or 8
-local IND_LIST     = (FarVer==2) and 7 or 6
-local IND_VBUF     = (FarVer==2) and 7 or 6
-local IND_FLAGS    = (FarVer==2) and 8 or 9
-local IND_DFLT     = (FarVer==2) and 9 or nil
+local IND_SELECTED = 6
+local IND_MASK     = 8
+local IND_LIST     = 6
+local IND_VBUF     = 6
+local IND_FLAGS    = 9
 
 local mod = {} -- this module
 local mod_meta = { __index=mod; }
@@ -207,11 +205,13 @@ local FlagsMap = {
     btnnoclose             = F.DIF_BTNNOCLOSE;
     centergroup            = F.DIF_CENTERGROUP;
     centertext             = F.DIF_CENTERTEXT;
+    default                = F.DIF_DEFAULTBUTTON;
     disable                = F.DIF_DISABLE;
     dropdown               = F.DIF_DROPDOWNLIST;
     editexpand             = F.DIF_EDITEXPAND;
     editor                 = F.DIF_EDITOR;
     editpath               = F.DIF_EDITPATH;
+    focus                  = F.DIF_FOCUS;
     group                  = F.DIF_GROUP;
     hidden                 = F.DIF_HIDDEN;
     lefttext               = F.DIF_LEFTTEXT;
@@ -236,9 +236,7 @@ if (FarVer == 2) then
     FlagsMap.colormask             = F.DIF_COLORMASK
     FlagsMap.setcolor              = F.DIF_SETCOLOR
 else
-    FlagsMap.default               = F.DIF_DEFAULTBUTTON
     FlagsMap.editpathexec          = F.DIF_EDITPATHEXEC
-    FlagsMap.focus                 = F.DIF_FOCUS
     FlagsMap.listtrackmouse        = F.DIF_LISTTRACKMOUSE
     FlagsMap.listtrackmouseinfocus = F.DIF_LISTTRACKMOUSEINFOCUS
     FlagsMap.righttext             = F.DIF_RIGHTTEXT
@@ -345,8 +343,6 @@ function mod:Run()
       if inp.hist                then t [IND_HISTORY ] = inp.hist; end
       if inp.val                 then t [IND_SELECTED] = inp.val;  end
       if inp.vbuf                then t [IND_VBUF    ] = inp.vbuf; end
-      if v.focus   and FarVer==2 then t [IND_FOCUS   ] = 1;        end
-      if v.default and FarVer==2 then t [IND_DFLT    ] = 1;        end
       if inp.text                then t [IND_DATA    ] = inp.text; end
       return t
     end
@@ -460,9 +456,6 @@ function mod:Run()
     if Msg == F.DN_INITDIALOG then
       if inData.initaction then inData.initaction(hDlg); end
 
-    elseif (FarVer == 2) and Msg == F.DN_GETDIALOGINFO then
-      return guid
-
     elseif Msg == F.DN_CLOSE then
       if inData.closeaction and inData[Par1] and not inData[Par1].cancel then
         return inData.closeaction(hDlg, Par1, self:GetDialogState(hDlg))
@@ -513,17 +506,7 @@ function mod:Run()
 
     elseif Msg == F.DN_CTLCOLORDLGITEM then
       local colors = outData[Par1].colors
-      if colors then
-        if FarVer == 3 then -- TODO for Far 2
-          return colors
-        else
-          local col = 0
-          for i,v in ipairs(colors) do
-            col = bor(col, lshift(v,8*(i-1)))
-          end
-          return col
-        end
-      end
+      if colors then return colors end
 
     end
 
@@ -533,16 +516,12 @@ function mod:Run()
   local x1, y1 = inData.x1 or -1, inData.y1 or -1
   local x2 = x1==-1 and W or x1+W-1
   local y2 = y1==-1 and H or y1+H-1
-  local hDlg
-  if FarVer == 2 then
-    hDlg = far.DialogInit(x1,y1,x2,y2, help, outData, inData.flags, DlgProc)
-  else
-    hDlg = far.DialogInit(guid, x1,y1,x2,y2, help, outData, inData.flags, DlgProc)
-    if hDlg and F.FDLG_NONMODAL and 0 ~= band(inData.flags, F.FDLG_NONMODAL) then
+  local hDlg = far.DialogInit(guid, x1,y1,x2,y2, help, outData, inData.flags, DlgProc, inData.data)
+  if hDlg then
+    if F.FDLG_NONMODAL and 0 ~= band(inData.flags, F.FDLG_NONMODAL) then
       return hDlg -- non-modal dialogs were introduced in build 3.0.5047
     end
-  end
-  if not hDlg then
+  else
     far.Message("Error occured in far.DialogInit()", "module 'simpledialog'", nil, "w")
     return nil
   end

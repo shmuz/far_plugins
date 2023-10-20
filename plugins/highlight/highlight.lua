@@ -55,28 +55,30 @@ local function NormalizeColorPriority (p)
   return p
 end
 
+local Sett = require "far2.settings"
+local sd   = require "far2.simpledialog"
+local SETTINGS_KEY  = "shmuz"
+local SETTINGS_NAME = "plugin_highlight"
+local Field = Sett.field
+
 local F = far.Flags
 local band, bor, bxor, lshift = bit64.band, bit64.bor, bit64.bxor, bit64.lshift
 
 local acFlags = bor(F.ECF_TABMARKCURRENT, F.ECF_AUTODELETE)
 local AppTitle
-local Hist_Config, Config
-local Hist_Extra, Extra
+local Hist, Config, Extra
 local Owner
 local PatEndLine = rex.new("$")
 local Classes = {}
-local sd = require "far2.simpledialog"
-local libHistory = require "far2.history"
 
 -- initialize AppTitle, Owner, Hist_Config, Config.
 do
   local info = export.GetGlobalInfo()
   AppTitle, Owner = info.Title, info.Guid
 
-  Hist_Config = libHistory.newsettings(nil, "Config")
-  Config = Hist_Config.Data
-  Hist_Extra = libHistory.newsettings(nil, "ExtraData")
-  Extra = Hist_Extra.Data
+  Hist = Sett.mload(SETTINGS_KEY, SETTINGS_NAME) or {}
+  Config = Field(Hist, "Config")
+  Extra = Field(Hist, "ExtraData")
 
   far.ReloadDefaultScript = Config.bDebugMode
   Config.nColorPriority = NormalizeColorPriority(Config.nColorPriority)
@@ -516,7 +518,7 @@ local function ShowSettings()
     end
 
     far.ReloadDefaultScript = Config.bDebugMode
-    Hist_Config:save()
+    Sett.msave(SETTINGS_KEY, SETTINGS_NAME, Hist)
     editor.Redraw()
   end
 end
@@ -655,7 +657,7 @@ local function HighlightExtra()
         for k,v in pairs(data) do Extra[k]=v end
         state.extracolor = extracolor
         Extra.Color = extracolor
-        Hist_Extra:save()
+        Sett.msave(SETTINGS_KEY, SETTINGS_NAME, Hist)
       else
         ErrMsg(r)
         return 0
