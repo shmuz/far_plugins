@@ -449,7 +449,7 @@ local function get_history (aConfig, aData)
   end
   local function IsExclusion(name)
     for _,rx in ipairs(exclude) do
-      if rx:match(name) then return true; end
+      if rx:find(name) then return true; end -- don't use rx:match() here!
     end
   end
 
