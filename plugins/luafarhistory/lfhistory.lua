@@ -3,11 +3,17 @@
 
 far.ReloadDefaultScript = true
 package.loaded["far2.custommenu"] = nil
+package.loaded["lfh_config"] = nil
 
-local custommenu = require "far2.custommenu"
+if not _Plugin then
+  package.path = far.PluginStartupInfo().ModuleDir .. "?.lua;" .. package.path
+end
+
+local Custommenu = require "far2.custommenu"
 local Utils      = require "far2.utils"
 local LibHistory = require "far2.history"
-local M          = Utils.RunInternalScript("lfh_message")
+local Config     = require "lfh_config"
+local M          = require "lfh_message"
 local F          = far.Flags
 local FarId      = ("\0"):rep(16)
 local PlugTitleCache = {}
@@ -18,12 +24,42 @@ local DefaultCfg = {
   bShowDates        = true,
   bKeepSelectedItem = false,
   bDirectSort       = true,
-  iSizeCmd          = 1000,
-  iSizeView         = 1000,
-  iSizeFold         = 1000,
   HighTextColor     = 0x3A,
   SelHighTextColor  = 0x0A,
   iDateFormat       = 2,
+  view = {
+    iSize        = 1000;
+    lastpattern  = nil;
+    last_time    = 0;
+    searchmethod = "dos";
+    xlat         = false;
+    exclude      = {};
+  },
+  commands = {
+    iSize        = 1000;
+    lastpattern  = nil;
+    last_time    = 0;
+    searchmethod = "dos";
+    xlat         = false;
+    exclude      = {};
+  },
+  folders = {
+    iSize        = 1000;
+    lastpattern  = nil;
+    last_time    = 0;
+    searchmethod = "dos";
+    xlat         = false;
+    exclude      = {};
+  },
+  locatefile = {
+    iSize        = nil;
+    lastpattern  = nil;
+    last_time    = nil;
+    searchmethod = "dos";
+    xlat         = false;
+    exclude      = nil;
+    bDynResize   = true;
+  },
 }
 
 local cfgView = {
@@ -35,9 +71,7 @@ local cfgView = {
     "CtrlEnter", "CtrlNumEnter", "RCtrlEnter", "RCtrlNumEnter",
     "ShiftEnter", "ShiftNumEnter",
     "CtrlPgUp", "RCtrlPgUp", "CtrlPgDn", "RCtrlPgDn",
-    "AltF8", "RAltF8", "AltF12", "RAltF12",
   },
-  maxItemsKey = "iSizeView",
 }
 
 local cfgCommands = {
@@ -47,9 +81,7 @@ local cfgCommands = {
   brkeys = {
     "CtrlEnter", "RCtrlEnter", "CtrlNumEnter", "RCtrlNumEnter",
     "ShiftEnter", "ShiftNumEnter",
-    "AltF11", "RAltF11", "AltF12", "RAltF12",
   },
-  maxItemsKey = "iSizeCmd",
 }
 
 local cfgFolders = {
@@ -59,19 +91,16 @@ local cfgFolders = {
   brkeys = {
     "CtrlEnter", "RCtrlEnter", "CtrlNumEnter", "RCtrlNumEnter",
     "ShiftEnter", "ShiftNumEnter",
-    "AltF8", "RAltF8", "AltF11", "RAltF11",
   },
-  maxItemsKey = "iSizeFold",
 }
 
 local cfgLocateFile = {
-  PluginHistoryType  = "locatefile",
+  PluginHistoryType = "locatefile",
   title = "mTitleLocateFile",
   brkeys = {
     "F3", "F4",
     "CtrlEnter", "RCtrlEnter", "CtrlNumEnter", "RCtrlNumEnter",
   },
-  bDynResize = true,
 }
 
 local DateFormats = {
@@ -124,7 +153,7 @@ local function TellFileIsDirectory (fname)
   far.Message(('%s:\n"%s"'):format(M.mFileIsDirectory, fname), M.mError, M.mOk, "w")
 end
 
-local function LocateFile (fname)
+local function FindFile (fname)
   local attr = GetFileAttrEx(fname)
   if attr and not attr:find"d" then
     local dir, name = fname:match("^(.*\\)([^\\]*)$")
@@ -170,11 +199,36 @@ local function SortListItems (list, bDirectSort, hDlg)
   end
 end
 
-local function GetListKeyFunction (HistTypeConfig, HistObject)
+local function ShowItemInfo (aItem, aConfig)
+  local strTime = GetTimeString(aItem.time)
+  if strTime then
+    local sd = require "far2.simpledialog"
+    local data = aConfig==cfgView and "File:"
+      or aConfig==cfgCommands     and "Command:"
+      or aConfig==cfgFolders      and "Folder:"
+                                   or "Data:"
+    local arr = {}
+    arr[#arr+1] = {tp="dbox"; text="Information"; }
+    arr[#arr+1] = {tp="text"; text=data; }
+    arr[#arr+1] = {tp="edit"; text=aItem.text; readonly=1; }
+    arr[#arr+1] = {tp="text"; text="Time:"; }
+    arr[#arr+1] = {tp="edit"; text=strTime; readonly=1; }
+    if aItem.extra then
+      arr[#arr+1] = {tp="text"; text="Directory:"; }
+      arr[#arr+1] = {tp="edit"; text=aItem.extra; readonly=1; }
+    end
+    arr[#arr+1] = {tp="sep"; }
+    arr[#arr+1] = {tp="butt"; text=M.mOk; default=1; centergroup=1; }
+
+    sd.New(arr):Run()
+  end
+end
+
+local function GetListKeyFunction (aConfig, aData)
   return function (self, hDlg, key, Item)
     -----------------------------------------------------------------------------------------------
     if key=="CtrlI" or key=="RCtrlI" then
-      if HistTypeConfig==cfgCommands or HistTypeConfig==cfgView or HistTypeConfig==cfgFolders then
+      if aConfig==cfgCommands or aConfig==cfgView or aConfig==cfgFolders then
         SortListItems(self, not _Plugin.Cfg.bDirectSort, hDlg)
       end
       return "done"
@@ -182,9 +236,9 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
       if not Item then
         return "done"
       end
-      if HistTypeConfig==cfgView or HistTypeConfig==cfgLocateFile then
-        local fname = HistTypeConfig==cfgView and Item.text or Item.text:sub(2)
-        if HistTypeConfig==cfgLocateFile then
+      if aConfig==cfgView or aConfig==cfgLocateFile then
+        local fname = aConfig==cfgView and Item.text or Item.text:sub(2)
+        if aConfig==cfgLocateFile then
           if not fname:find("[\\/]") then
             local Name = self.items.PanelDirectory and self.items.PanelDirectory.Name
             if Name and Name ~= "" then
@@ -211,18 +265,15 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
       end
     -----------------------------------------------------------------------------------------------
     elseif key == "F7" then
-      if HistTypeConfig ~= cfgLocateFile then
+      if aConfig ~= cfgLocateFile then
         if Item then
-          local timestring = GetTimeString(Item.time)
-          if timestring then
-            far.Message(Item.text, timestring, ";Ok")
-          end
+          ShowItemInfo(Item, aConfig)
         end
       end
       return "done"
     -----------------------------------------------------------------------------------------------
     elseif key == "CtrlF8" or key == "RCtrlF8" then
-      if HistTypeConfig == cfgFolders or HistTypeConfig == cfgView then
+      if aConfig == cfgFolders or aConfig == cfgView then
         far.Message(M.mPleaseWait, "", "")
         self:DeleteNonexistentItems(hDlg,
             function(t) return t.text:find("^%w%w+:") -- some plugin's prefix
@@ -234,12 +285,12 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
       return "done"
     -----------------------------------------------------------------------------------------------
     elseif key == "F9" then
-      local s = HistObject:getfield("lastpattern")
+      local s = aData.lastpattern
       if s and s ~= "" then self:ChangePattern(hDlg,s) end
       return "done"
     -----------------------------------------------------------------------------------------------
     elseif key=="CtrlDel" or key=="RCtrlDel" or key=="CtrlNumDel" or key=="RCtrlNumDel" then
-      if HistTypeConfig ~= cfgLocateFile then
+      if aConfig ~= cfgLocateFile then
         self:DeleteNonexistentItems(hDlg,
             function(t) return t.checked end,
             function(n) return 1 == far.Message((M.mDeleteItemsQuery):format(n),
@@ -249,13 +300,13 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
       return "done"
     -----------------------------------------------------------------------------------------------
     elseif key=="ShiftDel" or key=="ShiftNumDel" then
-      if HistTypeConfig == cfgLocateFile then return "done" end
+      if aConfig == cfgLocateFile then return "done" end
     -----------------------------------------------------------------------------------------------
     elseif key=="Enter" or key=="NumEnter" or key=="ShiftEnter" or key=="ShiftNumEnter" then
       if not Item then
         return "done"
       end
-      if HistTypeConfig==cfgView then
+      if aConfig==cfgView then
         local attr = GetFileAttrEx(Item.text)
         if not attr then
           TellFileNotExist(Item.text)
@@ -268,31 +319,27 @@ local function GetListKeyFunction (HistTypeConfig, HistObject)
     -----------------------------------------------------------------------------------------------
     end
 
-    for _,v in ipairs(HistTypeConfig.brkeys) do
+    for _,v in ipairs(aConfig.brkeys) do
       if key == v then return "break" end
     end
   end
 end
 
-function cfgView.CanClose (self, item, breakkey)
-  if item and (IsCtrlPgUp(breakkey) or IsCtrlPgDn(breakkey)) and not LocateFile(item.text) then
+function cfgView.CanClose (_list, item, breakkey)
+  if item and (IsCtrlPgUp(breakkey) or IsCtrlPgDn(breakkey)) and not FindFile(item.text) then
     TellFileNotExist(item.text)
     return false
   end
   return true
 end
 
-function cfgFolders.CanClose (self, item, breakkey)
+function cfgFolders.CanClose (_list, item, breakkey)
   if not item then
     return true
   end
   ----------------------------------------------------------------------------
   if IsCtrlEnter(breakkey) then
     panel.SetCmdLine(nil, item.text)
-    return true
-  end
-  ----------------------------------------------------------------------------
-  if breakkey=="AltF8" or breakkey=="RAltF8" or breakkey=="AltF11" or breakkey=="RAltF11" then
     return true
   end
   ----------------------------------------------------------------------------
@@ -335,57 +382,56 @@ function cfgFolders.CanClose (self, item, breakkey)
   end
 end
 
-local function MakeMenuParams (aHistTypeConfig, aHistTypeData, aItems, aHistObject)
+local function MakeMenuParams (aConfig, aData, aItems)
   local Cfg = _Plugin.Cfg
   local dateformat = DateFormats[Cfg.iDateFormat]
+
   local menuProps = {
     DialogId      = win.Uuid("d853e243-6b82-4b84-96cd-e733d77eeaa1"),
     Flags         = {FMENU_WRAPMODE=1},
     HelpTopic     = "Contents",
-    Title         = M[aHistTypeConfig.title],
+    Title         = M[aConfig.title],
     SelectIndex   = #aItems,
   }
+
   local listProps = {
---  debug         = true,
+    ----debug         = true,
     autocenter    = Cfg.bAutoCenter,
-    resizeW       = ConfigValue(aHistTypeConfig, "bDynResize"),
-    resizeH       = ConfigValue(aHistTypeConfig, "bDynResize"),
+    resizeW       = ConfigValue(aData, "bDynResize"),
+    resizeH       = ConfigValue(aData, "bDynResize"),
     resizeScreen  = true,
     col_highlight = Cfg.HighTextColor,
     col_selectedhighlight = Cfg.SelHighTextColor,
     selalign      = "bottom",
     selignore     = not Cfg.bKeepSelectedItem,
-    searchmethod  = aHistTypeData.searchmethod or "dos",
+    searchmethod  = aData.searchmethod or "dos",
     filterlines   = true,
-    xlat          = aHistTypeData.xlat,
-    showdates     = aHistTypeConfig ~= cfgLocateFile and dateformat,
+    xlat          = aData.xlat,
+    showdates     = aConfig ~= cfgLocateFile and dateformat,
     dateformat    = dateformat,
   }
-  local list = custommenu.NewList(listProps, aItems)
-  list.keyfunction = GetListKeyFunction(aHistTypeConfig, aHistObject)
-  list.CanClose = aHistTypeConfig.CanClose
+  local list = Custommenu.NewList(listProps, aItems)
+  list.keyfunction = GetListKeyFunction(aConfig, aData)
+  list.CanClose = aConfig.CanClose
   return menuProps, list
 end
 
-local function GetMaxItems (aConfig)
-  return _Plugin.Cfg[aConfig.maxItemsKey]
-end
-
-local function DelayedSaveHistory (hist, delay)
-  far.Timer(delay, function(h)
+local function SaveHistory (hist)
+  far.Timer(200, function(h)
     h:Close()
-    hist:save()
+    if hist then
+      hist:save()
+    end
     _Plugin.History:save() -- _Plugin.Cfg.bDirectSort
   end)
 end
 
-local function get_history (aConfig, obj)
+local function get_history (aConfig, aData)
   local menu_items, map = {}, {}
 
   -- add plugin database items
   local hst = LibHistory.newsettings(nil, aConfig.PluginHistoryType, "PSL_LOCAL")
   local plugin_items = hst:field("items")
-  local settings = hst:field("settings")
   for _,v in ipairs(plugin_items) do
     if v.text and not map[v.text] then
       table.insert(menu_items, v)
@@ -394,7 +440,20 @@ local function get_history (aConfig, obj)
   end
 
   -- add Far database items
-  local last_time = settings.last_time or 0
+  local exclude = {}
+  for _,v in ipairs(aData.exclude) do
+    if v.text ~= "" then
+      local ok, rx = pcall(regex.new, v.text)
+      if ok then table.insert(exclude, rx) end
+    end
+  end
+  local function IsExclusion(name)
+    for _,rx in ipairs(exclude) do
+      if rx:match(name) then return true; end
+    end
+  end
+
+  local last_time = aData.last_time or 0
   local far_settings = assert(far.CreateSettings("far"))
 
   local function AddFarItems (aFarHistoryType, aType)
@@ -409,8 +468,8 @@ local function get_history (aConfig, obj)
             item.typ = aType
           end
         else
-          if v.Time >= last_time then
-            item = { text=v.Name, time=v.Time, typ=aType }
+          if v.Time >= last_time and not IsExclusion(v.Name) then
+            item = { text=v.Name, time=v.Time, extra=v.Param, typ=aType }
             table.insert(menu_items, item)
             map[v.Name] = item
           end
@@ -433,7 +492,7 @@ local function get_history (aConfig, obj)
                 item.time = v.Time
                 item.typ = aType
               end
-            else
+            elseif not IsExclusion(text) then
               item = {
                 PluginId = v.PluginId;
                 PanelDir = v;
@@ -449,7 +508,7 @@ local function get_history (aConfig, obj)
       end
     end
   end
-  settings.last_time = win.GetSystemTimeAsFileTime()
+  aData.last_time = win.GetSystemTimeAsFileTime()
 
   if aConfig == cfgView then
     AddFarItems(F.FSSF_HISTORY_VIEW, "V")
@@ -460,14 +519,13 @@ local function get_history (aConfig, obj)
   end
   far_settings:Free()
 
-  local maxitems = GetMaxItems(aConfig)
-  if #menu_items > maxitems then
+  if #menu_items > aData.iSize then
     -- sort menu items: oldest records go first
     table.sort(menu_items, function(a,b) return (a.time or 0) < (b.time or 0) end)
 
     -- remove excessive items; leave checked items;
     local i = 1
-    while (#menu_items >= i) and (#menu_items > maxitems) do
+    while (#menu_items >= i) and (#menu_items > aData.iSize) do
       if menu_items[i].checked then i = i+1 -- leave the item
       else table.remove(menu_items, i)      -- remove the item
       end
@@ -475,18 +533,16 @@ local function get_history (aConfig, obj)
   end
 
   -- execute the menu
-  local menuProps, list = MakeMenuParams(aConfig, settings, menu_items, hst)
-  list.pattern = obj.pattern
+  local menuProps, list = MakeMenuParams(aConfig, aData, menu_items)
   SortListItems(list, _Plugin.Cfg.bDirectSort, nil)
-  local item, itempos = custommenu.Menu(menuProps, list)
-  obj.pattern = list.pattern
-  settings.searchmethod = list.searchmethod
-  settings.xlat = list.xlat
+  local item, itempos = Custommenu.Menu(menuProps, list)
+  aData.searchmethod = list.searchmethod
+  aData.xlat = list.xlat
   hst:setfield("items", list.items)
   if item and list.pattern ~= "" then
-    hst:setfield("lastpattern", list.pattern)
+    aData.lastpattern = list.pattern
   end
-  DelayedSaveHistory(hst, 200)
+  SaveHistory(hst)
   if item then
     return menu_items[itempos], item.BreakKey
   end
@@ -498,12 +554,8 @@ local function IsCmdLineAvail()
          ar==F.MACROAREA_QVIEWPANEL or ar==F.MACROAREA_TREEPANEL
 end
 
-local function commands_history(obj)
-  local item, key = get_history(cfgCommands, obj)
-
-  if key=="AltF11" or key=="RAltF11" then return "view" end
-  if key=="AltF12" or key=="RAltF12" then return "folders" end
-
+local function commands_history()
+  local item, key = get_history(cfgCommands, _Plugin.Cfg.commands)
   if item and IsCmdLineAvail() then
     if IsCtrlEnter(key) then
       panel.SetCmdLine(nil, item.text)
@@ -513,11 +565,8 @@ local function commands_history(obj)
   end
 end
 
-local function folders_history(obj)
-  local item, key = get_history(cfgFolders, obj)
-
-  if key=="AltF8" or key=="RAltF8" then return "commands" end
-  if key=="AltF11" or key=="RAltF11" then return "view" end
+local function folders_history()
+  get_history(cfgFolders, _Plugin.Cfg.folders)
 end
 
 local function CallViewer (fname, disablehistory)
@@ -530,11 +579,8 @@ local function CallEditor (fname, disablehistory)
   editor.Editor(fname, nil, nil, nil, nil, nil, flags)
 end
 
-local function view_history(obj)
-  local item, key = get_history(cfgView, obj)
-
-  if key=="AltF8" or key=="RAltF8" then return "commands" end
-  if key=="AltF12" or key=="RAltF12" then return "folders" end
+local function view_history()
+  local item, key = get_history(cfgView, _Plugin.Cfg.view)
 
   if not item then return end
   local fname = item.text
@@ -555,7 +601,7 @@ local function view_history(obj)
   return key
 end
 
-local function LocateFile2()
+local function LocateFile()
   local info = panel.GetPanelInfo(nil,1)
   if not (info and info.PanelType==F.PTYPE_FILEPANEL) then return end
 
@@ -566,19 +612,17 @@ local function LocateFile2()
     items[k] = {text=prefix..v.FileName}
   end
 
-  local hst = LibHistory.newsettings(nil, cfgLocateFile.PluginHistoryType, "PSL_ROAMING")
-  local settings = hst:field("settings")
-
-  local menuProps, list = MakeMenuParams(cfgLocateFile, settings, items, hst)
+  local aData = _Plugin.Cfg.locatefile
+  local menuProps, list = MakeMenuParams(cfgLocateFile, aData, items)
   list.searchstart = 2
 
-  local item, itempos = custommenu.Menu(menuProps, list)
-  settings.searchmethod = list.searchmethod
-  settings.xlat = list.xlat
+  local item, itempos = Custommenu.Menu(menuProps, list)
+  aData.searchmethod = list.searchmethod
+  aData.xlat = list.xlat
   if item and list.pattern ~= "" then
-    hst:setfield("lastpattern", list.pattern)
+    aData.lastpattern = list.pattern
   end
-  DelayedSaveHistory(hst, 200)
+  SaveHistory(nil)
 
   if item then
     if item.BreakKey then
@@ -596,7 +640,7 @@ end
 local PluginMenuGuid1   = win.Uuid("181fa8c3-fd3f-44a8-9c16-e3ca753c4ccb")
 local PluginConfigGuid1 = win.Uuid("688f9ee4-d0ac-49d0-b66b-8dbaa989f22c")
 
-local function export_GetPluginInfo()
+function export.GetPluginInfo()
   return {
     CommandPrefix = "lfh",
     Flags = bit64.bor(F.PF_EDITOR, F.PF_VIEWER),
@@ -607,49 +651,51 @@ local function export_GetPluginInfo()
   }
 end
 
-local function export_Configure()
-  local ConfigDialog = Utils.RunInternalScript("config")
-  if ConfigDialog and ConfigDialog(_Plugin.Cfg, M, DateFormats) then
-    _Plugin.History:save()
-  end
+function export.Configure()
+  Config.ConfigMenu()
 end
 
-local function RunCycle (op)
-
-  local obj_commands = { func=commands_history; pattern=""; }
-  local obj_view     = { func=view_history;     pattern=""; }
-  local obj_folders  = { func=folders_history;  pattern=""; }
-
-  while op do
-    if     op == "commands" then op = obj_commands:func()
-    elseif op == "view"     then op = obj_view:func()
-    elseif op == "folders"  then op = obj_folders:func()
-    else break
-    end
-  end
-end
-
-local function export_Open (From, Guid, Item)
+function export.Open (From, Guid, Item)
   local userItems, commandTable = Utils.LoadUserMenu("_usermenu.lua")
   ------------------------------------------------------------------------------
-  if From == F.OPEN_FROMMACRO then
-    return Utils.OpenMacro(Item, commandTable, nil)
-  elseif From == F.OPEN_COMMANDLINE then
+  if From == F.OPEN_COMMANDLINE then
     return Utils.OpenCommandLine(Item, commandTable, nil)
-  end
-  ------------------------------------------------------------------------------
-  if From==F.OPEN_PLUGINSMENU or From==F.OPEN_EDITOR or From==F.OPEN_VIEWER then
-    ---------------------------------------------------------------------------
+
+  elseif From == F.OPEN_FROMMACRO then
+    if Item[1] == "own" then
+      if     Item[2] == "commands" then commands_history()
+      elseif Item[2] == "view"     then view_history()
+      elseif Item[2] == "folders"  then folders_history()
+      elseif Item[2] == "locate"   then LocateFile()
+      elseif Item[2] == "config"   then export.Configure()
+      end
+    else
+      return Utils.OpenMacro(Item, commandTable, nil)
+    end
+
+  elseif From==F.OPEN_PLUGINSMENU or From==F.OPEN_EDITOR or From==F.OPEN_VIEWER then
     local properties = {
       Title=M.mPluginTitle, HelpTopic="Contents", Flags="FMENU_WRAPMODE",
     }
-    local items = {
-      { text=M.mMenuCommands,   run_cycle=true; param="commands" },
-      { text=M.mMenuView,       run_cycle=true; param="view"     },
-      { text=M.mMenuFolders,    run_cycle=true; param="folders"  },
-      { text=M.mMenuConfig,     action=export_Configure },
-      { text=M.mMenuLocateFile, action=LocateFile2      },
+    local allitems = {
+      { text=M.mMenuCommands;   action=commands_history; areas="p";   },
+      { text=M.mMenuView;       action=view_history;     areas="epv"; },
+      { text=M.mMenuFolders;    action=folders_history;  areas="p";   },
+      { text=M.mMenuConfig;     action=export.Configure; areas="epv"; },
+      { text=M.mMenuLocateFile; action=LocateFile;       areas="p";   },
     }
+
+    local items = {}
+    for _,v in ipairs(allitems) do
+      if From==F.OPEN_PLUGINSMENU and v.areas:find("p") or
+         From==F.OPEN_EDITOR      and v.areas:find("e") or
+         From==F.OPEN_VIEWER      and v.areas:find("v")
+      then
+        table.insert(items, v)
+        v.text = "&"..#items..". "..v.text
+      end
+    end
+
     local numInternalItems = #items
     Utils.AddMenuItems(items,
       From==F.OPEN_PLUGINSMENU and userItems.panels or
@@ -659,9 +705,7 @@ local function export_Open (From, Guid, Item)
     local item, pos = far.Menu(properties, items)
     if item then
       if pos <= numInternalItems then
-        if item.run_cycle then RunCycle(item.param)
-        elseif item.action then item.action()
-        end
+        item.action()
       else
         Utils.RunUserItem(item, item.arg)
       end
@@ -669,18 +713,45 @@ local function export_Open (From, Guid, Item)
   end
 end
 
-local function SetExportFunctions()
-  export.Configure     = export_Configure
-  export.GetPluginInfo = export_GetPluginInfo
-  export.Open          = export_Open
+local function FillDefaults (trg, src, guard)
+  guard = guard or {} -- handle cyclic references
+  for k,v in pairs(src) do
+    if trg[k] == nil then
+      if type(v) == "table" then
+        if guard[v] then
+          trg[k] = guard[v]
+        else
+          local t = {}
+          trg[k] = t
+          guard[v] = t
+          FillDefaults(t, v, guard)
+        end
+      else
+        trg[k] = v
+      end
+    elseif type(trg[k]) == "table" then
+      if type(v)=="table" and guard[v]==nil then
+        guard[v] = trg[k]
+        FillDefaults(trg[k], v, guard)
+      end
+    end
+  end
+end
+
+local function InitConfigModule()
+  Config.Init {
+    SaveHistory = SaveHistory;
+    DateFormats = DateFormats;
+  }
 end
 
 do
   if not _Plugin then
-    _Plugin = Utils.InitPlugin()
+    _Plugin = {}
     _Plugin.History = LibHistory.newsettings(nil, "config", "PSL_ROAMING")
     _Plugin.Cfg = _Plugin.History:field("config")
-    setmetatable(_Plugin.Cfg, {__index = DefaultCfg})
   end
-  SetExportFunctions()
+  FillDefaults(_Plugin.Cfg, DefaultCfg)
+  InitConfigModule()
+  export.OnError = Utils.OnError
 end

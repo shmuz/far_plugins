@@ -36,9 +36,6 @@ title. There are 4 switchable filtering methods available:
    #Ctrl-Alt-X#         Apply XLat conversion on filter and also
                       switch the keyboard layout.
    #Ctrl-I#             Inverse sort order.
-   #Alt-F8#             Switch to Commands history.
-   #Alt-F11#            Switch to View/Edit history.
-   #Alt-F12#            Switch to Folders history.
    #Ins#                Check the item (it protects from deleting by Ctrl-Del or Ctrl-F8)
 
  \3BCommands history\-
@@ -92,5 +89,29 @@ $ #Plugin's Configuration Dialog#
    #[x] Keep selected item#
        Keep the current selected item as selected (if possible) when the filter
        changes.
+
+ ~Contents~@Contents@
+
+@ConfigMenu
+$ #Plugin's Configuration Menu#
+  Here you can choose what to configure:
+  #-# ~Plugin's Configuration Dialog~@PluginConfig@
+  #-# Either of the three exclusion lists
+
+ ~Contents~@Contents@
+
+@ExclusionMenu
+$ #Exclusion Menu#
+  #Ins#    Add a new exclusion pattern to the list
+  #Del#    Delete an exclusion pattern from the list
+  #F4#     Edit an exclusion pattern
+
+ ~Contents~@Contents@
+
+@ExclusionDialog
+$ #Edit exclusion pattern dialog#
+  Here you can add or edit a pattern (FAR regular expression).
+  If a history item will match this expression it will not be added to a history.
+  The history items that are already in history will not be affected.
 
  ~Contents~@Contents@
