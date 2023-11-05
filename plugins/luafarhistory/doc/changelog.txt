@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2023-11-05, v3.12.2
+  [!] Fix in custommenu module
+
 2023-11-04, v3.12.1
   [!] Fix an exclusion list bug
 
