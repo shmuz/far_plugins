@@ -24,8 +24,8 @@ local DefaultCfg = {
   bShowDates        = true,
   bKeepSelectedItem = false,
   bDirectSort       = true,
-  HighTextColor     = 0x3A,
-  SelHighTextColor  = 0x0A,
+  HighTextColor     = { ForegroundColor=0xFF00FF00; BackgroundColor=0xFF008080; },
+  SelHighTextColor  = { ForegroundColor=0xFF00FF00; BackgroundColor=0xFF000000; },
   iDateFormat       = 2,
   view = {
     iSize        = 1000;
@@ -130,7 +130,7 @@ local function IsCtrlPgDn (key) return key=="CtrlPgDn" or key=="RCtrlPgDn" end
 
 local function ExecuteFromCmdLine(str, newwindow)
   panel.SetCmdLine(nil, str)
-  far.MacroPost(newwindow and 'Keys"ShiftEnter"' or 'Keys"Enter"')
+  far.MacroPost(newwindow and "Keys('ShiftEnter')" or "Keys('Enter')")
 end
 
 local function GetTimeString (filetime)
@@ -280,7 +280,7 @@ local function GetListKeyFunction (aConfig, aData)
                                or GetFileAttrEx(t.text) or t.checked end,
             function(n) return 1 == far.Message((M.mDeleteItemsQuery):format(n),
                         M.mDeleteNonexistentTitle, ";YesNo", "w") end)
-        hDlg:send("DM_REDRAW", 0, 0)
+        hDlg:send("DM_REDRAW")
       end
       return "done"
     -----------------------------------------------------------------------------------------------
@@ -295,7 +295,7 @@ local function GetListKeyFunction (aConfig, aData)
             function(t) return t.checked end,
             function(n) return 1 == far.Message((M.mDeleteItemsQuery):format(n),
                         M.mDeleteItemsTitle, ";YesNo", "w") end)
-        hDlg:send("DM_REDRAW", 0, 0)
+        hDlg:send("DM_REDRAW")
       end
       return "done"
     -----------------------------------------------------------------------------------------------
@@ -750,6 +750,10 @@ do
     _Plugin = {}
     _Plugin.History = LibHistory.newsettings(nil, "config", "PSL_ROAMING")
     _Plugin.Cfg = _Plugin.History:field("config")
+
+    -- older LF History versions stored colors as integers
+    if type(_Plugin.Cfg.HighTextColor)~="table"    then _Plugin.Cfg.HighTextColor=nil end
+    if type(_Plugin.Cfg.SelHighTextColor)~="table" then _Plugin.Cfg.SelHighTextColor=nil end
   end
   FillDefaults(_Plugin.Cfg, DefaultCfg)
   InitConfigModule()

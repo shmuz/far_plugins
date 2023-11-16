@@ -4,7 +4,6 @@
 local F = far.Flags
 local sd = require "far2.simpledialog"
 local M  = require "lfh_message"
-local DlgSend = far.SendDlgMessage
 local main
 
 local function Init(data)
@@ -70,10 +69,10 @@ local function ConfigDialog ()
     if msg == F.DN_BTNCLICK then
       if param1 == Pos.btnHighTextColor then
         local c = far.ColorDialog(hColor0)
-        if c then hColor0 = c; DlgSend(hDlg,F.DM_REDRAW); end
+        if c then hColor0 = c; hDlg:send("DM_REDRAW"); end
       elseif param1 == Pos.btnSelHighTextColor then
         local c = far.ColorDialog(hColor1)
-        if c then hColor1 = c; DlgSend(hDlg,F.DM_REDRAW); end
+        if c then hColor1 = c; hDlg:send("DM_REDRAW"); end
       end
 
     elseif msg == F.DN_CTLCOLORDLGITEM then
@@ -179,7 +178,7 @@ local function ConfigMenu()
     { tag="folders";  data=M.mMenuFolders  .. ": " ..M.mExclusions; },
   }
   local j = 1
-  for i,v in ipairs(Items) do
+  for _,v in ipairs(Items) do
     if v.separator==nil then
       v.text = ("&%d. %s"):format(j, v.data)
       j = j+1
