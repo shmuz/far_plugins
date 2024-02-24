@@ -2,8 +2,7 @@
  Goal: wrap long lines without breaking words.
 --]]
 
-local far2_dialog = require "far2.dialog"
-
+local sd = require "far2.simpledialog"
 local M = require "lf4ed_message"
 local F = far.Flags
 local insert, concat = table.insert, table.concat
@@ -121,59 +120,63 @@ local function Wrap (aColumn1, aColumn2, aJustify, aFactor)
 end
 
 
-local dialogGuid = win.Uuid("6d5c7ec2-8c2f-413c-81e6-0cc8ffc0799a")
-
 local function ExecuteWrapDialog (aData)
   local HIST_PROCESS = "LuaFAR\\Reformat\\ProcessLines"
-  local D = far2_dialog.NewDialog()
-  D._           = {"DI_DOUBLEBOX",3,1,72,10,   0, 0, 0, 0, M.MReformatBlock}
-  D.cbxReformat = {"DI_CHECKBOX", 5,2, 0, 0,   0, 0, 0, 0, M.MReformatBlock2}
-  D.labStart    = {"DI_TEXT",     9,3, 0, 0,   0, 0, 0, 0, M.MStartColumn}
-  D.edtColumn1  = {"DI_FIXEDIT", 22,3,25, 3,   0, 0, "9999", "DIF_MASKEDIT", "1"}
-  D.labEnd      = {"DI_TEXT",    29,3, 0, 0,   0, 0, 0, 0, M.MEndColumn}
-  D.edtColumn2  = {"DI_FIXEDIT", 41,3,44, 3,   0, 0, "9999", "DIF_MASKEDIT", "70"}
-  D.cbxJustify  = {"DI_CHECKBOX", 9,4, 0, 0,   0, 0, 0, 0, M.MJustifyBorder}
-  D.sep         = {"DI_TEXT",     5,5, 0, 0,   0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  D.cbxProcess  = {"DI_CHECKBOX", 5,6, 0, 0,   0, 0, 0, 0, M.MProcessLines}
-  D.labExpress  = {"DI_TEXT",     9,7, 0, 0,   0, 0, 0, 0, M.MLineExpr}
-  D.edtExpress  = {"DI_EDIT",    21,7,70, 7,   0, HIST_PROCESS, 0, "DIF_HISTORY", ""}
-  D.sep         = {"DI_TEXT",     5,8, 0, 0,   0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  D.btnOk       = {"DI_BUTTON",   0,9, 0, 0,   0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
-  D.btnCancel   = {"DI_BUTTON",   0,9, 0, 0,   0, 0, 0, "DIF_CENTERGROUP", M.MCancel}
+  local Items = {
+    guid = "6D5C7EC2-8C2F-413C-81E6-0CC8FFC0799A";
+    width = 76;
+    help = "Wrap";
+    {tp="dbox";                        text=M.MReformatBlock;             },
+    {tp="chbox";   name="cbxReformat"; text=M.MReformatBlock2; val=1;     },
+    {tp="text";    name="labStart"; x1=9; text=M.MStartColumn;            },
+    {tp="fixedit"; name="edtColumn1"; y1=""; x1=22; x2=25; val=1;  mask="9999"; },
+    {tp="text";    name="labEnd";     y1=""; x1=29; text=M.MEndColumn;    },
+    {tp="fixedit"; name="edtColumn2"; y1=""; x1=41; x2=44; val=70; mask="9999"; },
+    {tp="chbox";   name="cbxJustify";        x1=9; text=M.MJustifyBorder; },
+    {tp="sep";                                                            },
+    {tp="chbox";   name="cbxProcess";  text=M.MProcessLines;              },
+    {tp="text";    name="labExpress";  text=M.MLineExpr; x1=9;            },
+    {tp="edit";    name="edtExpress";  x1=21; y1=""; hist=HIST_PROCESS;   },
+    {tp="sep";                                                            },
+    {tp="butt";    text=M.MOk;     centergroup=1; default=1;              },
+    {tp="butt";    text=M.MCancel; centergroup=1; cancel=1;               },
+  }
+  local dlg = sd.New(Items)
+  local Pos = dlg:Indexes()
   ----------------------------------------------------------------------------
   -- Handlers of dialog events --
   local function CheckGroup (hDlg, c1, ...)
-    local enbl = c1:GetCheck(hDlg)
-    for _, elem in ipairs {...} do elem:Enable(hDlg, enbl) end
+    local enbl = hDlg:GetCheck(Pos[c1])
+    for _, name in ipairs {...} do hDlg:Enable(Pos[name], enbl) end
   end
 
   local function CheckAll (hDlg)
-    CheckGroup (hDlg, D.cbxReformat, D.labStart, D.edtColumn1, D.labEnd, D.edtColumn2, D.cbxJustify)
-    CheckGroup (hDlg, D.cbxProcess, D.edtExpress, D.labExpress)
-    if D.cbxReformat:GetCheck(hDlg) then far.SendDlgMessage(hDlg, "DM_SETFOCUS", D.edtColumn1.id)
-    elseif D.cbxProcess:GetCheck(hDlg) then far.SendDlgMessage(hDlg, "DM_SETFOCUS", D.edtExpress.id)
+    CheckGroup (hDlg, "cbxReformat", "labStart", "edtColumn1", "labEnd", "edtColumn2", "cbxJustify")
+    CheckGroup (hDlg, "cbxProcess", "edtExpress", "labExpress")
+    if hDlg:GetCheck(Pos.cbxReformat) then hDlg:SetFocus(Pos.edtColumn1)
+    elseif hDlg:GetCheck(Pos.cbxProcess) then hDlg:SetFocus(Pos.edtExpress)
     end
   end
 
-  local function DlgProc (hDlg, msg, param1, param2)
+  function Items.proc (hDlg, msg, param1, param2)
     if msg == F.DN_INITDIALOG then
-      if D.cbxReformat:GetCheck(hDlg) then D.cbxProcess:SetCheck(hDlg,false) end
+      if hDlg:GetCheck(Pos.cbxReformat) then hDlg:SetCheck(Pos.cbxProcess, 0) end
       CheckAll (hDlg)
     elseif msg == F.DN_BTNCLICK then
-      if param1 == D.cbxReformat.id then
-        if D.cbxReformat:GetCheck(hDlg) then D.cbxProcess:SetCheck(hDlg,false) end
+      if param1 == Pos.cbxReformat then
+        if hDlg:GetCheck(Pos.cbxReformat) then hDlg:SetCheck(Pos.cbxProcess, 0) end
         CheckAll (hDlg)
-      elseif param1 == D.cbxProcess.id then
-        if D.cbxProcess:GetCheck(hDlg) then D.cbxReformat:SetCheck(hDlg,false) end
+      elseif param1 == Pos.cbxProcess then
+        if hDlg:GetCheck(Pos.cbxProcess) then hDlg:SetCheck(Pos.cbxReformat, 0) end
         CheckAll (hDlg)
       end
     end
   end
   ----------------------------------------------------------------------------
-  far2_dialog.LoadData(D, aData)
-  local ret = far.Dialog (dialogGuid,-1,-1,76,12,"Wrap",D,0,DlgProc)
-  if ret == D.btnOk.id then
-    far2_dialog.SaveData(D, aData)
+  dlg:LoadData(aData)
+  local out = dlg:Run()
+  if out then
+    dlg:SaveData(out, aData)
     return true
   end
 end

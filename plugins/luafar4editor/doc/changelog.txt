@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2024-02-24, v3.10.0
+  [*] Use far2.simpledialog module instead of far2.dialog
+
 2023-07-17, v3.9.4
   [!] Fix Sort Lines dialog.
 

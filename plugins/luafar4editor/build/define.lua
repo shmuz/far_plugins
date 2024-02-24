@@ -1,11 +1,11 @@
 -- Definitions
 VER_MAJOR = "3"
-VER_MINOR = "9"
-VER_MICRO = "4"
+VER_MINOR = "10"
+VER_MICRO = "0"
 
-MINFARVERSION = "{ 3, 0, 0, 3300 }" -- 3.0.0.4364 for non-embedded plugin build (-DRUN_LUAFAR_INIT)
+MINFARVERSION = "{ 3, 0, 0, 6278 }" -- "LuaFAR: add methods to dialog handle"
 
-COPYRIGHT = "Shmuel Zeigerman, 2007-2021"
+COPYRIGHT = "Shmuel Zeigerman, 2007-2024"
 
 -- Derivative values --
 VER_STRING = VER_MAJOR.."."..VER_MINOR.."."..VER_MICRO

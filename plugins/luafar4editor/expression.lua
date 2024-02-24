@@ -3,7 +3,7 @@
  Start: 2006-02-?? by Shmuel Zeigerman
 --]]
 
-local far2_dialog = require "far2.dialog"
+local sd = require "far2.simpledialog"
 local M = require "lf4ed_message"
 local F = far.Flags
 
@@ -62,58 +62,63 @@ local function CompileParams (s1, s2, s3, s4)
   return p1, p2, p3, p4
 end
 
-local ParamsGuid = win.Uuid("187afc63-174c-40aa-b0b2-00215fdcadb1")
-
 local function ParamsDialog (aData)
   local HIST_PARAM = "LuaFAR\\LuaScript\\Parameter"
   local HIST_EXTFILE = "LuaFAR\\LuaScript\\ExternalFile"
-  local D = far2_dialog.NewDialog()
-  D._             = {"DI_DOUBLEBOX",3, 1, 52,16,0, 0, 0, 0, M.MDlgScriptParams}
-  D.bExternalScript = {"DI_CHECKBOX", 5, 2,  0,0, 0, 0, 0, 0, M.MExternalScript}
-  D.sExternalScript = {"DI_EDIT",     5, 3, 49,0, 0, HIST_EXTFILE, 0, "DIF_HISTORY",""}
-  D.sep             = {"DI_TEXT",    -1, 4,  0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},M.MParamsSeparator}
-
-  D.label           = {"DI_TEXT",     5, 5,  0,0, 0, 0, 0, 0, "&1."}
-  D.sParam1         = {"DI_EDIT",     8, 5, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
-  D.label           = {"DI_TEXT",     5, 7,  0,0, 0, 0, 0, 0, "&2."}
-  D.sParam2         = {"DI_EDIT",     8, 7, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
-  D.label           = {"DI_TEXT",     5, 9,  0,0, 0, 0, 0, 0, "&3."}
-  D.sParam3         = {"DI_EDIT",     8, 9, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
-  D.label           = {"DI_TEXT",     5,11,  0,0, 0, 0, 0, 0, "&4."}
-  D.sParam4         = {"DI_EDIT",     8,11, 49,0, 0, HIST_PARAM, 0, "DIF_HISTORY",""}
-  D.bParamsEnable   = {"DI_CHECKBOX", 5,13,  0,0, 0, 0, 0, 0, M.MScriptParamsEnable}
-  D.sep             = {"DI_TEXT",     0,14,  0,0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1},""}
-
-  D.btnRun          = {"DI_BUTTON",   0,15,  0,0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MRunScript}
-  D.btnStore        = {"DI_BUTTON",   0,15,  0,0, 0, 0, 0, "DIF_CENTERGROUP", M.MStoreParams}
-  D.btnCancel       = {"DI_BUTTON",   0,15,  0,0, 0, 0, 0, "DIF_CENTERGROUP", M.MCancel}
+  local Items = {
+    guid = "187AFC63-174C-40AA-B0B2-00215FDCADB1";
+    width = 56;
+    help = "ScriptParams";
+    {tp="dbox";  text=M.MDlgScriptParams;                                   },
+    {tp="chbox"; name="bExternalScript";        text=M.MExternalScript;     },
+    {tp="edit";  name="sExternalScript";              hist=HIST_EXTFILE;    },
+    {tp="sep";   text=M.MParamsSeparator;                                   },
+    {tp="text";  text="&1.";                    width=2;                    },
+    {tp="edit";  name="sParam1";       ystep=0; x1=8; hist=HIST_PARAM;      },
+    {tp="text";  text="&2.";           ystep=2; width=2;                    },
+    {tp="edit";  name="sParam2";       ystep=0; x1=8; hist=HIST_PARAM;      },
+    {tp="text";  text="&3.";           ystep=2; width=2;                    },
+    {tp="edit";  name="sParam3";       ystep=0; x1=8; hist=HIST_PARAM;      },
+    {tp="text";  text="&4.";           ystep=2; width=2;                    },
+    {tp="edit";  name="sParam4";       ystep=0; x1=8; hist=HIST_PARAM;      },
+    {tp="chbox"; name="bParamsEnable"; ystep=2; text=M.MScriptParamsEnable; },
+    {tp="sep";                                                              },
+    {tp="butt";  text=M.MRunScript; default=1; centergroup=1; Run=1;        },
+    {tp="butt";  text=M.MStoreParams;          centergroup=1; Store=1;      },
+    {tp="butt";  text=M.MCancel;    cancel=1;  centergroup=1;               },
+  }
+  ------------------------------------------------------------------------------
+  local dlg = sd.New(Items)
+  local Pos = dlg:Indexes()
   ------------------------------------------------------------------------------
   local function CheckExternalScript (hDlg)
-    D.sExternalScript:Enable(hDlg, D.bExternalScript:GetCheck(hDlg))
+    hDlg:Enable(Pos.sExternalScript, hDlg:GetCheck(Pos.bExternalScript))
   end
-  local function DlgProc (hDlg, msg, param1, param2)
-    if msg == F.DN_INITDIALOG then
+  ------------------------------------------------------------------------------
+  Items.proc = function(hDlg, Msg, Param1, Param2)
+    if Msg == F.DN_INITDIALOG then
       CheckExternalScript(hDlg)
-    elseif msg == F.DN_BTNCLICK then
-      if param1 == D.bExternalScript.id then CheckExternalScript(hDlg) end
-    elseif msg == F.DN_CLOSE then
-      if param1 == D.btnStore.id or param1 == D.btnRun.id then
-        local s1 = D.sParam1:GetText(hDlg)
-        local s2 = D.sParam2:GetText(hDlg)
-        local s3 = D.sParam3:GetText(hDlg)
-        local s4 = D.sParam4:GetText(hDlg)
+    elseif Msg == F.DN_BTNCLICK then
+      if Param1 == Pos.bExternalScript then CheckExternalScript(hDlg) end
+    elseif Msg == F.DN_CLOSE then
+      local elem = Items[Param1]
+      if elem and (elem.Run or elem.Store) then
+        local s1 = hDlg:GetText(Pos.sParam1)
+        local s2 = hDlg:GetText(Pos.sParam2)
+        local s3 = hDlg:GetText(Pos.sParam3)
+        local s4 = hDlg:GetText(Pos.sParam4)
         local ok, msg = pcall(CompileParams, s1, s2, s3, s4)
         if not ok then ErrMsg(msg); return 0; end
       end
     end
   end
-  far2_dialog.LoadData(D, aData)
-  local ret = far.Dialog (ParamsGuid,-1,-1,56,18,"ScriptParams",D,0,DlgProc)
-  ret = (ret==D.btnStore.id) and "store" or (ret==D.btnRun.id) and "run"
-  if ret then
-    far2_dialog.SaveData(D, aData)
+  ------------------------------------------------------------------------------
+  dlg:LoadData(aData)
+  local out,pos = dlg:Run()
+  if out then
+    dlg:SaveData(out, aData)
+    return Items[pos].Run and "run" or Items[pos].Store and "store"
   end
-  return ret
 end
 
 local function LuaScript (data)
@@ -148,30 +153,34 @@ local function LuaScript (data)
   return p1,p2,p3,p4
 end
 
-local ResultGuid = win.Uuid("d45fdadc-4918-4d47-b34a-311947d241b2")
-
-local function ResultDialog (aHelpTopic, aData, result)
+local function ResultDialog (aHelpTopic, aData, aValue)
   local Title = (aHelpTopic=="LuaExpression") and M.MDlgExpr or M.MDlgBlockSum
-  local D = far2_dialog.NewDialog()
+  local XX1 = 5 + M.MResult:gsub("&",""):len() + 1
+  local Items = {
+    guid = "D45FDADC-4918-4D47-B34A-311947D241B2";
+    width = 46;
+    help = aHelpTopic;
+    {tp="dbox";  text=Title;                                              },
+    {tp="text";  text=M.MResult;                                          },
+    {tp="edit";  name="edtResult"; ystep=0; x1=XX1; val=aValue; noload=1; },
+    {tp="chbox"; name="cbxInsert"; text=M.MInsertText;                    },
+    {tp="chbox"; name="cbxCopy";   text=M.MCopyToClipboard;               },
+    {tp="sep";                                                            },
+    {tp="butt";  text=M.MOk;     default=1;  centergroup=1;               },
+    {tp="butt";  text=M.MCancel; cancel=1;   centergroup=1;               },
+  }
   ------------------------------------------------------------------------------
-  D._         = {"DI_DOUBLEBOX",3, 1,42,7,  0, 0, 0, 0, Title}
-  D.lblResult = {"DI_TEXT",     5, 2, 0,0,  0, 0, 0, 0, M.MResult}
-  D.edtResult = {"DI_EDIT",     0, 2,40,0,  0, 0, 0, 0, result, _noautoload=1}
-  D.cbxInsert = {"DI_CHECKBOX", 5, 3, 0,0,  0, 0, 0, 0, M.MInsertText}
-  D.cbxCopy   = {"DI_CHECKBOX", 5, 4, 0,0,  0, 0, 0, 0, M.MCopyToClipboard}
-  D.sep       = {"DI_TEXT",     0, 5, 0,0,  0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  D.btnOk     = {"DI_BUTTON",   0, 6, 0,0,  0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
-  D.btnCancel = {"DI_BUTTON",   0, 6, 0,0,  0, 0, 0, "DIF_CENTERGROUP", M.MCancel}
-  D.edtResult.X1 = D.lblResult.X1 + D.lblResult.Data:len()
-  ------------------------------------------------------------------------------
-  far2_dialog.LoadData(D, aData)
-  local ret =  far.Dialog(ResultGuid,-1,-1,46,9,aHelpTopic,D)
-  far2_dialog.SaveData(D, aData)
-  return (ret == D.btnOk.id)
+  local dlg = sd.New(Items)
+  dlg:LoadData(aData)
+  local out = dlg:Run()
+  if out then
+    dlg:SaveData(out, aData)
+    return true
+  end
 end
 
 -- NOTE: In order to obtain correct offsets, this function should use either
---       regex.find, or unicode.utf8.cfind function.
+--       regex.find, or utf8.find function.
 local function BlockSum (history)
   local ei = assert(editor.GetInfo(), "EditorGetInfo failed")
   local blockEndLine

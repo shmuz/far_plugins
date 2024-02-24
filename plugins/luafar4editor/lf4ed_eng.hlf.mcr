@@ -328,11 +328,6 @@ disk. Subsequent 'require's of the same library return it from the memory.
 With this option checked, libraries are always loaded from the disk (this may
 be needed when debugging a library).
 
- #[x] Use 'strict' mode#
-
-    With this option turned on, the plugin does not allow access to
-"undeclared" global variables.
-
  #[x] Return to Main menu#
 
     When a utility that was activated via the main menu finishes its execution,
