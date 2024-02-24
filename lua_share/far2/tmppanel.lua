@@ -353,7 +353,6 @@ function Env:GetPluginInfo()
     PluginConfigGuids = PluginConfigGuid1.."",
     PluginConfigStrings = { M.MTempPanel },
   }
-  -- Info.Flags.preload = true
   if opt.AddToPluginsMenu then
     Info.PluginMenuGuids = PluginMenuGuid1..""
     Info.PluginMenuStrings = { M.MTempPanel }
