@@ -92,7 +92,7 @@ local function ParamsDialog (aData)
   local Pos = dlg:Indexes()
   ------------------------------------------------------------------------------
   local function CheckExternalScript (hDlg)
-    hDlg:Enable(Pos.sExternalScript, hDlg:GetCheck(Pos.bExternalScript))
+    hDlg:send("DM_ENABLE", Pos.sExternalScript, hDlg:send("DM_GETCHECK", Pos.bExternalScript))
   end
   ------------------------------------------------------------------------------
   Items.proc = function(hDlg, Msg, Param1, Param2)
@@ -103,10 +103,10 @@ local function ParamsDialog (aData)
     elseif Msg == F.DN_CLOSE then
       local elem = Items[Param1]
       if elem and (elem.Run or elem.Store) then
-        local s1 = hDlg:GetText(Pos.sParam1)
-        local s2 = hDlg:GetText(Pos.sParam2)
-        local s3 = hDlg:GetText(Pos.sParam3)
-        local s4 = hDlg:GetText(Pos.sParam4)
+        local s1 = hDlg:send("DM_GETTEXT", Pos.sParam1)
+        local s2 = hDlg:send("DM_GETTEXT", Pos.sParam2)
+        local s3 = hDlg:send("DM_GETTEXT", Pos.sParam3)
+        local s4 = hDlg:send("DM_GETTEXT", Pos.sParam4)
         local ok, msg = pcall(CompileParams, s1, s2, s3, s4)
         if not ok then ErrMsg(msg); return 0; end
       end

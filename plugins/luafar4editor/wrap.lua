@@ -146,28 +146,28 @@ local function ExecuteWrapDialog (aData)
   ----------------------------------------------------------------------------
   -- Handlers of dialog events --
   local function CheckGroup (hDlg, c1, ...)
-    local enbl = hDlg:GetCheck(Pos[c1])
-    for _, name in ipairs {...} do hDlg:Enable(Pos[name], enbl) end
+    local enbl = hDlg:send("DM_GETCHECK", Pos[c1])
+    for _, name in ipairs {...} do hDlg:send("DM_ENABLE", Pos[name], enbl) end
   end
 
   local function CheckAll (hDlg)
     CheckGroup (hDlg, "cbxReformat", "labStart", "edtColumn1", "labEnd", "edtColumn2", "cbxJustify")
     CheckGroup (hDlg, "cbxProcess", "edtExpress", "labExpress")
-    if hDlg:GetCheck(Pos.cbxReformat) then hDlg:SetFocus(Pos.edtColumn1)
-    elseif hDlg:GetCheck(Pos.cbxProcess) then hDlg:SetFocus(Pos.edtExpress)
+    if hDlg:send("DM_GETCHECK", Pos.cbxReformat) then hDlg:send("DM_SETFOCUS", Pos.edtColumn1)
+    elseif hDlg:send("DM_GETCHECK", Pos.cbxProcess) then hDlg:send("DM_SETFOCUS", Pos.edtExpress)
     end
   end
 
   function Items.proc (hDlg, msg, param1, param2)
     if msg == F.DN_INITDIALOG then
-      if hDlg:GetCheck(Pos.cbxReformat) then hDlg:SetCheck(Pos.cbxProcess, 0) end
+      if hDlg:send("DM_GETCHECK", Pos.cbxReformat) then hDlg:send("DM_SETCHECK", Pos.cbxProcess, false) end
       CheckAll (hDlg)
     elseif msg == F.DN_BTNCLICK then
       if param1 == Pos.cbxReformat then
-        if hDlg:GetCheck(Pos.cbxReformat) then hDlg:SetCheck(Pos.cbxProcess, 0) end
+        if hDlg:send("DM_GETCHECK", Pos.cbxReformat) then hDlg:send("DM_SETCHECK", Pos.cbxProcess, false) end
         CheckAll (hDlg)
       elseif param1 == Pos.cbxProcess then
-        if hDlg:GetCheck(Pos.cbxProcess) then hDlg:SetCheck(Pos.cbxReformat, 0) end
+        if hDlg:send("DM_GETCHECK", Pos.cbxProcess) then hDlg:send("DM_SETCHECK", Pos.cbxReformat, false) end
         CheckAll (hDlg)
       end
     end

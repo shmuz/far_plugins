@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2024-02-26, v3.10.1
+  [*] Changes for making minimum Far version = 3893.
+
 2024-02-24, v3.10.0
   [*] Use far2.simpledialog module instead of far2.dialog
 

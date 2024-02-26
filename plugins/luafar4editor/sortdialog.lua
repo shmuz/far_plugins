@@ -66,8 +66,8 @@ local function SortDialog (aData, columntype)
   ------------------------------------------------------------------------------
   -- Handlers of dialog events --
   local function Check (hDlg, c1, ...)
-    local enbl = hDlg:GetCheck(c1)
-    for _, elem in ipairs {...} do hDlg:Enable(elem, enbl) end
+    local enbl = hDlg:send("DM_GETCHECK", c1)
+    for _, elem in ipairs {...} do hDlg:send("DM_ENABLE", elem, enbl) end
   end
 
   function Items.proc (hDlg, msg, param1, param2)
@@ -77,13 +77,13 @@ local function SortDialog (aData, columntype)
       Check(hDlg, Pos.cbxUse3, Pos.edtExpr3, Pos.cbxRev3, Pos.labExpr3, Pos.cbxCase3)
       Check(hDlg, Pos.cbxFileName, Pos.labFileName, Pos.edtFileName)
     elseif msg == F.DN_BTNCLICK then
-      hDlg:EnableRedraw(0)
+      hDlg:send("DM_ENABLEREDRAW", 0)
       if     param1 == Pos.cbxUse1     then Check(hDlg, Pos.cbxUse1, Pos.edtExpr1, Pos.cbxRev1, Pos.labExpr1, Pos.cbxCase1)
       elseif param1 == Pos.cbxUse2     then Check(hDlg, Pos.cbxUse2, Pos.edtExpr2, Pos.cbxRev2, Pos.labExpr2, Pos.cbxCase2)
       elseif param1 == Pos.cbxUse3     then Check(hDlg, Pos.cbxUse3, Pos.edtExpr3, Pos.cbxRev3, Pos.labExpr3, Pos.cbxCase3)
       elseif param1 == Pos.cbxFileName then Check(hDlg, Pos.cbxFileName, Pos.labFileName, Pos.edtFileName)
-      elseif param1 == Pos.btnColPat   then hDlg:SetText(Pos.edtColPat, COLPAT_DEFAULT) end
-      hDlg:EnableRedraw(1)
+      elseif param1 == Pos.btnColPat   then hDlg:send("DM_SETTEXT", Pos.edtColPat, COLPAT_DEFAULT) end
+      hDlg:send("DM_ENABLEREDRAW", 1)
     end
   end
   ----------------------------------------------------------------------------
