@@ -4,7 +4,7 @@ local Common     = require "lfs_common"
 local EditMain   = require "lfs_editmain"
 local M          = require "lfs_message"
 
-local libDialog  = require "far2.dialog"
+local sd         = require "far2.simpledialog"
 local libMessage = require "far2.message"
 
 local FormatInt = Common.FormatInt
@@ -18,103 +18,112 @@ local RegexLibs = {"far", "oniguruma", "pcre", "pcre2"}
 local function ReplaceDialog (Data)
   local HIST_INITFUNC   = _Plugin.DialogHistoryPath .. "InitFunc"
   local HIST_FINALFUNC  = _Plugin.DialogHistoryPath .. "FinalFunc"
-  local hstflags = bit64.bor(F.DIF_HISTORY, F.DIF_USELASTHISTORY, F.DIF_MANUALADDHISTORY)
-  local guid = win.Uuid("87ed8b17-e2b2-47d0-896d-e2956f396f1a")
-  local Dlg = libDialog.NewDialog()
-  ------------------------------------------------------------------------------
-  Dlg.dbox        = {"DI_DOUBLEBOX", 3, 1, 72,18, 0, 0, 0, 0, M.MDlgMultilineReplace}
-  Dlg.lab         = {"DI_TEXT",      5, 2,  0, 0, 0, 0, 0, 0, M.MDlgSearchPat}
-  Dlg.sSearchPat  = {"DI_EDIT",      5, 3, 70, 0, 0, "SearchText", 0, hstflags, ""}
-  Dlg.lab         = {"DI_TEXT",      5, 4,  0, 0, 0, 0, 0, 0, M.MDlgReplacePat}
-  Dlg.sReplacePat = {"DI_EDIT",      5, 5, 70, 0, 0, "ReplaceText", 0, hstflags, ""}
-  Dlg.bRepIsFunc  = {"DI_CHECKBOX",  9, 6,  0, 0, 0, 0, 0, 0, M.MDlgRepIsFunc}
-  Dlg.sep         = {"DI_TEXT",      5, 7,  0, 0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  ------------------------------------------------------------------------------
-  local X2 = 39
+
+  local WID = 38
+  local X2 = WID + 1
   local X3 = X2 + M.MDlgRegexLib:gsub("&",""):len() + 1;
   local X4 = X3 + 12
-  Dlg.bRegExpr    = {"DI_CHECKBOX",  5, 8,  0, 0, 0, 0, 0, 0, M.MDlgRegExpr}
-  Dlg.lab         = {"DI_TEXT",     X2, 8,  0, 0, 0, 0, 0, 0, M.MDlgRegexLib}
-  Dlg.cmbRegexLib = {"DI_COMBOBOX", X3, 8, X4, 0, {{Text="Far regex"},{Text="Oniguruma"},{Text="PCRE"},{Text="PCRE2"}},
-                                                     0, 0, {DIF_DROPDOWNLIST=1}, "", _noautoload=true}
-  Dlg.bCaseSens   = {"DI_CHECKBOX",  5, 9,  0, 0, 0, 0, 0, 0, M.MDlgCaseSens}
-  Dlg.bFileAsLine = {"DI_CHECKBOX", X2, 9,  0, 0, 0, 0, 0, 0, M.MDlgFileAsLine}
-  Dlg.bWholeWords = {"DI_CHECKBOX",  5,10,  0, 0, 0, 0, 0, 0, M.MDlgWholeWords}
-  Dlg.bMultiLine  = {"DI_CHECKBOX", X2,10,  0, 0, 0, 0, 0, 0, M.MDlgMultilineMode}
-  Dlg.bExtended   = {"DI_CHECKBOX",  5,11,  0, 0, 0, 0, 0, 0, M.MDlgExtended}
-  Dlg.sep         = {"DI_TEXT",      5,12,  0, 0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  ------------------------------------------------------------------------------
-  Dlg.bAdvanced   = {"DI_CHECKBOX",  5,13,  0, 0, 0, 0, 0, 0, M.MDlgAdvanced}
-  Dlg.labInitFunc = {"DI_TEXT",      5,14,  0, 0, 0, 0, 0, 0, M.MDlgInitFunc}
-  Dlg.sInitFunc   = {"DI_EDIT",      5,15, 36, 0, 0, HIST_INITFUNC, 0, "DIF_HISTORY", "", F4=".lua"}
-  Dlg.labFinalFunc= {"DI_TEXT",     X2,14,  0, 0, 0, 0, 0, 0, M.MDlgFinalFunc}
-  Dlg.sFinalFunc  = {"DI_EDIT",     X2,15, 70, 0, 0, HIST_FINALFUNC, 0, "DIF_HISTORY", "", F4=".lua"}
-  Dlg.sep         = {"DI_TEXT",      5,16,  0, 0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  ------------------------------------------------------------------------------
-  Dlg.btnReplace  = {"DI_BUTTON",    0,17,  0, 0, 0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MDlgBtnReplace}
-  Dlg.btnCount    = {"DI_BUTTON",    0,17,  0, 0, 0, 0, 0, F.DIF_CENTERGROUP, M.MDlgBtnCount2}
-  Dlg.btnCancel   = {"DI_BUTTON",    0,17,  0, 0, 0, 0, 0, F.DIF_CENTERGROUP, M.MCancel}
-  ------------------------------------------------------------------------------
+
+  local Items = {
+    guid = "87ED8B17-E2B2-47D0-896D-E2956F396F1A";
+    help = "MReplace";
+    width = 2*WID;
+    { tp="dbox";  text=M.MDlgMultilineReplace; },
+    { tp="text";  text=M.MDlgSearchPat; },
+    { tp="edit";  hist="SearchText";    name="sSearchPat";  uselasthistory=1; manualaddhistory=1; },
+    { tp="text";  text=M.MDlgReplacePat; },
+    { tp="edit";  hist="ReplaceText";   name="sReplacePat"; uselasthistory=1; manualaddhistory=1; },
+    { tp="chbox"; text=M.MDlgRepIsFunc; name="bRepIsFunc";  x1=9; },
+    { tp="sep"; },
+    ------------------------------------------------------------------------------
+    { tp="chbox"; text=M.MDlgRegExpr; name="bRegExpr"; },
+    { tp="text";  text=M.MDlgRegexLib; x1=X2; y1=""; },
+    { tp="combobox"; x1=X3; x2=X4; y1="";   name="cmbRegexLib"; dropdown=1; noload=1;
+        list={{Text="Far regex"},{Text="Oniguruma"},{Text="PCRE"},{Text="PCRE2"}}; },
+    { tp="chbox"; text=M.MDlgCaseSens;      name="bCaseSens";                  },
+    { tp="chbox"; text=M.MDlgFileAsLine;    name="bFileAsLine"; x1=X2; y1="";  },
+    { tp="chbox"; text=M.MDlgWholeWords;    name="bWholeWords";                },
+    { tp="chbox"; text=M.MDlgMultilineMode; name="bMultiLine";  x1=X2; y1="";  },
+    { tp="chbox"; text=M.MDlgExtended;      name="bExtended";                  },
+    { tp="sep"; },
+    ------------------------------------------------------------------------------
+    { tp="chbox"; text=M.MDlgAdvanced;  name="bAdvanced";                      },
+    { tp="text";  text=M.MDlgInitFunc;  name="labInitFunc";                    },
+    { tp="edit";  hist=HIST_INITFUNC;   name="sInitFunc"; x2=WID-2; ext="lua"; },
+    { tp="text";  text=M.MDlgFinalFunc; name="labFinalFunc"; x1=X2; ystep=-1;  },
+    { tp="edit";  hist=HIST_FINALFUNC;  name="sFinalFunc";   x1=X2; ext="lua"; },
+    { tp="sep"; },
+    ------------------------------------------------------------------------------
+    { tp="butt"; centergroup=1; default=1; name="btnReplace"; text=M.MDlgBtnReplace; },
+    { tp="butt"; centergroup=1;            name="btnCount";   text=M.MDlgBtnCount2;  },
+    { tp="butt"; centergroup=1;  cancel=1; nohilite=1;        text=M.MCancel;        },
+  }
+  local dlg = sd.New(Items)
+  local Pos,Elem = dlg:Indexes()
 
   local function CheckRegexChange (hDlg)
-    local bRegex = Dlg.bRegExpr:GetCheck(hDlg)
-    Dlg.bWholeWords :Enable(hDlg, not bRegex)
-    Dlg.bExtended   :Enable(hDlg, bRegex)
-    Dlg.bFileAsLine :Enable(hDlg, bRegex)
-    Dlg.bMultiLine  :Enable(hDlg, bRegex)
+    local bRegex = hDlg:send("DM_GETCHECK", Pos.bRegExpr)
+    hDlg:send("DM_ENABLE", Pos.bWholeWords, bRegex==0 and 1 or 0)
+    hDlg:send("DM_ENABLE", Pos.bExtended,   bRegex)
+    hDlg:send("DM_ENABLE", Pos.bFileAsLine, bRegex)
+    hDlg:send("DM_ENABLE", Pos.bMultiLine,  bRegex)
   end
 
   local function CheckAdvancedEnab (hDlg)
-    local bEnab = Dlg.bAdvanced:GetCheck(hDlg)
-    Dlg.labInitFunc   :Enable(hDlg, bEnab)
-    Dlg.sInitFunc     :Enable(hDlg, bEnab)
-    Dlg.labFinalFunc  :Enable(hDlg, bEnab)
-    Dlg.sFinalFunc    :Enable(hDlg, bEnab)
+    local bEnab = hDlg:send("DM_GETCHECK", Pos.bAdvanced)
+    hDlg:send("DM_ENABLE", Pos.labInitFunc,  bEnab)
+    hDlg:send("DM_ENABLE", Pos.sInitFunc,    bEnab)
+    hDlg:send("DM_ENABLE", Pos.labFinalFunc, bEnab)
+    hDlg:send("DM_ENABLE", Pos.sFinalFunc,   bEnab)
   end
 
+  local closeaction = function(hDlg, param1, tOut)
+    local tmpData = {}
+    dlg:SaveData(tOut, tmpData)
+    tmpData.sRegexLib = RegexLibs[tOut.cmbRegexLib]
+    if Common.ProcessDialogData(tmpData, true, true) then
+      Data.sRegexLib = tmpData.sRegexLib
+      hDlg:send("DM_ADDHISTORY", Pos.sSearchPat, tmpData.sSearchPat)
+      hDlg:send("DM_ADDHISTORY", Pos.sReplacePat, tmpData.sReplacePat)
+    else
+      return KEEP_DIALOG_OPEN
+    end
+  end
 
-  local function DlgProc (hDlg, msg, param1, param2)
+  Items.proc = function(hDlg, msg, param1, param2)
     if msg == F.DN_INITDIALOG then
       CheckRegexChange(hDlg)
       CheckAdvancedEnab(hDlg)
     elseif msg == F.DN_BTNCLICK then
-      if param1==Dlg.bRegExpr.id then CheckRegexChange(hDlg)
-      elseif param1==Dlg.bAdvanced.id then CheckAdvancedEnab (hDlg)
+      if param1==Pos.bRegExpr then
+        CheckRegexChange(hDlg)
+      elseif param1==Pos.bAdvanced then
+        CheckAdvancedEnab(hDlg)
       end
-    elseif Common.Check_F4_On_DI_EDIT(Dlg, hDlg, msg, param1, param2) then
-      return -- processed
+    elseif msg == "EVENT_KEY" and param2 == "F4" then
+      if param1 == Pos.sReplacePat and hDlg:send("DM_GETCHECK", Pos.bRepIsFunc) == 1 then
+        local txt = sd.OpenInEditor(hDlg:send("DM_GETTEXT", Pos.sReplacePat), "lua")
+        if txt then hDlg:send("DM_SETTEXT", Pos.sReplacePat, txt) end
+        return true
+      end
     elseif msg == F.DN_CLOSE then
-      if param1==Dlg.btnReplace.id or param1==Dlg.btnCount.id then
-        local tmpData = {}
-        libDialog.SaveDataDyn(hDlg, Dlg, tmpData)
-        tmpData.sRegexLib = RegexLibs[ Dlg.cmbRegexLib:GetListCurPos(hDlg) ]
-        local ok, field = Common.ProcessDialogData(tmpData, true, true)
-        if ok then
-          Data.sRegexLib = tmpData.sRegexLib
-          hDlg:send("DM_ADDHISTORY", Dlg.sSearchPat.id, tmpData.sSearchPat)
-          hDlg:send("DM_ADDHISTORY", Dlg.sReplacePat.id, tmpData.sReplacePat)
-        else
-          if Dlg[field] then Common.GotoEditField(hDlg, Dlg[field].id) end
-          return KEEP_DIALOG_OPEN
-        end
-      end
+      return closeaction(hDlg, param1, param2)
     end
   end
 
-  Common.AssignHotKeys(Dlg)
-  libDialog.LoadData(Dlg, Data)
-  local items = Dlg.cmbRegexLib.ListItems
-  items.SelectIndex = 1
+  dlg:AssignHotKeys()
+  dlg:LoadData(Data)
+  local list = Elem.cmbRegexLib.list
+  list.SelectIndex = 1
   for i,v in ipairs(RegexLibs) do
-    if Data.sRegexLib == v then items.SelectIndex = i; break; end
+    if Data.sRegexLib == v then list.SelectIndex = i; break; end
   end
 
-  local ret = far.Dialog(guid,-1,-1,76,20,"MReplace",Dlg,0,DlgProc)
-  ret = ret==Dlg.btnReplace.id and "replace" or ret==Dlg.btnCount.id and "count"
-  if ret then
-    libDialog.SaveData(Dlg, Data)
+  local tOut, nPos = dlg:Run()
+  if tOut then
+    dlg:SaveData(tOut, Data)
+    return nPos==Pos.btnReplace and "replace" or nPos==Pos.btnCount and "count"
   end
-  return ret
 end
 
 local function EditorAction (op, data)
@@ -194,7 +203,7 @@ local function EditorAction (op, data)
 
   -- delete the source editor lines
   editor.SetPosition(nil, bSelection and editorInfo.BlockStartLine or 1, 1)
-  for i=bSelection and editorInfo.BlockStartLine or 1,lineno-1 do
+  for _ = bSelection and editorInfo.BlockStartLine or 1, lineno-1 do
     if CheckBreak() then
       editor.UndoRedo(nil, F.EUR_END)
       return nFound, 0, "broken"
@@ -221,6 +230,7 @@ local function EditorAction (op, data)
   end
 
   editor.UndoRedo(nil, F.EUR_END)
+  editor.Select(nil, F.BTYPE_NONE) -- prevent leaving an empty selection
   editor.SetPosition(nil, editorInfo)
 
   if data.bAdvanced then tParams.FinalFunc() end

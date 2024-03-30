@@ -12,7 +12,7 @@
 
 #define CHUNK 0x4000 // 16 Kib
 
-const char ReaderType[] = "LFSearch.ChunkReader";
+static const char ReaderType[] = "LFSearch.ChunkReader";
 
 typedef struct {
   FILE *fp;       // FILE object
@@ -21,39 +21,39 @@ typedef struct {
   char *data;     // allocated memory buffer
 } TReader;
 
-int NewReader (lua_State *L)
+static int NewReader (lua_State *L)
 {
   TReader* ud = (TReader*)lua_newuserdata(L, sizeof(TReader));
   memset(ud, 0, sizeof(TReader));
   ud->overlap = luaL_checkinteger(L, 1) / 2 / CHUNK;
   if (ud->overlap == 0) ud->overlap = 1;
-  ud->data = malloc(ud->overlap * 2 * CHUNK);
+  ud->data = (char*) malloc(ud->overlap * 2 * CHUNK);
   if (ud->data == NULL) return 0;
   luaL_getmetatable(L, ReaderType);
   lua_setmetatable(L, -2);
   return 1;
 }
 
-TReader* GetReader (lua_State *L, int pos)
+static TReader* GetReader (lua_State *L, int pos)
 {
   return (TReader*) luaL_checkudata(L, pos, ReaderType);
 }
 
-TReader* CheckReader (lua_State *L, int pos)
+static TReader* CheckReader (lua_State *L, int pos)
 {
-  TReader* ud = luaL_checkudata(L, pos, ReaderType);
+  TReader* ud = (TReader*) luaL_checkudata(L, pos, ReaderType);
   if (ud->data == NULL) luaL_argerror(L, pos, "attempt to access a deleted reader");
   return ud;
 }
 
-TReader* CheckReaderWithFile (lua_State *L, int pos)
+static TReader* CheckReaderWithFile (lua_State *L, int pos)
 {
   TReader* ud = CheckReader(L, pos);
   if (ud->fp == NULL) luaL_argerror(L, pos, "attempt to access a closed reader file");
   return ud;
 }
 
-int Reader_getnextchunk (lua_State *L)
+static int Reader_getnextchunk (lua_State *L)
 {
   TReader *ud = CheckReaderWithFile(L, 1);
   size_t M = ud->overlap;
@@ -89,7 +89,7 @@ int Reader_getnextchunk (lua_State *L)
   return 1;
 }
 
-int Reader_delete (lua_State *L)
+static int Reader_delete (lua_State *L)
 {
   TReader *ud = GetReader(L, 1);
   if (ud->fp) {
@@ -103,14 +103,14 @@ int Reader_delete (lua_State *L)
   return 0;
 }
 
-int Reader_ftell (lua_State *L)
+static int Reader_ftell (lua_State *L)
 {
   TReader *ud = CheckReaderWithFile(L, 1);
   lua_pushnumber(L, ftello64(ud->fp));
   return 1;
 }
 
-int Reader_closefile (lua_State *L)
+static int Reader_closefile (lua_State *L)
 {
   int ret = 0;
   TReader *ud = CheckReader(L, 1);
@@ -122,7 +122,7 @@ int Reader_closefile (lua_State *L)
   return 1;
 }
 
-int Reader_openfile (lua_State *L)
+static int Reader_openfile (lua_State *L)
 {
   int ret = 0;
   TReader *ud = CheckReader(L, 1);
@@ -146,19 +146,22 @@ int Reader_openfile (lua_State *L)
   return 1;
 }
 
-int Reader_getsize (lua_State *L)
+static int Reader_getsize (lua_State *L)
 {
   TReader *ud = CheckReader(L, 1);
   lua_pushnumber(L, ud->overlap * 2 * CHUNK);
   return 1;
 }
 
-const luaL_Reg funcs[] = {
+static const luaL_Reg funcs[] = {
   { "new", NewReader },
   { NULL, NULL }
 };
 
-const luaL_Reg methods[] = {
+// When the word 'static' was missing here it took me more than
+// 10 work hours to debug why this library didn't work on Linux
+// from LuaFAR plugins.
+static const luaL_Reg methods[] = {
   { "__gc",      Reader_delete },
   { "closefile", Reader_closefile },
   { "delete",    Reader_delete },

@@ -447,9 +447,9 @@ local function DoSearch (
 
   -- sLine must be set/modified only via set_sLine, in order to cache its length.
   -- This gives a very noticeable performance gain on long lines.
-  local sLine, sLineEol, sLineLen, sLineU8
+  local sLine, sLineLen, sLineU8
   local function set_sLine (s, eol)
-    sLine, sLineEol, sLineLen, sLineU8 = s, eol, TT.len(s), nil
+    sLine, sLineLen, sLineU8 = s, TT.len(s), nil
   end
   local get_sLineU8 = is_wide and
     function() sLineU8 = sLineU8 or win.Utf16ToUtf8(sLine); return sLineU8; end or
@@ -457,8 +457,8 @@ local function DoSearch (
 
   local x, y, egs, part1
 
-  local function SetStartBlockParam (y)
-    egs = TT.EditorGetString(nil, y, 0)
+  local function SetStartBlockParam (yy)
+    egs = TT.EditorGetString(nil, yy, 0)
     part1 = TT.sub(egs.StringText, 1, egs.SelStart-1)
     if egs.SelEnd == -1 then
       set_sLine(TT.sub(egs.StringText, egs.SelStart))
@@ -527,14 +527,14 @@ local function DoSearch (
     end
   end
   -----------------------------------------------------------------------------
-  local function ShowFound (x, fr, to, scroll)
+  local function ShowFound (xx, fr, to, scroll)
     local p1 = lenW(is_wide and part1 or Utf16(part1))
     if not is_wide then
-      x  = lenW(Utf16(TT.sub(sLine,1,x-1))) + 1
+      xx  = lenW(Utf16(TT.sub(sLine,1,xx-1))) + 1
       fr = lenW(Utf16(TT.sub(sLine,1,fr-1))) + 1
       to = lenW(Utf16(TT.sub(sLine,1,to)))
     end
-    ScrollToPosition (y, p1+x, fr, to, scroll)
+    ScrollToPosition (y, p1+xx, fr, to, scroll)
     if _Plugin.History:field("config").bSelectFound then
       editor.Select(nil, "BTYPE_STREAM", y, p1+fr, to<=fr and 1 or to-fr+1, 1)
     end
@@ -562,10 +562,10 @@ local function DoSearch (
         end
       end
       if bForward then
-        fLineInScope = function(y) bLastLine=(y==tInfo.CurLine); return y <= tInfo.CurLine; end
+        fLineInScope = function(yy) bLastLine=(yy==tInfo.CurLine); return yy <= tInfo.CurLine; end
         y = 0
       else
-        fLineInScope = function(y) bLastLine=(y==tInfo.CurLine); return y >= tInfo.CurLine; end
+        fLineInScope = function(yy) bLastLine=(yy==tInfo.CurLine); return yy >= tInfo.CurLine; end
         y = tInfo.TotalLines + 1
       end
       update_y()
@@ -582,8 +582,8 @@ local function DoSearch (
           end
           -----------------------------------------------------------------------
           local collect, fr, to
-          if bForward then fr, to, collect = ufind_method(tRegex, sLine, x)
-          else fr, to, collect = find_back(tRegex, ufind_method, sLine, x)
+          if bForward then fr, to = ufind_method(tRegex, sLine, x)
+          else fr, to = find_back(tRegex, ufind_method, sLine, x)
           end
           if not fr then
             if bLastLine then bFinish=true; end
@@ -722,8 +722,8 @@ local function DoReplace (
 
   local x, y, egs, part1, part3, x1, x2, y1, y2
 
-  local function SetStartBlockParam (y)
-    egs = TT.EditorGetString(nil, y, 0)
+  local function SetStartBlockParam (yy)
+    egs = TT.EditorGetString(nil, yy, 0)
     part1 = TT.sub(egs.StringText, 1, egs.SelStart-1)
     if egs.SelEnd == -1 then
       set_sLine(TT.sub(egs.StringText, egs.SelStart))
@@ -792,21 +792,20 @@ local function DoReplace (
     end
   end
   -----------------------------------------------------------------------------
-  local function ShowFound (x, fr, to, scroll)
+  local function ShowFound (xx, fr, to, scroll)
     local p1 = lenW(is_wide and part1 or Utf16(part1))
     if not is_wide then
-      x  = lenW(Utf16(TT.sub(sLine,1,x-1))) + 1
+      xx  = lenW(Utf16(TT.sub(sLine,1,xx-1))) + 1
       fr = lenW(Utf16(TT.sub(sLine,1,fr-1))) + 1
       to = lenW(Utf16(TT.sub(sLine,1,to)))
     end
-    ScrollToPosition (y, p1+x, fr, to, scroll)
+    ScrollToPosition (y, p1+xx, fr, to, scroll)
     editor.Select(nil, "BTYPE_STREAM", y, p1+fr, to<=fr and 1 or to-fr+1, 1)
     editor.Redraw()
     tStartPos = editor.GetInfo()
   end
   -------------------------------------------------------------------
   local function Replace (fr, to, sRep)
-    local sLastRep
     local bTraceSelection = tBlockInfo
         and (tBlockInfo.BlockType == F.BTYPE_STREAM)
         and (tBlockInfo.EndLine == y) and (tBlockInfo.EndPos ~= -1)
@@ -828,7 +827,6 @@ local function DoReplace (
                     x = bForward and TT.len(sStartLine)+1 or fr
                     x1, x2, y1, y2 = fr, fr-1+TT.len(txt), y, y
                 end
-                sLastRep = txt
                 break
             else
                 local line = part1..sStartLine
@@ -853,7 +851,6 @@ local function DoReplace (
                     x = TT.len(txt)+1
                 end
                 EditorSetCurString(sLine1..part3)--, stringEOL)
-                sLastRep = txt
                 x2, y2 = TT.len(txt)-1, y + nAddedLines - nDeletedLines
                 break
             else
@@ -977,10 +974,10 @@ local function DoReplace (
         end
       end
       if bForward then
-        fLineInScope = function(y) bLastLine=(y==tInfo.CurLine); return y <= tInfo.CurLine; end
+        fLineInScope = function(yy) bLastLine=(yy==tInfo.CurLine); return yy <= tInfo.CurLine; end
         y = 0
       else
-        fLineInScope = function(y) bLastLine=(y==tInfo.CurLine); return y >= tInfo.CurLine; end
+        fLineInScope = function(yy) bLastLine=(yy==tInfo.CurLine); return yy >= tInfo.CurLine; end
         y = tInfo.TotalLines + 1
       end
       update_y()

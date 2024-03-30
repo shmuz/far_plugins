@@ -108,12 +108,18 @@ local function ExclusionDialog (aStr)
   }
 
   local retvalue = nil
-  Items.closeaction = function(_hDlg, _Par1, tOut)
+  local closeaction = function(_hDlg, _Par1, tOut)
     if tOut.pattern ~= "" and pcall(regex.new, tOut.pattern) then
       retvalue = tOut.pattern
     else
       far.Message(("%s: \"%s\"" ):format(M.mExcludeDlgError, tOut.pattern), M.mError, M.mOk, "w")
       return 0
+    end
+  end
+
+  function Items.proc(hDlg, Msg, Par1, Par2)
+    if Msg == F.DN_CLOSE then
+      return closeaction(hDlg, Par1, Par2)
     end
   end
 

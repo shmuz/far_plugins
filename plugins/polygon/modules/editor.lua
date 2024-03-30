@@ -130,7 +130,7 @@ local function row_dialog(db, schema, table_name, rowid_name, db_data, row_id)
     table.insert(Items, { tp="butt"; text=M.cancel; centergroup=1; cancel=1;  })
   end
 
-  Items.keyaction = function (hDlg, Param1, key)
+  local keyaction = function (hDlg, Param1, key)
     local pos = hDlg:send(F.DM_GETFOCUS)
     local item = Items[pos]
     local txt = item.Colname and hDlg:send(F.DM_GETTEXT, pos)
@@ -170,7 +170,7 @@ local function row_dialog(db, schema, table_name, rowid_name, db_data, row_id)
     end
   end
 
-  Items.closeaction = function(hDlg, Par1, tOut)
+  local closeaction = function(hDlg, Par1, tOut)
     local out = { quan = math.max(1, tonumber(tOut.quan) or 1) }
     for pos,item in ipairs(Items) do
       if item.Colname then
@@ -182,6 +182,14 @@ local function row_dialog(db, schema, table_name, rowid_name, db_data, row_id)
     end
     if not exec_update(db, schema, table_name, rowid_name, row_id, out) then
       return KEEP_DIALOG_OPEN
+    end
+  end
+
+  Items.proc = function(hDlg, Msg, Par1, Par2)
+    if Msg == "EVENT_KEY" then
+      keyaction(hDlg, Par1, Par2)
+    elseif Msg == F.DN_CLOSE then
+      return closeaction(hDlg, Par1, Par2)
     end
   end
 

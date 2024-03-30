@@ -262,12 +262,9 @@ $ #Скрипты пользователя#
   #БИБЛИОТЕКИ:#
     *  Стандартные библиотеки Lua
     *  Библиотеки LuaFAR
-    *  #dialog#  (require "far2.dialog"; тот же модуль,
-                что применяется в LuaFAR for Editor)
-    *  #history# (require "far2.history"; тот же модуль,
-                что применяется в LuaFAR for Editor)
-    *  #message# (require "far2.message"; тот же модуль,
-                что применяется в LuaFAR for Editor)
+         #simpledialog#  (require "far2.simpledialog")
+         #history#       (require "far2.history")
+         #message#       (require "far2.message")
 
   #ФУНКЦИИ:#
    ~lfsearch.EditorAction~@FuncEditorAction@

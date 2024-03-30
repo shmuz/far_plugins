@@ -10,8 +10,6 @@ local Cfg = {
 
   ReloadOnRequire = true, -- Reload lua libraries each time they are require()d:
                           -- set true for libraries debugging, false for normal use;
-
-  UseStrict = true, -- Use require 'strict'
 }
 
 if far.FileTimeResolution then -- this function was introduced on Sep-03 2019
@@ -22,7 +20,7 @@ end
 local Utils      = require "far2.utils"
 local LibHistory = require "far2.history"
 
-local FirstRun = ... --> this works with Far >= 3.0.4425
+local FirstRun = not _Plugin
 if FirstRun then
   _Plugin = Utils.InitPlugin()
   _Plugin.History = LibHistory.newsettings(nil, "alldata")
@@ -72,17 +70,27 @@ function export.ExitFAR()
 end
 
 local function InitUpvalues (_Plugin)
-  if Cfg.UseStrict then require "strict" end
   Require = Cfg.ReloadOnRequire and Require or require
   -----------------------------------------------------------------------------
   far.ReloadDefaultScript = Cfg.ReloadDefaultScript
   -----------------------------------------------------------------------------
   local tp = Require "far2.tmppanel"
-  _Plugin.tmppanel = _Plugin.tmppanel or tp
+  tp.SetMessageTable(require "tmpp_message") -- message localization support
   Env = tp.NewEnv(_Plugin.Env or History:field("Env"))
   _Plugin.Env = Env
-  tp.PutExportedFunctions(export)
-  tp.Panel.AS_F9 = export.Configure
+  for _, name in ipairs {
+    "ClosePanel",
+    "GetFindData",
+    "GetOpenPanelInfo",
+    "ProcessPanelEvent",
+    "ProcessPanelInput",
+    "PutFiles",
+    "SetDirectory",
+    "SetFindList" }
+  do
+    export[name] = tp.Panel[name]
+  end
+  tp.Panel.ConfigFunction = export.Configure
 end
 
 do

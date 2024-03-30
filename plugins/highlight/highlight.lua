@@ -17,12 +17,12 @@ MenuPos = MenuPos or 1
 if not rex.new then
   local DllName = far.PluginStartupInfo().ModuleDir .. "rex_onig.dl"
   local luaopen = package.loadlib(DllName, "luaopen_rex_onig")
-  if not luaopen then
-    ErrMsg("Could not load\n" .. DllName)
-    return
+  if luaopen then
+    rex = luaopen()
+  else
+    rex = require "rex_onig"
   end
 
-  rex = luaopen()
   local Utf8ToUtf16 = win.Utf8ToUtf16
   local orig_new = rex.new
   rex.new = function (pat, cf, syn)
@@ -637,7 +637,7 @@ local function HighlightExtra()
     hDlg:send(F.DM_ENABLE, Pos.bExtended, bRegex and 1 or 0)
   end
 
-  function Items.closeaction(hDlg, param1, data)
+  local function closeaction(hDlg, param1, data)
     if param1 == Pos.btReset then
       SetExtraPattern(editor.GetInfo().EditorID, nil)
     elseif param1 == Pos.btOk then
@@ -683,6 +683,8 @@ local function HighlightExtra()
         param2[1] = extracolor
         return param2
       end
+    elseif msg == F.DN_CLOSE then
+      return closeaction(hDlg, param1, param2)
     end
   end
 

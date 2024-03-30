@@ -27,10 +27,9 @@ modules = \
   $(path_plugin)\lfs_replib.lua      \
                                      \
   $(path_share)*shmuz\serial.lua     \
-  $(path_share)*shmuz\hilite.lua     \
   $(path_share)*shmuz\cqueue.lua     \
   $(path_share)*far2\custommenu.lua  \
-  $(path_share)*far2\dialog.lua      \
+  $(path_share)*far2\simpledialog.lua  \
   $(path_share)*far2\history.lua     \
   $(path_share)*far2\message.lua     \
   $(path_share)*far2\tmppanel.lua    \

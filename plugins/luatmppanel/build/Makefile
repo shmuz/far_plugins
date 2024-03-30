@@ -14,10 +14,9 @@ scripts = $(path_plugin)\_globalinfo.lua
 modules = \
   $(path_plugin)*tmpp_message.lua  \
   $(path_share)*shmuz\serial.lua   \
-  $(path_share)*strict.lua         \
   $(path_share)*far2\history.lua   \
   $(path_share)*far2\tmppanel.lua  \
-  $(path_share)*far2\dialog.lua    \
+  $(path_share)*far2\simpledialog.lua \
   $(path_share)*far2\utils.lua
 
 FAR_EXPORTS = \
@@ -35,7 +34,6 @@ FAR_EXPORTS = \
   SETDIRECTORY      \
   SETFINDLIST
 
-MYCFLAGS  = -DRUN_LUAFAR_INIT
 TEMPL     = tmpp_lang.templ
 TEMPL_SCR = tmpp_lang.lua
 RCFILE    = tmppanel.rc

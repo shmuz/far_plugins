@@ -955,7 +955,7 @@ function mypanel:set_table_filter(handle)
     {tp="butt"; text=M.cancel; centergroup=1; cancel=1;                        },
   }
 
-  function Items.closeaction(hDlg, Param1, tOut)
+  local function closeaction(hDlg, Param1, tOut)
     local extra, where = tOut.extra, tOut.where
     local text = where:find("%S") and (extra.." WHERE "..where) or extra
     local longquery = query.." "..text
@@ -967,6 +967,12 @@ function mypanel:set_table_filter(handle)
     else
       dbx.err_message(self._db, longquery)
       return 0
+    end
+  end
+
+  Items.proc = function(hDlg, Msg, Par1, Par2)
+    if Msg == F.DN_CLOSE then
+      return closeaction(hDlg, Par1, Par2)
     end
   end
 
@@ -1005,7 +1011,7 @@ function mypanel:create_table()
     table.insert(items, 4+2*k, {tp="edit"; name=k; ystep=0; x1=x1; hist="polygon_colname"; })
   end
 
-  function items.closeaction(hDlg, Par1, tOut)
+  local function closeaction(hDlg, Par1, tOut)
     local t = {}
     for k=1,16 do
       if tOut[k] ~= "" then t[#t+1] = "  "..tOut[k] end
@@ -1014,6 +1020,12 @@ function mypanel:create_table()
     if self._db:exec(query) ~= sql3.OK then
       dbx.err_message(self._db, query)
       return KEEP_DIALOG_OPEN
+    end
+  end
+
+  items.proc = function(hDlg, Msg, Par1, Par2)
+    if Msg == F.DN_CLOSE then
+      return closeaction(hDlg, Par1, Par2)
     end
   end
 

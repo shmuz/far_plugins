@@ -7,14 +7,12 @@ local libEditors  = require "lfs_editors"
 local libReader   = require "reader"
 local libUCD      = require "ucd"
 local libCqueue   = require "shmuz.cqueue"
-local libDialog   = require "far2.dialog"
 local libMessage  = require "far2.message"
+local sd          = require "far2.simpledialog"
 
 local libTmpPanel = require "far2.tmppanel"
 libTmpPanel.SetMessageTable(M) -- message localization support
 
-local AssignHotKeys        = libCommon.AssignHotKeys
-local Check_F4_On_DI_EDIT  = libCommon.Check_F4_On_DI_EDIT
 local CheckMask            = libCommon.CheckMask
 local CheckSearchArea      = libCommon.CheckSearchArea
 local CreateSRFrame        = libCommon.CreateSRFrame
@@ -324,45 +322,59 @@ local function GetFileFormat (file, nBytes)
   return nCodePage, nil
 end
 
-local CfgGuid = win.Uuid("9888a43b-9e55-4022-9c57-d9213c06167d")
 
 local function ConfigDialog()
-  local Data = _Plugin.History:field("tmppanel")
-  local WIDTH, HEIGHT = 78, 13
-  local DC = math.floor(WIDTH/2-1)
+  local aData = _Plugin.History:field("tmppanel")
+  local W1 = 33
+  local DC = (5+W1) + 2
 
-  local Dlg = libDialog.NewDialog()
-  Dlg._                  = {"DI_DOUBLEBOX", 3,1,WIDTH-4,HEIGHT-2, 0,0,0,0,M.MConfigTitleTmpPanel}
-  Dlg._                  = {"DI_TEXT",    5, 2, 0,0,  0,0,0,0,M.MColumnTypes}
-  Dlg.ColumnTypes        = {"DI_EDIT",    5, 3,36,3,  0,0,0,0,""}
-  Dlg._                  = {"DI_TEXT",    5, 4, 0,0,  0,0,0,0,M.MColumnWidths}
-  Dlg.ColumnWidths       = {"DI_EDIT",    5, 5,36,5,  0,0,0,0,""}
-  Dlg._                  = {"DI_TEXT",    5, 6, 0,0,  0,0,0,0,M.MStartSorting}
-  Dlg.StartSorting       = {"DI_EDIT",    5, 7,36,7,  0,0,0,0,""}
-  Dlg._                  = {"DI_TEXT",   DC, 2, 0,0,  0,0,0,0,M.MStatusColumnTypes}
-  Dlg.StatusColumnTypes  = {"DI_EDIT",   DC, 3,72,3,  0,0,0,0,""}
-  Dlg._                  = {"DI_TEXT",   DC, 4, 0,0,  0,0,0,0,M.MStatusColumnWidths}
-  Dlg.StatusColumnWidths = {"DI_EDIT",   DC, 5,72,5,  0,0,0,0,""}
-  Dlg.FullScreenPanel    = {"DI_CHECKBOX",DC,7, 0,0,  0,0,0,0,M.MFullScreenPanel}
-  Dlg.PreserveContents   = {"DI_CHECKBOX",DC,8, 0,0,  0,0,0,0,M.MPreserveContents}
-  Dlg._                  = {"DI_TEXT",    5, 9, 0,0,  0,0,0,{DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  Dlg.btnOk              = {"DI_BUTTON",  0,10, 0,0,  0,0,0,{DIF_CENTERGROUP=1,DIF_DEFAULTBUTTON=1}, M.MOk}
-  Dlg.btnCancel          = {"DI_BUTTON",  0,10, 0,0,  0,0,0,"DIF_CENTERGROUP", M.MCancel}
-  Dlg.btnDefaults        = {"DI_BUTTON",  0,10, 0,0,  0,0,0,{DIF_CENTERGROUP=1,DIF_BTNNOCLOSE=1}, M.MBtnDefaults}
+  local Items = {
+    guid = "9888a43b-9e55-4022-9c57-d9213c06167d";
+    width = (5+W1)*2 + 2;
+    help = "SearchResultsPanel";
+    { tp="dbox";  text=M.MConfigTitleTmpPanel;   },
+    { tp="text";  text=M.MColumnTypes;           },
+    { tp="edit";  name="ColumnTypes";  width=W1; },
+    { tp="text";  text=M.MColumnWidths;          },
+    { tp="edit";  name="ColumnWidths"; width=W1; },
+    { tp="text";  text=M.MStartSorting;          },
+    { tp="edit";  name="StartSorting"; width=W1; },
 
-  local function DlgProc (hDlg, msg, param1, param2)
-    if msg == F.DN_BTNCLICK then
-      if param1 == Dlg.btnDefaults.id then
-        libDialog.LoadDataDyn (hDlg, Dlg, TmpPanelDefaults)
+    { tp="text";  text=M.MStatusColumnTypes;  x1=DC; y1=2; },
+    { tp="edit";  name="StatusColumnTypes";   x1=DC;       },
+    { tp="text";  text=M.MStatusColumnWidths; x1=DC;       },
+    { tp="edit";  name="StatusColumnWidths";  x1=DC;       },
+    { tp="chbox"; name="FullScreenPanel";  text=M.MFullScreenPanel;  x1=DC; ystep=2; },
+    { tp="chbox"; name="PreserveContents"; text=M.MPreserveContents; x1=DC; },
+    { tp="sep"; },
+
+    { tp="butt"; centergroup=1; text=M.MOk; default=1;    },
+    { tp="butt"; centergroup=1; text=M.MCancel; cancel=1; },
+    { tp="butt"; centergroup=1; text=M.MBtnDefaults; btnnoclose=1; name="reset"; },
+  }
+  local dlg = sd.New(Items)
+  local Pos = dlg:Indexes()
+
+  Items.proc = function(hDlg, Msg, Par1, Par2)
+    if Msg == F.DN_BTNCLICK and Par1 == Pos.reset then
+      for i,v in ipairs(Items) do
+        if v.name then
+          local val = TmpPanelDefaults[v.name]
+          if val ~= nil then
+            if     v.tp == "edit"  then hDlg:send("DM_SETTEXT", i, val)
+            elseif v.tp == "chbox" then hDlg:send("DM_SETCHECK", i, val and 1 or 0)
+            end
+          end
+        end
       end
     end
   end
 
-  libDialog.LoadData (Dlg, Data)
-  local ret = far.Dialog(CfgGuid, -1, -1, WIDTH, HEIGHT, "SearchResultsPanel", Dlg, 0, DlgProc)
-  if ret == Dlg.btnOk.id then
-    libDialog.SaveData (Dlg, Data)
-    if not Data.PreserveContents then
+  dlg:LoadData (aData)
+  local out = dlg:Run()
+  if out then
+    dlg:SaveData (out, aData)
+    if not aData.PreserveContents then
       _Plugin.FileList = nil
     end
     _Plugin.History:save()
@@ -451,206 +463,214 @@ end
 
 
 local function DirectoryFilterDialog (aData)
-  local Guid = win.Uuid("276DAB4E-8D58-487D-A3FF-E99681B38C1B")
-  local Dlg = libDialog.NewDialog()
+  local Items = {
+    guid = "276DAB4E-8D58-487D-A3FF-E99681B38C1B";
+    help = "DirectoryFilter";
+    width = 76;
+    { tp="dbox";  text=M.MDirFilterTitle;                 },
+    { tp="text";  text=M.MDlgDirMask;                     },
+    { tp="edit";  name="sDirMask";   hist="DirMasks";     },
+    { tp="chbox"; name="bDirMask_ProcessPath";   text=M.MDirFilterProcessPath;   x1=7; },
 
-  Dlg.frame                  = {"DI_DOUBLEBOX", 3, 1,72,12,   0, 0, 0, 0, M.MDirFilterTitle}
-  Dlg.lab                    = {"DI_TEXT",      5, 2, 0, 0,   0, 0, 0, 0, M.MDlgDirMask}
-  Dlg.sDirMask               = {"DI_EDIT",      5, 3,70, 0,   0, "DirMasks", 0, F.DIF_HISTORY, "", _default=""}
-  Dlg.bDirMask_ProcessPath   = {"DI_CHECKBOX",  7, 4, 0, 0,   0, 0, 0, 0, M.MDirFilterProcessPath}
-  Dlg.lab                    = {"DI_TEXT",      5, 6, 0, 0,   0, 0, 0, 0, M.MDlgDirExMask}
-  Dlg.sDirExMask             = {"DI_EDIT",      5, 7,70, 0,   0, "DirExMasks", 0, F.DIF_HISTORY, "", _default=""}
-  Dlg.bDirExMask_ProcessPath = {"DI_CHECKBOX",  7, 8, 0, 0,   0, 0, 0, 0, M.MDirFilterProcessPathEx}
-  Dlg.sep                    = {"DI_TEXT",      5,10, 0, 0,   0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  Dlg.btnOk                  = {"DI_BUTTON",    0,11, 0, 0,   0, 0, 0, {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
-  Dlg.btnCancel              = {"DI_BUTTON",    0,11, 0, 0,   0, 0, 0, "DIF_CENTERGROUP", M.MCancel}
-  ----------------------------------------------------------------------------
+    { tp="text";  text=M.MDlgDirExMask; ystep=2;          },
+    { tp="edit";  name="sDirExMask"; hist="DirExMasks";   },
+    { tp="chbox"; name="bDirExMask_ProcessPath"; text=M.MDirFilterProcessPathEx; x1=7; },
+    { tp="sep";                                           },
+    { tp="butt"; default=1; text=M.MOk;    centergroup=1; },
+    { tp="butt"; cancel=1; text=M.MCancel; centergroup=1; },
+  }
+  local Dlg = sd.New(Items)
+  local Pos = Dlg:Indexes()
 
-  local function DlgProc (hDlg, msg, param1, param2)
-    if msg == F.DN_CLOSE and param1 == Dlg.btnOk.id then
-      local mask1 = Dlg.sDirMask:GetText(hDlg) -- this mask is allowed to be empty
-      if not (mask1 == "" or CheckMask(mask1)) then
-        GotoEditField(hDlg, Dlg.sDirMask.id)
-        return KEEP_DIALOG_OPEN
-      end
-      local mask2 = Dlg.sDirExMask:GetText(hDlg) -- this mask is allowed to be empty
-      if not (mask2 == "" or CheckMask(mask2)) then
-        GotoEditField(hDlg, Dlg.sDirExMask.id)
-        return KEEP_DIALOG_OPEN
-      end
+  local function closeaction (hDlg, param1, tOut)
+    local mask1 = tOut.sDirMask -- this mask is allowed to be empty
+    if not (mask1 == "" or CheckMask(mask1)) then
+      GotoEditField(hDlg, Pos.sDirMask)
+      return KEEP_DIALOG_OPEN
+    end
+    local mask2 = tOut.sDirExMask -- this mask is allowed to be empty
+    if not (mask2 == "" or CheckMask(mask2)) then
+      GotoEditField(hDlg, Pos.sDirExMask)
+      return KEEP_DIALOG_OPEN
     end
   end
 
-  libDialog.LoadData(Dlg, aData)
-  local ret = far.Dialog(Guid, -1, -1, 76, 14, "DirectoryFilter", Dlg, 0, DlgProc)
-  if ret == Dlg.btnOk.id then libDialog.SaveData(Dlg, aData) end
+  Items.proc = function(hDlg, Msg, Par1, Par2)
+    if Msg == F.DN_CLOSE then
+      return closeaction(hDlg, Par1, Par2)
+    end
+  end
+
+  Dlg:LoadData(aData)
+  local out = Dlg:Run()
+  if out then Dlg:SaveData(out, aData) end
 end
 
+local searchGuid  = "3CD8A0BB-8583-4769-BBBC-5B6667D13EF9"
+local replaceGuid = "F7118D4A-FBC3-482E-A462-0167DF7CC346"
+local grepGuid    = "74D7F486-487D-40D0-9B25-B2BB06171D86"
 
-local searchGuid  = win.Uuid("3cd8a0bb-8583-4769-bbbc-5b6667d13ef9")
-local replaceGuid = win.Uuid("f7118d4a-fbc3-482e-a462-0167df7cc346")
-local grepGuid    = win.Uuid("74D7F486-487D-40D0-9B25-B2BB06171D86")
-
-local function PanelDialog (aOp, aData, aScriptCall)
-  local sepflags = bor(F.DIF_BOXCOLOR, F.DIF_SEPARATOR)
-  local D = libDialog.NewDialog()
-  local Frame = CreateSRFrame(D, aData, false, aScriptCall)
+local function PanelDialog  (aOp, aData, aScriptCall)
+  local insert = table.insert
+  local W = 35
+  local Items = {
+    width = 2*W+6;
+    help = aOp=="grep" and "PanelGrep" or "OperInPanels";
+    guid = aOp=="search" and searchGuid or aOp=="replace" and replaceGuid or grepGuid;
+  }
+  local Frame = CreateSRFrame(Items, aData, false, aScriptCall)
   ------------------------------------------------------------------------------
   local title = aOp=="search" and M.MTitleSearch or aOp=="replace" and M.MTitleReplace or M.MTitleGrep
-  D.dblbox      = {"DI_DOUBLEBOX",3, 1,72, 0, 0, 0, 0, 0, title}
-  local Y = Frame:InsertInDialog(true, 2, aOp)
+  insert(Items, { tp="dbox"; text=title; })
+  Frame:InsertInDialog(true, aOp)
   ------------------------------------------------------------------------------
-  D.sep         = {"DI_TEXT",     5, Y, 0, 0, 0, 0, 0, sepflags, ""}
+  insert(Items, { tp="sep"; })
 if aOp == "search" then
-  Y = Y + 1
-  D.lab         = {"DI_TEXT",     5, Y, 0,0, 0, 0, 0, 0, M.MDlgCodePages}
-  Y = Y + 1
-  D.cmbCodePage = {"DI_COMBOBOX", 5, Y,70,0, GetCodePages(aData), 0, 0, F.DIF_DROPDOWNLIST, "", _noautoload=1}
+  insert(Items, { tp="text"; text=M.MDlgCodePages; })
+  insert(Items, { tp="combobox"; name="cmbCodePage"; list=GetCodePages(aData); dropdown=1; noauto=1; })
 end
-  Y = Y + 1
-  D.lab         = {"DI_TEXT",     5, Y, 0,0, 0, 0, 0, 0, M.MDlgSearchArea}
-  Y = Y + 1
-  D.cmbSearchArea={"DI_COMBOBOX", 5, Y,36,0, GetSearchAreas(aData), 0, 0, F.DIF_DROPDOWNLIST, "", _noautoload=1}
+  insert(Items, { tp="text"; text=M.MDlgSearchArea; })
+  insert(Items, { tp="combobox"; name="cmbSearchArea"; list=GetSearchAreas(aData); x2=W+1; dropdown=1; noload=1; })
 if aOp == "search" then
-  D.bSearchFolders ={"DI_CHECKBOX",40,Y-1,0,0,  0,0,0,0, M.MDlgSearchFolders}
+  insert(Items, { tp="chbox"; name="bSearchFolders";  text=M.MDlgSearchFolders;  ystep=-1; x1=W+5; })
+  insert(Items, { tp="chbox"; name="bSearchSymLinks"; text=M.MDlgSearchSymLinks; ystep=1;  x1=W+5; })
+else
+  insert(Items, { tp="chbox"; name="bSearchSymLinks"; text=M.MDlgSearchSymLinks; ystep=0;  x1=W+5; })
 end
-  D.bSearchSymLinks = {"DI_CHECKBOX",40, Y, 0,0,  0,0,0,0, M.MDlgSearchSymLinks}
-  Y = Y + 1
-  local X1 =  5 + M.MDlgUseDirFilter:gsub("&",""):len() + 5
-  local X2 = 40 + M.MDlgUseFileFilter:gsub("&",""):len() + 5
-  D.bUseDirFilter  = {"DI_CHECKBOX", 5, Y, 0,0,  0,0,0,0, M.MDlgUseDirFilter}
-  D.btnDirFilter   = {"DI_BUTTON",  X1, Y, 0,0,  0,0,0,F.DIF_BTNNOCLOSE, M.MDlgBtnDirFilter}
-  D.bUseFileFilter = {"DI_CHECKBOX",40, Y, 0,0,  0,0,0,0, M.MDlgUseFileFilter}
-  D.btnFileFilter  = {"DI_BUTTON",  X2, Y, 0,0,  0,0,0,F.DIF_BTNNOCLOSE, M.MDlgBtnFileFilter}
-  Y = Y + 1
-  D.sep         = {"DI_TEXT",     5, Y, 0,0, 0, 0, 0, sepflags, ""}
+  local X1 =   5 + M.MDlgUseDirFilter:gsub("&",""):len()  + 5
+  local X2 = W+5 + M.MDlgUseFileFilter:gsub("&",""):len() + 5
+  insert(Items, { tp="chbox"; name="bUseDirFilter";  text=M.MDlgUseDirFilter;                       })
+  insert(Items, { tp="butt";  name="btnDirFilter";   text=M.MDlgBtnDirFilter; btnnoclose=1; x1=X1;  y1=""; })
+  insert(Items, { tp="chbox"; name="bUseFileFilter";  text=M.MDlgUseFileFilter;             x1=W+5; y1=""; })
+  insert(Items, { tp="butt";  name="btnFileFilter";   text=M.MDlgBtnFileFilter;  y1="";     x1=X2; btnnoclose=1; })
+  insert(Items, { tp="sep"; })
 
-if aOp=="replace" then
+if aOp == "replace" then
   local HIST_INITFUNC   = _Plugin.DialogHistoryPath .. "InitFunc"
   local HIST_FINALFUNC  = _Plugin.DialogHistoryPath .. "FinalFunc"
-  D.bAdvanced   = {"DI_CHECKBOX", 5, Y+1,  0, 0, 0, 0, 0, 0, M.MDlgAdvanced}
-  D.labInitFunc = {"DI_TEXT",     5, Y+2,  0, 0, 0, 0, 0, 0, M.MDlgInitFunc}
-  D.sInitFunc   = {"DI_EDIT",     5, Y+3, 36, 0, 0, HIST_INITFUNC, 0, "DIF_HISTORY", "", F4=".lua"}
-  D.labFinalFunc= {"DI_TEXT",    39, Y+2,  0, 0, 0, 0, 0, 0, M.MDlgFinalFunc}
-  D.sFinalFunc  = {"DI_EDIT",    39, Y+3, 70, 0, 0, HIST_FINALFUNC, 0, "DIF_HISTORY", "", F4=".lua"}
-  D.sep         = {"DI_TEXT",     5, Y+4,  0, 0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  Y = Y + 4
+  insert(Items, { tp="chbox"; name="bAdvanced";    text=M.MDlgAdvanced; })
+  insert(Items, { tp="text";  name="labInitFunc";  text=M.MDlgInitFunc; })
+  insert(Items, { tp="edit";  name="sInitFunc";    x2=W+1; hist=HIST_INITFUNC; ext="lua"; })
+  insert(Items, { tp="text";  name="labFinalFunc"; x1=W+4; text=M.MDlgFinalFunc; ystep=-1; })
+  insert(Items, { tp="edit";  name="sFinalFunc";   x1=""; hist=HIST_FINALFUNC; ext="lua"; })
+  insert(Items, { tp="sep"; })
 end
 
 if aOp=="grep" then
-  D.bGrepShowLineNumbers = {"DI_CHECKBOX", 5, Y+1,  0, 0, 0, 0, 0, 0, M.MDlgGrepShowLineNumbers}
-  D.bGrepHighlight       = {"DI_CHECKBOX", 5, Y+2,  0, 0, 0, 0, 0, 0, M.MDlgGrepHighlight}
-  D.bGrepInverseSearch   = {"DI_CHECKBOX", 5, Y+3,  0, 0, 0, 0, 0, 0, M.MDlgGrepInverseSearch}
-  D.label                = {"DI_TEXT",    40, Y+1,  0, 0, 0, 0, 0, 0, M.MDlgGrepContextBefore}
-  D.sGrepLinesBefore     = {"DI_FIXEDIT", 66, Y+1, 70, 0, 0, 0, "99999", "DIF_MASKEDIT", "0"}
-  D.label                = {"DI_TEXT",    40, Y+2,  0, 0, 0, 0, 0, 0, M.MDlgGrepContextAfter}
-  D.sGrepLinesAfter      = {"DI_FIXEDIT", 66, Y+2, 70, 0, 0, 0, "99999", "DIF_MASKEDIT", "0"}
-  D.sep                  = {"DI_TEXT",     5, Y+4,  0, 0, 0, 0, 0, sepflags, ""}
-  Y = Y + 4
+  insert(Items, { tp="chbox"; name="bGrepShowLineNumbers"; text=M.MDlgGrepShowLineNumbers; })
+  insert(Items, { tp="chbox"; name="bGrepHighlight";       text=M.MDlgGrepHighlight;       })
+  insert(Items, { tp="chbox"; name="bGrepInverseSearch";   text=M.MDlgGrepInverseSearch;   })
+  insert(Items, { tp="text";    x1=W+5;  ystep=-2;         text=M.MDlgGrepContextBefore;   })
+  insert(Items, { tp="fixedit"; name="sGrepLinesBefore"; x1=W+31; ystep=0; mask="99999"; val="0"; })
+  insert(Items, { tp="text";    x1=W+5;                    text=M.MDlgGrepContextAfter;    })
+  insert(Items, { tp="fixedit"; name="sGrepLinesAfter";  x1=W+31; ystep=0; mask="99999"; val="0"; })
+  insert(Items, { tp="sep"; ystep=2; })
 end
 
-  local btnNum = 0
-  local function NN (str) btnNum=btnNum+1 return "&"..btnNum..str end
-  Y = Y + 1
-  D.btnOk       = {"DI_BUTTON",   0, Y, 0,0, 0, 0, 0, bor(F.DIF_CENTERGROUP, F.DIF_DEFAULTBUTTON), M.MOk, NoHilite=1}
+  insert(Items, { tp="butt"; centergroup=1; text=M.MOk; default=1; name="btnOk"; nohilite=1;       })
 if aOp == "grep" then
-  D.btnCount    = {"DI_BUTTON",   0, Y, 0,0, 0, 0, 0, F.DIF_CENTERGROUP, NN(M.MDlgBtnCount)}
+  insert(Items, { tp="butt"; centergroup=1; text=M.MDlgBtnCount;   name="btnCount"; })
 end
-  D.btnPresets  = {"DI_BUTTON",   0, Y, 0,0, 0, 0, 0, bor(F.DIF_CENTERGROUP, F.DIF_BTNNOCLOSE), NN(M.MDlgBtnPresets)}
+  insert(Items, { tp="butt"; centergroup=1; text=M.MDlgBtnPresets; name="btnPresets";   btnnoclose=1; })
 if aOp == "search" then
-  D.btnConfig   = {"DI_BUTTON",   0, Y, 0,0, 0, 0, 0, F.DIF_CENTERGROUP, NN(M.MDlgBtnConfig)}
+  insert(Items, { tp="butt"; centergroup=1; text=M.MDlgBtnConfig;  name="btnConfig";    btnnoclose=1; })
 end
-  D.btnCancel   = {"DI_BUTTON",   0, Y, 0,0, 0, 0, 0, F.DIF_CENTERGROUP, M.MCancel, NoHilite=1}
-  D.dblbox.Y2   = Y+1
+  insert(Items, { tp="butt"; centergroup=1; text=M.MCancel; cancel=1; nohilite=1; })
+  ------------------------------------------------------------------------------
+  local dlg = sd.New(Items)
+  local Pos,Elem = dlg:Indexes()
+  Frame:SetDialogObject(dlg,Pos,Elem)
 
-  local function DlgProc (hDlg, msg, param1, param2)
+  function Items.proc (hDlg, msg, param1, param2)
     local NeedCallFrame = true
     --------------------------------------------------------------------------------------
     if msg == F.DN_INITDIALOG then
-      D.btnDirFilter:Enable(hDlg, D.bUseDirFilter:GetCheck(hDlg))
-      D.btnFileFilter:Enable(hDlg, D.bUseFileFilter:GetCheck(hDlg))
-      if D.cmbCodePage then
-        hDlg:send(F.DM_SETCOMBOBOXEVENT, D.cmbCodePage.id, F.CBET_KEY)
+      hDlg:send("DM_ENABLE", Pos.btnDirFilter,  hDlg:send("DM_GETCHECK", Pos.bUseDirFilter))
+      hDlg:send("DM_ENABLE", Pos.btnFileFilter, hDlg:send("DM_GETCHECK", Pos.bUseFileFilter))
+      if Pos.cmbCodePage then
+        hDlg:send("DM_SETCOMBOBOXEVENT", Pos.cmbCodePage, F.CBET_KEY)
         local t = {}
-        for i,v in ipairs(D.cmbCodePage.ListItems) do
+        for i,v in ipairs(Elem.cmbCodePage.list) do
           if v.CodePage then
             t.Index, t.Data = i, v.CodePage
-            hDlg:send(F.DM_LISTSETDATA, D.cmbCodePage.id, t)
+            hDlg:send("DM_LISTSETDATA", Pos.cmbCodePage, t)
           end
         end
       end
     --------------------------------------------------------------------------------------
-    elseif msg == F.DN_CONTROLINPUT or msg == F.DN_INPUT then
-      if param2.EventType == F.KEY_EVENT then
-        if D.cmbCodePage and param1 == D.cmbCodePage.id then
-          local key = far.InputRecordToName(param2)
-          if key=="Ins" or key=="Num0" or key=="Space" then
-            local pos = D.cmbCodePage:GetListCurPos(hDlg)
-            if pos > 2 then -- if not ("Default code pages" or "Checked code pages")
-              local item = hDlg:send(F.DM_LISTGETITEM, param1, pos)
-              item.Flags = bxor(item.Flags, F.LIF_CHECKED)
-              item.Index = pos
-              hDlg:send(F.DM_LISTUPDATE, param1, item)
-            end
+    elseif msg == "EVENT_KEY" then
+      if param1 == Pos.cmbCodePage then
+        if param2=="Ins" or param2=="NumPad0" or param2=="Space" then
+          local pos = hDlg:send("DM_LISTGETCURPOS", param1)
+          if pos.SelectPos > 2 then -- if not ("Default code pages" or "Checked code pages")
+            local item = hDlg:send("DM_LISTGETITEM", param1, pos.SelectPos)
+            item.Flags = bxor(item.Flags, F.LIF_CHECKED)
+            item.Index = pos.SelectPos
+            hDlg:send("DM_LISTUPDATE", param1, item)
           end
-        else
-          Check_F4_On_DI_EDIT(D, hDlg, msg, param1, param2)
         end
       end
     --------------------------------------------------------------------------------------
     elseif msg == F.DN_CLOSE then
-      if D.btnConfig and param1 == D.btnConfig.id then
-        hDlg:send(F.DM_SHOWDIALOG, 0)
+      if Pos.btnConfig and param1 == Pos.btnConfig then
+        hDlg:send("DM_SHOWDIALOG", 0)
         ConfigDialog()
-        hDlg:send(F.DM_SHOWDIALOG, 1)
-        hDlg:send(F.DM_SETFOCUS, D.btnOk.id)
+        hDlg:send("DM_SHOWDIALOG", 1)
+        hDlg:send("DM_SETFOCUS", Pos.btnOk)
         return KEEP_DIALOG_OPEN
       end
 
-      local ok_or_count = (D.btnOk and param1==D.btnOk.id) or
-                          (D.btnCount and param1==D.btnCount.id)
+      local ok_or_count = (Pos.btnOk and param1==Pos.btnOk) or
+                          (Pos.btnCount and param1==Pos.btnCount)
       if ok_or_count then
-        if not CheckMask(D.sFileMask:GetText(hDlg)) then
-          GotoEditField(hDlg, D.sFileMask.id)
+        if not CheckMask(hDlg:send("DM_GETTEXT", Pos.sFileMask)) then
+          GotoEditField(hDlg, Pos.sFileMask)
           return KEEP_DIALOG_OPEN
         end
-        if (aOp=="replace" or aOp=="grep") and D.sSearchPat:GetText(hDlg) == "" then
+        if (aOp=="replace" or aOp=="grep") and hDlg:send("DM_GETTEXT", Pos.sSearchPat) == "" then
           ErrorMsg(M.MSearchFieldEmpty)
-          GotoEditField(hDlg, D.sSearchPat.id)
+          GotoEditField(hDlg, Pos.sSearchPat)
           return KEEP_DIALOG_OPEN
         end
-        aData.sSearchArea = IndexToSearchArea(D.cmbSearchArea:GetListCurPos(hDlg))
-        D.bUseDirFilter:SaveCheck(hDlg, aData)
-        D.bUseFileFilter:SaveCheck(hDlg, aData)
+        aData.sSearchArea = IndexToSearchArea(hDlg:send("DM_LISTGETCURPOS", Pos.cmbSearchArea).SelectPos)
+        aData.bUseDirFilter = hDlg:send("DM_GETCHECK", Pos.bUseDirFilter)==1
+        aData.bUseFileFilter = hDlg:send("DM_GETCHECK", Pos.bUseFileFilter)==1
       end
       -- store selected code pages no matter what user pressed: OK or Esc.
-      if D.cmbCodePage then
-        SaveCodePageCombo(hDlg, D.cmbCodePage, aData, ok_or_count)
+      if Pos.cmbCodePage then
+        SaveCodePageCombo(hDlg, Pos.cmbCodePage, Elem.cmbCodePage.list, aData, ok_or_count)
       end
     --------------------------------------------------------------------------------------
-    elseif msg==F.DN_BTNCLICK and param1==D.btnPresets.id then
-      Frame:DoPresets(hDlg)
-      hDlg:send(F.DM_SETFOCUS, D.btnOk.id)
+    elseif msg == F.DN_BTNCLICK then
       NeedCallFrame = false
-    --------------------------------------------------------------------------------------
-    elseif msg==F.DN_BTNCLICK and param1==D.bUseDirFilter.id then
-      D.btnDirFilter:Enable(hDlg, D.bUseDirFilter:GetCheck(hDlg))
-      NeedCallFrame = false
-    --------------------------------------------------------------------------------------
-    elseif msg==F.DN_BTNCLICK and param1==D.btnDirFilter.id then
-      hDlg:send(F.DM_SHOWDIALOG, 0)
-      DirectoryFilterDialog(aData)
-      hDlg:send(F.DM_SHOWDIALOG, 1)
-      NeedCallFrame = false
-    --------------------------------------------------------------------------------------
-    elseif msg==F.DN_BTNCLICK and param1==D.bUseFileFilter.id then
-      D.btnFileFilter:Enable(hDlg, D.bUseFileFilter:GetCheck(hDlg))
-      NeedCallFrame = false
-    --------------------------------------------------------------------------------------
-    elseif msg==F.DN_BTNCLICK and param1==D.btnFileFilter.id then
-      local filter = far.CreateFileFilter(1, "FFT_FINDFILE")
-      if filter and filter:OpenFiltersMenu() then aData.FileFilter = filter end
-      NeedCallFrame = false
+      if param1 == Pos.btnPresets then
+        Frame:DoPresets(hDlg)
+        hDlg:send("DM_SETFOCUS", Pos.btnOk)
+
+      elseif param1 == Pos.bUseDirFilter then
+        hDlg:send("DM_ENABLE", Pos.btnDirFilter, hDlg:send("DM_GETCHECK", Pos.bUseDirFilter))
+
+      elseif param1 == Pos.btnDirFilter then
+        hDlg:send("DM_SHOWDIALOG", 0)
+        DirectoryFilterDialog(aData)
+        hDlg:send("DM_SHOWDIALOG", 1)
+        hDlg:send("DM_SETFOCUS", Pos.btnOk)
+
+      elseif param1 == Pos.bUseFileFilter then
+        hDlg:send("DM_ENABLE", Pos.btnFileFilter, hDlg:send("DM_GETCHECK", Pos.bUseFileFilter))
+
+      elseif param1 == Pos.btnFileFilter then
+        local filter = far.CreateFileFilter(1, "FFT_FINDFILE")
+        if filter and filter:OpenFiltersMenu() then aData.FileFilter = filter end
+
+      elseif param1 == Pos.btnConfig then
+        hDlg:send("DM_SHOWDIALOG", 0)
+        ConfigDialog()
+        hDlg:send("DM_SHOWDIALOG", 1)
+        hDlg:send("DM_SETFOCUS", Pos.btnOk)
+      else
+        NeedCallFrame = true
+      end
     --------------------------------------------------------------------------------------
     end
     if NeedCallFrame then
@@ -658,20 +678,24 @@ end
     end
   end
 
-  AssignHotKeys(D)
-  libDialog.LoadData(D, aData)
+--  local dataTP = _Plugin.History.tmppanel
+--  for k,v in pairs(TmpPanelDefaults) do
+--    if dataTP[k] == nil then dataTP[k] = v end
+--  end
+  dlg:AssignHotKeys()
+  dlg:LoadData(aData)
   Frame:OnDataLoaded(aData)
-  local Guid = aOp=="search" and searchGuid or aOp=="replace" and replaceGuid or grepGuid
 
-  local helpTopic = aOp=="grep" and "PanelGrep" or "OperInPanels"
-  local ret = far.Dialog(Guid, -1, -1, 76, Y+3, helpTopic, D, 0, DlgProc)
-  if     aOp == "search" then
-    return (ret == D.btnOk.id) and Frame.close_params
-  elseif aOp == "replace" then
-    if ret == D.btnOk.id then return "replace", Frame.close_params; end
-  elseif aOp == "grep" then
-    if     ret == D.btnOk.id    then return "grep", Frame.close_params
-    elseif ret == D.btnCount.id then return "count", Frame.close_params
+  local out, ret = dlg:Run()
+  if out then
+    if aOp == "search" then
+      return (ret == Pos.btnOk) and Frame.close_params
+    elseif aOp == "replace" then
+      if ret == Pos.btnOk then return "replace", Frame.close_params; end
+    elseif aOp == "grep" then
+      if     ret == Pos.btnOk    then return "grep", Frame.close_params
+      elseif ret == Pos.btnCount then return "count", Frame.close_params
+      end
     end
   end
 end

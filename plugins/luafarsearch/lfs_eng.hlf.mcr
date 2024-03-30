@@ -255,9 +255,9 @@ $ #User Scripts#
   #LIBRARIES:#
     *  The standard Lua libraries
     *  LuaFAR libraries
-    *  #dialog#  (require "far2.dialog" , same as in LuaFAR for Editor)
-    *  #history# (require "far2.history", same as in LuaFAR for Editor)
-    *  #message# (require "far2.message", same as in LuaFAR for Editor)
+         #simpledialog#  (require "far2.simpledialog")
+         #history#       (require "far2.history")
+         #message#       (require "far2.message")
 
   #FUNCTIONS:#
    ~lfsearch.EditorAction~@FuncEditorAction@

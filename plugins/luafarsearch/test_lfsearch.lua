@@ -4,32 +4,14 @@
 
 local DIRSEP = string.sub(package.config, 1, 1)
 local OS_WIN = (DIRSEP == "\\")
-local tEditor, tPanel
 local TMPDIR, GetHistory, SetHistory
 
 if OS_WIN then
-  local ed = _G.editor
-  tEditor = { Editor=ed.Editor; }
-  setmetatable(tEditor,
-    { __index = function(t,k)
-                  return function(...) return ed[k](nil, ...) end
-                end;
-    })
-  ----------------------------------------------------------------
-  local pan = _G.panel
-  tPanel = { GetPanelDirectory=function(...) return pan.GetPanelDirectory(nil,...).Name end; }
-  setmetatable(tPanel,
-    { __index = function(t,k)
-                  return function(...) return pan[k](nil, ...) end
-                end;
-    })
-  ----------------------------------------------------------------
   GetHistory = function(s1,s2) return _Plugin.History:field(s1)[s2] end
   SetHistory = function(s1,s2,val) _Plugin.History:setfield(s1.."."..s2, val) end
   ----------------------------------------------------------------
   TMPDIR = assert(win.GetEnv("Temp"))
 else
-  tEditor, tPanel = _G.editor, _G.panel
   GetHistory = function(s1,s2) return _Plugin.History[s1][s2] end
   SetHistory = function(s1,s2,val) _Plugin.History[s1][s2] = val end
   TMPDIR = "/tmp"
@@ -43,13 +25,13 @@ local F = far.Flags
 local russian_alphabet_utf8 = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя"
 
 local function OpenHelperEditor()
-  local ret = tEditor.Editor ("__tmp__.tmp", nil, nil,nil,nil,nil,
+  local ret = editor.Editor ("__tmp__.tmp", nil, nil,nil,nil,nil,
               {EF_NONMODAL=1, EF_IMMEDIATERETURN=1, EF_CREATENEW=1})
   assert (ret == F.EEC_MODIFIED, "could not open file")
 end
 
 local function CloseHelperEditor()
-  tEditor.Quit()
+  editor.Quit()
   far.AdvControl("ACTL_COMMIT")
 end
 
@@ -64,22 +46,22 @@ end
 
 local function GetEditorText()
   local t = {}
-  tEditor.SetPosition(1, 1)
-  for i=1, tEditor.GetInfo().TotalLines do
-    t[i] = tEditor.GetString(i, 2)
+  editor.SetPosition(nil, 1, 1)
+  for i=1, editor.GetInfo().TotalLines do
+    t[i] = editor.GetString(nil, i, 2)
   end
   return table.concat(t, "\n")
 end
 
 local function SetEditorText(str)
-  tEditor.SetPosition(1,1)
-  for _=1, tEditor.GetInfo().TotalLines do
-    tEditor.DeleteString()
+  editor.SetPosition(nil,1,1)
+  for _=1, editor.GetInfo().TotalLines do
+    editor.DeleteString()
   end
   if not OS_WIN then
     str = str:gsub("\n", "\r")
   end
-  tEditor.InsertText(str)
+  editor.InsertText(nil,str)
 end
 
 local function AssertEditorText(ref, msg)
@@ -93,7 +75,7 @@ do -- former selftest.lua
 local function RunEditorAction (lib, op, data, refFound, refReps)
   data.sRegexLib = lib
   if not data.KeepCurPos then
-    tEditor.SetPosition(data.CurLine or 1, data.CurPos or 1)
+    editor.SetPosition(nil, data.CurLine or 1, data.CurPos or 1)
   end
   local nFound, nReps = lfsearch.EditorAction(op, data)
   if nFound ~= refFound or nReps ~= refReps then
@@ -381,13 +363,13 @@ local function test_Replace (lib)
   -- test replace in selection
   dt = { sSearchPat="in", sReplacePat="###", sScope="block" }
   SetEditorText("line1\nline2\nline3\nline4\n")
-  tEditor.Select("BTYPE_STREAM",2,1,-1,2)
+  editor.Select(nil,"BTYPE_STREAM",2,1,-1,2)
   RunEditorAction(lib, "test:replace", dt, 2, 2)
   AssertEditorText("line1\nl###e2\nl###e3\nline4\n")
   --------
   dt = { sSearchPat=".+", sReplacePat="###", sScope="block", bRegExpr=true }
   SetEditorText("line1\nline2\nline3\nline4\n")
-  tEditor.Select("BTYPE_COLUMN",2,2,2,2)
+  editor.Select(nil,"BTYPE_COLUMN",2,2,2,2)
   RunEditorAction(lib, "test:replace", dt, 2, 2)
   AssertEditorText("line1\nl###e2\nl###e3\nline4\n")
 
@@ -468,7 +450,7 @@ local function test_Replace (lib)
   for k=0,1 do
     dt.bSearchBack = (k==1)
     SetEditorText("foo1\nbar1\nfoo2\nbar2\nfoo3\nbar3\nfoo4\nbar4\n")
-    tEditor.Select("BTYPE_STREAM",3,1,-1,4)
+    editor.Select(nil,"BTYPE_STREAM",3,1,-1,4)
     RunEditorAction(lib, "test:replace", dt, 2, 2)
     AssertEditorText("foo1\nbar1\nfoo2\nfoo3\nfoo4\nbar4\n")
   end
@@ -504,7 +486,7 @@ local function test_Replace (lib)
   for k=0,1 do
     dt.bSearchBack = (k==1)
     SetEditorText("foo1\nbar1\nfoo2\nbar2\nfoo3\nbar3\nfoo4\nbar4\n")
-    tEditor.Select("BTYPE_STREAM",3,1,-1,4)
+    editor.Select(nil,"BTYPE_STREAM",3,1,-1,4)
     RunEditorAction(lib, "test:replace", dt, 2, 4)
     AssertEditorText("foo1\nbar1\nbar2\nbar3\nfoo4\nbar4\n")
   end
@@ -538,7 +520,7 @@ local function test_bug_20090208 (lib)
   local dt = { bRegExpr=true, sReplacePat="\n$0", sScope="block" }
   dt.sSearchPat = "\\w+"
   SetEditorText(("my table\n"):rep(5))
-  tEditor.Select("BTYPE_STREAM",2,1,-1,2)
+  editor.Select(nil,"BTYPE_STREAM",2,1,-1,2)
   RunEditorAction(lib, "test:replace", dt, 4, 4)
   AssertEditorText("my table\n\nmy \ntable\n\nmy \ntable\nmy table\nmy table\n")
 end
@@ -592,7 +574,7 @@ local function test_bug1_20111114 (lib)
   RunEditorAction(lib, "test:search", dt, 1, 0)
   if not bSelectFound then SetHistory("config", "bSelectFound", false) end
 
-  local info, SI = tEditor.GetInfo(), tEditor.GetString()
+  local info, SI = editor.GetInfo(), editor.GetString()
   ProtectedAssert(info.CurPos == 5)
   ProtectedAssert(SI.SelStart == 4)
   ProtectedAssert(SI.SelEnd == 4)
@@ -608,28 +590,28 @@ local function test_bug2_20111114 (lib)
   SetEditorText("Д121") -- 1-st char takes 2 bytes in UTF-8
 
   local dt = { sSearchPat="1", sOrigin="cursor", sScope="block", CurPos=3 }
-  tEditor.Select("BTYPE_STREAM",1,1,4,1)
+  editor.Select(nil,"BTYPE_STREAM",1,1,4,1)
   RunEditorAction(lib, "test:search", dt, 1, 0)
   if not bSelectFound then SetHistory("config", "bSelectFound", false) end
 
-  local info, SI = tEditor.GetInfo(), tEditor.GetString()
+  local info, SI = editor.GetInfo(), editor.GetString()
   ProtectedAssert(info.CurPos == 5)
   ProtectedAssert(SI.SelStart == 4)
   ProtectedAssert(SI.SelEnd == 4)
 
   dt.CurPos = 1
-  tEditor.Select("BTYPE_STREAM",1,1,3,1)
+  editor.Select(nil,"BTYPE_STREAM",1,1,3,1)
   RunEditorAction(lib, "test:count", dt, 1, 0)
 
-  tEditor.Select("BTYPE_STREAM",1,1,4,1)
+  editor.Select(nil,"BTYPE_STREAM",1,1,4,1)
   RunEditorAction(lib, "test:count", dt, 2, 0)
 end
 
 local function test_bug_20120301 (lib)
   SetEditorText("-\tabc")
   local dt = { sSearchPat="abc", sReplacePat="", sScope="block" }
-  local pos = tEditor.RealToTab(1, 3)
-  tEditor.Select("BTYPE_COLUMN", 1, pos, 3, 1)
+  local pos = editor.RealToTab(nil, 1, 3)
+  editor.Select(nil, "BTYPE_COLUMN", 1, pos, 3, 1)
   RunEditorAction(lib, "test:replace", dt, 1, 1)
 end
 
@@ -649,7 +631,7 @@ local function test_bug_20161108 (lib)
     SetEditorText("line1\nline2\n")
     local dt = { sSearchPat="$", sReplacePat="-", sScope="block", sOrigin="scope", bRegExpr=true }
     dt.bSearchBack = (k==2)
-    tEditor.Select("BTYPE_STREAM", 1, 1, 0, 3)
+    editor.Select(nil, "BTYPE_STREAM", 1, 1, 0, 3)
     RunEditorAction(lib, "test:count", dt, 2, 0)
     RunEditorAction(lib, "test:replace", dt, 2, 2)
     AssertEditorText("line1-\nline2-\n")
@@ -685,7 +667,7 @@ do -- former test_mreplace.lua
 local function RunEditorAction (lib, op, data, refFound, refReps)
   data.sRegexLib = lib
   if not data.KeepCurPos then
-    tEditor.SetPosition(data.CurLine or 1, data.CurPos or 1)
+    editor.SetPosition(nil, data.CurLine or 1, data.CurPos or 1)
   end
   local nFound, nReps = lfsearch.MReplaceEditorAction(op, data)
   if nFound ~= refFound or nReps ~= refReps then
@@ -796,7 +778,7 @@ local function test_Replace (lib)
   -- test replace in selection
   dt = { sSearchPat="in", sReplacePat="###", sScope="block" }
   SetEditorText("line1\nline2\nline3\nline4\n")
-  tEditor.Select("BTYPE_STREAM",2,1,-1,2)
+  editor.Select(nil,"BTYPE_STREAM",2,1,-1,2)
   RunEditorAction(lib, "replace", dt, 2, 2)
   AssertEditorText("line1\nl###e2\nl###e3\nline4\n")
 
@@ -878,7 +860,7 @@ local function test_bug_20090208 (lib)
   local dt = { bRegExpr=true, sReplacePat="\n$0" }
   dt.sSearchPat = "\\w+"
   SetEditorText(("my table\n"):rep(5))
-  tEditor.Select("BTYPE_STREAM",2,1,-1,2)
+  editor.Select(nil,"BTYPE_STREAM",2,1,-1,2)
   RunEditorAction(lib, "replace", dt, 4, 4)
   AssertEditorText("my table\n\nmy \ntable\n\nmy \ntable\nmy table\nmy table\n")
 end
@@ -929,7 +911,7 @@ end
 do -- former selftest2.lua
 
 local TestDir = join(TMPDIR, "LFSearch_Test")
-local CurDir = assert(tPanel.GetPanelDirectory(1))
+local CurDir = assert(panel.GetPanelDirectory(nil, 1))
 if CurDir == "" then CurDir = far.GetCurrentDirectory() end
 --------------------------------------------------------------------------------
 
@@ -977,15 +959,15 @@ end
 
 local function PrAssert(condition, ...) -- protected assert
   if condition then return condition, ... end
-  tPanel.SetPanelDirectory(1, CurDir)
+  panel.SetPanelDirectory(nil, 1, CurDir)
   RemoveTree()
-  error((...) or "asserion failed", 3)
+  error((...) or "assertion failed", 3)
 end
 --------------------------------------------------------------------------------
 
 local function test_one_mask (mask, files, num)
   for _,f in ipairs(files) do AddFile(nil, f) end
-  PrAssert(tPanel.SetPanelDirectory(1, TestDir))
+  PrAssert(panel.SetPanelDirectory(nil, 1, TestDir))
   local dt = { sFileMask = mask, sSearchArea = "OnlyCurrFolder" }
   local arr = lfsearch.SearchFromPanel(dt)
   PrAssert(arr)
@@ -1040,7 +1022,7 @@ local function test_search (lib)
     "файл-01.бин", "файл-02.бин", "файл-03.бин",
   }
 
-  PrAssert(tPanel.SetPanelDirectory(1, TestDir))
+  PrAssert(panel.SetPanelDirectory(nil, 1, TestDir))
   for _,f in ipairs(files) do AddFile(nil, f, f) end
 
   local dt = { sFileMask = "*", sSearchArea = "OnlyCurrFolder" }
@@ -1089,7 +1071,7 @@ local function test_replace (lib)
     "файл-01.бин", "файл-02.бин", "файл-03.бин",
   }
 
-  PrAssert(tPanel.SetPanelDirectory(1, TestDir))
+  PrAssert(panel.SetPanelDirectory(nil, 1, TestDir))
 
   -- a file will contain 4 lines with its name in each line
   local function AddMyFiles()
@@ -1175,7 +1157,7 @@ local function test_dir_filter()
     end
   end, "FRS_RECUR")
 
-  PrAssert(tPanel.SetPanelDirectory(1, root_dir))
+  PrAssert(panel.SetPanelDirectory(nil, 1, root_dir))
 
   local dt = { sFileMask = "*", sSearchArea = "FromCurrFolder" }
 
@@ -1218,7 +1200,7 @@ function selftest.test_panels_search_replace (lib_list)
     test_replace(lib)
   end
   test_dir_filter()
-  tPanel.SetPanelDirectory(1, CurDir)
+  panel.SetPanelDirectory(nil, 1, CurDir)
   RemoveTree()
 end
 
@@ -1240,9 +1222,6 @@ end
 local arg = ...
 if arg == "run" or type(arg)=="table" then
   selftest.test_all()
-  if not OS_WIN then
-    far.Message("All tests OK", "LuaFAR Search")
-  end
 end
 
 return selftest

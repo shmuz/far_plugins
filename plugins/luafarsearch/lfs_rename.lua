@@ -5,7 +5,7 @@
 local Common     = require "lfs_common"
 local M          = require "lfs_message"
 
-local libDialog  = require "far2.dialog"
+local libDialog  = require "far2.simpledialog"
 local libMessage = require "far2.message"
 
 local AppName = "LF Rename"
@@ -206,59 +206,58 @@ local LogTable = {
   "MDlgFinalFunc",          "sFinalFunc",
 }
 
-local UserGuid = win.Uuid("af8d7072-ff17-4407-9af4-7323273ba899")
-
 local function UserDialog (aData, aList, aDlgTitle)
   local HIST_SEARCH  = RegPath .. "Search"
   local HIST_REPLACE = RegPath .. "Replace"
   local HIST_INITFUNC  = _Plugin.DialogHistoryPath .. "InitFunc"
   local HIST_FINALFUNC = _Plugin.DialogHistoryPath .. "FinalFunc"
 
-  local W = 72
+  local W = 35
   local X1 = 5 + M.MDlgFileMask:len() -- mask offset
-  local X2 = 5 + math.max(M.MDlgRenameBefore:len()+4, M.MDlgRenameAfter:len())
-
-  local FLAGS_SEP = {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}
-  local FLAGS_EDIT = {DIF_HISTORY=1,DIF_USELASTHISTORY=1}
-  local FLAGS_BTNOK = {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}
+  local X2 = 5 + math.max(M.MDlgRenameBefore:len()+5, M.MDlgRenameAfter:len()+1)
   ------------------------------------------------------------------------------
-  local Dlg = libDialog.NewDialog()
-  Dlg._                 = {"DI_DOUBLEBOX", 3, 1,  W,22, 0, 0, 0, 0, aDlgTitle}
+  local Items = {
+    guid="AF8D7072-FF17-4407-9AF4-7323273BA899";
+    help="Rename";
+    width=2*W+6;
+    { tp="dbox";  text=aDlgTitle;                                                                  },
+    { tp="text";  text=M.MDlgFileMask;                                                             },
+    { tp="edit";  x1=X1; y1="";                  name="sFileMask";         hist="Masks";           },
+    { tp="rbutt"; text=M.MDlgRenameInAll;        name="rSearchInAll";      group=1;  val=1;        },
+    { tp="rbutt"; text=M.MDlgRenameInSelected;   name="rSearchInSelected";                         },
+    { tp="chbox"; text=M.MDlgRenameFiles;        name="bRenFiles";        x1=W+4; ystep=-1; val=1; },
+    { tp="chbox"; text=M.MDlgRenameFolders;      name="bRenFolders";      x1="";                   },
+    { tp="chbox"; text=M.MDlgRenameInSubfolders; name="bRenRecurse";                               },
+    { tp="sep";                                                                                    },
 
-  Dlg.lab               = {"DI_TEXT",        5, 2,  0, 0, 0, 0, 0, 0, M.MDlgFileMask}
-  Dlg.sFileMask         = {"DI_EDIT",       X1, 2, 70, 0, 0, "Masks", 0, "DIF_HISTORY", ""}
-  Dlg.rSearchInAll      = {"DI_RADIOBUTTON", 5, 3,  0, 0, 1, 0, 0, "DIF_GROUP", M.MDlgRenameInAll}
-  Dlg.rSearchInSelected = {"DI_RADIOBUTTON", 5, 4,  0, 0, 0, 0, 0, 0, M.MDlgRenameInSelected}
-  Dlg.bRenFiles         = {"DI_CHECKBOX",   39, 3,  0, 0, 1, 0, 0, 0, M.MDlgRenameFiles }
-  Dlg.bRenFolders       = {"DI_CHECKBOX",   39, 4,  0, 0, 0, 0, 0, 0, M.MDlgRenameFolders }
-  Dlg.bRenRecurse       = {"DI_CHECKBOX",    5, 5,  0, 0, 0, 0, 0, 0, M.MDlgRenameInSubfolders }
-  Dlg.sep               = {"DI_TEXT",        5, 6,  0, 0, 0, 0, 0, FLAGS_SEP, ""}
+    { tp="text";  text=M.MDlgSearchPat;                                                            },
+    { tp="edit";  name="sSearchPat";             hist=HIST_SEARCH;  uselasthistory=1;              },
+    { tp="text";  text=M.MDlgReplacePat;                                                           },
+    { tp="edit";  name="sReplacePat";            hist=HIST_REPLACE; uselasthistory=1;              },
+    { tp="chbox"; text=M.MDlgRepIsFunc;          name="bRepIsFunc";      x1=7;                     },
+    { tp="chbox"; text=M.MRenameConfirmRename;   name="bConfirmRename";  x1=W+4; y1="";            },
+    { tp="chbox"; text=M.MDlgRenameLogfile;      name="bLogFile";        x1=7;                     },
+    { tp="sep";                                                                                    },
 
-  Dlg.lab               = {"DI_TEXT",        5, 7,  0, 0, 0, 0, 0, 0, M.MDlgSearchPat}
-  Dlg.sSearchPat        = {"DI_EDIT",        5, 8,W-2, 6, 0, HIST_SEARCH, 0, FLAGS_EDIT, ""}
-  Dlg.lab               = {"DI_TEXT",        5, 9,  0, 0, 0, 0, 0, 0, M.MDlgReplacePat}
-  Dlg.sReplacePat       = {"DI_EDIT",        5,10,W-2, 6, 0, HIST_REPLACE, 0, FLAGS_EDIT, ""}
-  Dlg.bRepIsFunc        = {"DI_CHECKBOX",    7,11,  0, 0, 0, 0, 0, 0, M.MDlgRepIsFunc}
-  Dlg.bConfirmRename    = {"DI_CHECKBOX",   39,11,  0, 0, 1, 0, 0, 0, M.MRenameConfirmRename }
-  Dlg.bLogFile          = {"DI_CHECKBOX",    7,12,  0, 0, 1, 0, 0, 0, M.MDlgRenameLogfile }
-  Dlg.sep               = {"DI_TEXT",        5,13,  0, 0, 0, 0, 0, FLAGS_SEP, ""}
+    { tp="chbox"; text=M.MDlgAdvanced;           name="bAdvanced";                                 },
+    { tp="text";  text=M.MDlgInitFunc;           name="labInitFunc";                               },
+    { tp="edit";  name="sInitFunc";              hist=HIST_INITFUNC;  ext="lua"; x2=W+1;           },
+    { tp="text";  text=M.MDlgFinalFunc;          name="labFinalFunc";            x1=W+4; ystep=-1; },
+    { tp="edit";  name="sFinalFunc";             hist=HIST_FINALFUNC; ext="lua"; x1="";            },
+    { tp="sep";                                                                                    },
 
-  Dlg.bAdvanced         = {"DI_CHECKBOX",    5,14,  0, 0, 0, 0, 0, 0, M.MDlgAdvanced}
-  Dlg.labInitFunc       = {"DI_TEXT",        5,15,  0, 0, 0, 0, 0, 0, M.MDlgInitFunc}
-  Dlg.sInitFunc         = {"DI_EDIT",        5,16, 36, 0, 0, HIST_INITFUNC, 0, "DIF_HISTORY", "", F4=".lua"}
-  Dlg.labFinalFunc      = {"DI_TEXT",       39,15,  0, 0, 0, 0, 0, 0, M.MDlgFinalFunc}
-  Dlg.sFinalFunc        = {"DI_EDIT",       39,16, 70, 0, 0, HIST_FINALFUNC, 0, "DIF_HISTORY", "", F4=".lua"}
-  Dlg.sep               = {"DI_TEXT",        5,17,  0, 0, 0, 0, 0, {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
+    { tp="butt";  text=M.MDlgRenameBefore;       name="btnBefore"; btnnoclose=1;                   },
+    { tp="edit";  name="edtBefore";              noauto=1;  readonly=1;  x1=X2; y1=""; skipF4=1;   },
+    { tp="text";  text=M.MDlgRenameAfter;        nohilite=1;                                       },
+    { tp="edit";  name="edtAfter";               noauto=1;  readonly=1;  x1=X2; y1=""; skipF4=1;   },
+    { tp="sep";                                                                                    },
 
-  Dlg.btnBefore         = {"DI_BUTTON",      5,18,  0, 0, 0, 0, 0, "DIF_BTNNOCLOSE", M.MDlgRenameBefore}
-  Dlg.edtBefore         = {"DI_EDIT",       X2,18,W-2, 0, 0, 0, 0, "DIF_READONLY", "", _noautoload=1, skipF4=1}
-  Dlg.lab               = {"DI_TEXT",        5,19,  0, 0, 0, 0, 0, 0, M.MDlgRenameAfter}
-  Dlg.edtAfter          = {"DI_EDIT",       X2,19,W-2, 0, 0, 0, 0, "DIF_READONLY", "", _noautoload=1, skipF4=1}
-  Dlg.sep               = {"DI_TEXT",        5,20,  0, 0, 0, 0, 0, FLAGS_SEP, ""}
-
-  Dlg.btnOk             = {"DI_BUTTON",      0,21,  0, 0, 0, 0, 0, FLAGS_BTNOK, M.MOk, NoHilite=1}
-  Dlg.btnConfig         = {"DI_BUTTON",      0,21,  0, 0, 0, 0, 0, "DIF_CENTERGROUP", M.MDlgBtnConfig}
-  Dlg.btnCancel         = {"DI_BUTTON",      0,21,  0, 0, 0, 0, 0, "DIF_CENTERGROUP", M.MCancel, NoHilite=1}
+    { tp="butt";  name="btnOk";     centergroup=1; default=1; text=M.MOk; nohilite=1;              },
+--  { tp="butt";  name="btnConfig"; centergroup=1;            text=M.MDlgBtnConfig;                },
+    { tp="butt";  name="btnCancel"; centergroup=1; cancel=1;  text=M.MCancel; nohilite=1;          },
+  }
+  local dlg = libDialog.New(Items)
+  local Pos = dlg:Indexes()
   ------------------------------------------------------------------------------
 
   local m_index = 1    -- circular index into aList; incremented when btnBefore is pressed;
@@ -290,7 +289,7 @@ local function UserDialog (aData, aList, aDlgTitle)
       text = "<S> "..m_sErrSearch
     elseif m_sErrReplace then
       text = "<R> "..m_sErrReplace
-    elseif not Dlg.bRepIsFunc:GetCheck(hDlg) and m_tReplace.MaxGroupNumber >= m_uRegex:bracketscount() then
+    elseif 0 == hDlg:send("DM_GETCHECK", Pos.bRepIsFunc) and m_tReplace.MaxGroupNumber >= m_uRegex:bracketscount() then
       m_sErrMaxGroup = "inexistent group"
       text = "<R> "..m_sErrMaxGroup
     else
@@ -300,13 +299,13 @@ local function UserDialog (aData, aList, aDlgTitle)
       else text = "<R> "..res
       end
     end
-    Dlg.edtAfter:SetText(hDlg, text)
-    FixLeftPos(hDlg, Dlg.edtBefore.id)
-    FixLeftPos(hDlg, Dlg.edtAfter.id)
+    hDlg:send("DM_SETTEXT", Pos.edtAfter, text)
+    FixLeftPos(hDlg, Pos.edtBefore)
+    FixLeftPos(hDlg, Pos.edtAfter)
   end
 
   local function UpdateSearchPat (hDlg)
-    local pat = Dlg.sSearchPat:GetText(hDlg)
+    local pat = hDlg:send("DM_GETTEXT", Pos.sSearchPat)
     local ok, res = pcall(Rex.new, pat, "i")
     if ok then m_uRegex, m_sErrSearch = res, nil
     else m_uRegex, m_sErrSearch = nil, res
@@ -323,9 +322,9 @@ local function UserDialog (aData, aList, aDlgTitle)
   end
 
   local function UpdateReplacePat (hDlg)
-    local repl = Dlg.sReplacePat:GetText(hDlg)
+    local repl = hDlg:send("DM_GETTEXT", Pos.sReplacePat)
     m_sErrReplace = nil
-    if Dlg.bRepIsFunc:GetCheck(hDlg) then
+    if hDlg:send("DM_GETCHECK", Pos.bRepIsFunc) == 1 then
       local func, msg = loadstring("local T,M,R = ...\n" .. repl, M.MReplaceFunction)
       if func then m_tReplace = setfenv(func, NewEnvir())
       else m_sErrReplace = msg
@@ -340,100 +339,101 @@ local function UserDialog (aData, aList, aDlgTitle)
   end
 
   local function CheckAdvancedEnab (hDlg)
-    local bEnab = Dlg.bAdvanced:GetCheck(hDlg)
-    Dlg.labInitFunc   :Enable(hDlg, bEnab)
-    Dlg.sInitFunc     :Enable(hDlg, bEnab)
-    Dlg.labFinalFunc  :Enable(hDlg, bEnab)
-    Dlg.sFinalFunc    :Enable(hDlg, bEnab)
+    local bEnab = hDlg:send("DM_GETCHECK", Pos.bAdvanced)
+    hDlg:send("DM_ENABLE", Pos.labInitFunc,  bEnab)
+    hDlg:send("DM_ENABLE", Pos.sInitFunc,    bEnab)
+    hDlg:send("DM_ENABLE", Pos.labFinalFunc, bEnab)
+    hDlg:send("DM_ENABLE", Pos.sFinalFunc,   bEnab)
   end
 
-  local function DlgProc (hDlg, msg, param1, param2)
+  function Items.proc (hDlg, msg, param1, param2)
     if msg == F.DN_INITDIALOG then
-      Dlg.edtBefore:SetText(hDlg, aList[1])
+      hDlg:send("DM_SETTEXT", Pos.edtBefore, aList[1])
       UpdateSearchPat(hDlg)
       UpdateReplacePat(hDlg)
       UpdatePreviewLabel(hDlg)
-      if not (Dlg.bRenFolders:GetCheck(hDlg) or Dlg.bRenFolders:GetCheck(hDlg)) then
-        Dlg.bRenFiles:SetCheck(hDlg,1)
+      if 0 == hDlg:send("DM_GETCHECK", Pos.bRenFolders) then
+        hDlg:send("DM_SETCHECK", Pos.bRenFiles, 1)
       end
       CheckAdvancedEnab(hDlg)
 
     elseif msg == F.DN_EDITCHANGE then
-      if param1 == Dlg.sSearchPat.id then
+      if param1 == Pos.sSearchPat then
         UpdateSearchPat(hDlg)
         UpdatePreviewLabel(hDlg)
-      elseif param1 == Dlg.sReplacePat.id then
+      elseif param1 == Pos.sReplacePat then
         UpdateReplacePat(hDlg)
         UpdatePreviewLabel(hDlg)
       end
 
     elseif msg == F.DN_BTNCLICK then
-      if param1 == Dlg.bRenFiles.id then
-        if not Dlg.bRenFiles:GetCheck(hDlg) then Dlg.bRenFolders:SetCheck(hDlg,1) end
-      elseif param1 == Dlg.bRenFolders.id then
-        if not Dlg.bRenFolders:GetCheck(hDlg) then Dlg.bRenFiles:SetCheck(hDlg,1) end
-      elseif param1 == Dlg.bRepIsFunc.id then
+      if param1 == Pos.bRenFiles then
+        if 0 == hDlg:send("DM_GETCHECK", Pos.bRenFiles) then hDlg:send("DM_SETCHECK", Pos.bRenFolders, 1) end
+      elseif param1 == Pos.bRenFolders then
+        if 0 == hDlg:send("DM_GETCHECK", Pos.bRenFolders) then hDlg:send("DM_SETCHECK", Pos.bRenFiles, 1) end
+      elseif param1 == Pos.bRepIsFunc then
         UpdateReplacePat(hDlg)
         UpdatePreviewLabel(hDlg)
-      elseif param1 == Dlg.btnBefore.id then
+      elseif param1 == Pos.btnBefore then
         m_index = (m_index < #aList) and m_index+1 or 1
-        Dlg.edtBefore:SetText(hDlg, aList[m_index])
+        hDlg:send("DM_SETTEXT", Pos.edtBefore, aList[m_index])
         UpdatePreviewLabel(hDlg)
-      elseif param1 == Dlg.bAdvanced.id then
+      elseif param1 == Pos.bAdvanced then
         CheckAdvancedEnab(hDlg)
       end
 
     elseif msg == F.DN_CLOSE then
-      if param1 == Dlg.btnOk.id then
-        local mask = Dlg.sFileMask:GetText(hDlg)
-        if not far.ProcessName("PN_CHECKMASK", mask, "", "PN_SHOWERRORMESSAGE") then
-          Common.GotoEditField(hDlg, Dlg.sFileMask.id)
+      if param1 == Pos.btnOk then
+        local mask = hDlg:send("DM_GETTEXT", Pos.sFileMask)
+        if not far.CheckMask(mask, "PN_SHOWERRORMESSAGE") then
+          Common.GotoEditField(hDlg, Pos.sFileMask)
           return KEEP_DIALOG_OPEN
         end
         if m_sErrSearch then
           ErrorMsg(m_sErrSearch, M.MSearchPattern..": "..M.MSyntaxError)
-          Common.GotoEditField(hDlg, Dlg.sSearchPat.id)
+          Common.GotoEditField(hDlg, Pos.sSearchPat)
           return KEEP_DIALOG_OPEN
         elseif m_sErrReplace or m_sErrMaxGroup then
           ErrorMsg(m_sErrReplace or m_sErrMaxGroup, M.MReplacePattern..": "..M.MSyntaxError)
-          Common.GotoEditField(hDlg, Dlg.sReplacePat.id)
+          Common.GotoEditField(hDlg, Pos.sReplacePat)
           return KEEP_DIALOG_OPEN
         end
-        if Dlg.bAdvanced:GetCheck(hDlg) then
+        if hDlg:send("DM_GETCHECK", Pos.bAdvanced) == 1 then
           local msg2
-          local sInitFunc = Dlg.sInitFunc:GetText(hDlg)
+          local sInitFunc = hDlg:send("DM_GETTEXT", Pos.sInitFunc)
           m_InitFunc, msg2 = loadstring (sInitFunc or "", "Initial")
           if not m_InitFunc then
             ErrorMsg(msg2, "Initial Function: " .. M.MSyntaxError)
-            Common.GotoEditField(hDlg, Dlg.sInitFunc.id)
+            Common.GotoEditField(hDlg, Pos.sInitFunc)
             return KEEP_DIALOG_OPEN
           end
-          local sFinalFunc = Dlg.sFinalFunc:GetText(hDlg)
+          local sFinalFunc = hDlg:send("DM_GETTEXT", Pos.sFinalFunc)
           m_FinalFunc, msg2 = loadstring (sFinalFunc or "", "Final")
           if not m_FinalFunc then
             ErrorMsg(msg2, "Final Function: " .. M.MSyntaxError)
-            Common.GotoEditField(hDlg, Dlg.sFinalFunc.id)
+            Common.GotoEditField(hDlg, Pos.sFinalFunc)
             return KEEP_DIALOG_OPEN
           end
           local env = type(m_tReplace)=="function" and getfenv(m_tReplace) or NewEnvir()
           setfenv(m_InitFunc, env)
           setfenv(m_FinalFunc, env)
         end
-      elseif param1 == Dlg.btnConfig.id then
-        hDlg:send(F.DM_SHOWDIALOG, 0)
+      elseif param1 == Pos.btnConfig then
+        hDlg:send("DM_SHOWDIALOG", 0)
         Common.ConfigDialog()
-        hDlg:send(F.DM_SHOWDIALOG, 1)
-        hDlg:send(F.DM_SETFOCUS, Dlg.btnOk.id)
+        hDlg:send("DM_SHOWDIALOG", 1)
+        hDlg:send("DM_SETFOCUS", Pos.btnOk)
         return KEEP_DIALOG_OPEN
       end
     end
   end
 
-  Common.AssignHotKeys(Dlg)
-  libDialog.LoadData(Dlg, aData)
-  if far.Dialog (UserGuid,-1,-1,W+4,24,"Rename",Dlg,0,DlgProc) == Dlg.btnOk.id then
-    libDialog.SaveData(Dlg, aData)
-    _Plugin.History:save()
+  dlg:AssignHotKeys()
+  dlg:LoadData(aData)
+  local out = dlg:Run()
+  if out then
+    dlg:SaveData(out, aData)
+    _Plugin.SaveSettings()
     return {
       Regex             = m_uRegex,
       fReplace          = m_fReplace,

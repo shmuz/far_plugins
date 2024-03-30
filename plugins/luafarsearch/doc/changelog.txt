@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2024-03-30, v3.46.0
+  [*] Use 'simpledialog' module instead of 'dialog'.
+
 2023-03-07, v3.45.5
   [!] Panels (search): fix error of conversion invalid UTF-8 to UTF-16 (occurs on Windows XP).
 

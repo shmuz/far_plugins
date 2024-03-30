@@ -125,15 +125,11 @@ function mod:GetDialogState(hDlg)
 
         if tp==F.DI_CHECKBOX then
           local val = item[IND_SELECTED]
-          if FarVer == 2 then out[elem.name] = val
-          else                out[elem.name] = (val==2) and 2 or (val ~= 0) -- false,true,2
-          end
+          out[elem.name] = (val==2) and 2 or (val ~= 0) -- false,true,2
 
         elseif tp==F.DI_RADIOBUTTON then
           local val = item[IND_SELECTED]
-          if FarVer == 2 then out[elem.name] = val
-          else                out[elem.name] = (val ~= 0) -- false,true
-          end
+          out[elem.name] = (val ~= 0) -- false,true
 
         elseif tp==F.DI_EDIT or tp==F.DI_FIXEDIT or tp==F.DI_PSWEDIT then
           out[elem.name] = item[IND_DATA] -- string
@@ -157,9 +153,7 @@ function mod:SetDialogState(hDlg, Data)
         local tp = elem.tp
 
         if tp=="chbox" then
-          if FarVer == 3 then
-            val = (val==2 or val==0) and val or (val and 1) or 0
-          end
+          val = (val==2 or val==0) and val or (val and 1) or 0
           Send(hDlg, "DM_SETCHECK", pos, val)
 
         elseif tp=="rbutt" then
@@ -450,27 +444,26 @@ function mod:Run()
     end
   end
   ----------------------------------------------------------------------------------------------
+  local UserProc = inData.proc
+
   local function DlgProc(hDlg, Msg, Par1, Par2)
-    local r = inData.proc and inData.proc(hDlg, Msg, Par1, Par2)
-    if r then return r; end
-
-    if Msg == F.DN_INITDIALOG then
-      if inData.initaction then inData.initaction(hDlg); end
-
-    elseif Msg == F.DN_CLOSE then
-      if inData.closeaction and inData[Par1] and not inData[Par1].cancel then
-        return inData.closeaction(hDlg, Par1, self:GetDialogState(hDlg))
+    if Msg == F.DN_CLOSE then
+      if inData[Par1] and not inData[Par1].cancel then
+        return UserProc(hDlg, Msg, Par1, self:GetDialogState(hDlg))
       end
 
-    elseif (FarVer == 2) and Msg == F.DN_KEY then
-      if inData.keyaction and inData.keyaction(hDlg, Par1, far.KeyToName(Par2)) then
+    elseif FarVer == 2 and Msg == F.DN_KEY or
+      FarVer == 3 and Msg==F.DN_CONTROLINPUT and Par2.EventType==F.KEY_EVENT and Par2.KeyDown
+    then
+      local keyname = FarVer==2 and far.KeyToName(Par2) or FarVer==3 and far.InputRecordToName(Par2)
+      if UserProc(hDlg, "EVENT_KEY", Par1, keyname) then
         return true
       end
-      if Par2 == F.KEY_F1 then
+      if keyname == "F1" then
         if type(inData.help) == "function" then
           inData.help()
         end
-      elseif Par2 == F.KEY_F4 then
+      elseif keyname == "F4" then
         if outData[Par1][IND_TYPE] == F.DI_EDIT and not inData[Par1].skipF4 then
           local txt = Send(hDlg, "DM_GETTEXT", Par1)
           txt = mod.OpenInEditor(txt, inData[Par1].ext)
@@ -478,36 +471,14 @@ function mod:Run()
         end
       end
 
-    elseif (FarVer == 2) and (Msg == F.DN_MOUSECLICK or Msg == F.DN_MOUSEEVENT)
-    or     (FarVer == 3) and (Msg == F.DN_CONTROLINPUT and Par2.EventType == F.MOUSE_EVENT) then
-      if inData.mouseaction then
-        if Par1 <= 0 then Par1 = nil; end
-        if inData.mouseaction(hDlg, Par1, Par2) then return true end
-      end
+    elseif (FarVer == 2) and (Msg == F.DN_MOUSECLICK or Msg == F.DN_MOUSEEVENT) or
+           (FarVer == 3) and (Msg == F.DN_CONTROLINPUT and Par2.EventType == F.MOUSE_EVENT)
+    then
+      if Par1 <= 0 then Par1 = nil; end
+      if UserProc(hDlg, "EVENT_MOUSE", Par1, Par2) then return true end
 
-    elseif (FarVer == 3) and Msg==F.DN_CONTROLINPUT and Par2.EventType==F.KEY_EVENT and Par2.KeyDown then
-      if inData.keyaction and inData.keyaction(hDlg, Par1, far.InputRecordToName(Par2)) then
-        return true
-      end
-      local modif = band(Par2.ControlKeyState,0x1F) ~= 0
-      if Par2.VirtualKeyCode == VK.F1 and not modif then
-        if type(inData.help) == "function" then
-          inData.help()
-        end
-      elseif Par2.VirtualKeyCode == VK.F4 and not modif then
-        if outData[Par1][IND_TYPE] == F.DI_EDIT then
-          local txt = Send(hDlg, "DM_GETTEXT", Par1)
-          txt = mod.OpenInEditor(txt, inData[Par1].ext)
-          if txt then Send(hDlg, "DM_SETTEXT", Par1, txt); end
-        end
-      end
-
-    elseif Msg == F.DN_BTNCLICK then
-      if inData[Par1].action then inData[Par1].action(hDlg,Par1,Par2); end
-
-    elseif Msg == F.DN_CTLCOLORDLGITEM then
-      local colors = outData[Par1].colors
-      if colors then return colors end
+    else
+      return UserProc(hDlg, Msg, Par1, Par2)
 
     end
 
@@ -517,6 +488,8 @@ function mod:Run()
   local x1, y1 = inData.x1 or -1, inData.y1 or -1
   local x2 = x1==-1 and W or x1+W-1
   local y2 = y1==-1 and H or y1+H-1
+  DlgProc = UserProc and DlgProc or nil
+
   local hDlg = far.DialogInit(guid, x1,y1,x2,y2, help, outData, inData.flags, DlgProc, inData.data)
   if hDlg then
     if F.FDLG_NONMODAL and 0 ~= band(inData.flags, F.FDLG_NONMODAL) then

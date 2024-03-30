@@ -4,9 +4,8 @@
 local M          = require "lfs_message"
 local RepLib     = require "lfs_replib"
 
-local libDialog  = require "far2.dialog"
+local sdialog    = require "far2.simpledialog"
 local libHistory = require "far2.history"
-local fHilite    = require "shmuz.hilite"
 local serial     = require "shmuz.serial"
 
 local DefaultLogFileName = "\\D{%Y%m%d-%H%M%S}.log"
@@ -14,7 +13,6 @@ local DefaultLogFileName = "\\D{%Y%m%d-%H%M%S}.log"
 local type = type
 local uchar = ("").char
 local F = far.Flags
-local VK = win.GetVirtualKeys()
 local band, bor, bnot = bit64.band, bit64.bor, bit64.bnot
 local Utf8, Utf16 = win.Utf16ToUtf8, win.Utf8ToUtf16
 local TransformReplacePat = RepLib.TransformReplacePat
@@ -97,17 +95,18 @@ local function FormatTime (tm)
   return fmt:format(tm)
 end
 
-local function SaveCodePageCombo (hDlg, combo, aData, aSaveCurPos)
+
+local function SaveCodePageCombo (hDlg, combo_pos, combo_list, aData, aSaveCurPos)
   if aSaveCurPos then
-    local pos = combo:GetListCurPos (hDlg)
-    aData.iSelectedCodePage = combo.ListItems[pos].CodePage
+    local pos = hDlg:send("DM_LISTGETCURPOS", combo_pos).SelectPos
+    aData.iSelectedCodePage = combo_list[pos].CodePage
   end
   aData.tCheckedCodePages = {}
-  local info = hDlg:send(F.DM_LISTINFO, combo.id)
+  local info = hDlg:send("DM_LISTINFO", combo_pos)
   for i=1,info.ItemsNumber do
-    local item = hDlg:send(F.DM_LISTGETITEM, combo.id, i)
+    local item = hDlg:send("DM_LISTGETITEM", combo_pos, i)
     if 0 ~= band(item.Flags, F.LIF_CHECKED) then
-      local t = hDlg:send(F.DM_LISTGETDATA, combo.id, i)
+      local t = hDlg:send("DM_LISTGETDATA", combo_pos, i)
       if t then table.insert(aData.tCheckedCodePages, t) end
     end
   end
@@ -493,13 +492,14 @@ local function ProcessDialogData (aData, bReplace, bInEditor, bUseMultiPatterns,
 end
 
 
-local function GetDialogHistoryKey (baseKey)
-  return _Plugin.History:field("config").bUseFarHistory and baseKey
-      or _Plugin.DialogHistoryPath .. baseKey
-end
-
 local function GetDialogHistoryValue (key, index)
   local dh = libHistory.dialoghistory(key, index, index)
+  return dh and dh[1] and dh[1].Name
+end
+
+
+local function GetDialogHistory (key)
+  local dh = libHistory.dialoghistory(key, -1, -1)
   return dh and dh[1] and dh[1].Name
 end
 
@@ -508,212 +508,177 @@ local SRFrame = {}
 SRFrame.Libs = {"far", "oniguruma", "pcre", "pcre2"}
 local SRFrameMeta = {__index = SRFrame}
 
-local function CreateSRFrame (Dlg, aData, bInEditor, bScriptCall)
-  local self = {Dlg=Dlg, Data=aData, bInEditor=bInEditor, bScriptCall=bScriptCall}
+local function CreateSRFrame (Items, aData, bInEditor, bScriptCall)
+  local self = {Items=Items, Data=aData, bInEditor=bInEditor, bScriptCall=bScriptCall}
   return setmetatable(self, SRFrameMeta)
 end
 
-function SRFrame:InsertInDialog (aPanelsDialog, Y, aOp)
-  local sepflags = bor(F.DIF_BOXCOLOR, F.DIF_SEPARATOR)
-  local hstflags = bor(F.DIF_HISTORY, F.DIF_MANUALADDHISTORY)
-  local Dlg = self.Dlg
+function SRFrame:SetDialogObject (dlg, Pos, Elem)
+  self.Dlg = dlg
+  self.Pos,self.Elem = Pos,Elem
+end
+
+function SRFrame:InsertInDialog (aPanelsDialog, aOp)
+  local insert = table.insert
+  local Items = self.Items
+  local md = 40 -- "middle"
   ------------------------------------------------------------------------------
   if aPanelsDialog then
-    Dlg.lab       = {"DI_TEXT",   5, Y,   0, 0, 0, 0, 0, 0, M.MDlgFileMask}
-    Dlg.sFileMask = {"DI_EDIT",   5, Y+1,70, 0, 0, "Masks", 0, F.DIF_HISTORY, "", _default="*"}
-    Y = Y+2
+    insert(Items, { tp="text"; text=M.MDlgFileMask; })
+    insert(Items, { tp="edit"; name="sFileMask"; hist="Masks"; uselasthistory=1; })
   end
   ------------------------------------------------------------------------------
-  Dlg.lab         = {"DI_TEXT",   5,Y,  0, Y, 0, 0, 0, 0, M.MDlgSearchPat}
-  Y = Y + 1
-  Dlg.sSearchPat  = {"DI_EDIT",   5,Y, 65, Y, 0, GetDialogHistoryKey("SearchText"), 0, hstflags, ""}
-  local bSearchEsc ={"DI_BUTTON",67,Y,  0, Y, 0, "", 0, F.DIF_BTNNOCLOSE, "&\\"}
+  insert(Items, { tp="text"; text=M.MDlgSearchPat; })
+  insert(Items, { tp="edit"; name="sSearchPat"; hist="SearchText"; })
   ------------------------------------------------------------------------------
   if aPanelsDialog and aOp == "grep" then
-    Y = Y + 1
-    Dlg.lab       = {"DI_TEXT",   5,Y,  0, Y, 0, 0, 0, 0, M.MDlgSkipPat}
-    Y = Y + 1
-    Dlg.sSkipPat  = {"DI_EDIT",   5,Y, 65, Y, 0, GetDialogHistoryKey("SkipText"), 0, hstflags, ""}
-    Dlg.bSkipEsc  = {"DI_BUTTON",67,Y,  0, Y, 0, "", 0, F.DIF_BTNNOCLOSE, "&/"}
+    insert(Items, { tp="text";  text=M.MDlgSkipPat; })
+    insert(Items, { tp="edit";  name="sSkipPat";  hist="SkipText"; })
   end
   ------------------------------------------------------------------------------
   if aOp == "replace" then
-    Y = Y + 1
-    Dlg.lab         = {"DI_TEXT",     5,Y,  0, 0, 0, 0, 0, 0, M.MDlgReplacePat}
-    Y = Y + 1
-    Dlg.sReplacePat = {"DI_EDIT",     5,Y, 65, Y, 0, GetDialogHistoryKey("ReplaceText"), 0, hstflags, ""}
-    Dlg.bSearchEsc =  bSearchEsc
-    Dlg.bReplaceEsc = {"DI_BUTTON", 67, Y,  0, Y, 0, "", 0, F.DIF_BTNNOCLOSE, "&/"}
-    Y = Y + 1
+    insert(Items, { tp="text";  text=M.MDlgReplacePat; })
+    insert(Items, { tp="edit";  name="sReplacePat"; hist="ReplaceText"; })
+    insert(Items, { tp="chbox"; name="bRepIsFunc";         x1=7;         text=M.MDlgRepIsFunc; })
     if aPanelsDialog then
-      Dlg.bRepIsFunc       = {"DI_CHECKBOX", 7, Y, 0,0, 0,0,0,0, M.MDlgRepIsFunc}
-      Dlg.bMakeBackupCopy  = {"DI_CHECKBOX",27, Y, 0,0, 0,0,0,0, M.MDlgMakeBackupCopy}
-      Dlg.bConfirmReplace  = {"DI_CHECKBOX",48, Y, 0,0, 0,0,0,0, M.MDlgConfirmReplace}
+      insert(Items, { tp="chbox"; name="bMakeBackupCopy";  x1=27, y1=""; text=M.MDlgMakeBackupCopy; })
+      insert(Items, { tp="chbox"; name="bConfirmReplace";  x1=48, y1=""; text=M.MDlgConfirmReplace; })
     else
-      Dlg.bRepIsFunc       = {"DI_CHECKBOX", 7, Y, 0,0, 0,0,0,0, M.MDlgRepIsFunc}
-      Dlg.bDelEmptyLine    = {"DI_CHECKBOX",38, Y, 0,0, 0,0,0,0, M.MDlgDelEmptyLine}
-      Y = Y + 1
-      Dlg.bConfirmReplace  = {"DI_CHECKBOX", 7, Y, 0,0, 0,0,0,0, M.MDlgConfirmReplace}
-      Dlg.bDelNonMatchLine = {"DI_CHECKBOX",38, Y, 0,0, 0,0,0,0, M.MDlgDelNonMatchLine}
+      insert(Items, { tp="chbox"; name="bDelEmptyLine";    x1=md, y1=""; text=M.MDlgDelEmptyLine; })
+      insert(Items, { tp="chbox"; name="bConfirmReplace";  x1=7,         text=M.MDlgConfirmReplace; })
+      insert(Items, { tp="chbox"; name="bDelNonMatchLine"; x1=md, y1=""; text=M.MDlgDelNonMatchLine; })
     end
-  else
-    Dlg.bSearchEsc = bSearchEsc
   end
   ------------------------------------------------------------------------------
-  Y = Y + 1
-  Dlg.sep = {"DI_TEXT", 5,Y,0,0, 0,0, 0, sepflags, ""}
+  insert(Items, { tp="sep"; })
   ------------------------------------------------------------------------------
-  Y = Y + 1
-  local X2 = 40
-  local X3 = X2 + M.MDlgRegexLib:gsub("&",""):len() + 1;
-  local X4 = X3 + 12
-  Dlg.bRegExpr   = {"DI_CHECKBOX",      5,Y,  0, 0, 0, 0, 0, 0, M.MDlgRegExpr}
-  Dlg.lab        = {"DI_TEXT",         X2,Y,  0, 0, 0, 0, 0, 0, M.MDlgRegexLib}
-  Dlg.cmbRegexLib= {"DI_COMBOBOX",     X3,Y ,X4, 0, {
-                       {Text="Far regex"},
-                       {Text="Oniguruma"},
-                       {Text="PCRE"},
-                       {Text="PCRE2"},
-                     }, 0, 0, {DIF_DROPDOWNLIST=1}, "", _noautoload=true}
-  Y = Y + 1
-  Dlg.bCaseSens   = {"DI_CHECKBOX",     5,Y,  0, 0, 0, 0, 0, 0, M.MDlgCaseSens}
-  Dlg.bExtended   = {"DI_CHECKBOX",    X2,Y,  0, 0, 0, 0, 0, 0, M.MDlgExtended}
+  insert(Items, { tp="chbox"; name="bRegExpr";                         text=M.MDlgRegExpr;  })
+  insert(Items, { tp="text";                         y1=""; x1=md;     text=M.MDlgRegexLib; })
+  local x1 = md + M.MDlgRegexLib:gsub("&",""):len() + 1;
+  insert(Items, { tp="combobox"; name="cmbRegexLib"; y1=""; x1=x1; width=14; dropdown=1; noload=1;
+           list = { {Text="Far regex"}, {Text="Oniguruma"}, {Text="PCRE"}, {Text="PCRE2"} };  })
   ------------------------------------------------------------------------------
-  Y = Y + 1
-  Dlg.bWholeWords = {"DI_CHECKBOX",     5,Y,  0, 0, 0, 0, 0, 0, M.MDlgWholeWords}
+  insert(Items, { tp="chbox"; name="bCaseSens";                        text=M.MDlgCaseSens; })
+  insert(Items, { tp="chbox"; name="bExtended"; x1=md; y1="";          text=M.MDlgExtended; })
+  insert(Items, { tp="chbox"; name="bWholeWords";                      text=M.MDlgWholeWords; })
   ------------------------------------------------------------------------------
   if aPanelsDialog and aOp=="search" then
-    Dlg.bFileAsLine    = {"DI_CHECKBOX",X2, Y,  0, 0, 0, 0, 0, 0, M.MDlgFileAsLine}
-    Y = Y + 1
-    Dlg.bMultiPatterns = {"DI_CHECKBOX", 5, Y,  0, 0, 0, 0, 0, 0, M.MDlgMultiPatterns}
-    Dlg.bInverseSearch = {"DI_CHECKBOX",X2, Y,  0, 0, 0, 0, 0, 0, M.MDlgInverseSearch}
+    insert(Items, { tp="chbox"; name="bFileAsLine";    x1=md; y1="";   text=M.MDlgFileAsLine;    })
+    insert(Items, { tp="chbox"; name="bMultiPatterns";                 text=M.MDlgMultiPatterns; })
+    insert(Items, { tp="chbox"; name="bInverseSearch"; x1=md; y1="";   text=M.MDlgInverseSearch; })
   end
-  return Y + 1
 end
 
 function SRFrame:CheckRegexInit (hDlg, Data)
-  local Dlg = self.Dlg
-  Dlg.bWholeWords :SetCheck(hDlg, Data.bWholeWords)
-  Dlg.bExtended   :SetCheck(hDlg, Data.bExtended)
-  Dlg.bCaseSens   :SetCheck(hDlg, Data.bCaseSens)
+  local Pos = self.Pos
+  hDlg:send("DM_SETCHECK", Pos.bWholeWords, Data.bWholeWords and 1 or 0)
+  hDlg:send("DM_SETCHECK", Pos.bExtended,   Data.bExtended and 1 or 0)
+  hDlg:send("DM_SETCHECK", Pos.bCaseSens,   Data.bCaseSens and 1 or 0)
   self:CheckRegexChange(hDlg)
 end
 
 function SRFrame:CheckRegexChange (hDlg)
-  local Dlg = self.Dlg
-  local bRegex = Dlg.bRegExpr:GetCheck(hDlg)
+  local Pos = self.Pos
+  local bRegex = hDlg:send("DM_GETCHECK", Pos.bRegExpr)
 
-  if bRegex then Dlg.bWholeWords:SetCheck(hDlg, false) end
-  Dlg.bWholeWords:Enable(hDlg, not bRegex)
+  if bRegex then hDlg:send("DM_SETCHECK", Pos.bWholeWords, 0) end
+  hDlg:send("DM_ENABLE", Pos.bWholeWords, bRegex==0 and 1 or 0)
 
-  if not bRegex then Dlg.bExtended:SetCheck(hDlg, false) end
-  Dlg.bExtended:Enable(hDlg, bRegex)
+  if not bRegex then hDlg:send("DM_SETCHECK", Pos.bExtended, 0) end
+  hDlg:send("DM_ENABLE", Pos.bExtended, bRegex)
 
-  if Dlg.bFileAsLine then
-    if not bRegex then Dlg.bFileAsLine:SetCheck(hDlg, false) end
-    Dlg.bFileAsLine:Enable(hDlg, bRegex)
+  if Pos.bFileAsLine then
+    if not bRegex then hDlg:send("DM_SETCHECK", Pos.bFileAsLine, 0) end
+    hDlg:send("DM_ENABLE", Pos.bFileAsLine, bRegex)
   end
 end
 
 function SRFrame:CheckAdvancedEnab (hDlg)
-  local Dlg = self.Dlg
-  if Dlg.bAdvanced then
-    local bEnab = Dlg.bAdvanced:GetCheck(hDlg)
-    Dlg.labInitFunc   :Enable(hDlg, bEnab)
-    Dlg.sInitFunc     :Enable(hDlg, bEnab)
-    Dlg.labFinalFunc  :Enable(hDlg, bEnab)
-    Dlg.sFinalFunc    :Enable(hDlg, bEnab)
-    if Dlg.sFilterFunc then
-      Dlg.labFilterFunc :Enable(hDlg, bEnab)
-      Dlg.sFilterFunc   :Enable(hDlg, bEnab)
+  local Pos = self.Pos
+  if Pos.bAdvanced then
+    hDlg:send("DM_ENABLEREDRAW", 0)
+    local bEnab = hDlg:send("DM_GETCHECK", Pos.bAdvanced)
+    hDlg:send("DM_ENABLE", Pos.labInitFunc,   bEnab)
+    hDlg:send("DM_ENABLE", Pos.sInitFunc,     bEnab)
+    hDlg:send("DM_ENABLE", Pos.labFinalFunc,  bEnab)
+    hDlg:send("DM_ENABLE", Pos.sFinalFunc,    bEnab)
+    if Pos.sFilterFunc then
+      hDlg:send("DM_ENABLE", Pos.labFilterFunc, bEnab)
+      hDlg:send("DM_ENABLE", Pos.sFilterFunc,   bEnab)
     end
+    hDlg:send("DM_ENABLEREDRAW", 1)
   end
 end
 
 function SRFrame:CheckWrapAround (hDlg)
-  local Dlg = self.Dlg
-  if self.bInEditor and Dlg.bWrapAround then
-    local enb = Dlg.rScopeGlobal:GetCheck(hDlg) and Dlg.rOriginCursor:GetCheck(hDlg)
-    Dlg.bWrapAround:Enable(hDlg, enb)
+  local Pos = self.Pos
+  if self.bInEditor and Pos.bWrapAround then
+    local bEnab = hDlg:send("DM_GETCHECK", Pos.rScopeGlobal)==1 and hDlg:send("DM_GETCHECK", Pos.rOriginCursor)==1
+    hDlg:send("DM_ENABLE", Pos.bWrapAround, bEnab and 1 or 0)
   end
-end
-
-local function SetSearchFieldNotEmpty (Dlg)
-  -- Try plugin history (it may be not stored in dialog history)
-  local h = _Plugin.History
-  local s = not h:field("config").bUseFarHistory and h:field("main").sSearchPat
-
-  -- Try dialog history
-  if not s or s == "" then
-    local key = GetDialogHistoryKey("SearchText")
-    s = GetDialogHistoryValue(key, -1)
-    if s == "" then
-      s = GetDialogHistoryValue(key, -2)
-    end
-  end
-
-  if s then Dlg.sSearchPat.Data = s end
 end
 
 function SRFrame:OnDataLoaded (aData)
-  local Dlg = self.Dlg
+  local Pos = self.Pos
+  local Items = self.Items
+  local bInEditor = self.bInEditor
+
   if not self.bScriptCall then
-    if Dlg.sReplacePat then Dlg.sReplacePat.Flags = bor(Dlg.sReplacePat.Flags, F.DIF_USELASTHISTORY) end
-    if Dlg.sFileMask then Dlg.sFileMask.Flags = bor(Dlg.sFileMask.Flags, F.DIF_USELASTHISTORY) end
-    if self.bInEditor then
-      local from = _Plugin.History:field("config").rPickFrom
-      if from == "history" then
-        SetSearchFieldNotEmpty(Dlg)
-      elseif from == "nowhere" then
-        Dlg.sSearchPat.Data = ""
-        if Dlg.sReplacePat then Dlg.sReplacePat.Data = ""; end
-      else -- (default) if from == "editor" then
-        local word = GetWordUnderCursor()
-        if word then Dlg.sSearchPat.Data = word
-        else         SetSearchFieldNotEmpty(Dlg)
-        end
+    if bInEditor then
+      local config = _Plugin.History:field("config")
+      if config.rPickHistory then
+        Items[Pos.sSearchPat].uselasthistory = true
+      elseif config.rPickNowhere then
+        Items[Pos.sSearchPat].val = ""
+        if Pos.sReplacePat then Items[Pos.sReplacePat].val = ""; end
+      else -- (default) if config.rPickEditor then
+        Items[Pos.sSearchPat].val = GetWordUnderCursor() or ""
       end
     else
-      if Dlg.sReplacePat then SetSearchFieldNotEmpty(Dlg) end
+      Items[Pos.sSearchPat].val =
+        aData.sSearchPat == "" and ""
+      --or GetDialogHistory("SearchText")
+        or aData.sSearchPat
+        or ""
     end
   end
 
-  local items = Dlg.cmbRegexLib.ListItems
-  items.SelectIndex = 1
+  local item = Items[Pos.cmbRegexLib]
+  item.val = 1
   for i,v in ipairs(self.Libs) do
-    if aData.sRegexLib == v then items.SelectIndex = i; break; end
+    if aData.sRegexLib == v then item.val = i; break; end
   end
 end
 
 
 function SRFrame:CompleteLoadData (hDlg, Data, LoadFromPreset)
-  local Dlg = self.Dlg
+  local Pos = self.Pos
   local bScript = self.bScriptCall or LoadFromPreset
 
   if self.bInEditor then
     -- Set scope
     local EI = editor.GetInfo()
     if EI.BlockType == F.BTYPE_NONE then
-      Dlg.rScopeGlobal:SetCheck(hDlg, true)
-      Dlg.rScopeBlock:Enable(hDlg, false)
+      hDlg:send("DM_SETCHECK", Pos.rScopeGlobal, 1)
+      hDlg:send("DM_ENABLE", Pos.rScopeBlock, 0)
     else
       local bScopeBlock
       local bForceBlock = _Plugin.History:field("config").bForceScopeToBlock
       if bScript or not bForceBlock then
         bScopeBlock = (Data.sScope == "block")
       else
-        local line = editor.GetStringW(nil, EI.BlockStartLine+1) -- test the 2-nd selected line
+        local line = editor.GetString(nil,EI.BlockStartLine+1) -- test the 2-nd selected line
         bScopeBlock = line and line.SelStart>0
       end
-      Dlg[bScopeBlock and "rScopeBlock" or "rScopeGlobal"]:SetCheck(hDlg, true)
+      hDlg:send("DM_SETCHECK", Pos[bScopeBlock and "rScopeBlock" or "rScopeGlobal"], 1)
     end
 
     -- Set origin
     local key = bScript and "sOrigin"
-                or Dlg.rScopeGlobal:GetCheck(hDlg) and "sOriginInGlobal"
+                or hDlg:send("DM_GETCHECK", Pos.rScopeGlobal)==1 and "sOriginInGlobal"
                 or "sOriginInBlock"
     local name = Data[key]=="scope" and "rOriginScope" or "rOriginCursor"
-    Dlg[name]:SetCheck(hDlg, true)
+    hDlg:send("DM_SETCHECK", Pos[name], 1)
 
     self:CheckWrapAround(hDlg)
   end
@@ -724,133 +689,92 @@ end
 
 
 function SRFrame:SaveDataDyn (hDlg, Data)
-  local Dlg = self.Dlg
+  local state = self.Dlg:GetDialogState(hDlg)
   ------------------------------------------------------------------------
-  Dlg.sSearchPat:SaveText(hDlg, Data)
-  Dlg.bCaseSens:SaveCheck(hDlg, Data)
-  Dlg.bRegExpr:SaveCheck(hDlg, Data)
-
-  Dlg.bWholeWords:SaveCheck(hDlg, Data)
-  Dlg.bExtended:SaveCheck(hDlg, Data)
-  if Dlg.bFileAsLine then Dlg.bFileAsLine:SaveCheck(hDlg, Data) end
-  if Dlg.bInverseSearch then Dlg.bInverseSearch:SaveCheck(hDlg, Data) end
-  if Dlg.bMultiPatterns then Dlg.bMultiPatterns:SaveCheck(hDlg, Data) end
+  for k,v in pairs(state) do Data[k]=v end
   ------------------------------------------------------------------------
   if self.bInEditor then
-    Dlg.bWrapAround:SaveCheck(hDlg, Data)
-    Dlg.bSearchBack:SaveCheck(hDlg, Data)
-    Dlg.bHighlight:SaveCheck(hDlg, Data)
-    Data.sScope = Dlg.rScopeGlobal:GetCheck(hDlg) and "global" or "block"
-    Data.sOrigin = Dlg.rOriginCursor:GetCheck(hDlg) and "cursor" or "scope"
+    Data.sScope = state.rScopeGlobal and "global" or "block"
+    Data.sOrigin = state.rOriginCursor and "cursor" or "scope"
 
     if not self.bScriptCall then
       local key = Data.sScope == "global" and "sOriginInGlobal" or "sOriginInBlock"
       Data[key] = Data.sOrigin -- to be passed to execution
     end
   else
-    Dlg.sFileMask:SaveText(hDlg, Data)
-    if Dlg.bSearchFolders then Dlg.bSearchFolders:SaveCheck(hDlg, Data) end
-    Dlg.bSearchSymLinks:SaveCheck(hDlg, Data)
-    Data.sSearchArea = IndexToSearchArea(Dlg.cmbSearchArea:GetListCurPos(hDlg))
-    if Dlg.bGrepHighlight then -- Grep dialog
-      Dlg.sSkipPat:SaveText(hDlg, Data)
-      Dlg.bGrepShowLineNumbers:SaveCheck(hDlg, Data)
-      Dlg.bGrepHighlight:SaveCheck(hDlg, Data)
-      Dlg.bGrepInverseSearch:SaveCheck(hDlg, Data)
-      Dlg.sGrepLinesBefore:SaveText(hDlg, Data)
-      Dlg.sGrepLinesAfter:SaveText(hDlg, Data)
-    end
+    Data.sSearchArea = IndexToSearchArea(state.cmbSearchArea)
   end
   ------------------------------------------------------------------------
-  if Dlg.bAdvanced then
-    Dlg.bAdvanced  :SaveCheck(hDlg, Data)
-    Dlg.sInitFunc  :SaveText(hDlg, Data)
-    Dlg.sFinalFunc :SaveText(hDlg, Data)
-    if Dlg.sFilterFunc then
-      Dlg.sFilterFunc:SaveText(hDlg, Data)
-    end
-  end
-  ------------------------------------------------------------------------
-  if Dlg.sReplacePat then
-    Dlg.sReplacePat :SaveText(hDlg, Data)
-    Dlg.bRepIsFunc  :SaveCheck(hDlg, Data)
-    if Dlg.bDelEmptyLine then Dlg.bDelEmptyLine:SaveCheck(hDlg, Data) end
-    if Dlg.bDelNonMatchLine then Dlg.bDelNonMatchLine:SaveCheck(hDlg, Data) end
-    if Dlg.bMakeBackupCopy then Dlg.bMakeBackupCopy:SaveCheck(hDlg, Data) end
-    if Dlg.bConfirmReplace then Dlg.bConfirmReplace:SaveCheck(hDlg, Data) end
-  end
-  ------------------------------------------------------------------------
-  Data.sRegexLib = self.Libs[ Dlg.cmbRegexLib:GetListCurPos(hDlg) ]
+  Data.sRegexLib = self.Libs[ state.cmbRegexLib ]
 end
 
+function SRFrame:GetLibName (hDlg)
+  local pos = hDlg:send("DM_LISTGETCURPOS", self.Pos.cmbRegexLib)
+  return self.Libs[pos.SelectPos]
+end
 
 function SRFrame:DlgProc (hDlg, msg, param1, param2)
-  local Dlg, Data, bInEditor = self.Dlg, self.Data, self.bInEditor
-  local bReplace = Dlg.sReplacePat
+  local Pos = self.Pos
+  local Data, bInEditor = self.Data, self.bInEditor
+  local bReplace = Pos.sReplacePat
   ----------------------------------------------------------------------------
   if msg == F.DN_INITDIALOG then
+    assert(self.Dlg, "self.Dlg not set; probably Frame:SetDialogObject was not called")
     self:CompleteLoadData(hDlg, Data, false)
+    if _Plugin.sSearchWord and not self.bScriptCall then
+      if _Plugin.History:field("config").rPickHistory then
+        hDlg:send("DM_SETTEXT", Pos.sSearchPat, _Plugin.sSearchWord)
+      end
+      hDlg:send("DM_ADDHISTORY", Pos.sSearchPat, _Plugin.sSearchWord)
+      _Plugin.sSearchWord = nil
+    end
   ----------------------------------------------------------------------------
   elseif msg == F.DN_BTNCLICK then
-    if param1==Dlg.bRegExpr.id then
+    if param1==Pos.bRegExpr then
       self:CheckRegexChange(hDlg)
-    elseif Dlg.bSearchEsc and param1==Dlg.bSearchEsc.id then
-      local txt = Dlg.sSearchPat:GetText(hDlg)
-      if #txt < 1e6 then -- protect against memory exhaustion
-        txt = EscapeSearchPattern(txt)
-        Dlg.sSearchPat:SetText(hDlg, txt)
-        hDlg:send("DM_SETFOCUS", Dlg.sSearchPat.id)
-      end
-    elseif Dlg.bSkipEsc and param1==Dlg.bSkipEsc.id then
-      local txt = Dlg.sSkipPat:GetText(hDlg)
-      if #txt < 1e6 then -- protect against memory exhaustion
-        txt = EscapeSearchPattern(txt)
-        Dlg.sSkipPat:SetText(hDlg, txt)
-        hDlg:send("DM_SETFOCUS", Dlg.sSkipPat.id)
-      end
-    elseif Dlg.bReplaceEsc and param1==Dlg.bReplaceEsc.id then
-      local txt = Dlg.sReplacePat:GetText(hDlg)
-      if #txt < 1e6 then -- protect against memory exhaustion
-        txt = txt:gsub("[$\\]", "\\%1")
-        Dlg.sReplacePat:SetText(hDlg, txt)
-        hDlg:send("DM_SETFOCUS", Dlg.sReplacePat.id)
-      end
     else
       if bInEditor then
         self:CheckWrapAround(hDlg)
       end
-      if Dlg.bAdvanced and param1==Dlg.bAdvanced.id then
+      if Pos.bAdvanced and param1==Pos.bAdvanced then
         self:CheckAdvancedEnab(hDlg)
       end
     end
   ----------------------------------------------------------------------------
+  elseif msg == "EVENT_KEY" and param2 == "F4" then
+    if param1 == Pos.sReplacePat and hDlg:send("DM_GETCHECK", Pos.bRepIsFunc) == 1 then
+      local txt = sdialog.OpenInEditor(hDlg:send("DM_GETTEXT", Pos.sReplacePat), "lua")
+      if txt then hDlg:send("DM_SETTEXT", Pos.sReplacePat, txt) end
+      return true
+    end
+  ----------------------------------------------------------------------------
   elseif msg == F.DN_EDITCHANGE then
-    if param1 == Dlg.cmbRegexLib.id then self:CheckRegexChange(hDlg) end
+    if param1 == Pos.cmbRegexLib then self:CheckRegexChange(hDlg) end
   ----------------------------------------------------------------------------
   elseif msg == F.DN_CLOSE then
-    if Dlg.btnOk      and param1 == Dlg.btnOk.id       or
-       Dlg.btnCount   and param1 == Dlg.btnCount.id    or
-       Dlg.btnShowAll and param1 == Dlg.btnShowAll.id
+    if Pos.btnOk      and param1 == Pos.btnOk       or
+       Pos.btnCount   and param1 == Pos.btnCount    or
+       Pos.btnShowAll and param1 == Pos.btnShowAll
     then
       if bInEditor then
-        if Dlg.sSearchPat:GetText(hDlg) == "" then
+        if hDlg:send("DM_GETTEXT", Pos.sSearchPat) == "" then
           ErrorMsg(M.MSearchFieldEmpty)
-          GotoEditField(hDlg, Dlg.sSearchPat.id)
+          GotoEditField(hDlg, Pos.sSearchPat)
           return KEEP_DIALOG_OPEN
         end
       end
       local tmpdata, key = {}
       for k,v in pairs(Data) do tmpdata[k]=v end
       self:SaveDataDyn(hDlg, tmpdata)
-      local bSkip = Dlg.sSkipPat and tmpdata.sSkipPat ~= ""
-      self.close_params, key = ProcessDialogData(tmpdata, bReplace, bInEditor, Dlg.bMultiPatterns, bSkip)
+      local bSkip = Pos.sSkipPat and tmpdata.sSkipPat ~= ""
+      self.close_params, key = ProcessDialogData(tmpdata, bReplace, bInEditor, Pos.bMultiPatterns, bSkip)
       if self.close_params then
         for k,v in pairs(tmpdata) do Data[k]=v end
-        hDlg:send("DM_ADDHISTORY", Dlg.sSearchPat.id, Data.sSearchPat)
-        if Dlg.sReplacePat then hDlg:send("DM_ADDHISTORY", Dlg.sReplacePat.id, Data.sReplacePat) end
-        if Dlg.sSkipPat    then hDlg:send("DM_ADDHISTORY", Dlg.sSkipPat.id,    Data.sSkipPat)    end
+        hDlg:send("DM_ADDHISTORY", Pos.sSearchPat, Data.sSearchPat)
+        if Pos.sReplacePat then hDlg:send("DM_ADDHISTORY", Pos.sReplacePat, Data.sReplacePat) end
+        if Pos.sSkipPat    then hDlg:send("DM_ADDHISTORY", Pos.sSkipPat,    Data.sSkipPat)    end
       else
-        if key and Dlg[key] then GotoEditField(hDlg, Dlg[key].id) end
+        if key and Pos[key] then GotoEditField(hDlg, Pos[key]) end
         return KEEP_DIALOG_OPEN
       end
 
@@ -860,13 +784,19 @@ end
 
 
 function SRFrame:DoPresets (hDlg)
-  local Dlg = self.Dlg
+  local Pos = self.Pos
   local HistPresetNames = _Plugin.DialogHistoryPath .. "Presets"
   hDlg:send("DM_SHOWDIALOG", 0)
   local props = { Title=M.MTitlePresets, Bottom = "F1", HelpTopic="Presets", }
   local presets = _Plugin.History:field("presets")
-  local bkeys = { {BreakKey="F2"},  {BreakKey="INSERT"}, {BreakKey="DELETE"}, {BreakKey="F6"},
-                  {BreakKey="C+S"}, {BreakKey="C+O"}, }
+  local bkeys = {
+    {  action="Save";    BreakKey="F2";      },
+    {  action="SaveAs";  BreakKey="INSERT";  },
+    {  action="Delete";  BreakKey="DELETE";  },
+    {  action="Rename";  BreakKey="F6";      },
+    {  action="Export";  BreakKey="C+S";     },
+    {  action="Import";  BreakKey="C+O";     },
+  }
 
   while true do
     local items = {}
@@ -876,58 +806,60 @@ function SRFrame:DoPresets (hDlg)
       if name == self.PresetName then t.selected,t.checked = true,true; end
     end
     table.sort(items, function(a,b) return win.CompareString(a.text,b.text,nil,"cS") < 0; end)
+    ----------------------------------------------------------------------------
     local item, pos = far.Menu(props, items, bkeys)
+    ----------------------------------------------------------------------------
     if not item then break end
     ----------------------------------------------------------------------------
+    props.SelectIndex = pos
     if item.preset then
       self.PresetName = item.text
       local data = item.preset
-      libDialog.LoadDataDyn (hDlg, Dlg, data, true)
+      self.Dlg:SetDialogState(hDlg, data)
 
-      if Dlg.cmbSearchArea and data.sSearchArea then
-        Dlg.cmbSearchArea:SetListCurPos(hDlg, SearchAreaToIndex(data.sSearchArea))
+      if Pos.cmbSearchArea and data.sSearchArea then
+        hDlg:send("DM_LISTSETCURPOS", Pos.cmbSearchArea, {SelectPos=SearchAreaToIndex(data.sSearchArea)} )
       end
 
-      if Dlg.cmbCodePage then
-        local combo = Dlg.cmbCodePage
-        local info = hDlg:send(F.DM_LISTINFO, combo.id)
+      if Pos.cmbCodePage then
+        local info = hDlg:send("DM_LISTINFO", Pos.cmbCodePage)
         if data.tCheckedCodePages then
           local map = {}
           for i,v in ipairs(data.tCheckedCodePages) do map[v]=i end
           for i=3,info.ItemsNumber do -- skip "Default code pages" and "Checked code pages"
-            local cp = hDlg:send(F.DM_LISTGETDATA, combo.id, i)
+            local cp = hDlg:send("DM_LISTGETDATA", Pos.cmbCodePage, i)
             if cp then
-              local listItem = hDlg:send(F.DM_LISTGETITEM, combo.id, i)
+              local listItem = hDlg:send("DM_LISTGETITEM", Pos.cmbCodePage, i)
               listItem.Index = i
               if map[cp] then listItem.Flags = bor(listItem.Flags, F.LIF_CHECKED)
               else listItem.Flags = band(listItem.Flags, bnot(F.LIF_CHECKED))
               end
-              hDlg:send(F.DM_LISTUPDATE, combo.id, listItem)
+              hDlg:send("DM_LISTUPDATE", Pos.cmbCodePage, listItem)
             end
           end
         end
         if data.iSelectedCodePage then
           local scp = data.iSelectedCodePage
           for i=1,info.ItemsNumber do
-            if scp == hDlg:send(F.DM_LISTGETDATA, combo.id, i) then
-              combo:SetListCurPos(hDlg, i)
+            if scp == hDlg:send("DM_LISTGETDATA", Pos.cmbCodePage, i) then
+              hDlg:send("DM_LISTSETCURPOS", Pos.cmbCodePage, {SelectPos=i})
               break
             end
           end
         end
       end
 
-      local index, lib = 1, data.sRegexLib
+      local index
       for i,v in ipairs(self.Libs) do
-        if lib == v then index = i; break; end
+        if data.sRegexLib == v then index = i; break; end
       end
-      Dlg.cmbRegexLib:SetListCurPos(hDlg, index)
+      hDlg:send("DM_LISTSETCURPOS", Pos.cmbRegexLib, {SelectPos=index or 1})
 
       self:CompleteLoadData(hDlg, data, true)
       break
     ----------------------------------------------------------------------------
-    elseif item.BreakKey == "F2" or item.BreakKey == "INSERT" then
-      local pure_save_name = item.BreakKey == "F2" and self.PresetName
+    elseif item.action == "Save" or item.action == "SaveAs" then
+      local pure_save_name = item.action == "Save" and self.PresetName
       local name = pure_save_name or
         far.InputBox(nil, M.MSavePreset, M.MEnterPresetName, HistPresetNames,
                      self.PresetName, nil, nil, F.FIB_NOUSELASTHISTORY)
@@ -935,11 +867,14 @@ function SRFrame:DoPresets (hDlg)
         if pure_save_name or not presets[name] or
           far.Message(M.MPresetOverwrite, M.MConfirm, M.MBtnYesNo, "w") == 1
         then
-          local data = {}
+          props.SelectIndex = nil
+          local data = self.Dlg:GetDialogState(hDlg)
           presets[name] = data
           self.PresetName = name
-          self:SaveDataDyn (hDlg, data)
-          if Dlg.cmbCodePage then SaveCodePageCombo(hDlg, Dlg.cmbCodePage, data, true) end
+          self:SaveDataDyn(hDlg, data)
+          if Pos.cmbCodePage then
+            SaveCodePageCombo(hDlg, Pos.cmbCodePage, self.Items[Pos.cmbCodePage].list, data, true)
+          end
           _Plugin.History:save()
           if pure_save_name then
             far.Message(M.MPresetWasSaved, M.MMenuTitle)
@@ -948,10 +883,13 @@ function SRFrame:DoPresets (hDlg)
         end
       end
     ----------------------------------------------------------------------------
-    elseif item.BreakKey == "DELETE" and items[1] then
+    elseif item.action == "Delete" and items[1] then
       local name = items[pos].text
       local msg = ([[%s "%s"?]]):format(M.MDeletePreset, name)
       if far.Message(msg, M.MConfirm, M.MBtnYesNo, "w") == 1 then
+        if pos == #items then
+          props.SelectIndex = pos-1
+        end
         if self.PresetName == name then
           self.PresetName = nil
         end
@@ -959,7 +897,7 @@ function SRFrame:DoPresets (hDlg)
         _Plugin.History:save()
       end
     ----------------------------------------------------------------------------
-    elseif item.BreakKey == "F6" and items[1] then
+    elseif item.action == "Rename" and items[1] then
       local oldname = items[pos].text
       local name = far.InputBox(nil, M.MRenamePreset, M.MEnterPresetName, HistPresetNames, oldname)
       if name and name ~= oldname then
@@ -972,7 +910,7 @@ function SRFrame:DoPresets (hDlg)
         end
       end
     ----------------------------------------------------------------------------
-    elseif item.BreakKey == "C+S" and items[1] then
+    elseif item.action == "Export" and items[1] then
       local fname = far.InputBox(nil, M.MPresetExportTitle, M.MPresetExportPrompt)
       if fname then
         fname = far.ConvertPath(fname)
@@ -990,7 +928,7 @@ function SRFrame:DoPresets (hDlg)
         end
       end
     ----------------------------------------------------------------------------
-    elseif item.BreakKey == "C+O" then
+    elseif item.action == "Import" then
       local fname = far.InputBox(nil, M.MPresetImportTitle, M.MPresetImportPrompt)
       if fname then
         local func, msg = loadfile(far.ConvertPath(fname))
@@ -1059,37 +997,42 @@ end
 
 
 local function ConfigDialog()
-  local CfgGuid = win.Uuid("6C2BC7AF-8739-499E-BFA2-7E967B0BDDA9")
   local HIST_LOG = _Plugin.DialogHistoryPath .. "LogFileName"
   local X1 = 5 + (M.MRenameLogFileName):len()
-  local Dlg = libDialog.NewDialog()
-  Dlg.frame           = {"DI_DOUBLEBOX",   3, 1,72, 8,  0, 0, 0,  0,  M.MConfigTitleCommon}
-  Dlg.bUseFarHistory  = {"DI_CHECKBOX",    5, 2, 0, 0,  0, 0, 0,  0,  M.MUseFarHistory}
-  Dlg.lab             = {"DI_TEXT",        5, 4, 0, 0,  0, 0, 0,  0,  M.MRenameLogFileName}
-  Dlg.sLogFileName    = {"DI_EDIT",       X1, 4,70, 0,  0, HIST_LOG, 0, {DIF_HISTORY=1,DIF_USELASTHISTORY=1},
-                                                                      DefaultLogFileName}
-  Dlg.sep             = {"DI_TEXT",        5, 6, 0, 0,  0, 0, 0,  {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  Dlg.btnOk           = {"DI_BUTTON",      0, 7, 0, 0,  0, 0, 0,  {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
-  Dlg.btnCancel       = {"DI_BUTTON",      0, 7, 0, 0,  0, 0, 0,  "DIF_CENTERGROUP", M.MCancel}
-  ----------------------------------------------------------------------------
-  local Data = _Plugin.History:field("config")
-  libDialog.LoadData(Dlg, Data)
 
-  local function DlgProc (hDlg, msg, param1, param2)
-    if msg == F.DN_CLOSE then
-      if param1 == Dlg.btnOk.id then
-        local ok, errmsg = TransformLogFilePat(Dlg.sLogFileName:GetText(hDlg))
-        if not ok then
-          ErrorMsg(errmsg, "Log file name")
-          return KEEP_DIALOG_OPEN
-        end
-      end
+  local Items = {
+    guid="6C2BC7AF-8739-499E-BFA2-7E967B0BDDA9";
+    help="Configuration";
+    { tp="dbox";  text=M.MConfigTitleCommon;                            },
+    { tp="text";  text=M.MRenameLogFileName; ystep=2;                   },
+    { tp="edit";  hist=HIST_LOG; uselasthistory=1; name="sLogFileName";
+                  text=DefaultLogFileName; y1=""; x1=X1;                },
+    { tp="sep";   ystep=2;                                              },
+    { tp="butt";  centergroup=1; text=M.MOk;     default=1;             },
+    { tp="butt";  centergroup=1; text=M.MCancel; cancel=1;              },
+  }
+  ----------------------------------------------------------------------------
+  local Dlg = sdialog.New(Items)
+
+  local function closeaction (hDlg, param1, state)
+    local ok, errmsg = TransformLogFilePat(state.sLogFileName)
+    if not ok then
+      ErrorMsg(errmsg, "Log file name")
+      return KEEP_DIALOG_OPEN
     end
   end
 
-  local ret = far.Dialog (CfgGuid, -1, -1, 76, 10, "Configuration", Dlg, 0, DlgProc)
-  if ret == Dlg.btnOk.id then
-    libDialog.SaveData(Dlg, Data)
+  function Items.proc (hDlg, Msg, Par1, Par2)
+    if Msg == F.DN_CLOSE then
+      return closeaction(hDlg, Par1, Par2)
+    end
+  end
+
+  local Data = _Plugin.History:field("config")
+  Dlg:LoadData(Data)
+  local state = Dlg:Run()
+  if state then
+    Dlg:SaveData(state, Data)
     _Plugin.History:save()
     return true
   end
@@ -1097,140 +1040,74 @@ end
 
 
 local function EditorConfigDialog()
-  local CfgGuid = win.Uuid("69E53E0A-D63E-40CC-B153-602E9633956E")
-  local Dlg = libDialog.NewDialog()
   local offset = 5 + math.max(M.MBtnHighlightColor:len(),
                               M.MBtnGrepLineNumMatchedColor:len(),
                               M.MBtnGrepLineNumContextColor:len()) + 5
-  Dlg.frame           = {"DI_DOUBLEBOX",   3, 1,72,15,  0, 0, 0,  0,  M.MConfigTitleEditor}
-  Dlg.bForceScopeToBlock={"DI_CHECKBOX",   5, 2, 0, 0,  0, 0, 0,  0,  M.MOptForceScopeToBlock}
-  Dlg.bSelectFound    = {"DI_CHECKBOX",    5, 3, 0, 0,  0, 0, 0,  0,  M.MOptSelectFound}
-  Dlg.bShowSpentTime  = {"DI_CHECKBOX",    5, 4, 0, 0,  0, 0, 0,  0,  M.MOptShowSpentTime}
-  Dlg.lab             = {"DI_TEXT",        5, 6, 0, 0,  0, 0, 0,  0,  M.MOptPickFrom}
-  Dlg.rPickEditor     = {"DI_RADIOBUTTON", 7, 7, 0, 0,  0, 0, 0,  "DIF_GROUP", M.MOptPickEditor, _noautoload=1}
-  Dlg.rPickHistory    = {"DI_RADIOBUTTON",27, 7, 0, 0,  0, 0, 0,  0,           M.MOptPickHistory, _noautoload=1}
-  Dlg.rPickNowhere    = {"DI_RADIOBUTTON",47, 7, 0, 0,  0, 0, 0,  0,           M.MOptPickNowhere, _noautoload=1}
-
-  Dlg.sep             = {"DI_TEXT",       -1, 9, 0, 0,  0, 0, 0,  {DIF_SEPARATOR=1,DIF_CENTERTEXT=1}, M.MSepHighlightColors}
-  Dlg.btnHighlight    = {"DI_BUTTON",      5,10, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.MBtnHighlightColor}
-  Dlg.labHighlight    = {"DI_TEXT",   offset,10, 0, 0,  0, 0, 0,  0,  M.MTextSample}
-  Dlg.btnGrepLNum1    = {"DI_BUTTON",      5,11, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.MBtnGrepLineNumMatchedColor}
-  Dlg.labGrepLNum1    = {"DI_TEXT",   offset,11, 0, 0,  0, 0, 0,  0,  M.MTextSample}
-  Dlg.btnGrepLNum2    = {"DI_BUTTON",      5,12, 0, 0,  0, 0, 0,  "DIF_BTNNOCLOSE", M.MBtnGrepLineNumContextColor}
-  Dlg.labGrepLNum2    = {"DI_TEXT",   offset,12, 0, 0,  0, 0, 0,  0,  M.MTextSample}
-
-  Dlg.sep             = {"DI_TEXT",        5,13, 0, 0,  0, 0, 0,  {DIF_BOXCOLOR=1,DIF_SEPARATOR=1}, ""}
-  Dlg.btnOk           = {"DI_BUTTON",      0,14, 0, 0,  0, 0, 0,  {DIF_CENTERGROUP=1, DIF_DEFAULTBUTTON=1}, M.MOk}
-  Dlg.btnCancel       = {"DI_BUTTON",      0,14, 0, 0,  0, 0, 0,  "DIF_CENTERGROUP", M.MCancel}
   ----------------------------------------------------------------------------
+  local Items = {
+    guid = "69E53E0A-D63E-40CC-B153-602E9633956E";
+    width = 76;
+    help = "Contents";
+    {tp="dbox";  text=M.MConfigTitleEditor; },
+    {tp="chbox"; name="bForceScopeToBlock";  text=M.MOptForceScopeToBlock; },
+    {tp="chbox"; name="bSelectFound";        text=M.MOptSelectFound; },
+    {tp="chbox"; name="bShowSpentTime";      text=M.MOptShowSpentTime; },
+    {tp="text";  text=M.MOptPickFrom; ystep=2; },
+    {tp="rbutt"; x1=7;  name="rPickEditor";  text=M.MOptPickEditor; group=1; val=1; },
+    {tp="rbutt"; x1=27; name="rPickHistory"; text=M.MOptPickHistory; y1=""; },
+    {tp="rbutt"; x1=47; name="rPickNowhere"; text=M.MOptPickNowhere; y1=""; },
+
+    {tp="sep"; ystep=2; text=M.MSepHighlightColors; },
+    {tp="butt"; name="btnHighlight"; text=M.MBtnHighlightColor; btnnoclose=1; },
+    {tp="text"; name="labHighlight"; text=M.MTextSample; x1=offset; y1=""; width=M.MTextSample:len(); },
+    {tp="butt"; name="btnGrepLNum1"; text=M.MBtnGrepLineNumMatchedColor; btnnoclose=1; },
+    {tp="text"; name="labGrepLNum1"; text=M.MTextSample; x1=offset; y1=""; width=M.MTextSample:len(); },
+    {tp="butt"; name="btnGrepLNum2"; text=M.MBtnGrepLineNumContextColor; btnnoclose=1; },
+    {tp="text"; name="labGrepLNum2"; text=M.MTextSample; x1=offset; y1=""; width=M.MTextSample:len(); },
+
+    {tp="sep"; },
+    {tp="butt"; centergroup=1; text=M.MOk;    default=1; },
+    {tp="butt"; centergroup=1; text=M.MCancel; cancel=1; },
+  }
+  ----------------------------------------------------------------------------
+  local dlg = sdialog.New(Items)
+  local Pos = dlg:Indexes()
   local Data = _Plugin.History:field("config")
-  libDialog.LoadData(Dlg, Data)
-  if Data.rPickFrom     == "history" then Dlg.rPickHistory.Selected = 1
-  elseif Data.rPickFrom == "nowhere" then Dlg.rPickNowhere.Selected = 1
-  else                                    Dlg.rPickEditor.Selected  = 1
-  end
+  dlg:LoadData(Data)
 
   local hColor0 = Data.EditorHighlightColor
   local hColor1 = Data.GrepLineNumMatchColor
   local hColor2 = Data.GrepLineNumContextColor
 
-  local function DlgProc (hDlg, msg, param1, param2)
+  Items.proc = function(hDlg, msg, param1, param2)
     if msg == F.DN_BTNCLICK then
-      if param1 == Dlg.btnHighlight.id then
+      if param1 == Pos.btnHighlight then
         local c = far.ColorDialog(hColor0)
         if c then hColor0 = c; hDlg:send(F.DM_REDRAW); end
-      elseif param1 == Dlg.btnGrepLNum1.id then
+      elseif param1 == Pos.btnGrepLNum1 then
         local c = far.ColorDialog(hColor1)
         if c then hColor1 = c; hDlg:send(F.DM_REDRAW); end
-      elseif param1 == Dlg.btnGrepLNum2.id then
+      elseif param1 == Pos.btnGrepLNum2 then
         local c = far.ColorDialog(hColor2)
         if c then hColor2 = c; hDlg:send(F.DM_REDRAW); end
       end
 
     elseif msg == F.DN_CTLCOLORDLGITEM then
-      if param1 == Dlg.labHighlight.id then param2[1] = hColor0; return param2; end
-      if param1 == Dlg.labGrepLNum1.id then param2[1] = hColor1; return param2; end
-      if param1 == Dlg.labGrepLNum2.id then param2[1] = hColor2; return param2; end
+      if param1 == Pos.labHighlight then param2[1] = hColor0; return param2; end
+      if param1 == Pos.labGrepLNum1 then param2[1] = hColor1; return param2; end
+      if param1 == Pos.labGrepLNum2 then param2[1] = hColor2; return param2; end
     end
   end
 
-  local ret = far.Dialog (CfgGuid, -1, -1, 76, 17, "Configuration", Dlg, 0, DlgProc)
-  if ret == Dlg.btnOk.id then
-    libDialog.SaveData(Dlg, Data)
-    Data.EditorHighlightColor    = hColor0
-    Data.GrepLineNumMatchColor   = hColor1
+  local out = dlg:Run()
+  if out then
+    dlg:SaveData(out, Data)
+    Data.EditorHighlightColor = hColor0
+    Data.GrepLineNumMatchColor = hColor1
     Data.GrepLineNumContextColor = hColor2
-    Data.rPickFrom =
-        Dlg.rPickHistory.Selected ~= 0 and "history" or
-        Dlg.rPickNowhere.Selected ~= 0 and "nowhere" or "editor"
     _Plugin.History:save()
     return true
   end
-end
-
-
---- Automatically assign hot keys in LuaFAR dialog items.
--- NOTE: uses the "hilite" module.
--- @param Dlg : an array of dialog items (tables);
---              an item may have a boolean field 'NoHilite' that means no automatic highlighting;
-local function AssignHotKeys (Dlg)
-  local typeIndex = 1  -- index of the "Type" element in a dialog item (Far 3 API)
-  local dataIndex = 10 -- index of the "Data" element in a dialog item (Far 3 API)
-  local types = { [F.DI_BUTTON]=1;[F.DI_CHECKBOX]=1;[F.DI_RADIOBUTTON]=1;[F.DI_TEXT]=1;[F.DI_VTEXT]=1; }
-  local arr, idx = {}, {}
-  for i,v in ipairs(Dlg) do
-    local iType = type(v[typeIndex])=="number" and v[typeIndex] or F[v[typeIndex]] -- convert flag to number
-    if types[iType] and not v.NoHilite then
-      local n = #arr+1
-      arr[n], idx[n] = v[dataIndex], i
-    end
-  end
-  local out = fHilite(arr)
-  for k,v in pairs(out) do
-    if type(k)=="number" then Dlg[idx[k]][dataIndex]=v end
-  end
-end
-
-
---- Switch from DI_EDIT dialog field to modal editor, edit text there and put it into the field.
--- @param  hDlg     dialog handle
--- @param  itempos  position of a DI_EDIT item in the dialog
--- @param  ext      extension to give a temporary file, e.g. ".lua" (for syntax highlighting)
-local function OpenInEditor (hDlg, itempos, ext)
-  local fname = win.GetEnv("TEMP").."\\far3-"..win.Uuid(win.Uuid()):sub(1,8)..(ext or "")
-  local fp = io.open(fname, "w")
-  if fp then
-    local txt = hDlg:send("DM_GETTEXT", itempos)
-    fp:write(txt or "")
-    fp:close()
-    local flags = {EF_DISABLEHISTORY=1,EF_DISABLESAVEPOS=1}
-    if editor.Editor(fname,nil,nil,nil,nil,nil,flags,nil,nil,65001) == F.EEC_MODIFIED then
-      fp = io.open(fname)
-      if fp then
-        txt = fp:read("*all")
-        fp:close()
-        hDlg:send("DM_SETTEXT", itempos, txt)
-      end
-    end
-    win.DeleteFile(fname)
-    far.AdvControl("ACTL_REDRAWALL")
-  end
-end
-
-
-local function Check_F4_On_DI_EDIT (Dlg, hDlg, msg, param1, param2)
-  if msg == F.DN_CONTROLINPUT and param2.EventType == F.KEY_EVENT and param2.KeyDown then
-    if param2.VirtualKeyCode == VK.F4 and param2.ControlKeyState%0x20 == 0 then
-      local item = Dlg[param1]
-      if (item[1]==F.DI_EDIT or item[1]=="DI_EDIT") and not item.skipF4 then
-        local ext = item.F4 or
-          (item==Dlg.sReplacePat and Dlg.bRepIsFunc and Dlg.bRepIsFunc:GetCheck(hDlg) and ".lua")
-        OpenInEditor(hDlg, param1, ext)
-        return true
-      end
-    end
-  end
-  return false
 end
 
 
@@ -1326,8 +1203,6 @@ end
 
 
 return {
-  AssignHotKeys = AssignHotKeys,
-  Check_F4_On_DI_EDIT = Check_F4_On_DI_EDIT,
   CheckMask = CheckMask,
   CheckSearchArea = CheckSearchArea,
   ConfigDialog = ConfigDialog,
@@ -1339,7 +1214,7 @@ return {
   ErrorMsg = ErrorMsg,
   FormatInt = FormatInt,
   FormatTime = FormatTime,
-  GetDialogHistoryKey = GetDialogHistoryKey,
+  GetDialogHistory = GetDialogHistory,
   GetDialogHistoryValue = GetDialogHistoryValue,
   GetRegexLib = GetRegexLib,
   GetReplaceFunction = GetReplaceFunction,

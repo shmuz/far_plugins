@@ -7,15 +7,6 @@ local function CreateTable()
   return { MaxGroupNumber=0 }
 end
 
-local function BS_NameExt_FileName (T, subj, offs)
-  local nm = string.match(subj, "^\\([NX])", offs)
-  if nm then
-    T[#T+1] = { nm=="N" and "name" or "extension" }
-    return 2
-  end
-  return 0
-end
-
 local function BS_CaseModifier (T, subj, offs)
   local c = string.match(subj, "^\\([LlUuE])", offs)
   if c then
@@ -67,19 +58,6 @@ local function BS_Escape (T, subj, offs)
   local escape = string.match(subj, "^\\(.?)", offs)
   if escape then
     local val = escape:match("[%p%-+^$&]") or EscapeMap[escape]
-    if val then
-      T[#T+1] = { "literal", val }
-      return 1 + #escape
-    end
-    return -1, "invalid or incomplete escape: \\"..escape
-  end
-  return 0
-end
-
-local function BS_Escape_FileName (T, subj, offs)
-  local escape = string.match(subj, "^\\(.?)", offs)
-  if escape then
-    local val = escape:match("[~!@#$%%^&*()%-+[%]{}\\|:;'\",<.>/?]")
     if val then
       T[#T+1] = { "literal", val }
       return 1 + #escape
