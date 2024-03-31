@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2024-03-31, v3.46.1
+  [!] A fix.
+
 2024-03-30, v3.46.0
   [*] Use 'simpledialog' module instead of 'dialog'.
 

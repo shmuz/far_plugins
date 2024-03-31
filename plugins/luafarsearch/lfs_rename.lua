@@ -433,7 +433,7 @@ local function UserDialog (aData, aList, aDlgTitle)
   local out = dlg:Run()
   if out then
     dlg:SaveData(out, aData)
-    _Plugin.SaveSettings()
+    _Plugin.History:save()
     return {
       Regex             = m_uRegex,
       fReplace          = m_fReplace,
