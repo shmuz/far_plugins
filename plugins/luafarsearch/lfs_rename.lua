@@ -368,9 +368,13 @@ local function UserDialog (aData, aList, aDlgTitle)
 
     elseif msg == F.DN_BTNCLICK then
       if param1 == Pos.bRenFiles then
-        if 0 == hDlg:send("DM_GETCHECK", Pos.bRenFiles) then hDlg:send("DM_SETCHECK", Pos.bRenFolders, 1) end
+        if 0 == hDlg:send("DM_GETCHECK", Pos.bRenFiles) then
+          hDlg:send("DM_SETCHECK", Pos.bRenFolders, 1)
+        end
       elseif param1 == Pos.bRenFolders then
-        if 0 == hDlg:send("DM_GETCHECK", Pos.bRenFolders) then hDlg:send("DM_SETCHECK", Pos.bRenFiles, 1) end
+        if 0 == hDlg:send("DM_GETCHECK", Pos.bRenFolders) then
+          hDlg:send("DM_SETCHECK", Pos.bRenFiles, 1)
+        end
       elseif param1 == Pos.bRepIsFunc then
         UpdateReplacePat(hDlg)
         UpdatePreviewLabel(hDlg)
@@ -385,7 +389,7 @@ local function UserDialog (aData, aList, aDlgTitle)
     elseif msg == F.DN_CLOSE then
       if param1 == Pos.btnOk then
         local mask = hDlg:send("DM_GETTEXT", Pos.sFileMask)
-        if not far.CheckMask(mask, "PN_SHOWERRORMESSAGE") then
+        if not Common.CheckMask(mask) then
           Common.GotoEditField(hDlg, Pos.sFileMask)
           return KEEP_DIALOG_OPEN
         end
