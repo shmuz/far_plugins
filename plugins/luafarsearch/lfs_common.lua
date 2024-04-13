@@ -3,18 +3,16 @@
 
 local M          = require "lfs_message"
 local RepLib     = require "lfs_replib"
-
 local sdialog    = require "far2.simpledialog"
 local libHistory = require "far2.history"
 local serial     = require "shmuz.serial"
 
 local DefaultLogFileName = "\\D{%Y%m%d-%H%M%S}.log"
 
-local type = type
+local band, bnot, bor = bit64.band, bit64.bnot, bit64.bor
+local Utf8, Utf16 = win.Utf16ToUtf8, win.Utf8ToUtf16
 local uchar = ("").char
 local F = far.Flags
-local band, bor, bnot = bit64.band, bit64.bor, bit64.bnot
-local Utf8, Utf16 = win.Utf16ToUtf8, win.Utf8ToUtf16
 local TransformReplacePat = RepLib.TransformReplacePat
 local KEEP_DIALOG_OPEN = 0
 
@@ -29,7 +27,7 @@ end
 local function GotoEditField (hDlg, id)
   local len = hDlg:send("DM_GETTEXT", id):len()
   hDlg:send("DM_SETFOCUS", id)
-  hDlg:send("DM_SETCURSORPOS", id, {X=len, Y=1})
+  hDlg:send("DM_SETCURSORPOS", id, {X=len, Y=0})
   hDlg:send("DM_SETSELECTION", id, {BlockType="BTYPE_STREAM", BlockStartPos=1, BlockWidth=len})
 end
 
@@ -581,14 +579,14 @@ function SRFrame:CheckRegexChange (hDlg)
   local Pos = self.Pos
   local bRegex = hDlg:send("DM_GETCHECK", Pos.bRegExpr)
 
-  if bRegex then hDlg:send("DM_SETCHECK", Pos.bWholeWords, 0) end
+  if bRegex==1 then hDlg:send("DM_SETCHECK", Pos.bWholeWords, 0) end
   hDlg:send("DM_ENABLE", Pos.bWholeWords, bRegex==0 and 1 or 0)
 
-  if not bRegex then hDlg:send("DM_SETCHECK", Pos.bExtended, 0) end
+  if bRegex==0 then hDlg:send("DM_SETCHECK", Pos.bExtended, 0) end
   hDlg:send("DM_ENABLE", Pos.bExtended, bRegex)
 
   if Pos.bFileAsLine then
-    if not bRegex then hDlg:send("DM_SETCHECK", Pos.bFileAsLine, 0) end
+    if bRegex==0 then hDlg:send("DM_SETCHECK", Pos.bFileAsLine, 0) end
     hDlg:send("DM_ENABLE", Pos.bFileAsLine, bRegex)
   end
 end
