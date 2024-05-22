@@ -141,6 +141,8 @@ local function LuaScript (data)
     chunk = assert(loadstring(text, chunkname))
   end
   ------------------------------------------------------------------------------
+  local env = setmetatable({}, {__index=_G})
+  setfenv(chunk, env)
   local p1,p2,p3,p4
   if data.bParamsEnable then
     p1,p2,p3,p4 = CompileParams(data.sParam1, data.sParam2, data.sParam3, data.sParam4)

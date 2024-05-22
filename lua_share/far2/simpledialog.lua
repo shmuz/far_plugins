@@ -8,9 +8,7 @@ local F         = far.Flags
 local DirSep    = package.config:sub(1,1)
 local OpSys     = DirSep=="/" and "linux" or "windows"
 local FarVer    = F.ACTL_GETFARMANAGERVERSION and 3 or 2
-local VK        = win.GetVirtualKeys()
 local band, bor = bit64.band, bit64.bor
-local lshift    = bit64.lshift
 local Send      = far.SendDlgMessage
 local Colors    = far.Colors or F
 
@@ -34,12 +32,14 @@ end
 -- @param ext      : extension of temporary file (affects syntax highlighting; optional)
 -- @return         : output text (or nil)
 function mod.OpenInEditor(text, ext)
-  local tempdir = "/tmp"
+  local tempdir
   if OpSys == "windows" then
     tempdir = win.GetEnv("TEMP")
     if not tempdir then
       far.Message("Environment variable TEMP is not set", "Error", nil, "w"); return nil
     end
+  else
+    tempdir = far.InMyTemp()
   end
   ext = type(ext)=="string" and ext or ".tmp"
   if ext~="" and ext:sub(1,1)~="." then ext = "."..ext; end
@@ -473,6 +473,9 @@ function mod:Run()
            (FarVer == 3) and (Msg == F.DN_CONTROLINPUT and Par2.EventType == F.MOUSE_EVENT) then
       if Par1 <= 0 then Par1 = nil; end
       if UserProc(hDlg, "EVENT_MOUSE", Par1, Par2) then return true end
+
+    elseif Msg == F.DN_CTLCOLORDLGITEM then
+      return UserProc(hDlg, Msg, Par1, Par2) or outData[Par1].colors
 
     else
       return UserProc(hDlg, Msg, Par1, Par2)
