@@ -2,19 +2,18 @@
 -- Started: 2014-10-06
 -- Author: Shmuel Zeigerman
 
--- luacheck: globals rex Editors MenuPos
+-- luacheck: globals rex Editors
 
-local function LOG(fmt,...) win.OutputDebugString(fmt:format(...)) end
+--local function LOG(fmt,...) win.OutputDebugString(fmt:format(...)) end
 local function ErrMsg (msg, title, flags)
   far.Message(msg, title or "[Highlight] Error", nil, (flags or "").."w")
 end
 
 -- Global variables
-rex = rex or {}
+rex = rex
 Editors = Editors or {}
-MenuPos = MenuPos or 1
 
-if not rex.new then
+if not rex then
   local DllName = far.PluginStartupInfo().ModuleDir .. "rex_onig.dl"
   local luaopen = package.loadlib(DllName, "luaopen_rex_onig")
   if luaopen then
@@ -33,11 +32,11 @@ if not rex.new then
   local sz = 2 -- sizeof(wchar_t)
   methods.findW = function(r, s, init) -- simplified method: only 1-st capture
     local from, to, cap = r:find(s, sz*(init-1)+1)
-    if from then from, to = (from-1)/sz+1, to/sz; return from, to, cap; end
+    if from then return (from-1)/sz+1, to/sz, cap; end
   end
   methods.tfindW = function(r, s, init)
     local from, to, t = r:tfind(s, sz*(init-1)+1)
-    if from then from, to = (from-1)/sz+1, to/sz; return from, to, t; end
+    if from then return (from-1)/sz+1, to/sz, t; end
   end
 end
 
@@ -698,13 +697,12 @@ end
 
 function export.Open (From, Guid, Item)
   if From == F.OPEN_EDITOR then
-    local item, pos = far.Menu({Title=AppTitle, SelectIndex=MenuPos}, {
+    local item = far.Menu({Title=AppTitle}, {
       {text="&1. Select syntax";   act=MenuSelectSyntax; },
       {text="&2. Highlight extra"; act=HighlightExtra;   },
       {text="&3. Settings";        act=ShowSettings;     }
     })
     if item then
-      MenuPos = pos
       item.act()
     end
   elseif From == F.OPEN_FROMMACRO then

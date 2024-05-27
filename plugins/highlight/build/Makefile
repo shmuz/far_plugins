@@ -5,9 +5,6 @@ PROJECT = highlight
 path_plugin = ..
 COMMON_MAK = $(path_plugin)\..\common.mak
 
-MYOBJECTS = highlight.o
-MYLUAOPEN_LIST = luaopen_highlight
-
 T_MESSAGE =
 
 bootscript = $(path_plugin)\$(PROJECT).lua
@@ -19,8 +16,7 @@ modules = \
   $(path_share)*far2\settings.lua     \
   $(path_share)*far2\simpledialog.lua
 
-# Do not include PROCESSEDITOREVENT - it is in "highlight.c".
-FAR_EXPORTS = OPEN
+FAR_EXPORTS = OPEN PROCESSEDITOREVENT
 
 TEMPL       =
 TEMPL_SCR   =

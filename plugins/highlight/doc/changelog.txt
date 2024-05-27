@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2024-05-27, v0.6.2
+  [*] Refactoring: remove C-file highlight.c from the project.
+
 2023-10-20, v0.6.1
   [*] Refactoring: use far2.settings instead of far2.history
 
