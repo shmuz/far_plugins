@@ -1,3 +1,6 @@
+2024-06-09, v.1.8.3
+    1. Refactor to not depend on bit64 __tostring metamethod.
+
 2023-03-10, v.1.8.2
     1. Insert rows dialog: don't autoreplace NULLs in primary key columns
 

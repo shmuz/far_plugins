@@ -510,15 +510,6 @@ function mypanel:get_panel_list_db()
 end
 
 
-local function rowid_tostring(rowid)
-  if type(rowid)=="string" then
-    return rowid
-  else -- rowid is a number
-    return tostring(bit64.new(rowid))
-  end
-end
-
-
 function mypanel:get_panel_list_obj()
   local fullname = Norm(self._schema).."."..Norm(self._objname)
 
@@ -612,8 +603,7 @@ function mypanel:get_panel_list_obj()
         item.CustomColumnData[i] = exporter.get_text(stmt, i, true)
       end
       -- the leftmost column is ROWID (according to the query used)
-      local rowid = stmt:get_value(0)
-      rowid = rowid_tostring(rowid)
+      local rowid = stmt:get_column_text(0)
       -- IMPORTANT: field 'Owner' is used for holding ROWID
       item.Owner = rowid
       -- use ROWID as file name, otherwise FAR cannot properly handle selections on the panel
