@@ -276,21 +276,17 @@ function export.Configure (Guid) -- luacheck: no unused args
     HelpTopic = "Contents",
   }
   local items = {
-    { text=M.MConfigTitleCommon },
-    { text=M.MConfigTitleEditor },
-    { text=M.MConfigTitleTmpPanel },
+    { text=M.MConfigTitleEditor;   action=Common.EditorConfigDialog; },
+    { text=M.MConfigTitleTmpPanel; action=Panels.ConfigDialog;       },
+    { text=M.MConfigTitleCommon;   action=Common.ConfigDialog;       },
   }
   local userItems = libUtils.LoadUserMenu("_usermenu.lua")
   libUtils.AddMenuItems(items, userItems.config, M)
   while true do
     local item, pos = far.Menu(properties, items)
     if not item then break end
-    if pos == 1 then
-      Common.ConfigDialog()
-    elseif pos == 2 then
-      Common.EditorConfigDialog()
-    elseif pos == 3 then
-      Panels.ConfigDialog()
+    if pos <= 3 then
+      item.action()
     else
       libUtils.RunUserItem(item, item.arg)
     end

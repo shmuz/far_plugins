@@ -235,7 +235,7 @@ end
 
 local function Analyse(FileName, Buffer, OpMode)
   return
-    band(OpMode,F.OPM_TOPLEVEL) == 0 -- not supposed to process ShiftF1/F2/F3
+    band(OpMode, F.OPM_TOPLEVEL+F.OPM_FIND) == 0 -- not supposed to process ShiftF1/F2/F3
     and FileName
     and FileName ~= ""
     and dbx.format_supported(Buffer, #Buffer)

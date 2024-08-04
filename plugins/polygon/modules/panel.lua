@@ -607,7 +607,7 @@ function mypanel:get_panel_list_obj()
       -- IMPORTANT: field 'Owner' is used for holding ROWID
       item.Owner = rowid
       -- use ROWID as file name, otherwise FAR cannot properly handle selections on the panel
-      item.FileName = ("%010s"):format(rowid)
+      item.FileName = ("%010d"):format(rowid)
     else
       for i = 1,#self._col_info do
         item.CustomColumnData[i] = exporter.get_text(stmt, i-1, true)
