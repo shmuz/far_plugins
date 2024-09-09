@@ -869,6 +869,9 @@ function mypanel:prepare_panel_info(handle)
     self:FillKeyBar(info.key_bar, "db")
   -------------------------------------------------------------------------------------------------
   else -- self._panel_mode == "table"/"view"/"query"
+    local pInfo = panel.GetPanelInfo(handle)
+    local sort_reverse = bit64.band(pInfo.Flags, F.PFLAGS_REVERSESORTORDER) ~= 0
+    local sort_char = sort_reverse and M.sort_descend or M.sort_ascend
     local cur = self._tables[self._objname]
     local masks = self._col_masks_used[self._objname] and cur and cur.col_masks
     local show_affinity = self._panel_mode=="table" and self._show_affinity
@@ -881,7 +884,7 @@ function mypanel:prepare_panel_info(handle)
         end
         col_types = col_types .. "C" .. (i-1)
         col_widths = col_widths .. width
-        local head = i == self._sort_col_index and "♦" or ""
+        local head = i == self._sort_col_index and sort_char or ""
         local tail = show_affinity and affinity_map[descr.affinity] or ""
         table.insert(col_titles, head..descr.name..tail)
       end
