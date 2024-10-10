@@ -5,6 +5,7 @@
 -- The reason: FSF.GetReparsePointInfo() did not work in the range of builds [4425-4876].
 
 local F = far.Flags
+local M -- forward declaration
 local MenuFlags = bit64.bor(F.FMENU_WRAPMODE, F.FMENU_AUTOHIGHLIGHT)
 local PluginConfigGuid1 = win.Uuid("B2C08615-ED7C-491D-BE5C-8758FDAB9139")
 local PluginMenuGuid1   = win.Uuid("3D5E7985-3B5D-4777-A572-BA7C621B3731")
@@ -19,18 +20,63 @@ end
 -- Set the defaults: prioritize safety and "least surprise".
 local function NormDataOnFirstRun()
   local data = _Plugin.History:field("main")
-  data.bAdvanced          = false
-  data.bConfirmReplace    = true
-  data.bDelEmptyLine      = false
-  data.bDelNonMatchLine   = false
-  data.bGrepInverseSearch = false
-  data.bInverseSearch     = false
-  data.bMultiPatterns     = false
-  data.bRepIsFunc         = false
-  data.bSearchBack        = false
-  data.bUseDirFilter      = false
-  data.bUseFileFilter     = false
-  data.sSearchArea        = "FromCurrFolder"
+  local pers = _Plugin.History:field("persistent")
+  local setval = function(name, dflt)
+    if data[name]==nil or not pers[name] then data[name]=dflt; end
+  end
+  setval("bAdvanced"          , false)
+  setval("bConfirmReplace"    , true)
+  setval("bDelEmptyLine"      , false)
+  setval("bDelNonMatchLine"   , false)
+  setval("bGrepInverseSearch" , false)
+  setval("bInverseSearch"     , false)
+  setval("bMultiPatterns"     , false)
+  setval("bRepIsFunc"         , false)
+  setval("bSearchBack"        , false)
+  setval("bUseDirFilter"      , false)
+  setval("bUseFileFilter"     , false)
+  setval("sSearchArea"        , "FromCurrFolder")
+end
+
+
+local function PersistentDialog()
+  local sd = require "far2.simpledialog"
+  local items = {
+      width = 0;
+      guid="325E21EA-0E78-4FF8-A800-8710896CE606";
+      help="PersistentSettings";
+    {tp="dbox";  text=M.MDlgPersistentSettings; },
+    {tp="chbox"; name="bAdvanced"         ; text=M.MDlgAdvanced          ; },
+    {tp="chbox"; name="bConfirmReplace"   ; text=M.MDlgConfirmReplace    ; },
+    {tp="chbox"; name="bDelEmptyLine"     ; text=M.MDlgDelEmptyLine      ; },
+    {tp="chbox"; name="bDelNonMatchLine"  ; text=M.MDlgDelNonMatchLine   ; },
+    {tp="chbox"; name="bGrepInverseSearch"; text=M.MDlgGrepInverseSearch ; },
+    {tp="chbox"; name="bInverseSearch"    ; text=M.MDlgInverseSearch     ; },
+    {tp="chbox"; name="bMultiPatterns"    ; text=M.MDlgMultiPatterns     ; },
+    {tp="chbox"; name="bRepIsFunc"        ; text=M.MDlgRepIsFunc         ; },
+    {tp="chbox"; name="bSearchBack"       ; text=M.MDlgReverseSearch     ; },
+    {tp="chbox"; name="bUseDirFilter"     ; text=M.MDlgUseDirFilter      ; },
+    {tp="chbox"; name="bUseFileFilter"    ; text=M.MDlgUseFileFilter     ; },
+    {tp="chbox"; name="sSearchArea"       ; text=M.MDlgSearchArea        ; },
+    {tp="sep"; },
+    {tp="butt"; default=1; centergroup=1; text=M.MOk;     },
+    {tp="butt"; cancel=1;  centergroup=1; text=M.MCancel; },
+  }
+  for _,v in ipairs(items) do
+    if v.text and v.name then
+      v.text=v.text:gsub("&",""):gsub(":$","")
+      v.text = ("%-30s(%s)"):format(v.text, v.name)
+    end
+  end
+
+  local pers = _Plugin.History:field("persistent")
+  local dlg = sd.New(items)
+  dlg:LoadData(pers)
+  local out = dlg:Run()
+  if out then
+    dlg:SaveData(out, pers)
+    _Plugin.History:save()
+  end
 end
 
 
@@ -68,7 +114,7 @@ local libUtils   = require "far2.utils"
 local Common     = require "lfs_common"
 local EditMain   = require "lfs_editmain"
 local Editors    = require "lfs_editors"
-local M          = require "lfs_message"
+M                = require "lfs_message"
 local MReplace   = require "lfs_mreplace"
 local Panels     = require "lfs_panels" -- call only after modifying package.cpath
 local Rename     = require "lfs_rename"
@@ -276,16 +322,17 @@ function export.Configure (Guid) -- luacheck: no unused args
     HelpTopic = "Contents",
   }
   local items = {
-    { text=M.MConfigTitleEditor;   action=Common.EditorConfigDialog; },
-    { text=M.MConfigTitleTmpPanel; action=Panels.ConfigDialog;       },
-    { text=M.MConfigTitleCommon;   action=Common.ConfigDialog;       },
+    { text=M.MConfigTitleEditor;     action=Common.EditorConfigDialog; },
+    { text=M.MConfigTitleTmpPanel;   action=Panels.ConfigDialog;       },
+    { text=M.MConfigTitleCommon;     action=Common.ConfigDialog;       },
+    { text=M.MDlgPersistentSettings; action=PersistentDialog;          },
   }
   local userItems = libUtils.LoadUserMenu("_usermenu.lua")
   libUtils.AddMenuItems(items, userItems.config, M)
   while true do
     local item, pos = far.Menu(properties, items)
     if not item then break end
-    if pos <= 3 then
+    if pos <= #items then
       item.action()
     else
       libUtils.RunUserItem(item, item.arg)

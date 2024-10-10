@@ -1587,3 +1587,12 @@ and will not be processed.
  The syntax of masks is identical to Far-style ~file masks~@:FileMasks@.
 
  ~Contents~@Contents@
+
+@PersistentSettings
+$ #Persistent settings#
+^#Persistent settings# 
+
+ The settings that are checked on this dialog persist between Far Manager sessions.
+ The settings that are not checked will be set to their respective defaults in a next session.
+
+ ~Contents~@Contents@
