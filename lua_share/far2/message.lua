@@ -259,8 +259,8 @@ local function Message (aText, aTitle, aButtons, aFlags, aHelpTopic, aId)
       if param1 > 1 and param1 <= #tb_labels+1 then
         local color = D[param1].color
         if color then
-          for _,v in ipairs(param2) do
-            v.ForegroundColor, v.BackgroundColor = band(color,0xF), rshift(color,4)
+          for i,v in ipairs(param2) do
+            param2[i] = color
           end
           return param2
         end
@@ -322,9 +322,15 @@ end
 local function GetInvertedColor (element)
   local color = far.AdvControl("ACTL_GETCOLOR", far.Colors[element])
   local fc, bc = color.ForegroundColor, color.BackgroundColor
-  fc = band(bnot(fc), 0xF)
-  bc = band(bnot(bc), 0xF)
-  return bor(fc, lshift(bc, 4))
+  if 0 ~= band(color.Flags, F.FCF_FG_INDEX) then
+    fc = band(bnot(fc), 0xF)
+    bc = band(bnot(bc), 0xF)
+    return bor(fc, lshift(bc, 4))
+  else
+    color.ForegroundColor = bor(bnot(fc), 0xFF000000)
+    color.BackgroundColor = bor(bnot(bc), 0xFF000000)
+    return color
+  end
 end
 
 return {

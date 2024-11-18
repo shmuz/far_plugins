@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2024-11-18, v3.46.5
+  [!] Fix colors in Replace prompt messages (was unreadable with RGB colors).
+
 2024-10-10, v3.46.4
   [+] Dialog "Persistent settings".
 
