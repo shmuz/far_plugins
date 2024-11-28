@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+Last changes
+  [!] Editor Find: fix 'highlight all' in some cases.
+
 2024-11-18, v3.46.5
   [!] Fix colors in Replace prompt messages (was unreadable with RGB colors).
 

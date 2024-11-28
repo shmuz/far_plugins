@@ -109,14 +109,15 @@ local function RedrawHighlightPattern (EI, Pattern, Priority, ProcessLineNumbers
     if not filename_line then
       text = Pattern.ufindW and text or win.Utf16ToUtf8(text)
       local start = 1
-      local maxstart = math.min(str.StringLength+1, EI.LeftPos+EI.WindowSizeX-1) - offset
+      local RealLeftPos = editor.TabToReal(nil, y, EI.LeftPos)
+      local maxstart = math.min(str.StringLength+1, RealLeftPos+EI.WindowSizeX-1) - offset
 
       while start <= maxstart do
         local from, to, collect = ufind(Pattern, text, start)
         if not from then break end
         start = to>=from and to+1 or from+1
         if not (bSkip and collect[1]) then
-          if to >= from and to+offset >= EI.LeftPos then
+          if to >= from and to+offset >= RealLeftPos then
             editor.AddColor(ID, y, offset+from, offset+to, ColorFlags, Color, Priority, ColorOwner)
           end
         end
