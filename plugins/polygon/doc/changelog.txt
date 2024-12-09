@@ -1,3 +1,6 @@
+Recent changes:
+    1. Fix GetOpenPanelInfo (columns were not updated after ALTER TABLE execution).
+
 2024-09-09, v.1.8.5
     1. Rebuild of the embedded version.
 

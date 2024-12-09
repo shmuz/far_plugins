@@ -869,6 +869,11 @@ function mypanel:prepare_panel_info(handle)
     self:FillKeyBar(info.key_bar, "db")
   -------------------------------------------------------------------------------------------------
   else -- self._panel_mode == "table"/"view"/"query"
+    -- Re-read column info as it may have changed due to possible "ALTER TABLE..." execution
+    local col_info = dbx.read_columns_info(self._db, self._schema, self._objname)
+    if col_info then
+      self._col_info = col_info
+    end
     local pInfo = panel.GetPanelInfo(handle)
     local sort_reverse = bit64.band(pInfo.Flags, F.PFLAGS_REVERSESORTORDER) ~= 0
     local sort_char = sort_reverse and M.sort_descend or M.sort_ascend
@@ -888,6 +893,14 @@ function mypanel:prepare_panel_info(handle)
         local tail = show_affinity and affinity_map[descr.affinity] or ""
         table.insert(col_titles, head..descr.name..tail)
       end
+    end
+    if col_titles[1] == nil then
+      local descr = self._col_info[1]
+      col_types = "C0"
+      col_widths = "0"
+      local head = 1 == self._sort_col_index and sort_char or ""
+      local tail = show_affinity and affinity_map[descr.affinity] or ""
+      table.insert(col_titles, head..descr.name..tail)
     end
     if self._panel_mode == "query" then
       info.title = ("%s [%s]"):format(info.title, self._objname)
