@@ -5,7 +5,7 @@ ifneq ($(CROOT),C:\Shmuel_Home)
 
 #---------------------------- SETTINGS TO BE CONFIGURED BY THE USER ----------
   # 32 or 64-bit plugin; override from command line if needed
-  DIRBIT = 32
+  DIRBIT = 64
 
   # Root work directory - relative to plugins' "build" directories
   rootpath = $(abspath ../../..)
@@ -21,7 +21,7 @@ ifneq ($(CROOT),C:\Shmuel_Home)
 #---------------------------- END OF USER'S SETTINGS -------------------------
 
 else
-  DIRBIT    = 32
+  DIRBIT    = 64
   rootpath  = $(abspath ../../../..)
   farsource = $(CROOT)/work/farmanager
   farhome   = $(CROOT)/Programs/Far3-$(DIRBIT)bit
@@ -68,15 +68,18 @@ else
   RESFLAGS = -F pe-i386
 endif
 
+# this directory must be outside plugins' tree to avoid loading the generated DLL's by Far
+OUTDIR_BASE = $(TEMP)\LuaFAR_Builds\$(PROJECT)\Out$(DIRBIT)
+
 ifdef EMBED
-  OUTDIR = Out$(DIRBIT)_embed
+  OUTDIR = $(OUTDIR_BASE)_embed
   LUAOPEN_LIST = $(LUAOPEN_EMBED) $(MYLUAOPEN_LIST)
   TARGETS = $(T_EMBED) $(T_MESSAGE) $(GLOBINFO) $(HELP)
+  # MYCFLAGS += -DNO_RUN_LUAFAR_INIT
 else
-  OUTDIR = Out$(DIRBIT)
+  OUTDIR = $(OUTDIR_BASE)
   LUAOPEN_LIST = $(MYLUAOPEN_LIST)
   TARGETS = $(T_NOEMBED) $(T_MESSAGE) $(GLOBINFO) $(HELP)
-  MYCFLAGS += -DRUN_LUAFAR_INIT
 endif
 
 MYOBJECTS_D = $(MYOBJECTS:%.o=$(OUTDIR)/%.o)
@@ -92,7 +95,9 @@ OBJ_EMBED  = $(OUTDIR)/$(PROJECT)_embed.o
 C_MAIN     = $(OUTDIR)/$(PROJECT)_main.c
 OBJ_MAIN   = $(OUTDIR)/$(PROJECT)_main.o
 OBJ_PLUG   = $(OUTDIR)/$(PROJECT)_plug.o
+ifdef RCFILE
 OBJ_RC     = $(OUTDIR)/$(RCFILE:%.rc=%-rc.o)
+endif
 VERSION_H  = $(OUTDIR)/version.h
 
 EXPORTS = $(addprefix -DEXPORT_,$(FAR_EXPORTS))
