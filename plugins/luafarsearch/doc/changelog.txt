@@ -2,7 +2,7 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
-Last changes
+2025-02-14, v3.46.6
   [!] Editor Find: fix 'highlight all' in some cases.
 
 2024-11-18, v3.46.5

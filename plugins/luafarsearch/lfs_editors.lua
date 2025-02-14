@@ -109,7 +109,7 @@ local function RedrawHighlightPattern (EI, Pattern, Priority, ProcessLineNumbers
     if not filename_line then
       text = Pattern.ufindW and text or win.Utf16ToUtf8(text)
       local start = 1
-      local RealLeftPos = editor.TabToReal(nil, y, EI.LeftPos)
+      local RealLeftPos = editor.TabToReal(ID, y, EI.LeftPos)
       local maxstart = math.min(str.StringLength+1, RealLeftPos+EI.WindowSizeX-1) - offset
 
       while start <= maxstart do
