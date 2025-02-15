@@ -2,6 +2,9 @@
 -- Started: 2018-01-13
 -- luacheck: globals  AppIdToSkip  package  require  polygon_ResetSort
 
+local DIRSEP = string.sub(package.config, 1, 1)
+local OS_WIN = (DIRSEP == "\\")
+
 AppIdToSkip = AppIdToSkip or {} -- must be global to withstand script reloads
 local band, bor, rshift = bit64.band, bit64.bor, bit64.rshift
 local Guid_ConfirmClose = win.Uuid("27224BE2-EEF4-4240-808F-38095BCEF7B2")
@@ -47,7 +50,10 @@ end
 
 
 local function First_load_actions()
-  if not package.loaded.lsqlite3 then
+  if package.loaded.lsqlite3 then
+    return
+  end
+  if OS_WIN then
     local pluginDir = far.PluginStartupInfo().ModuleDir
     ReadIniFile(pluginDir.."polygon.ini")
 
@@ -63,6 +69,10 @@ local function First_load_actions()
     if not ok then error(msg) end
 
     package.path = pluginDir.."?.lua;"..package.path
+  else
+    local info = far.PluginStartupInfo()
+    ReadIniFile(win.JoinPath(info.ShareDir, "polygon.ini"))
+    require "lsqlite3"
   end
 end
 
@@ -78,7 +88,7 @@ local utils     = require "modules.utils"
 local plugdebug = require "far2.plugdebug"
 
 local F = far.Flags
-local PluginGuid = export.GetGlobalInfo().Guid -- plugin GUID
+local PluginGuid = win.Uuid("D4BC5EA7-8229-4FFE-AAC1-5A4F51A0986A")
 local ErrMsg, Norm = utils.ErrMsg, utils.Norm
 
 
@@ -122,11 +132,16 @@ local function LoadUserModules(object, aLoadCommon, aLoadIndividual)
 
   -- Load common modules (from %farprofile%\PluginsData\polygon)
   if aLoadCommon then
-    local dir = win.GetEnv("FARPROFILE")
-    if dir and dir~="" then
-      dir = dir .. "\\PluginsData\\polygon"
+    if OS_WIN then
+      local dir = win.GetEnv("FARPROFILE")
+      if dir and dir~="" then
+        dir = dir .. "\\PluginsData\\polygon"
+        far.RecursiveSearch(dir, "*.lua", LoadOneUserFile, F.FRS_RECUR, AddModule)
+        -- Far build >= 3810 required for calling far.RecursiveSearch with extra parameters
+      end
+    else
+      local dir = far.InMyConfig("plugins/luafar/polygon")
       far.RecursiveSearch(dir, "*.lua", LoadOneUserFile, F.FRS_RECUR, AddModule)
-      -- Far build >= 3810 required for calling far.RecursiveSearch with extra parameters
     end
   end
 
@@ -148,9 +163,10 @@ local function LoadUserModules(object, aLoadCommon, aLoadIndividual)
         end
         stmt:finalize()
         if #collector > 0 then
-          local db_dir = object._filename:gsub("[^\\/]+$","")
+          local db_dir = object._filename:gsub("[^"..DIRSEP.."]+$","")
           for _,item in ipairs(collector) do
-            local fullname = item.script:match("^[a-zA-Z]:") and item.script or db_dir..item.script
+            local fullname = item.script:match(OS_WIN and "^[a-zA-Z]:" or "^/")
+                             and item.script or db_dir..item.script
             local filedata = win.GetFileInfo(fullname)
             if filedata then
               LoadOneUserFile(filedata, fullname, AddModule)
@@ -192,11 +208,15 @@ function export.GetPluginInfo()
   local prefix = PluginData[config.PREFIX]
   if prefix ~= "" then info.CommandPrefix = prefix; end
 
-  info.PluginConfigGuids = PluginGuid
+  if OS_WIN then
+    info.PluginConfigGuids = PluginGuid
+  end
   info.PluginConfigStrings = { M.title }
 
   if PluginData[config.ADD_TO_MENU] then
-    info.PluginMenuGuids = PluginGuid;
+    if OS_WIN then
+      info.PluginMenuGuids = PluginGuid;
+    end
     info.PluginMenuStrings = { M.title }
   else
     info.Flags = bor(info.Flags, F.PF_DISABLEPANELS)
@@ -279,7 +299,7 @@ local function OpenFromCommandLine(str)
   if File == "" then
     File = ":memory:"
   else
-    File = File:gsub("%%(.-)%%", win.GetEnv) -- expand environment variables
+    File = OS_WIN and File:gsub("%%(.-)%%", win.GetEnv) or win.ExpandEnv(File)
     File = far.ConvertPath(File, "CPM_FULL")
   end
   return File, Opt
@@ -350,13 +370,21 @@ function export.Open(OpenFrom, Guid, Item)
   local FileName, Opt = nil, nil
 
   if OpenFrom == F.OPEN_ANALYSE then
-    FileName = Item.FileName
+    if OS_WIN then FileName = Item.FileName
+    else FileName = Item
+    end
+
   elseif OpenFrom == F.OPEN_SHORTCUT then
-    FileName = Item.HostFile
+    if OS_WIN then FileName = Item.HostFile
+    else FileName = Item
+    end
+
   elseif OpenFrom == F.OPEN_PLUGINSMENU then
     FileName = OpenFromPluginsMenu()
+
   elseif OpenFrom == F.OPEN_COMMANDLINE then
     FileName, Opt = OpenFromCommandLine(Item)
+
   elseif OpenFrom == F.OPEN_FROMMACRO then
     if Item[1] == "open" then
       FileName, Opt = OpenFromMacro(Item)
@@ -406,18 +434,43 @@ function export.ClosePanel(object, handle)
 end
 
 
-function export.ProcessPanelInput(object, handle, rec)
+local function ProcessPanelInput(object, handle, rec)
   for _,mod in ipairs(object.LoadedModules) do
     if type(mod.ProcessPanelInput) == "function" then
-      local ok, msg = xpcall(
-        function() return mod.ProcessPanelInput(object:get_info(), handle, rec) end,
-        debug.traceback)
-        if ok and msg then return true end
+      local func = function()
+        return mod.ProcessPanelInput(object:get_info(), handle, rec)
+      end
+      local ok, msg = xpcall(func, debug.traceback)
+      if ok and msg then
+        return true
+      end
       if not ok then ErrMsg(msg) end
     end
   end
   return rec.EventType == F.KEY_EVENT and object:handle_keyboard(handle, rec)
 end
+
+
+local function ProcessKey(object, handle, key, controlstate)
+  if 0 ~= band(key, F.PKF_PREPROCESS) then
+    return
+  end
+  local cs = 0
+  if 0 ~= band(controlstate, F.PKF_CONTROL) then cs = bor(cs, 0x08) end -- LEFT_CTRL_PRESSED
+  if 0 ~= band(controlstate, F.PKF_ALT    ) then cs = bor(cs, 0x02) end -- LEFT_ALT_PRESSED
+  if 0 ~= band(controlstate, F.PKF_SHIFT  ) then cs = bor(cs, 0x10) end -- SHIFT_PRESSED
+  local rec = {
+    EventType = F.KEY_EVENT;
+    KeyDown = true;
+    VirtualKeyCode = key;
+    ControlKeyState = cs;
+  }
+  return ProcessPanelInput(object, handle, rec)
+end
+
+
+export.ProcessPanelInput = OS_WIN and ProcessPanelInput or nil
+export.ProcessKey = (not OS_WIN) and ProcessKey or nil
 
 
 function export.ProcessPanelEvent (object, handle, Event, Param)
@@ -478,6 +531,11 @@ end
 
 
 if plugdebug.Running() then
+  local msg = "On_Default_Script_Loaded"
   plugdebug.Start()
-  win.OutputDebugString("On_Default_Script_Loaded")
+  if OS_WIN then
+    win.OutputDebugString(msg)
+  else
+    far.Log(msg)
+  end
 end

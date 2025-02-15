@@ -1,5 +1,9 @@
 -- coding: UTF-8
 
+local DIRSEP  = string.sub(package.config, 1, 1)
+local OS_WIN  = (DIRSEP == "\\")
+local TYPE_ID = OS_WIN and "AllocationSize" or "NumberOfLinks" -- IMPORTANT: this field is used as type id
+
 local sql3     = require "lsqlite3"
 local settings = require "far2.settings"
 local sdialog  = require "far2.simpledialog"
@@ -12,12 +16,17 @@ local utils    = require "modules.utils"
 
 local ErrMsg, Resize, Norm = utils.ErrMsg, utils.Resize, utils.Norm
 local F = far.Flags
-local VK = win.GetVirtualKeys()
 local KEEP_DIALOG_OPEN = 0
 local SM_USER = F.SM_USER or 100 -- SM_USER appeared in Far 3.0.5655
 
 local CMP_ALPHA, CMP_INT, CMP_FLOAT = 0,1,2 -- CRITICAL: must match the enum in polygon.c
-local SECTION_FILES = "files" -- keys in this section are lower-cased full file names
+
+local SECTION_FILES   = "files" -- keys in this section are lower-cased full file names
+local SECTION_GENERAL = "general"
+local SECTION_QUERIES = "queries"
+local SETTINGS_KEY    = nil
+local KEY_TIME        = "time"
+local KEY_LASTCHECK   = "last_check"
 
 
 -- Clean up "files" history
@@ -26,43 +35,64 @@ local function RemoveOldHistoryRecords()
   local CHECK_PERIOD = DAY * 1
   local RETAIN_TIME = DAY * 365
 
-  ------------------------------------------------------------------------
-  local pSection, pKey, pLocation = "general", "last_check", "local"
-  ------------------------------------------------------------------------
-  local now = win.GetSystemTimeAsFileTime()
-  local last = settings.mload(pSection, pKey, pLocation)
-  if last and (now - last) < CHECK_PERIOD then
-    return
-  end
-  settings.msave(pSection, pKey, now, pLocation)
-
-  ------------------------------------------------------------------------
-  pSection, pKey, pLocation = SECTION_FILES, nil, "local" -- luacheck: no unused
-  ------------------------------------------------------------------------
-  local obj = far.CreateSettings(nil, F.PSL_LOCAL)
-  local subkey = obj:OpenSubkey(0, pSection)
-  if subkey then
-    local items = obj:Enum(subkey)
-    obj:Free()
-    for _, v in ipairs(items) do
-      pKey = v.Name
-      local pData = settings.mload(pSection, pKey, pLocation)
-      if pData then
-        local last = pData["time"]
-        if last then
-          if now - last > RETAIN_TIME then
-            settings.mdelete(pSection, pKey, pLocation) -- delete expired data
+  if OS_WIN then
+    local pLocation = "local"
+    local now = win.GetSystemTimeAsFileTime()
+    local last = settings.mload(SECTION_GENERAL, KEY_LASTCHECK, pLocation)
+    if last and (now - last) < CHECK_PERIOD then
+      return
+    end
+    settings.msave(SECTION_GENERAL, KEY_LASTCHECK, now, pLocation)
+    ------------------------------------------------------------------------
+    local obj = far.CreateSettings(nil, F.PSL_LOCAL)
+    local subkey = obj:OpenSubkey(0, SECTION_FILES)
+    if subkey then
+      local items = obj:Enum(subkey)
+      obj:Free()
+      for _, v in ipairs(items) do
+        local fname = v.Name
+        local fdata = settings.mload(SECTION_FILES, fname, pLocation)
+        if fdata then
+          local last = fdata[KEY_TIME]
+          if last then
+            if now - last > RETAIN_TIME then
+              settings.mdelete(SECTION_FILES, fname, pLocation) -- delete expired fdata
+            end
+          else
+            fdata[KEY_TIME] = now
+            settings.msave(SECTION_FILES, fname, fdata, pLocation) -- set current time and save
           end
         else
-          pData["time"] = now
-          settings.msave(pSection, pKey, pData, pLocation) -- set current time and save
+          settings.mdelete(SECTION_FILES, fname, pLocation) -- delete corrupted fdata
         end
-      else
-        settings.mdelete(pSection, pKey, pLocation) -- delete corrupted data
       end
+    else
+      obj:Free()
     end
   else
-    obj:Free()
+    local now = win.GetSystemTimeAsFileTime()
+    local sect = settings.mload(SETTINGS_KEY, SECTION_GENERAL) or {}
+    local last = sect[KEY_LASTCHECK]
+    if last and (now - last) < CHECK_PERIOD then
+      return
+    end
+    sect[KEY_LASTCHECK] = now
+    settings.msave(SETTINGS_KEY, SECTION_GENERAL, sect)
+    ------------------------------------------------------------------------
+    local items = settings.mload(SETTINGS_KEY, SECTION_FILES)
+    if items then
+      for fname, fdata in pairs(items) do
+        local last = fdata[KEY_TIME]
+        if last then
+          if now - last > RETAIN_TIME then
+            items[fname] = nil -- delete expired fdata
+          end
+        else
+          fdata[KEY_TIME] = now
+        end
+      end
+      settings.msave(SETTINGS_KEY, SECTION_FILES, items)
+    end
   end
 end
 
@@ -113,7 +143,12 @@ function mypanel.open(filename, extensions, ignore_foreign_keys, multi_db)
       self._db:exec("PRAGMA foreign_keys = ON;")
     end
     RemoveOldHistoryRecords()
-    self._histfile = settings.mload(SECTION_FILES, filename:lower(), "local") or {}
+    if OS_WIN then
+      self._histfile = settings.mload(SECTION_FILES, filename:lower(), "local") or {}
+    else
+      local sect = settings.mload(SETTINGS_KEY, SECTION_FILES) or {}
+      self._histfile = settings.field(sect, filename:lower())
+    end
     self._histfile.tables = self._histfile.tables or {}
     self._tables = self._histfile.tables
     return self
@@ -133,7 +168,7 @@ function mypanel:set_directory(aHandle, aDir, aUserData)
   local success = true
   self._tab_filter = {}
   ----------------------------------------------------------------------------------------
-  if aDir == "/" or aDir == "\\" then
+  if aDir == DIRSEP or (OS_WIN and aDir == "/") then
     if self._multi_db then
       self:set_root_mode()
     else
@@ -164,11 +199,12 @@ function mypanel:set_directory(aHandle, aDir, aUserData)
     end
   ----------------------------------------------------------------------------------------
   else -- any directory except "/", "\\", ".."
-    local g1, g2, g3, g4 = aDir:match [[^(\?)([^\]+)(\?)([^\]*)$]]
-    if g1==nil or (g3=="\\" and g4=="") then
+    local patt = ("^(%s?)([^%s]+)(%s?)([^%s]*)$"):format(DIRSEP,DIRSEP,DIRSEP,DIRSEP)
+    local g1, g2, g3, g4 = aDir:match(patt)
+    if g1==nil or (g3==DIRSEP and g4=="") then
       return false
     end
-    if g1 == "\\" then -- absolute path
+    if g1 == DIRSEP then -- absolute path
       if self:database_exists(g2) then
         if g4 ~= "" then
           success = self:table_or_view_exists(g2,g4) and self:open_object(aHandle,g2,g4)
@@ -322,13 +358,21 @@ local meta_q_history = { __index=q_history; }
 
 function q_history.new()
   local self = setmetatable({}, meta_q_history)
-  self._array = settings.mload("queries", "queries", "local") or {}
+  if OS_WIN then
+    self._array = settings.mload(SECTION_QUERIES, SECTION_QUERIES, "local") or {}
+  else
+    self._array = settings.mload(SETTINGS_KEY, SECTION_QUERIES) or {}
+  end
   return self
 end
 
 
 function q_history:save()
-  settings.msave("queries", "queries", self._array, "local")
+  if OS_WIN then
+    settings.msave(SECTION_QUERIES, SECTION_QUERIES, self._array, "local")
+  else
+    settings.msave(SETTINGS_KEY, SECTION_QUERIES, self._array)
+  end
 end
 
 
@@ -380,16 +424,18 @@ function mypanel:get_open_panel_info(handle)
   end
 
   local CurDir
-  if self._exiting then
+  if self._exiting or (not OS_WIN and self._panel_mode=="db" and not self._multi_db) then
     CurDir = ""
   else
     CurDir = self._schema
-    if self._objname ~= "" then CurDir = CurDir.."\\"..self._objname; end
-    if CurDir ~= "" then CurDir = "\\"..CurDir; end
+    if self._objname ~= "" then CurDir = CurDir..DIRSEP..self._objname; end
+    if CurDir ~= "" then CurDir = DIRSEP..CurDir; end
   end
 
   local Info  = self._panel_info
-  local Flags = bit64.bor(F.OPIF_DISABLESORTGROUPS,F.OPIF_DISABLEFILTER,F.OPIF_SHORTCUT)
+  local Flags = OS_WIN and
+    bit64.bor(F.OPIF_DISABLESORTGROUPS,F.OPIF_DISABLEFILTER,F.OPIF_SHORTCUT) or
+    bit64.bor(F.OPIF_USEHIGHLIGHTING)
   return {
     CurDir           = CurDir;
     Flags            = Flags;
@@ -487,7 +533,7 @@ function mypanel:get_panel_list_db()
   local items = { { FileName=".."; FileAttributes="d"; } }
   for i,obj in ipairs(db_objects) do
     local item = {
-      AllocationSize = obj.type;  -- IMPORTANT: 'AllocationSize' field is used as type id
+      [TYPE_ID] = obj.type;
       CustomColumnData = {};
       FileAttributes = "";
       FileName = obj.name;
@@ -749,10 +795,16 @@ function mypanel:set_column_mask(handle)
       masks[self._col_info[1].name] = "0"
     end
     self._col_masks_used[self._objname] = true
-    self._histfile["time"] = win.GetSystemTimeAsFileTime()
-    settings.msave(SECTION_FILES, self._filename:lower(), self._histfile, "local")
+    self._histfile[KEY_TIME] = win.GetSystemTimeAsFileTime()
+    if OS_WIN then
+      settings.msave(SECTION_FILES, self._filename:lower(), self._histfile, "local")
+    else
+      local t = settings.mload(SETTINGS_KEY, SECTION_FILES) or {}
+      t[self._filename:lower()] = self._histfile
+      settings.msave(SETTINGS_KEY, SECTION_FILES, t)
+    end
     self:invalidate_panel_info()
-    panel.RedrawPanel(handle,nil)
+    panel.RedrawPanel(handle)
   end
 end
 
@@ -762,7 +814,7 @@ function mypanel:toggle_column_mask(handle)
   if cur and cur.col_masks then
     self._col_masks_used[self._objname] = not self._col_masks_used[self._objname]
     self:invalidate_panel_info()
-    panel.RedrawPanel(handle,nil)
+    panel.RedrawPanel(handle)
   end
 end
 
@@ -799,31 +851,50 @@ local function GetKeybarStrings(panelmode)
   end
 end
 
-local Keybar_mods = {
-  nomods = 0;
-  shift  = F.SHIFT_PRESSED;
-  alt    = F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED;
-  ctrl   = F.LEFT_CTRL_PRESSED + F.RIGHT_CTRL_PRESSED;
-}
-
 
 function mypanel:FillKeyBar (trg, src)
-  src = GetKeybarStrings(src)
-  for mod,cks in pairs(Keybar_mods) do
-    for vk=VK.F1,VK.F8 do
-      local txt = src[mod][vk-VK.F1+1]
-      if txt then
-        table.insert(trg, { Text=txt; LongText=txt; VirtualKeyCode=vk; ControlKeyState=cks })
+  if OS_WIN then
+    local VK = win.GetVirtualKeys()
+    local Keybar_mods = {
+      nomods = 0;
+      shift  = F.SHIFT_PRESSED;
+      alt    = F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED;
+      ctrl   = F.LEFT_CTRL_PRESSED + F.RIGHT_CTRL_PRESSED;
+    }
+    src = GetKeybarStrings(src)
+    for mod,cks in pairs(Keybar_mods) do
+      for vk=VK.F1,VK.F8 do
+        local txt = src[mod][vk-VK.F1+1]
+        if txt then
+          table.insert(trg, { Text=txt; LongText=txt; VirtualKeyCode=vk; ControlKeyState=cks })
+        end
       end
     end
+    for vk=VK.F9,VK.F12 do
+      table.insert(trg, { Text=""; LongText=""; VirtualKeyCode=vk;
+                          ControlKeyState=F.LEFT_CTRL_PRESSED + F.RIGHT_CTRL_PRESSED })
+    end
+    local txt = self._multi_db and "MainDB" or "MultiDB"
+    table.insert(trg, { Text=txt; LongText=txt; VirtualKeyCode=VK.F6;
+                        ControlKeyState=F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED + F.SHIFT_PRESSED })
+  else
+    src = GetKeybarStrings(src)
+    trg.Titles={}
+    trg.ShiftTitles={}
+    trg.AltTitles={}
+    trg.CtrlTitles={}
+    for k=1,8 do
+      trg.Titles[k]      = src.nomods[k]
+      trg.ShiftTitles[k] = src.shift[k]
+      trg.AltTitles[k]   = src.alt[k]
+      trg.CtrlTitles[k]  = src.ctrl[k]
+    end
+    for k=9,12 do
+      trg.CtrlTitles[k] = ""
+    end
+    local txt = self._multi_db and "MainDB" or "MultiDB"
+    trg.AltShiftTitles = { [6]=txt; }
   end
-  for vk=VK.F9,VK.F12 do
-    table.insert(trg, { Text=""; LongText=""; VirtualKeyCode=vk;
-                        ControlKeyState=F.LEFT_CTRL_PRESSED + F.RIGHT_CTRL_PRESSED })
-  end
-  local txt = self._multi_db and "MainDB" or "MultiDB"
-  table.insert(trg, { Text=txt; LongText=txt; VirtualKeyCode=VK.F6;
-                      ControlKeyState=F.LEFT_ALT_PRESSED + F.RIGHT_ALT_PRESSED + F.SHIFT_PRESSED })
 end
 
 
@@ -846,7 +917,7 @@ function mypanel:prepare_panel_info(handle)
   local info = {
     key_bar = {};
     modes   = {};
-    title   = M.title_short .. ": " .. self._filename:match("[^\\/]*$");
+    title   = M.title_short .. ": " .. self._filename:match("[^"..DIRSEP.."]*$");
   }
   self._panel_info = info
   self._language = win.GetEnv("FARLANG")
@@ -922,7 +993,11 @@ function mypanel:prepare_panel_info(handle)
   }
   local pm2 = {}
   for k,v in pairs(pm1) do pm2[k]=v; end
-  pm2.Flags = F.PMFLAGS_FULLSCREEN
+  if OS_WIN then
+    pm2.Flags = F.PMFLAGS_FULLSCREEN
+  else
+    pm2.FullScreen = true
+  end
   for k=1,10 do
     info.modes[k] = (k%2==1) and pm2 or pm1
   end
@@ -1209,7 +1284,7 @@ end
 
 function mypanel:view_db_object()
   -- Get selected object name
-  local item = panel.GetCurrentPanelItem(nil, 1)
+  local item = panel.GetCurrentPanelItem(nil,1)
   if not item or item.FileName == ".." then
     return
   end
@@ -1253,7 +1328,7 @@ end
 
 function mypanel:view_db_create_sql()
   -- Get selected object name
-  local item = panel.GetCurrentPanelItem(nil, 1)
+  local item = panel.GetCurrentPanelItem(nil,1)
   if item and item.FileName ~= ".." then
     local RealItemName = item.FileName
     local cr_sql = dbx.get_creation_sql(self._db, self._schema, RealItemName)
@@ -1380,7 +1455,7 @@ function mypanel:edit_query(query)
 
   -- Open query editor
   query = nil
-  local flags = F.EF_DISABLESAVEPOS + F.EF_DISABLEHISTORY
+  local flags = F.EF_DISABLEHISTORY + (OS_WIN and F.EF_DISABLESAVEPOS or 0)
   if F.EEC_MODIFIED==editor.Editor(tmp_name,"SQLite query",nil,nil,nil,nil,flags,nil,nil,65001) then
     fp = io.open(tmp_name)
     if fp then

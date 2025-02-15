@@ -329,7 +329,7 @@ $^ #Edit Table Row#
 
  Each edit field displays its contents as text, numeric, BLOB or NULL.
 
-   - Text values are displayed like     #'some text'#
+   - Text values are displayed like     #some text#
    - Numeric values are displayed like  #15#, #0.35# or #2.35e6#
    - BLOB values are displayed like     #x'13E6BC64'#
    - NULL values are displayed as       #NULL#

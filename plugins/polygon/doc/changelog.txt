@@ -1,5 +1,7 @@
-Recent changes:
+2025-02-15, v.1.9.0
     1. Fix GetOpenPanelInfo (columns were not updated after ALTER TABLE execution).
+    2. All plugin's source files made portable (far3 / far2m).
+    3. Text fields in the "Edit row" dialog are shown unnormalized (no quotes added).
 
 2024-09-09, v.1.8.5
     1. Rebuild of the embedded version.

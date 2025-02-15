@@ -1,5 +1,9 @@
 -- coding: UTF-8
 
+local DIRSEP  = string.sub(package.config, 1, 1)
+local OS_WIN  = (DIRSEP == "\\")
+local DEVNULL = OS_WIN and "NUL" or "/dev/null"
+
 local sql3     = require "lsqlite3"
 local sdialog  = require "far2.simpledialog"
 local M        = require "modules.string_rc"
@@ -44,7 +48,9 @@ end
 
 
 local function get_sqlite_exe()
-  local t_execs = { far.PluginStartupInfo().ModuleDir.."sqlite3.exe", "sqlite3.exe" }
+  local t_execs = OS_WIN and
+    { far.PluginStartupInfo().ModuleDir.."sqlite3.exe", "sqlite3.exe" } or
+    { "sqlite3" }
   local i = 0
   return function() i=i+1; return t_execs[i]; end
 end
@@ -59,10 +65,10 @@ end
 function exporter:get_destination_dir()
   local dir = panel.GetPanelDirectory(nil, 0).Name
   if dir == "" then -- passive panel's directory is unknown, choose host file directory
-    dir = self._filename:match(".*\\") or ""
+    dir = self._filename:match(".*"..DIRSEP) or ""
   end
-  if not (dir=="" or dir:sub(-1)=="\\") then
-    dir = dir .. "\\"
+  if not (dir=="" or dir:sub(-1)==DIRSEP) then
+    dir = dir .. DIRSEP
   end
   return dir
 end
@@ -213,7 +219,7 @@ function exporter:recover_data_with_dialog()
   ------------------------------------------------------------------------------
   local function set_output_name(hDlg)
     local as_dump = 1==hDlg:send("DM_GETCHECK", Pos.as_dump)
-    local fname = self._filename:match("[^\\]+$"):gsub("(.*)%.[^.]*$", "%1")
+    local fname = self._filename:match("[^"..DIRSEP.."]+$"):gsub("(.*)%.[^.]*$", "%1")
     local target = ("%s%s.recovered.%s"):format(
       self:get_destination_dir(), fname, as_dump and "dump" or "db")
     hDlg:send("DM_SETTEXT", Pos.targetfile, target)
@@ -236,10 +242,17 @@ function exporter:recover_data_with_dialog()
   local rc = dlg:Run()
   if rc then
     for exec in get_sqlite_exe() do
-      local cmd = rc.as_dump and
-        ([[""%s" "%s" .recover 1> "%s" 2>NUL"]]):format(exec, self._filename, rc.targetfile) or
-        ([[""%s" "%s" .recover 2>NUL | "%s" "%s" 2>NUL"]]):format(exec, self._filename, exec, rc.targetfile)
-      if 0==win.system(cmd) then break end
+      if OS_WIN then
+        local cmd = rc.as_dump and
+          ([[""%s" "%s" .recover 1> "%s" 2>NUL"]]):format(exec, self._filename, rc.targetfile) or
+          ([[""%s" "%s" .recover 2>NUL | "%s" "%s" 2>NUL"]]):format(exec, self._filename, exec, rc.targetfile)
+        if 0==win.system(cmd) then break end
+      else
+        local cmd = rc.as_dump and
+          ([[%s "%s" .recover 1> "%s" 2>/dev/null]]):format(exec, self._filename, rc.targetfile) or
+          ([[%s "%s" .recover 2>/dev/null | %s "%s" 2>/dev/null]]):format(exec, self._filename, exec, rc.targetfile)
+        if 0==os.execute(cmd) then break end
+      end
     end
     panel.UpdatePanel(nil,0)
     panel.RedrawPanel(nil,0)
@@ -478,13 +491,17 @@ function exporter:export_data_as_dump(Args)
       t[i+1] = '"'..s1..' '..Norm(item.FileName)..'"'
     end
   end
-  t[#t+1] = '1>"'..Args.file_name..'" 2>NUL'
+  t[#t+1] = '1>"'..Args.file_name..'" 2>'..DEVNULL
   local cmd = table.concat(t, " ")
   ------------------------
   far.Message("Please wait...", "", "")
   for exec in get_sqlite_exe() do
-    -- use win.system because win.ShellExecute wouldn't reuse Far console.
-    if 0 == win.system('""'..exec..'" '..cmd..'"') then break; end
+    if OS_WIN then
+      -- use win.system because win.ShellExecute wouldn't reuse Far console.
+      if 0 == win.system('""'..exec..'" '..cmd..'"') then break; end
+    else
+      if 0 == os.execute(exec..' '..cmd) then break; end
+    end
   end
   ------------------------
   panel.RedrawPanel(nil,1)

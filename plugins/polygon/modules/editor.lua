@@ -1,5 +1,9 @@
 -- coding: UTF-8
 
+local DIRSEP  = string.sub(package.config, 1, 1)
+local OS_WIN  = (DIRSEP == "\\")
+local TYPE_ID = OS_WIN and "AllocationSize" or "NumberOfLinks" -- IMPORTANT: this field is used as type id
+
 local sql3     = require "lsqlite3"
 local sdialog  = require "far2.simpledialog"
 local M        = require "modules.string_rc"
@@ -28,7 +32,7 @@ local function get_default_value(affinity)
   local val = 0
   if     affinity == "NUMERIC" then val = 0
   elseif affinity == "INTEGER" then val = 0
-  elseif affinity == "TEXT"    then val = "'text'" -- make it visible
+  elseif affinity == "TEXT"    then val = "text" -- make it visible
   elseif affinity == "BLOB"    then val = "x'00'"
   elseif affinity == "REAL"    then val = 0.0
   end
@@ -158,8 +162,9 @@ local function row_dialog(db, schema, table_name, rowid_name, db_data, row_id)
       if fp then
         fp:write(txt)
         fp:close()
+        local DelFlag = OS_WIN and F.VF_DELETEONCLOSE or F.VF_DELETEONLYFILEONCLOSE
         viewer.Viewer(fname, item.Colname, nil,nil,nil,nil,
-                      bit64.bor(F.VF_DELETEONCLOSE,F.VF_DISABLEHISTORY), 65001)
+                      bit64.bor(DelFlag,F.VF_DISABLEHISTORY), 65001)
       end
     -- convert blob to text and show it
     elseif key == "AltF3" then
@@ -218,7 +223,7 @@ local function get_row_data(db, schema, table_name, rowid_name, handle)
         elseif coltype == sql3.INTEGER or coltype == sql3.FLOAT then
           value = stmt:get_column_text(i)
         elseif coltype == sql3.TEXT then
-          value = Norm(stmt:get_column_text(i))
+          value = stmt:get_column_text(i)
         elseif coltype == sql3.BLOB then
           local s = string.gsub(stmt:get_value(i), ".",
             function(c) return string.format("%02x", string.byte(c)); end)
@@ -306,7 +311,7 @@ local function remove(db, schema, table_name, rowid_name, items)
   end
   if table_name == "" then
     for _,item in ipairs(items) do
-      local typename = dbx.decode_object_type(item.AllocationSize)
+      local typename = dbx.decode_object_type(item[TYPE_ID])
       if typename then
         local name_norm = Norm(item.FileName)
         local query = ("DROP %s %s.%s"):format(typename, Norm(schema), name_norm)
