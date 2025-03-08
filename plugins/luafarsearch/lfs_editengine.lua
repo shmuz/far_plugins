@@ -32,7 +32,7 @@ local function GetSelectionInfo (EditorId)
   }
   if Info.BlockType == F.BTYPE_COLUMN then
     out.TabStartPos = editor.RealToTab(EditorId, Info.BlockStartLine, egs.SelStart)
-    out.TabEndPos = editor.RealToTab(EditorId, Info.BlockStartLine, egs.SelEnd)
+    out.TabEndPos = editor.RealToTab(EditorId, Info.BlockStartLine, egs.SelEnd+1) - 1
   end
 
   -- binary search for a non-block line
@@ -699,6 +699,7 @@ local function DoReplace (
   local tInfo, tStartPos = editor.GetInfo(), editor.GetInfo()
   local acc, acc_started
   local Need_EUR_END
+  local sFileName = editor.GetFileName()
 
   local tBlockInfo = bScopeIsBlock and assert(GetSelectionInfo() or nil, "no selection")
 
@@ -1047,7 +1048,7 @@ local function DoReplace (
           tRepeat.from, tRepeat.to = fr, to
           -----------------------------------------------------------------------
           collect[0] = TT.sub(sLine, fr, to)
-          local sRepFinal, ret2 = fReplace(collect, nFound, nReps, y)
+          local sRepFinal, ret2 = fReplace(collect, nFound, nReps, y, sFileName)
           if ret2 and sChoice == "all" then bFinish = true end
           if sRepFinal then
             if sChoice ~= "all" then

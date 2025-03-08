@@ -146,13 +146,15 @@ local function EditorAction (op, data)
   local TT_gmatch          = is_wide and regex.gmatchW or regex.gmatch
   local TT_Gsub            = is_wide and Common.GsubW or Common.Gsub
 
+  local sFileName = editor.GetFileName()
+
   local fReplace = function() end
   if op == "replace" then
     local nMatch,nReps = 0,0
     local ff = Common.GetReplaceFunction(tParams.ReplacePat, is_wide)
     fReplace = function (collect)
       nMatch = nMatch + 1
-      local r1,r2 = ff(collect,nMatch,nReps)
+      local r1,r2 = ff(collect,nMatch,nReps,nil,sFileName)
       if r1 then nReps = nReps+1 end
       return r1,r2
     end

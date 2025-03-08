@@ -1223,7 +1223,7 @@ local function Replace_ProcessFile (fdata, fullname, cdata)
           -----------------------------------------------------------------------
           local sCurMatch = sub(Line, fr, to)
           collect[0] = sCurMatch
-          local ok, sRepFinal, bStop = pcall(fReplace, collect, nMatches, nReps, numline)
+          local ok, sRepFinal, bStop = pcall(fReplace, collect, nMatches, nReps, numline, fullname)
           bSkipAll = bStop and bReplaceAll
           if not ok then
             fp:close()

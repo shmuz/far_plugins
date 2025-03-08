@@ -1389,6 +1389,7 @@ treated as the body of a Lua function (see below).
        #M#   - number of the current match (1-based)
        #R#   - number of the current replacement (1-based)
        #LN#  - line number in editor or file (1-based)
+       #FN#  - current file name
        #rex# - regex library loaded
  
  *  The function can set and modify global variables and use them

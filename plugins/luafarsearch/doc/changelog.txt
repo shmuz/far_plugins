@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2025-03-08, v3.47.0
+  [!] Editor: fix replace in mixed tab/spaces vertical blocks.
+  [+] Replace in function mode: a new predefined variable FN (current file name).
+
 2025-02-14, v3.46.6
   [!] Editor Find: fix 'highlight all' in some cases.
 

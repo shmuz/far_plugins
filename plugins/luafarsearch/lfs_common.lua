@@ -280,35 +280,34 @@ end
 
 
 local function GetReplaceFunction (aReplacePat, is_wide)
-  local fSame = function(s) return s end
-  local U8 = is_wide and Utf8 or fSame
-  local U16 = is_wide and Utf16 or fSame
-
-  if type(aReplacePat) == "function" then
+  local tp = type(aReplacePat)
+  if tp == "function" then
     return is_wide and
-      function(collect,nMatch,nReps,nLine) -- this implementation is inefficient as it works in UTF-8 !
+      function(collect,nMatch,nReps,nLine,sFName) -- this implementation is inefficient as it works in UTF-8 !
         local ccopy = {}
         for k,v in pairs(collect) do
-          local key = type(k)=="number" and k or U8(k)
-          ccopy[key] = v and U8(v)
+          local key = type(k)=="number" and k or Utf8(k)
+          ccopy[key] = v and Utf8(v)
         end
-        local R1,R2 = aReplacePat(ccopy,nMatch,nReps+1,nLine)
+        local R1,R2 = aReplacePat(ccopy,nMatch,nReps+1,nLine,sFName)
         local tp1 = type(R1)
-        if     tp1 == "string" then R1 = U16(R1)
-        elseif tp1 == "number" then R1 = U16(tostring(R1))
+        if     tp1 == "string" then R1 = Utf16(R1)
+        elseif tp1 == "number" then R1 = Utf16(tostring(R1))
         end
         return R1, R2
-      end or
-      function(collect,nMatch,nReps,nLine)
-        local R1,R2 = aReplacePat(collect,nMatch,nReps+1,nLine)
+      end
+    or
+      function(collect,nMatch,nReps,nLine,sFName)
+        local R1,R2 = aReplacePat(collect,nMatch,nReps+1,nLine,sFName)
         if type(R1)=="number" then R1=tostring(R1) end
         return R1, R2
       end
 
-  elseif type(aReplacePat) == "string" then
-    return function() return U16(aReplacePat) end
+  elseif tp == "string" then
+    local val = is_wide and Utf16(aReplacePat) or aReplacePat
+    return function() return val end
 
-  elseif type(aReplacePat) == "table" then
+  elseif tp == "table" then
     return RepLib.GetReplaceFunction(aReplacePat, is_wide)
 
   else
@@ -448,7 +447,7 @@ local function ProcessDialogData (aData, bReplace, bInEditor, bUseMultiPatterns,
   ---------------------------------------------------------------------------
   if bReplace then
     if aData.bRepIsFunc then
-      local func, msg = loadstring("local T,M,R,LN = ...\n"..aData.sReplacePat, M.MReplaceFunction)
+      local func, msg = loadstring("local T,M,R,LN,FN = ...\n"..aData.sReplacePat, M.MReplaceFunction)
       if func then params.ReplacePat = setfenv(func, params.Envir)
       else ErrorMsg(msg, M.MReplaceFunction..": "..M.MSyntaxError); return nil,"sReplacePat"
       end
