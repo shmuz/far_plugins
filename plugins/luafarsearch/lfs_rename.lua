@@ -13,7 +13,7 @@ local RegPath = "LuaFAR\\"..AppName.."\\"
 
 local F = far.Flags
 local KEEP_DIALOG_OPEN = 0
-local HistData = _Plugin.History:field("rename")
+local HistData = _Plugin.HField("rename")
 local GsubMB = Common.GsubMB
 local Rex = Common.GetRegexLib("far")
 
@@ -437,7 +437,7 @@ local function UserDialog (aData, aList, aDlgTitle)
   local out = dlg:Run()
   if out then
     dlg:SaveData(out, aData)
-    _Plugin.History:save()
+    _Plugin.SaveSettings()
     return {
       Regex             = m_uRegex,
       fReplace          = m_fReplace,
@@ -592,7 +592,7 @@ local function DoAction (Params, aDir, aLog)
 end
 
 local function GetLogFileName()
-  local config = _Plugin.History:field("config")
+  local config = _Plugin.HField("config")
   local name = config.sLogFileTemplate or Common.DefaultLogFileName
   local tReplace = Common.TransformLogFilePat(name)
   local fReplace = GetReplaceFunction(tReplace)

@@ -46,10 +46,10 @@ local function tableSerialize (tbl)
   if type(tbl) == "table" then
     local idx = {}
     AddToIndex(idx, tbl)
-    local lines = { "local idx={}; for i=1,"..#idx.." do idx[i]={} end" }
+    local lines = { "local t; local idx={}; for i=1,"..#idx.." do idx[i]={} end" }
     for i,t in ipairs(idx) do
       local found
-      lines[#lines+1] = "do local t=idx["..i.."]"
+      lines[#lines+1] = "do t=idx["..i.."]"
       for k,v in pairs(t) do
         local k2 = basicSerialize(k) or type(k)=="table" and "idx["..idx[k].."]"
         if k2 then
@@ -154,6 +154,18 @@ local function field (t, seq)
   return t
 end
 
+function setfield (t, seq, val)
+  checkarg(t, 1, "table")
+  checkarg(seq, 2, "string")
+  local part1, part2 = seq:match("^(.-)([^.]*)$")
+  for v in part1:gmatch("[^.]+") do
+    t[v] = t[v] or {}
+    t = t[v]
+  end
+  t[part2] = val
+  return val
+end
+
 return {
   deserialize = deserialize;
   field = field;
@@ -161,4 +173,5 @@ return {
   mload = mload;
   msave = msave;
   serialize = serialize;
+  setfield = setfield;
 }

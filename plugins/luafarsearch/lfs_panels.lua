@@ -295,7 +295,7 @@ end
 
 
 local function ConfigDialog()
-  local aData = _Plugin.History:field("tmppanel")
+  local aData = _Plugin.HField("tmppanel")
   local W1 = 33
   local DC = (5+W1) + 2
 
@@ -348,7 +348,7 @@ local function ConfigDialog()
     if not aData.PreserveContents then
       _Plugin.FileList = nil
     end
-    _Plugin.History:save()
+    _Plugin.SaveSettings()
     return true
   end
 end
@@ -1437,7 +1437,7 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
   local sOp, tParams
   if aWithDialog then
     sOp, tParams = PanelDialog(aOp, aData, aScriptCall)
-    if sOp and not aScriptCall then _Plugin.History:save() end
+    if sOp and not aScriptCall then _Plugin.SaveSettings() end
   else
     sOp, tParams = aOp, ProcessDialogData(aData, true, false)
   end
@@ -1626,7 +1626,7 @@ end
 
 
 local function InitTmpPanel()
-  local history = _Plugin.History:field("tmppanel")
+  local history = _Plugin.HField("tmppanel")
   for k,v in pairs(TmpPanelDefaults) do
     if history[k] == nil then history[k] = v end
   end
@@ -1645,7 +1645,7 @@ local function InitTmpPanel()
 
   local tpGetOpenPanelInfo = export.GetOpenPanelInfo
   export.GetOpenPanelInfo = function (Panel, Handle)
-    local hist = _Plugin.History:field("tmppanel")
+    local hist = _Plugin.HField("tmppanel")
     local Info = tpGetOpenPanelInfo (Panel, Handle)
     Info.StartSortMode, Info.StartSortOrder = hist.StartSorting:match("(%d+)%s*,%s*(%d+)")
     for _,mode in pairs(Info.PanelModesArray) do
@@ -1655,7 +1655,7 @@ local function InitTmpPanel()
   end
 
   export.ClosePanel = function(object, handle)
-    local hist = _Plugin.History:field("tmppanel")
+    local hist = _Plugin.HField("tmppanel")
     if hist.PreserveContents then
       _Plugin.FileList = object:GetItems()
       _Plugin.FileList.NoDuplicates = true

@@ -4,7 +4,6 @@
 local M          = require "lfs_message"
 local RepLib     = require "lfs_replib"
 local sdialog    = require "far2.simpledialog"
-local libHistory = require "far2.history"
 local serial     = require "shmuz.serial"
 
 local DefaultLogFileName = "\\D{%Y%m%d-%H%M%S}.log"
@@ -83,9 +82,6 @@ local function MakeGsub (mode)
   end
 end
 
-local Gsub  = MakeGsub("byte")
-local GsubW = MakeGsub("widechar")
-local GsubMB = MakeGsub("multibyte")
 
 local function FormatTime (tm)
   if tm < 0 then tm = 0 end
@@ -391,17 +387,17 @@ end
 
 local function ProcessDialogData (aData, bReplace, bInEditor, bUseMultiPatterns, bSkip)
   local params = {}
-  params.bFileAsLine = aData.bFileAsLine
-  params.bInverseSearch = aData.bInverseSearch
-  params.bConfirmReplace = aData.bConfirmReplace
-  params.bWrapAround = aData.bWrapAround
-  params.bSearchBack = aData.bSearchBack
-  params.bDelEmptyLine = aData.bDelEmptyLine
+  params.bFileAsLine      = aData.bFileAsLine
+  params.bInverseSearch   = aData.bInverseSearch
+  params.bConfirmReplace  = aData.bConfirmReplace
+  params.bWrapAround      = aData.bWrapAround
+  params.bSearchBack      = aData.bSearchBack
+  params.bDelEmptyLine    = aData.bDelEmptyLine
   params.bDelNonMatchLine = aData.bDelNonMatchLine
-  params.bHighlight = aData.bHighlight
-  params.sOrigin = aData.sOrigin
-  params.sSearchPat = aData.sSearchPat or ""
-  params.FileFilter = aData.bUseFileFilter and aData.FileFilter
+  params.bHighlight       = aData.bHighlight
+  params.sOrigin          = aData.sOrigin
+  params.sSearchPat       = aData.sSearchPat or ""
+  params.FileFilter       = aData.bUseFileFilter and aData.FileFilter
   ---------------------------------------------------------------------------
   params.Envir = setmetatable({}, {__index=_G})
   params.Envir.dofile = function(fname)
@@ -489,14 +485,25 @@ local function ProcessDialogData (aData, bReplace, bInEditor, bUseMultiPatterns,
 end
 
 
+local function dialoghistory (name, from, to)
+  local obj = far.CreateSettings("far")
+  if obj then
+    local root = obj:OpenSubkey(0, name) -- e.g., "NewFolder"
+    local data = root and obj:Enum(root, from, to)
+    obj:Free()
+    return data
+  end
+end
+
+
 local function GetDialogHistoryValue (key, index)
-  local dh = libHistory.dialoghistory(key, index, index)
+  local dh = dialoghistory(key, index, index)
   return dh and dh[1] and dh[1].Name
 end
 
 
 local function GetDialogHistory (key)
-  local dh = libHistory.dialoghistory(key, -1, -1)
+  local dh = dialoghistory(key, -1, -1)
   return dh and dh[1] and dh[1].Name
 end
 
@@ -622,7 +629,7 @@ function SRFrame:OnDataLoaded (aData)
 
   if not self.bScriptCall then
     if bInEditor then
-      local config = _Plugin.History:field("config")
+      local config = _Plugin.HField("config")
       if config.rPickHistory then
         Items[Pos.sSearchPat].uselasthistory = true
       elseif config.rPickNowhere then
@@ -660,7 +667,7 @@ function SRFrame:CompleteLoadData (hDlg, Data, LoadFromPreset)
       hDlg:send("DM_ENABLE", Pos.rScopeBlock, 0)
     else
       local bScopeBlock
-      local bForceBlock = _Plugin.History:field("config").bForceScopeToBlock
+      local bForceBlock = _Plugin.HField("config").bForceScopeToBlock
       if bScript or not bForceBlock then
         bScopeBlock = (Data.sScope == "block")
       else
@@ -719,7 +726,7 @@ function SRFrame:DlgProc (hDlg, msg, param1, param2)
     assert(self.Dlg, "self.Dlg not set; probably Frame:SetDialogObject was not called")
     self:CompleteLoadData(hDlg, Data, false)
     if _Plugin.sSearchWord and not self.bScriptCall then
-      if _Plugin.History:field("config").rPickHistory then
+      if _Plugin.HField("config").rPickHistory then
         hDlg:send("DM_SETTEXT", Pos.sSearchPat, _Plugin.sSearchWord)
       end
       hDlg:send("DM_ADDHISTORY", Pos.sSearchPat, _Plugin.sSearchWord)
@@ -785,7 +792,7 @@ function SRFrame:DoPresets (hDlg)
   local HistPresetNames = _Plugin.DialogHistoryPath .. "Presets"
   hDlg:send("DM_SHOWDIALOG", 0)
   local props = { Title=M.MTitlePresets, Bottom = "F1", HelpTopic="Presets", }
-  local presets = _Plugin.History:field("presets")
+  local presets = _Plugin.HField("presets")
   local bkeys = {
     {  action="Save";    BreakKey="F2";      },
     {  action="SaveAs";  BreakKey="INSERT";  },
@@ -872,7 +879,7 @@ function SRFrame:DoPresets (hDlg)
           if Pos.cmbCodePage then
             SaveCodePageCombo(hDlg, Pos.cmbCodePage, self.Items[Pos.cmbCodePage].list, data, true)
           end
-          _Plugin.History:save()
+          _Plugin.SaveSettings()
           if pure_save_name then
             far.Message(M.MPresetWasSaved, M.MMenuTitle)
             break
@@ -891,7 +898,7 @@ function SRFrame:DoPresets (hDlg)
           self.PresetName = nil
         end
         presets[name] = nil
-        _Plugin.History:save()
+        _Plugin.SaveSettings()
       end
     ----------------------------------------------------------------------------
     elseif item.action == "Rename" and items[1] then
@@ -903,7 +910,7 @@ function SRFrame:DoPresets (hDlg)
             self.PresetName = name
           end
           presets[name], presets[oldname] = presets[oldname], nil
-          _Plugin.History:save()
+          _Plugin.SaveSettings()
         end
       end
     ----------------------------------------------------------------------------
@@ -947,7 +954,7 @@ function SRFrame:DoPresets (hDlg)
                 end
               end
             end
-            _Plugin.History:save()
+            _Plugin.SaveSettings()
           else
             ErrorMsg(M.MPresetImportDataNotTable)
           end
@@ -1011,26 +1018,23 @@ local function ConfigDialog()
   ----------------------------------------------------------------------------
   local Dlg = sdialog.New(Items)
 
-  local function closeaction (hDlg, param1, state)
-    local ok, errmsg = TransformLogFilePat(state.sLogFileName)
-    if not ok then
-      ErrorMsg(errmsg, "Log file name")
-      return KEEP_DIALOG_OPEN
-    end
-  end
-
   function Items.proc (hDlg, Msg, Par1, Par2)
     if Msg == F.DN_CLOSE then
-      return closeaction(hDlg, Par1, Par2)
+      local state = Par2
+      local ok, errmsg = TransformLogFilePat(state.sLogFileName)
+      if not ok then
+        ErrorMsg(errmsg, "Log file name")
+        return KEEP_DIALOG_OPEN
+      end
     end
   end
 
-  local Data = _Plugin.History:field("config")
+  local Data = _Plugin.HField("config")
   Dlg:LoadData(Data)
   local state = Dlg:Run()
   if state then
     Dlg:SaveData(state, Data)
-    _Plugin.History:save()
+    _Plugin.SaveSettings()
     return true
   end
 end
@@ -1069,7 +1073,7 @@ local function EditorConfigDialog()
   ----------------------------------------------------------------------------
   local dlg = sdialog.New(Items)
   local Pos = dlg:Indexes()
-  local Data = _Plugin.History:field("config")
+  local Data = _Plugin.HField("config")
   dlg:LoadData(Data)
 
   local hColor0 = Data.EditorHighlightColor
@@ -1102,7 +1106,7 @@ local function EditorConfigDialog()
     Data.EditorHighlightColor = hColor0
     Data.GrepLineNumMatchColor = hColor1
     Data.GrepLineNumContextColor = hColor2
-    _Plugin.History:save()
+    _Plugin.SaveSettings()
     return true
   end
 end
@@ -1200,30 +1204,30 @@ end
 
 
 return {
-  CheckMask = CheckMask,
-  CheckSearchArea = CheckSearchArea,
-  ConfigDialog = ConfigDialog,
-  CreateSRFrame = CreateSRFrame,
-  DefaultLogFileName = DefaultLogFileName,
-  DisplayReplaceState = DisplayReplaceState,
-  DisplaySearchState = DisplaySearchState,
-  EditorConfigDialog = EditorConfigDialog,
-  ErrorMsg = ErrorMsg,
-  FormatInt = FormatInt,
-  FormatTime = FormatTime,
-  GetDialogHistory = GetDialogHistory,
-  GetDialogHistoryValue = GetDialogHistoryValue,
-  GetRegexLib = GetRegexLib,
-  GetReplaceFunction = GetReplaceFunction,
-  GetSearchAreas = GetSearchAreas,
-  GetWordUnderCursor = GetWordUnderCursor,
-  GotoEditField = GotoEditField,
-  Gsub = Gsub,
-  GsubMB = GsubMB,
-  GsubW = GsubW,
-  IndexToSearchArea = IndexToSearchArea,
-  NewUserBreak = NewUserBreak,
-  ProcessDialogData = ProcessDialogData,
-  SaveCodePageCombo = SaveCodePageCombo,
-  TransformLogFilePat = TransformLogFilePat,
+  CheckMask             = CheckMask;
+  CheckSearchArea       = CheckSearchArea;
+  ConfigDialog          = ConfigDialog;
+  CreateSRFrame         = CreateSRFrame;
+  DefaultLogFileName    = DefaultLogFileName;
+  DisplayReplaceState   = DisplayReplaceState;
+  DisplaySearchState    = DisplaySearchState;
+  EditorConfigDialog    = EditorConfigDialog;
+  ErrorMsg              = ErrorMsg;
+  FormatInt             = FormatInt;
+  FormatTime            = FormatTime;
+  GetDialogHistory      = GetDialogHistory;
+  GetDialogHistoryValue = GetDialogHistoryValue;
+  GetRegexLib           = GetRegexLib;
+  GetReplaceFunction    = GetReplaceFunction;
+  GetSearchAreas        = GetSearchAreas;
+  GetWordUnderCursor    = GetWordUnderCursor;
+  GotoEditField         = GotoEditField;
+  Gsub                  = MakeGsub("byte");
+  GsubMB                = MakeGsub("multibyte");
+  GsubW                 = MakeGsub("widechar");
+  IndexToSearchArea     = IndexToSearchArea;
+  NewUserBreak          = NewUserBreak;
+  ProcessDialogData     = ProcessDialogData;
+  SaveCodePageCombo     = SaveCodePageCombo;
+  TransformLogFilePat   = TransformLogFilePat;
 }

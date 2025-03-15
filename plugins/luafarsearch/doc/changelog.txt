@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+Latest changes:
+  [*] far2.settings library is used instead of far2.history one.
+
 2025-03-08, v3.47.0
   [!] Editor: fix replace in mixed tab/spaces vertical blocks.
   [+] Replace in function mode: a new predefined variable FN (current file name).

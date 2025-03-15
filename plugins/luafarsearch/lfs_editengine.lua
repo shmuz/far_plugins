@@ -535,7 +535,7 @@ local function DoSearch (
       to = lenW(Utf16(TT.sub(sLine,1,to)))
     end
     ScrollToPosition (y, p1+xx, fr, to, scroll)
-    if _Plugin.History:field("config").bSelectFound then
+    if _Plugin.HField("config").bSelectFound then
       editor.Select(nil, "BTYPE_STREAM", y, p1+fr, to<=fr and 1 or to-fr+1, 1)
     end
     editor.Redraw()
@@ -1134,7 +1134,7 @@ local function DoReplace (
   if nReps==0 and tBlockInfo then -- it works incorrectly anyway
     EditorSelect(tBlockInfo)
   else
-    local bSelectFound = _Plugin.History:field("config").bSelectFound
+    local bSelectFound = _Plugin.HField("config").bSelectFound
     if sChoice=="yes" then
       if bSelectFound and x2 then
         if not is_wide then

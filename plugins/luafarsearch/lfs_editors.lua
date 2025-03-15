@@ -81,7 +81,7 @@ end
 --                            and highlight them separately from regular editor text
 ---------------------------------------------------------------------------------------------------
 local function RedrawHighlightPattern (EI, Pattern, Priority, ProcessLineNumbers, bSkip)
-  local config = _Plugin.History:field("config")
+  local config = _Plugin.HField("config")
   local Color = config.EditorHighlightColor
   local ID = EI.EditorID
   local GetNextString = MakeGetString(ID, EI.TopScreenLine,

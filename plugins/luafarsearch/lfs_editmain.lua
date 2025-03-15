@@ -185,7 +185,7 @@ local function EditorAction (aOp, aData, aScriptCall)
     if not tParams then return nil end
 
   elseif aOp == "searchword" or aOp == "searchword_rev" then
-    local word = Common.GetWordUnderCursor(_Plugin.History:field("config").bSelectFound)
+    local word = Common.GetWordUnderCursor(_Plugin.HField("config").bSelectFound)
     if not word then return end
     _Plugin.sSearchWord = word -- it may be used in further operations
     aData = {
@@ -233,7 +233,7 @@ local function EditorAction (aOp, aData, aScriptCall)
     ---------------------------------------------------------------------------
     if not aScriptCall then
       local function GetTitle()
-        if _Plugin.History:field("config").bShowSpentTime then
+        if _Plugin.HField("config").bShowSpentTime then
           return ("%s [ %s s ]"):format(M.MMenuTitle, Common.FormatTime(nElapsed))
         else
           return M.MMenuTitle

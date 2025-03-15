@@ -30,7 +30,7 @@ modules = \
   $(path_share)*shmuz\cqueue.lua     \
   $(path_share)*far2\custommenu.lua  \
   $(path_share)*far2\simpledialog.lua  \
-  $(path_share)*far2\history.lua     \
+  $(path_share)*far2\settings.lua    \
   $(path_share)*far2\message.lua     \
   $(path_share)*far2\tmppanel.lua    \
   $(path_share)*far2\utils.lua

@@ -5,11 +5,15 @@
 -- The reason: FSF.GetReparsePointInfo() did not work in the range of builds [4425-4876].
 
 local F = far.Flags
-local M -- forward declaration
+local M, History, HField -- forward declarations
 local MenuFlags = bit64.bor(F.FMENU_WRAPMODE, F.FMENU_AUTOHIGHLIGHT)
 local PluginConfigGuid1 = win.Uuid("B2C08615-ED7C-491D-BE5C-8758FDAB9139")
 local PluginMenuGuid1   = win.Uuid("3D5E7985-3B5D-4777-A572-BA7C621B3731")
 _G.lfsearch = {}
+
+local SETTINGS_KEY = "plugin"
+local SETTINGS_NAME = "settings"
+local Sett = require "far2.settings"
 
 
 local function GetFarBuildNumber()
@@ -17,25 +21,47 @@ local function GetFarBuildNumber()
 end
 
 
+local function LoadSettings()
+  local data = Sett.mload(SETTINGS_KEY, SETTINGS_NAME, "roaming")
+  if not data then
+    -- try to load old settings (saved when far2.history library was used)
+    local obj = far.CreateSettings(nil, "PSL_ROAMING")
+    if obj then
+      local strData = obj:Get(0, "alldata", "FST_DATA")
+      obj:Free()
+      if strData then
+        data = Sett.deserialize(strData.."\nreturn Data\n")
+      end
+    end
+  end
+  return data
+end
+
+
+local function SaveSettings()
+  Sett.msave(SETTINGS_KEY, SETTINGS_NAME, History, "roaming")
+end
+
+
 -- Set the defaults: prioritize safety and "least surprise".
 local function NormDataOnFirstRun()
-  local data = _Plugin.History:field("main")
-  local pers = _Plugin.History:field("persistent")
-  local setval = function(name, dflt)
-    if data[name]==nil or not pers[name] then data[name]=dflt; end
+  local main = HField("main")
+  local pers = HField("persistent")
+  local SetVal = function(name, dflt)
+    if main[name]==nil or not pers[name] then main[name]=dflt; end
   end
-  setval("bAdvanced"          , false)
-  setval("bConfirmReplace"    , true)
-  setval("bDelEmptyLine"      , false)
-  setval("bDelNonMatchLine"   , false)
-  setval("bGrepInverseSearch" , false)
-  setval("bInverseSearch"     , false)
-  setval("bMultiPatterns"     , false)
-  setval("bRepIsFunc"         , false)
-  setval("bSearchBack"        , false)
-  setval("bUseDirFilter"      , false)
-  setval("bUseFileFilter"     , false)
-  setval("sSearchArea"        , "FromCurrFolder")
+  SetVal("bAdvanced"          , false)
+  SetVal("bConfirmReplace"    , true)
+  SetVal("bDelEmptyLine"      , false)
+  SetVal("bDelNonMatchLine"   , false)
+  SetVal("bGrepInverseSearch" , false)
+  SetVal("bInverseSearch"     , false)
+  SetVal("bMultiPatterns"     , false)
+  SetVal("bRepIsFunc"         , false)
+  SetVal("bSearchBack"        , false)
+  SetVal("bUseDirFilter"      , false)
+  SetVal("bUseFileFilter"     , false)
+  SetVal("sSearchArea"        , "FromCurrFolder")
 end
 
 
@@ -69,26 +95,31 @@ local function PersistentDialog()
     end
   end
 
-  local pers = _Plugin.History:field("persistent")
+  local pers = HField("persistent")
   local dlg = sd.New(items)
   dlg:LoadData(pers)
   local out = dlg:Run()
   if out then
     dlg:SaveData(out, pers)
-    _Plugin.History:save()
+    SaveSettings()
   end
 end
 
 
 local function FirstRunActions()
-  local libHistory = require "far2.history"
+  History = LoadSettings() or {}
+  HField = function(key) return Sett.field(History, key) end
+  NormDataOnFirstRun()
+
   _Plugin = {
-    DialogHistoryPath = "LuaFAR Search\\",
-    OriginalRequire = require,
-    History = libHistory.newsettings(nil, "alldata"),
-    Repeat = {},
-    FileList = nil,
-    Finder = _finder,
+    DialogHistoryPath = "LuaFAR Search\\";
+    FileList          = nil;
+    Finder            = _finder;
+    HField            = HField;
+    History           = History;
+    OriginalRequire   = require;
+    Repeat            = {};
+    SaveSettings      = SaveSettings;
   }
 
   if GetFarBuildNumber() >= 5550 then
@@ -98,7 +129,6 @@ local function FirstRunActions()
     _finder.FileTimeResolution(2)
   end
 
-  NormDataOnFirstRun()
   local ModuleDir = far.PluginStartupInfo().ModuleDir
   package.path = ModuleDir .. "?.lua;" .. package.path
   package.cpath = ModuleDir .. "?.dl;" .. package.cpath
@@ -107,7 +137,6 @@ end
 
 local FirstRun = ... --> this works with LuaFAR builds >= 529 (Far >= 3.0.4425)
 if FirstRun then FirstRunActions() end
-local History = _Plugin.History
 
 
 local libUtils   = require "far2.utils"
@@ -127,7 +156,7 @@ end
 
 
 local function OpenFromEditor (userItems)
-  local hMenu = History:field("editor.menu")
+  local hMenu = HField("editor.menu")
   local items = {
     { text=M.MMenuFind,             action="search",         save=true  },
     { text=M.MMenuReplace,          action="replace",        save=true  },
@@ -149,7 +178,7 @@ local function OpenFromEditor (userItems)
   hMenu.position = pos
 
   if pos <= nOwnItems then
-    local data = History:field("main")
+    local data = HField("main")
     data.fUserChoiceFunc = nil
     local ret
 
@@ -162,11 +191,11 @@ local function OpenFromEditor (userItems)
     end
 
     if ret and item.save then
-      History:save() -- very expensive with SQLite (~ 0.1 sec)
+      SaveSettings() -- very expensive with SQLite (~ 0.1 sec)
     end
   else
     libUtils.RunUserItem(item, item.arg)
-    History:save()
+    SaveSettings()
   end
 end
 
@@ -175,22 +204,22 @@ local function GUI_SearchFromPanels (data)
   local tFileList, bCancel = Panels.SearchFromPanel(data, true, false)
   if tFileList then -- the dialog was not cancelled
     if tFileList[1] then
-      local panel = Panels.CreateTmpPanel(tFileList, History:field("tmppanel"))
-      History:save()
+      local panel = Panels.CreateTmpPanel(tFileList, HField("tmppanel"))
+      SaveSettings()
       return panel
     else -- no files were found
       if bCancel or 1==far.Message(M.MNoFilesFound,M.MMenuTitle,M.MButtonsNewSearch) then
         return GUI_SearchFromPanels(data)
       end
-      History:save()
+      SaveSettings()
     end
   end
 end
 
 
 local function OpenFromPanels (userItems)
-  local hMain = History:field("main")
-  local hMenu = History:field("panels.menu")
+  local hMain = HField("main")
+  local hMenu = HField("panels.menu")
 
   local items = {
     {text=M.MMenuFind,     action="find"},
@@ -218,7 +247,7 @@ local function OpenFromPanels (userItems)
     elseif item.action == "rename" then
       Rename.main()
     elseif item.action == "tmppanel" then
-      return Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
+      return Panels.CreateTmpPanel(_Plugin.FileList or {}, HField("tmppanel"))
     end
   else
     libUtils.RunUserItem(item, item.arg)
@@ -234,7 +263,7 @@ local function OpenFromMacro (aItem, commandTable)
 
   elseif Op=="own" then
     local area = far.MacroGetArea()
-    local data = History:field("main")
+    local data = HField("main")
     data.fUserChoiceFunc = nil
 
     if Where=="editor" then
@@ -244,12 +273,12 @@ local function OpenFromMacro (aItem, commandTable)
         then
           local ret = EditMain.EditorAction(Cmd, data, false)
           if ret and (Cmd=="search" or Cmd=="replace" or Cmd=="config") then
-            History:save() -- very expensive with SQLite (~ 0.1 sec)
+            SaveSettings() -- very expensive with SQLite (~ 0.1 sec)
           end
           return ret
         elseif Cmd=="mreplace" then
           if MReplace.ReplaceWithDialog(data, true) then
-            History:save() -- very expensive with SQLite (~ 0.1 sec)
+            SaveSettings() -- very expensive with SQLite (~ 0.1 sec)
           end
         elseif Cmd=="resethighlight" then
           Editors.ActivateHighlight(false)
@@ -272,7 +301,7 @@ local function OpenFromMacro (aItem, commandTable)
         elseif Cmd == "rename" then
           Rename.main()
         elseif Cmd == "panel" then
-          local pan = Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
+          local pan = Panels.CreateTmpPanel(_Plugin.FileList or {}, HField("tmppanel"))
           return { [1]=pan; type="panel" }
         end
       end
@@ -284,7 +313,7 @@ end
 
 
 local function OpenFromShortcut()
-  return Panels.CreateTmpPanel(_Plugin.FileList or {}, History:field("tmppanel"))
+  return Panels.CreateTmpPanel(_Plugin.FileList or {}, HField("tmppanel"))
 end
 
 
@@ -352,7 +381,7 @@ function lfsearch.EditorAction (aOp, aData, aSaveData)
   local newdata = {}; for k,v in pairs(aData) do newdata[k] = v end
   local nFound, nReps = EditMain.EditorAction(aOp, newdata, true)
   if aSaveData and nFound then
-    History:setfield("main", newdata)
+    History["main"] = newdata
   end
   return nFound, nReps
 end
@@ -380,7 +409,7 @@ end
 
 
 do
-  local config = History:field("config")
+  local config = HField("config")
   config.bUseFarHistory = config.bUseFarHistory~=false -- true by default
   config.EditorHighlightColor    = config.EditorHighlightColor    or 0xCF
   config.GrepLineNumMatchColor   = config.GrepLineNumMatchColor   or 0xA0

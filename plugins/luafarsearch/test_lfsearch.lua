@@ -7,8 +7,8 @@ local OS_WIN = (DIRSEP == "\\")
 local TMPDIR, GetHistory, SetHistory
 
 if OS_WIN then
-  GetHistory = function(s1,s2) return _Plugin.History:field(s1)[s2] end
-  SetHistory = function(s1,s2,val) _Plugin.History:setfield(s1.."."..s2, val) end
+  GetHistory = function(s1,s2) return _Plugin.History[s1][s2] end
+  SetHistory = function(s1,s2,val) _Plugin.History[s1][s2] = val end
   ----------------------------------------------------------------
   TMPDIR = assert(win.GetEnv("Temp"))
 else
