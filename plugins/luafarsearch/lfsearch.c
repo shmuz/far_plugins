@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 #include <plugin.hpp>
 #include <lua.h>
-#include <luafar.h>
+#include <lf_luafar.h>
 
 #ifndef FILE_ATTRIBUTE_NO_SCRUB_DATA
 #define FILE_ATTRIBUTE_NO_SCRUB_DATA 0x20000

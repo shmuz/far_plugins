@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 #include <plugin.hpp>
 #include <lua.h>
-#include <luafar.h>
+#include <lf_luafar.h>
 
 #ifdef _MSC_VER
 #define LUAPLUG WINAPI
