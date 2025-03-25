@@ -375,13 +375,25 @@ lfsearch.MReplaceEditorAction = MReplace.EditorAction
 lfsearch.MReplaceDialog = MReplace.ReplaceWithDialog
 
 
+-- Note: not intended to process tables containing cyclic references
+local function MergeTables(trg, src)
+  for k,v in pairs(src) do
+    if type(v)=="table" and type(trg[k])=="table" then
+      MergeTables(trg[k], v) -- recursion
+    else
+      trg[k] = v
+    end
+  end
+end
+
+
 function lfsearch.EditorAction (aOp, aData, aSaveData)
   assert(type(aOp)=="string", "arg #1: string expected")
   assert(type(aData)=="table", "arg #2: table expected")
   local newdata = {}; for k,v in pairs(aData) do newdata[k] = v end
   local nFound, nReps = EditMain.EditorAction(aOp, newdata, true)
   if aSaveData and nFound then
-    History["main"] = newdata
+    MergeTables(History["main"], newdata)
   end
   return nFound, nReps
 end
