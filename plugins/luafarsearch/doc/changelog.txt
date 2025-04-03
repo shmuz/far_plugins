@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2025-04-03, v3.48.1
+  [!] Grep: fix an error in Inverse search when nothing is found (since 3.45.4).
+
 2025-03-25, v3.48.0
   [*] far2.settings library is used instead of far2.history one.
   [!] lfsearch.EditorAction: non-relevant history data were erased.

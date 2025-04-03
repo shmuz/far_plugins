@@ -1421,10 +1421,10 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
       DisplayReplaceState(fullname, cdata.nFilesProcessed-1, pos/fdata.FileSize)
     end
   end -- for line, eol in lines_iter(...)
+  if tGrep then
+    tGrep.nMatches = nMatches -- may be 0 in case of inverse search
+  end
   if nMatches > 0 then
-    if tGrep then
-      tGrep.nMatches = nMatches
-    end
     cdata.nMatchesTotal = cdata.nMatchesTotal + nMatches
     cdata.nFilesWithMatches = cdata.nFilesWithMatches + 1
   end
