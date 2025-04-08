@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2025-04-08, v3.10.2
+  [!] Force editor redraw after Sort Lines.
+
 2024-02-26, v3.10.1
   [*] Changes for making minimum Far version = 3893.
 

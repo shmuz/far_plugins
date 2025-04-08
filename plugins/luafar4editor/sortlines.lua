@@ -214,6 +214,7 @@ local function SortWithRawData (aData)
   editor.UndoRedo(nil, "EUR_BEGIN")
   PutLines(arr_compare, arr_index, arr_target, OnlySelection)
   editor.UndoRedo(nil, "EUR_END")
+  editor.Redraw(nil)
 end
 
 -- generic
