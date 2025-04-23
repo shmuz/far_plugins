@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+Latest:
+  [!] Fix debug mode.
+
 2025-04-03, v3.48.1
   [!] Grep: fix an error in Inverse search when nothing is found (since 3.45.4).
 

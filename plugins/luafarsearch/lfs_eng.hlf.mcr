@@ -48,17 +48,17 @@ $ #Plugin's menu in the Editor#
 ^#Menu items#
 
  #Find#                               ¦Find text using settings specified in the ~dialog~@OperInEditor@.
- 
+
  #Replace#                            ¦Replace text using settings specified in the ~dialog~@OperInEditor@.
- 
+
  #Repeat#                             ¦Repeat the last #Find# or #Replace# operation.
- 
+
  #Repeat (reverse search)#            ¦Repeat the last #Find# or #Replace# operation, in the opposite direction.
- 
+
  #Find word under cursor#             ¦Find the word under cursor, case insensitive.
- 
+
  #Find word under cursor (reverse)#   ¦Find the word under cursor, case insensitive, in the opposite direction.
- 
+
  #Multi-Line Replace#                 ¦See ~Multi-Line Replace in Editor~@MReplace@
 
  #Toggle Highlight#                   ¦If the plugin highlighted parts of editor text then that highlighting will be turned on/off.
@@ -68,7 +68,7 @@ $ #Plugin's menu in the Editor#
 
 @OperInEditor
 $ #Operation in Editor#
-^#Dialog settings# 
+^#Dialog settings#
  #Search for#
  The search pattern. If "Reg. Expression" option is checked then it is
 interpreted as a regular expression, otherwise as a literal string.
@@ -108,7 +108,7 @@ pattern.
  #Origin# (where the search begins):
    #(•) From cursor# - search from cursor to the scope border.
    #( ) Whole scope# - search between the scope borders.
- 
+
  #[x] Wrap around#
  Wrap search around the scope. #[?]# means: ask the user.
 
@@ -134,7 +134,7 @@ it will be deleted.
 
  #[x] Advanced#
  Enable the advanced features: Line Filter, Initial Code and Final Code.
- 
+
  #Line Filter#
  *  Line Filter allows to conduct search or replace on some lines
     while skipping the others.
@@ -183,14 +183,15 @@ $ #"Show All" operation#
  Do search and show the list with all lines containing the found text.
 Each line in the list contains an editor line where the search succeeded.
 
-    #Enter#            Go to the selected line in the editor.
-    #F6#               Show different parts of long lines.
-    #F7#               Show the selected line in a message box.
-    #F8#               Close the list and reopen the Search Dialog.
-    #Ctrl-C#           Copy the selected line to the clipboard.
+    #Enter#            Go to the selected line in the editor
+    #F6#               Show different parts of long lines
+    #F7#               Show the selected line in a message box
+    #F8#               Close the list and reopen the Search Dialog
+    #Ctrl-Ins#         Copy the selected line to the clipboard
+    #Ctrl-Shift-Ins#   Copy all list lines to the clipboard
     #Ctrl-Up#, #Ctrl-Down#, #Ctrl-Home#, #Ctrl-End#
-                     Scroll the editor not closing the list.
-    #Ctrl-Num0#        Restore editor position after scrolling.
+                     Scroll the editor not closing the list
+    #Ctrl-Num0#        Restore editor position after scrolling
 
  ~Contents~@Contents@
 
@@ -199,7 +200,7 @@ $ #Configuration#
  #[x] Use Far history#
  Which history to use in "Search for" and "Replace with" fields.
 Either Far history or this plugin's separate history can be used.
- 
+
  #Log file name#
  Specify name of the log file, created by the ~Rename~@Rename@ utility.
 The name can contain a date-time template #\D{...}# - see its description
@@ -208,13 +209,13 @@ in the ~Syntax of Replace pattern~@SyntaxReplace@ section.
  #[x] Process selected text if it exists#
  On invoking editor search or replace dialog, automatically set #Scope#
 to #Selected text# if the editor contains selection.
-  
+
  #[x] Select found text#
  Select found text in the editor.
- 
+
  #[x] Show operation time#
  Show time taken by the operation
- 
+
  #Pick search string from:#
  This setting determines how the #Search# field is initialized when the
 Search or Replace dialog is opened. There are 3 options:
@@ -408,7 +409,7 @@ $ #lfsearch.SearchFromPanel
        "bMultiPatterns"  : multiple patterns mode
        "bExtended"       : ignore whitespace in regexp
        "bFileAsLine"     : file as a line
-       "bInverseSearch"  : inverse search       
+       "bInverseSearch"  : inverse search
        "bSearchFolders"  : search for folders
        "bSearchSymLinks" : search in symbolic links
 
@@ -416,11 +417,11 @@ $ #lfsearch.SearchFromPanel
                            "SelectedItems", "RootFolder", "NonRemovDrives",
                            "LocalDrives", "PathFolders"
 
- #bWithDialog# - whether the dialog should be invoked. 
- 
+ #bWithDialog# - whether the dialog should be invoked.
+
  #tFound# - a table (array) with names of the found files.
 
- 
+
  ~Contents~@Contents@
 
 @FuncReplaceFromPanel
@@ -456,11 +457,11 @@ $ #lfsearch.ReplaceFromPanel
        "sInitFunc"       : Initial function
        "sFinalFunc"      : Final function
 
- #bWithDialog# - whether the dialog should be invoked. 
- 
+ #bWithDialog# - whether the dialog should be invoked.
+
  #returns:# nothing.
 
- 
+
  ~Contents~@Contents@
 
 @FuncSetDebugMode
@@ -481,11 +482,11 @@ $ #Plugin's menu in Panels#
 ^#Menu items#
 
  #Find#                         ¦Find text according to ~dialog~@OperInPanels@.
- 
+
  #Replace#                      ¦Replace text according to ~dialog~@OperInPanels@.
- 
+
  #Grep#                         ¦Find all text occurrences according to ~dialog~@PanelGrep@ and place results in a file.
- 
+
  #Rename#                       ¦Rename files and directories according to ~dialog~@Rename@.
 
  #Panel#                        ¦Open the ~temporary panel~@TmpPanel@ of the plugin.
@@ -495,7 +496,7 @@ $ #Plugin's menu in Panels#
 
 @OperInPanels
 $ #Search and Replace in Panels#
-^#Dialog settings# 
+^#Dialog settings#
  #File mask#
  The syntax is identical to Far-style ~file masks~@:FileMasks@.
 
@@ -515,7 +516,7 @@ $ #Search and Replace in Panels#
  #[x] Make backup copy# (only in "Replace" dialog)
  If a file was modified as a result of the replace operation,
  the backup of the original file is created.
- 
+
  #[x] Multiple patterns# (only in "Find" dialog)
  Several patterns can be specified at once in the "Search for" field.
    #*# The patterns are separated with spaces.
@@ -544,7 +545,7 @@ $ #Search and Replace in Panels#
 
    #*# Some code page from the list is selected: the search is performed using
 only that code page.
- 
+
    #*# "Default code pages" is selected.
 The search is performed using the predefined set of code pages:
 { OEM, ANSI, 1200, 1201, 65000, 65001 }.
@@ -552,7 +553,7 @@ The search is performed using the predefined set of code pages:
    #*# "Checked code pages" is selected and some code pages are checked
 in the list. The search is performed using the checked code pages.
 (A page can be checked in the list by pressing Space or Ins).
- 
+
  #Search area#
  Choose where to look for files and directories:
    #*# From the current folder
@@ -564,7 +565,7 @@ in the list. The search is performed using the checked code pages.
    #*# In PATH folders
 
  #[x] Directory filter#  #[ Tune ]#
- Enable use of directory filter. 
+ Enable use of directory filter.
  Show ~Directory filter dialog~@DirectoryFilter@.
 
  #[x] File filter#       #[ Tune ]#
@@ -587,7 +588,7 @@ $ #Search results panel#
  The plugin uses an embedded temporary panel for displaying its search results.
 The settings of the temporary panel can be tuned in the configuration dialog.
 
-^#Dialog settings# 
+^#Dialog settings#
  #Column types#
  #Column widths#
  #Status line column types#
@@ -1372,7 +1373,7 @@ $ #Syntax of Replace pattern#
     *  The following works only in ~Rename~@Rename@ utility.
        #\N#           File name, without extension
        #\X#           File extension (the dot not included)
- 
+
  If the Function mode option is selected, then the text in this field is
 treated as the body of a Lua function (see below).
 
@@ -1391,27 +1392,27 @@ treated as the body of a Lua function (see below).
        #LN#  - line number in editor or file (1-based)
        #FN#  - current file name
        #rex# - regex library loaded
- 
+
  *  The function can set and modify global variables and use them
     during its current and future invocations (within the current
     search).
- 
+
  *  Let's assume the function returned two values: #ret1# and #ret2#.
     These values are processed as follows:
-    
-    In all utilities:    
+
+    In all utilities:
     *  #type(ret1)=="string" or type(ret1)=="number"# :
        ret1 is used as the substituting text.
     *  #ret1==nil or ret1==false#  : no replacement is done.
     *  undocumented type of #ret1# : no replacement is done.
-    
+
     In per-line replacing utilities from editor and panels:
     *  #ret1==true#: the line along with end-of-line is deleted.
          - not relevant for "multi-line replace" and "rename"
            utilities.
          - when replacing from panels, deleted is only that part of
            the line that was yet not placed into the output file.
-    
+
     In replacing utilities from editor and panels:
     *  #ret2==true#: immediate termination of the current search and
                    replace operation.
@@ -1437,7 +1438,7 @@ the default line break sequences are inserted.
  All replacements take place at once with no prompt for the user. In the
 similar way they all can be cancelled at once by pressing Ctrl-Z.
 
-^#Dialog settings# 
+^#Dialog settings#
  #Search for#
  The search pattern.
 
@@ -1462,7 +1463,7 @@ pattern.
  #[x] File as a line#
  If checked then #.# (dot) in regular expressions matches any character,
 including \r and \n.
- 
+
  #[x] Multiline mode#
  If checked then #^# and #$# in regular expressions match correspondingly
 beginnings and ends of every line.
@@ -1486,7 +1487,7 @@ directory to be recursively searched does not have to match the mask.
  #(•) Search in all#
  Items for renaming and directories for recursion are searched among
 all items of the active panel.
- 
+
  #( ) Search in selected#
  Items for renaming and directories for recursion are searched only among
 selected items of the active panel. If there are no selected items then
@@ -1538,7 +1539,7 @@ The file is automatically opened in the editor after the search is finished.
  We want to find the word #new# in the C++ code but not in comments like this: #//...new...#.
  To achieve that we specify pattern #\bnew\b# as the search pattern
 and pattern #\/\/.*# as the skip pattern.
- 
+
  #[x] Show line numbers#
  Each output line contains line number it has in the searched file.
 
@@ -1564,7 +1565,7 @@ $ #Panel#
 
 @DirectoryFilter
 $ #Directory filter#
-^#Dialog settings# 
+^#Dialog settings#
 
  #Directory search mask#
  The search of files for inclusion in the list and processing will be done
@@ -1591,7 +1592,7 @@ and will not be processed.
 
 @PersistentSettings
 $ #Persistent settings#
-^#Persistent settings# 
+^#Persistent settings#
 
  The settings that are checked on this dialog persist between Far Manager sessions.
  The settings that are not checked will be set to their respective defaults in a next session.
