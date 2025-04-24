@@ -192,10 +192,15 @@ local function GetRegexLib (lib_name)
   if lib_name == "far" then
     base = regex
     local tb_methods = getmetatable(regex.new(".")).__index
-    tb_methods.ufind = tb_methods.ufind or
-      function (r,subj,init) return pack_results(r:find(subj,init)) end
-    tb_methods.ufindW = tb_methods.ufindW or
-      function (r,subj,init) return pack_results(r:findW(subj,init)) end
+    if tb_methods.tfind then -- since 2025-04-11
+      tb_methods.ufind = tb_methods.tfind
+      tb_methods.ufindW = tb_methods.tfindW
+    else 
+      tb_methods.ufind = tb_methods.ufind or
+        function (r,subj,init) return pack_results(r:find(subj,init)) end
+      tb_methods.ufindW = tb_methods.ufindW or
+        function (r,subj,init) return pack_results(r:findW(subj,init)) end
+    end
     tb_methods.capturecount = function(r) return r:bracketscount() - 1 end
   -----------------------------------------------------------------------------
   elseif lib_name == "pcre" then
@@ -275,14 +280,14 @@ local function GetWordUnderCursor (select)
 end
 
 
-local function GetReplaceFunction (aReplacePat, is_wide)
+local function GetReplaceFunction (aReplacePat, is_wide, is_ngroup_wide)
   local tp = type(aReplacePat)
   if tp == "function" then
     return is_wide and
       function(collect,nMatch,nReps,nLine,sFName) -- this implementation is inefficient as it works in UTF-8 !
         local ccopy = {}
         for k,v in pairs(collect) do
-          local key = type(k)=="number" and k or Utf8(k)
+          local key = (type(k)=="number" and k) or (is_ngroup_wide and Utf8(k)) or k
           ccopy[key] = v and Utf8(v)
         end
         local R1,R2 = aReplacePat(ccopy,nMatch,nReps+1,nLine,sFName)
@@ -304,7 +309,7 @@ local function GetReplaceFunction (aReplacePat, is_wide)
     return function() return val end
 
   elseif tp == "table" then
-    return RepLib.GetReplaceFunction(aReplacePat, is_wide)
+    return RepLib.GetReplaceFunction(aReplacePat, is_wide, is_ngroup_wide)
 
   else
     error("invalid type of replace pattern", 2)
@@ -412,6 +417,7 @@ local function ProcessDialogData (aData, bReplace, bInEditor, bUseMultiPatterns,
     return
   end
   params.Envir.rex = rex
+  params.bNgroupIsWide = (libname == "oniguruma")
 
   if bUseMultiPatterns and aData.bMultiPatterns then
     local ok, ret = pcall(ProcessMultiPatterns, aData, rex)

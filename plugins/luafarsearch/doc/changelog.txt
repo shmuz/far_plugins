@@ -2,7 +2,8 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
-Latest:
+2025-04-24, v3.49.0
+  [+] Support named groups in Far regex operations.
   [!] Fix debug mode.
 
 2025-04-03, v3.48.1

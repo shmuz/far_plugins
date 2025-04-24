@@ -217,17 +217,7 @@ local function EditorAction (aOp, aData, aScriptCall)
         bFirstSearch,
         aScriptCall,
         _Plugin.Repeat,
-        tParams.Regex,
-        tParams.sScope=="block",
-        tParams.sOrigin=="scope",
-        tParams.bWrapAround,
-        tParams.bSearchBack,
-        tParams.FilterFunc,
-        tParams.sSearchPat,
-        tParams.ReplacePat,
-        tParams.bConfirmReplace,
-        tParams.bDelEmptyLine,
-        tParams.bDelNonMatchLine,
+        tParams,
         aData.fUserChoiceFunc)
     if aData.bAdvanced then tParams.FinalFunc() end
     ---------------------------------------------------------------------------

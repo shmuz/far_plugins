@@ -406,14 +406,16 @@ local function DoSearch (
     bFirstSearch,     -- [in]     whether this is first or repeated search
     bScriptCall,      -- [in]     whether this call is from a script
     tRepeat,          -- [in/out] data saved from previous operation / for next repeat operation
-    tRegex,           -- [in]     contains methods: ufindW, gsubW and/or ufind, gsub
-    bScopeIsBlock,    -- [in]     boolean
-    bOriginIsScope,   -- [in]     boolean
-    bWrapAround,      -- [in]     wrap search around the scope
-    bSearchBack,      -- [in]     search in reverse direction
-    fFilter,          -- [in]     either function or nil
-    sSearchPat        -- [in]     search pattern (for display purpose only)
+    tParams           -- [in]
   )
+  -- input parameters
+  local tRegex           = tParams.Regex            -- contains methods: ufind, gsub
+  local bScopeIsBlock    = tParams.sScope=="block"  -- boolean
+  local bOriginIsScope   = tParams.sOrigin=="scope" -- boolean
+  local bWrapAround      = tParams.bWrapAround      -- wrap search around the scope
+  local bSearchBack      = tParams.bSearchBack      -- search in reverse direction
+  local fFilter          = tParams.FilterFunc       -- either function or nil
+  local sSearchPat       = tParams.sSearchPat       -- search pattern (for display purpose only)
 
   local update_info = make_update_info(bScriptCall)
   local timing = NewTiming()
@@ -662,19 +664,21 @@ local function DoReplace (
     bFirstSearch,     -- [in]     whether this is first or repeated search
     bScriptCall,      -- [in]     whether this call is from a script
     tRepeat,          -- [in/out] data saved from previous operation / for next repeat operation
-    tRegex,           -- [in]     contains methods: ufindW, gsubW and/or ufind, gsub
-    bScopeIsBlock,    -- [in]     boolean
-    bOriginIsScope,   -- [in]     boolean
-    bWrapAround,      -- [in]     wrap search around the scope
-    bSearchBack,      -- [in]     search in reverse direction
-    fFilter,          -- [in]     either function or nil
-    sSearchPat,       -- [in]     search pattern (for display purpose only)
-    xReplacePat,      -- [in]     either of: string, function, compiled replace expression
-    bConfirmReplace,  -- [in]     confirm replace
-    bDelEmptyLine,    -- [in]     delete empty line (if it is empty after the replace operation)
-    bDelNonMatchLine, -- [in]     delete line where no match was found
+    tParams,          -- [in]
     fReplaceChoice    -- [in]     either function or nil
   )
+  -- input parameters
+  local tRegex           = tParams.Regex            -- contains methods: ufind, gsub
+  local bScopeIsBlock    = tParams.sScope=="block"  -- boolean
+  local bOriginIsScope   = tParams.sOrigin=="scope" -- boolean
+  local bWrapAround      = tParams.bWrapAround      -- wrap search around the scope
+  local bSearchBack      = tParams.bSearchBack      -- search in reverse direction
+  local fFilter          = tParams.FilterFunc       -- either function or nil
+  local sSearchPat       = tParams.sSearchPat       -- search pattern (for display purpose only)
+  local xReplacePat      = tParams.ReplacePat       -- either of: string, function, compiled replace expression
+  local bConfirmReplace  = tParams.bConfirmReplace  -- confirm replace
+  local bDelEmptyLine    = tParams.bDelEmptyLine    -- delete empty line (if it is empty after the replace operation)
+  local bDelNonMatchLine = tParams.bDelNonMatchLine -- delete line where no match was found
 
   local update_info = make_update_info(bScriptCall)
   local timing = NewTiming()
@@ -692,7 +696,7 @@ local function DoReplace (
   local bForward = not bSearchBack
   local bAllowEmpty = bFirstSearch
   fReplaceChoice = fReplaceChoice or GetReplaceChoice
-  local fReplace = Common.GetReplaceFunction(xReplacePat, is_wide)
+  local fReplace = Common.GetReplaceFunction(xReplacePat, is_wide, tParams.bNgroupIsWide)
 
   local sChoice = bFirstSearch and not bConfirmReplace and "all" or "initial"
   local nFound, nReps, nLine = 0, 0, 0

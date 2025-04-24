@@ -1472,7 +1472,7 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
     bReplaceAll = not aData.bConfirmReplace,                          -- in/out
     bWideCharRegex = bWideCharRegex,                                     -- in
     ufind_method = tParams.Regex.ufindW or tParams.Regex.ufind,          -- in
-    fReplace = aOp=="replace" and GetReplaceFunction(tParams.ReplacePat, bWideCharRegex), -- in
+    fReplace = aOp=="replace" and GetReplaceFunction(tParams.ReplacePat, bWideCharRegex, tParams.bNgroupIsWide), -- in
     nFilesModified = 0,                                                  -- out
     nFilesProcessed = 0,                                                 -- out
     nFilesWithMatches = 0,                                               -- out

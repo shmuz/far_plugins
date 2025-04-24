@@ -126,7 +126,7 @@ local function TransformReplacePat (aStr)
   return T
 end
 
-local function GetReplaceFunction (aReplacePat, is_wide)
+local function GetReplaceFunction (aReplacePat, is_wide, is_ngroup_wide)
   if type(aReplacePat) ~= "table" then
     error("invalid type of replace pattern")
   end
@@ -138,8 +138,10 @@ local function GetReplaceFunction (aReplacePat, is_wide)
   end
   local cache = {} -- performance optimization
   for i,v in ipairs(aReplacePat) do
-    if v[1] == "hex" or v[1] == "literal" or v[1] == "ngroup" then
+    if v[1] == "hex" or v[1] == "literal" then
       cache[i] = U16(v[2])
+    elseif v[1] == "ngroup" then
+      cache[i] = is_ngroup_wide and U16(v[2]) or v[2]
     end
   end
   ---------------------------------------------------------------------------

@@ -291,22 +291,22 @@ local function test_Replace (lib)
       subj:sub(1,35):reverse() .. subj)
 
     -- test named groups
-    if lib=="oniguruma" or lib=="pcre" then
-      dt = { sSearchPat="(?<foo>\\w+)(?<space>\\s+)(?<bar>\\w+)",
-             sReplacePat="${bar}${space}${foo}",
-             bRegExpr=true,
-             bSearchBack = (k==1),
-             sOrigin = "scope" }
-      SetEditorText("@@@ word1  \t\t  WORD2 @@@")
-      RunEditorAction(lib, "test:replace", dt, 1, 1)
-      AssertEditorText("@@@ WORD2  \t\t  word1 @@@")
+    dt = { sSearchPat = lib=="far"
+             and "(?{foo}\\w+)(?{space}\\s+)(?{bar}\\w+)"
+              or "(?<foo>\\w+)(?<space>\\s+)(?<bar>\\w+)",
+           sReplacePat="${bar}${space}${foo}",
+           bRegExpr=true,
+           bSearchBack = (k==1),
+           sOrigin = "scope" }
+    SetEditorText("@@@ word1  \t\t  WORD2 @@@")
+    RunEditorAction(lib, "test:replace", dt, 1, 1)
+    AssertEditorText("@@@ WORD2  \t\t  word1 @@@")
 
-      dt.bRepIsFunc = true
-      dt.sReplacePat = "return T.bar .. T.space .. T.foo"
-      SetEditorText("@@@ word1  \t\t  WORD2 @@@")
-      RunEditorAction(lib, "test:replace", dt, 1, 1)
-      AssertEditorText("@@@ WORD2  \t\t  word1 @@@")
-    end
+    dt.bRepIsFunc = true
+    dt.sReplacePat = "return T.bar .. T.space .. T.foo"
+    SetEditorText("@@@ word1  \t\t  WORD2 @@@")
+    RunEditorAction(lib, "test:replace", dt, 1, 1)
+    AssertEditorText("@@@ WORD2  \t\t  word1 @@@")
 
     -- test escaped dollar and backslash
     dt = { sSearchPat="abc", sReplacePat=[[$0\$0\t\\t]], bRegExpr=true }
@@ -1115,21 +1115,19 @@ local function test_replace (lib)
   MyTest(dtfm, "1.1.1.line;\n2.2.2.line;\n3.3.3.line;\n4.4.4.line;\n")
 
   -- Test named groups
-  if lib=="oniguruma" or lib=="pcre" then
-    AddMyFiles()
-    local dt2 = setmetatable({}, {__index=dt})
-    dt2.sSearchPat = "(?<first>.)(?<second>.)"
-    dt2.sReplacePat = "${second}${first}$0"
-    lfsearch.ReplaceFromPanel(dt2)
-    MyTest(dt)
+  AddMyFiles()
+  local dt2 = setmetatable({}, {__index=dt})
+  dt2.sSearchPat = lib=="far" and "(?{first}.)(?{second}.)" or "(?<first>.)(?<second>.)"
+  dt2.sReplacePat = "${second}${first}$0"
+  lfsearch.ReplaceFromPanel(dt2)
+  MyTest(dt)
 
-    -- Same test but in function mode
-    AddMyFiles()
-    dt2.bRepIsFunc = true
-    dt2.sReplacePat = "return T.second .. T.first .. T[0]"
-    lfsearch.ReplaceFromPanel(dt2)
-    MyTest(dt)
-  end
+  -- Same test but in function mode
+  AddMyFiles()
+  dt2.bRepIsFunc = true
+  dt2.sReplacePat = "return T.second .. T.first .. T[0]"
+  lfsearch.ReplaceFromPanel(dt2)
+  MyTest(dt)
 
   -- Test custom user choice function
   AddMyFiles()

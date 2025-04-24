@@ -151,7 +151,7 @@ local function EditorAction (op, data)
   local fReplace = function() end
   if op == "replace" then
     local nMatch,nReps = 0,0
-    local ff = Common.GetReplaceFunction(tParams.ReplacePat, is_wide)
+    local ff = Common.GetReplaceFunction(tParams.ReplacePat, is_wide, tParams.bNgroupIsWide)
     fReplace = function (collect)
       nMatch = nMatch + 1
       local r1,r2 = ff(collect,nMatch,nReps,nil,sFileName)

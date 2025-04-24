@@ -322,7 +322,7 @@ end
 local function GetInvertedColor (element)
   local color = far.AdvControl("ACTL_GETCOLOR", far.Colors[element])
   local fc, bc = color.ForegroundColor, color.BackgroundColor
-  if 0 ~= band(color.Flags, F.FCF_FG_INDEX) then
+  if 0 ~= band(color.Flags, F.FCF_FG_4BIT) then
     fc = band(bnot(fc), 0xF)
     bc = band(bnot(bc), 0xF)
     return bor(fc, lshift(bc, 4))
