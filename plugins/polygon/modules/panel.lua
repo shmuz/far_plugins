@@ -942,7 +942,7 @@ function mypanel:prepare_panel_info(handle)
   else -- self._panel_mode == "table"/"view"/"query"
     -- Re-read column info as it may have changed due to possible "ALTER TABLE..." execution
     local col_info = dbx.read_columns_info(self._db, self._schema, self._objname)
-    if col_info then
+    if col_info and col_info[1] then
       self._col_info = col_info
     end
     local pInfo = panel.GetPanelInfo(handle)
@@ -1118,6 +1118,7 @@ local SuppressedKeys = {
   AltF3   = true;
   CtrlA   = true;
   CtrlN   = true;
+  F3      = true;
   F5      = true;
   F7      = true;
   ShiftF4 = true;
@@ -1432,7 +1433,8 @@ function mypanel:view_pragma_statements()
       guid = "FF769EE0-2643-48F1-A8A2-239CD3C6691F";
       width = W;
       { tp="dbox"; text=("%s [%s]"):format(M.title_pragma, self._schema);              },
-      { tp="listbox"; x1=4; x2=W-5; y2=15; list=items; listnobox=1; listnoampersand=1; },
+      { tp="listbox"; x1=4; x2=W-5; y2=15; list=items; listnobox=1; listnoampersand=1;
+                      listnoclose=1; },
       { tp="sep";                                                                      },
       { tp="butt"; text=M.ok; centergroup=1; default=1;                                },
     }

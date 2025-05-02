@@ -1,3 +1,6 @@
+Recent:
+    1. Fix error in GetOpenPanelInfo after an SQL query (broken since 1.9.0).
+
 2025-02-15, v.1.9.0
     1. Fix GetOpenPanelInfo (columns were not updated after ALTER TABLE execution).
     2. All plugin's source files made portable (far3 / far2m).
