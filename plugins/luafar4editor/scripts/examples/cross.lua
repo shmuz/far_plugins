@@ -3,8 +3,9 @@
 
 local F=far.Flags
 local editors={}
-local color={Flags=bit64.bor(F.FCF_FG_4BIT,F.FCF_BG_4BIT),ForegroundColor=0x1,BackgroundColor=0xf}
-local color1={Flags=bit64.bor(F.FCF_FG_4BIT,F.FCF_BG_4BIT),ForegroundColor=0x1,BackgroundColor=0xc}
+local cflags=bit64.bor(F.FCF_INHERIT_STYLE, F.FCF_INDEXMASK)
+local color={Flags=cflags,ForegroundColor=0xff000001,BackgroundColor=0xff000007}
+local color1={Flags=cflags,ForegroundColor=0xff000001,BackgroundColor=0xff00000e}
 local scrolllock=false
 
 function GetData(id)
