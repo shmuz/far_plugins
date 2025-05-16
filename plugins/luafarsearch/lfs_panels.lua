@@ -966,25 +966,32 @@ local function CollectAllItems (aData, tParams, fFileMask, fDirMask, fDirExMask,
     -- note: filedata can be nil for root directories
     local isFile = filedata and not filedata.FileAttributes:find("d")
     ---------------------------------------------------------------------------
-    if isFile or ((area == "FromCurrFolder" or area == "OnlyCurrFolder") and bPlugin) then
-      fileList[#fileList+1] = filedata
-      fileList[#fileList+1] = item
-    end
-    if not isFile and not (area == "OnlyCurrFolder" and bPlugin) then
-      RecursiveSearch(item,
-        function(fdata, fullname)
-          if fdata == "display_state" then
-            return DisplayListState(#fileList/2, userbreak)
-          end
-          if not fdata.FileAttributes:find("d") then
-            local n = #fileList
-            fileList[n+1] = fdata
-            fileList[n+2] = fullname
-            if n%20 == 0 then
-              if DisplayListState(n/2, userbreak) then return "break"; end
+    if isFile then
+      if fFileMask(item) then
+        fileList[#fileList+1] = filedata
+        fileList[#fileList+1] = item
+      end
+    else
+      if (area == "FromCurrFolder" or area == "OnlyCurrFolder") and bPlugin then
+        fileList[#fileList+1] = filedata
+        fileList[#fileList+1] = item
+      end
+      if not (area == "OnlyCurrFolder" and bPlugin) then
+        RecursiveSearch(item,
+          function(fdata, fullname)
+            if fdata == "display_state" then
+              return DisplayListState(#fileList/2, userbreak)
             end
-          end
-        end, flags, FileFilter, fFileMask, fDirMask, fDirExMask, tRecurseGuard)
+            if not fdata.FileAttributes:find("d") then
+              local n = #fileList
+              fileList[n+1] = fdata
+              fileList[n+2] = fullname
+              if n%20 == 0 then
+                if DisplayListState(n/2, userbreak) then return "break"; end
+              end
+            end
+          end, flags, FileFilter, fFileMask, fDirMask, fDirExMask, tRecurseGuard)
+      end
     end
     if userbreak.fullcancel then break end
   end

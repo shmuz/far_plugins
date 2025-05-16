@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+Latest
+  [!] Fix panel grep and replace.
+      File mask was ignored in start directory when Search area was "Selected files and folders".
+
 2025-04-24, v3.49.0
   [+] Support named groups in Far regex operations.
   [!] Fix debug mode.
