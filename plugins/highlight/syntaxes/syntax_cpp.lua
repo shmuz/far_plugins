@@ -16,13 +16,17 @@
     pattern = [[ ^ \s* \# (?: (?! \/\/ | \/\*) .)* ]];
   },
   {
-    name = "Literal"; fgcolor = "white";
+    name = "NumLiteral"; fgcolor = "white";
     pattern = [[ (?i) \b
       (?: 0x[\dA-F]+ U?L?L? |
           \d+ U?L?L?        |
           (?:\d+\.\d*|\.?\d+) (?:E[+-]?\d+)?
       )
     \b ]];
+  },
+  {
+    name = "BoolLiteral"; fgcolor = "white";
+    pattern = [[\b(?: false|true)\b]];
   },
   {
     name = "String"; fgcolor = "purple"; color_unfinished= "darkblue on purple";
@@ -41,8 +45,8 @@
       auto|const|double|float|int|short|struct|unsigned|break|continue|else|for|long|signed|switch|
       void|case|default|enum|goto|register|sizeof|typedef|volatile|char|do|extern|if|return|static|
       union|while|asm|dynamic_cast|namespace|reinterpret_cast|try|bool|explicit|new|static_cast|
-      typeid|catch|false|operator|template|typename|class|friend|private|this|using|const_cast|
-      inline|public|throw|virtual|delete|mutable|protected|true|wchar_t|and|bitand|compl|not_eq|
+      typeid|catch|operator|template|typename|class|friend|private|this|using|const_cast|
+      inline|public|throw|virtual|delete|mutable|protected|wchar_t|and|bitand|compl|not_eq|
       or_eq|xor_eq|and_eq|bitor|not|or|xor |__property|__published|__fastcall
       )\b ]];
   },
