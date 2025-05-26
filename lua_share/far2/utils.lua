@@ -432,6 +432,7 @@ local function ExecuteCommandLine (tActions, tCommands, sFrom, fConfig)
           end
         end
         local f = assert(loadfile(path))
+        env._filename = path
         setfenv(f, env)(unpack(v))
       elseif v.opt == "e" then
         local f = assert(loadstring(v.param))

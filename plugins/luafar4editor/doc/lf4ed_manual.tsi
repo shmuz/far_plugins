@@ -1259,7 +1259,7 @@ article id=58 dt=Text ctime=0 mtime=3499591303 nm=hobj:setfield
 #_    fields are created by assigning each of them a new table.
 #_
 
-article id=59 dt=Text ctime=0 mtime=3577278175 nm=Command line calls
+article id=59 dt=Text ctime=0 mtime=3957424157 nm=Command line calls
 #_<markdown>
 #_
 #_### Syntax
@@ -1277,7 +1277,8 @@ article id=59 dt=Text ctime=0 mtime=3577278175 nm=Command line calls
 #_
 #_#### Filename
 #_Name of a Lua script file. It can be either absolute, or relative
-#_to the current directory.
+#_to the current directory. The script can access its file name via
+#_a global variable `_filename`.
 #_
 #_----------------------------------------------------------------
 #_
