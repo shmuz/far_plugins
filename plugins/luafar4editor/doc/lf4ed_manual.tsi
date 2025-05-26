@@ -1,6 +1,6 @@
 <TreeSpice version 4.0>
 
-node lv=0 id=1 art=1 nm=LuaFAR for Editor (version 3.10)
+node lv=0 id=1 art=1 nm=LuaFAR for Editor (version 3.11)
 node lv=0 id=19 art=19 nm=What's new
 node lv=1 id=54 art=54 nm=Changelog
 node lv=1 id=76 art=76 nm=Version 2.5.0
@@ -83,7 +83,7 @@ node lv=2 id=82 art=82 nm=RunInternalScript
 node lv=2 id=83 art=83 nm=RunUserItem
 node lv=0 id=10 art=10 nm=Credits
 
-article id=1 dt=Text ctime=0 mtime=3522650788 nm=LuaFAR for Editor (version 3.10)
+article id=1 dt=Text ctime=0 mtime=3522650788 nm=LuaFAR for Editor (version 3.11)
 #_<markdown>
 #_**LuaFAR for Editor** (a Far Manager plugin) is a collection of utilities
 #_working in the Far Editor. The plugin also allows to add the unlimited
