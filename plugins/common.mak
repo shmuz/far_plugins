@@ -22,7 +22,7 @@ ifneq ($(CROOT),C:\Shmuel_Home)
 
 else
   DIRBIT    = 64
-  rootpath  = $(abspath ../../../..)
+  rootpath  = $(PATH_WORK)
   farsource = $(CROOT)/work/farmanager
   farhome   = $(CROOT)/Programs/Far3-$(DIRBIT)bit
   LUA       = lua.exe

@@ -247,9 +247,12 @@ end
 --    Supported properties for entire dialog (all are optional):
 --        guid          : string   : a text-form guid
 --        width         : number   : dialog width
---        help          : string   : help topic
---        flags         : flags    : dialog flags
+--        x1            : number   : x1 coordinate (0-based)
+--        y1            : number   : y1 coordinate (0-based)
+--        help          : str|func : string: help topic, function: called on F1 press
+--        flags         : number   : dialog flags
 --        proc          : function : dialog procedure
+--        data          : any      : Param2 on DN_INITFIALOG; get/set via DM_GETDLGDATA/DM_SETDLGDATA
 
 --    Supported properties for a dialog item (all are optional except tp):
 --        tp            : string   : type; mandatory
@@ -272,14 +275,13 @@ end
 -- @return1 out  table : contains final values of dialog items indexed by 'name' field of 'inData' items
 -- @return2 pos number : return value of API far.Dialog()
 ----------------------------------------------------------------------------------------------------
-function mod:Run()
+function mod:Compile()
   local inData = self.Items
-  inData.flags = inData.flags or 0
-  assert(type(inData.flags)=="number", "'Data.flags' must be a number")
-  local HMARGIN = (0 ~= band(inData.flags,F.FDLG_SMALLDIALOG)) and 0
-    or (#inData==1 and inData[1].tp=="listbox") and 1 or 3              -- horisontal margin
-  local VMARGIN = (0 == band(inData.flags,F.FDLG_SMALLDIALOG)) and 1 or 0 -- vertical margin
-  local guid = inData.guid and win.Uuid(inData.guid) or ("\0"):rep(16)
+  local inFlags = inData.flags or 0
+  assert(type(inFlags)=="number", "'Data.flags' must be a number")
+  local HMARGIN = (0 ~= band(inFlags,F.FDLG_SMALLDIALOG)) and 0
+    or (#inData==1 and inData[1].tp=="listbox") and 1 or 3           -- horisontal margin
+  local VMARGIN = (0 == band(inFlags,F.FDLG_SMALLDIALOG)) and 1 or 0 -- vertical margin
   local W = inData.width or 76
   local Y, H = VMARGIN-1, 0
   local outData = {}
@@ -447,8 +449,38 @@ function mod:Run()
       item[IND_X2] = W-HMARGIN-3
     end
   end
-  ----------------------------------------------------------------------------------------------
-  local UserProc = inData.proc or function() end
+
+  local guid  = inData.guid and win.Uuid(inData.guid) or ("\0"):rep(16)
+  local x1    = inData.x1 or -1
+  local y1    = inData.y1 or -1
+  local x2    = x1==-1 and W or x1+W-1
+  local y2    = y1==-1 and H or y1+H-1
+  local help  = type(inData.help)=="string" and inData.help or nil
+  local items = outData
+  local flags = inData.flags or 0
+  local proc  = inData.proc or function() end
+  local data  = inData.data
+
+  return {
+    guid, x1, y1, x2, y2, help, items, flags, function() end, data,
+    guid  = guid;
+    x1    = x1;
+    y1    = y1;
+    x2    = x2;
+    y2    = y2;
+    help  = help;
+    items = items;
+    flags = flags;
+    proc  = proc;
+    data  = data;
+  }
+end
+
+function mod:Run()
+  local oData = self:Compile()
+  local items = oData.items
+  local inData = self.Items
+  local UserProc = oData.proc
 
   local function DlgProc(hDlg, Msg, Par1, Par2)
     if Msg == F.DN_CLOSE then
@@ -465,7 +497,7 @@ function mod:Run()
           inData.help()
         end
       elseif keyname == "F4" then
-        if outData[Par1][IND_TYPE] == F.DI_EDIT and not inData[Par1].skipF4 then
+        if items[Par1][IND_TYPE] == F.DI_EDIT and not inData[Par1].skipF4 then
           local txt = Send(hDlg, "DM_GETTEXT", Par1)
           txt = mod.OpenInEditor(txt, inData[Par1].ext)
           if txt then Send(hDlg, "DM_SETTEXT", Par1, txt); end
@@ -478,7 +510,7 @@ function mod:Run()
       if UserProc(hDlg, "EVENT_MOUSE", Par1, Par2) then return true end
 
     elseif Msg == F.DN_CTLCOLORDLGITEM then
-      return UserProc(hDlg, Msg, Par1, Par2) or outData[Par1].colors
+      return UserProc(hDlg, Msg, Par1, Par2) or items[Par1].colors
 
     else
       return UserProc(hDlg, Msg, Par1, Par2)
@@ -487,14 +519,10 @@ function mod:Run()
 
   end
   ----------------------------------------------------------------------------------------------
-  local help = type(inData.help)=="string" and inData.help or nil
-  local x1, y1 = inData.x1 or -1, inData.y1 or -1
-  local x2 = x1==-1 and W or x1+W-1
-  local y2 = y1==-1 and H or y1+H-1
-
-  local hDlg = far.DialogInit(guid, x1,y1,x2,y2, help, outData, inData.flags, DlgProc, inData.data)
+  oData[9] = DlgProc
+  local hDlg = far.DialogInit(unpack(oData))
   if hDlg then
-    if F.FDLG_NONMODAL and 0 ~= band(inData.flags, F.FDLG_NONMODAL) then
+    if F.FDLG_NONMODAL and 0 ~= band(oData.flags, F.FDLG_NONMODAL) then
       return hDlg -- non-modal dialogs were introduced in build 3.0.5047
     end
   else
