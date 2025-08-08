@@ -338,9 +338,9 @@ function export.GetPluginInfo()
   return {
     CommandPrefix = "lfs",
     Flags = F.PF_EDITOR,
-    PluginMenuGuids = PluginMenuGuid1.."",
+    PluginMenuGuids = PluginMenuGuid1,
     PluginMenuStrings = { M.MMenuTitle },
-    PluginConfigGuids = PluginConfigGuid1.."",
+    PluginConfigGuids = PluginConfigGuid1,
     PluginConfigStrings = { M.MMenuTitle },
   }
 end

@@ -350,15 +350,15 @@ function Env:GetPluginInfo()
   local Info = {
     Flags = 0,
     CommandPrefix = opt.Prefix,
-    PluginConfigGuids = PluginConfigGuid1.."",
+    PluginConfigGuids = PluginConfigGuid1,
     PluginConfigStrings = { M.MTempPanel },
   }
   if opt.AddToPluginsMenu then
-    Info.PluginMenuGuids = PluginMenuGuid1..""
+    Info.PluginMenuGuids = PluginMenuGuid1
     Info.PluginMenuStrings = { M.MTempPanel }
   end
   if opt.AddToDisksMenu then
-    Info.DiskMenuGuids = DiskMenuGuid1..""
+    Info.DiskMenuGuids = DiskMenuGuid1
     Info.DiskMenuStrings = { M.MDiskMenuString }
   end
   return Info

@@ -208,15 +208,11 @@ function export.GetPluginInfo()
   local prefix = PluginData[config.PREFIX]
   if prefix ~= "" then info.CommandPrefix = prefix; end
 
-  if OS_WIN then
-    info.PluginConfigGuids = PluginGuid
-  end
+  info.PluginConfigGuids = PluginGuid
   info.PluginConfigStrings = { M.title }
 
   if PluginData[config.ADD_TO_MENU] then
-    if OS_WIN then
-      info.PluginMenuGuids = PluginGuid;
-    end
+    info.PluginMenuGuids = PluginGuid;
     info.PluginMenuStrings = { M.title }
   else
     info.Flags = bor(info.Flags, F.PF_DISABLEPANELS)
