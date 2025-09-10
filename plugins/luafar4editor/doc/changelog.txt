@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+Last
+  [*] Sort Lines dialog improved.
+
 2025-05-26, v3.11.0
   [+] The script run from the command line via the -r<filename> switch
       can access its file name via the global variable _filename.

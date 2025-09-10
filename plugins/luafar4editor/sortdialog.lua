@@ -16,6 +16,7 @@ local function SortDialog (aData, columntype)
   local HIST_COLPAT   = regpath .. "ColumnPattern"
   local HIST_FILENAME = regpath .. "FileName"
   local X1,X2,X3,X4 = 13,15,32,58
+  local X5 = M.MFileName:len() + 9
   ------------------------------------------------------------------------------
   local Items = {
     guid="719CA394-AB79-4973-956B-54A1626E6BEC";
@@ -45,9 +46,8 @@ local function SortDialog (aData, columntype)
     {tp="edit";  name="edtColPat"; x1=44, y1=""; x2=56; hist=HIST_COLPAT; text=COLPAT_DEFAULT},
     {tp="butt";  name="btnColPat"; x1=59, y1=""; btnnoclose=1; text=M.MDefault},
     {tp="sep"; },
-    {tp="text";  name="labFileName"; text=M.MFileName; },
-    {tp="edit";  name="edtFileName"; x1=21; y1=""; x2=55; hist=HIST_FILENAME},
-    {tp="chbox"; name="cbxFileName"; x1=58; y1=""; text=M.MEnable4},
+    {tp="chbox"; name="cbxFileName"; text=M.MFileName; },
+    {tp="edit";  name="edtFileName"; x1=X5; y1=""; hist=HIST_FILENAME},
     {tp="sep"; },
     {tp="butt";  centergroup=1; text=M.MOk; default=1; },
     {tp="butt";  centergroup=1; text=M.MCancel; cancel=1; },
@@ -75,13 +75,13 @@ local function SortDialog (aData, columntype)
       Check(hDlg, Pos.cbxUse1, Pos.edtExpr1, Pos.cbxRev1, Pos.labExpr1, Pos.cbxCase1)
       Check(hDlg, Pos.cbxUse2, Pos.edtExpr2, Pos.cbxRev2, Pos.labExpr2, Pos.cbxCase2)
       Check(hDlg, Pos.cbxUse3, Pos.edtExpr3, Pos.cbxRev3, Pos.labExpr3, Pos.cbxCase3)
-      Check(hDlg, Pos.cbxFileName, Pos.labFileName, Pos.edtFileName)
+      Check(hDlg, Pos.cbxFileName, Pos.edtFileName)
     elseif msg == F.DN_BTNCLICK then
       hDlg:send("DM_ENABLEREDRAW", 0)
       if     param1 == Pos.cbxUse1     then Check(hDlg, Pos.cbxUse1, Pos.edtExpr1, Pos.cbxRev1, Pos.labExpr1, Pos.cbxCase1)
       elseif param1 == Pos.cbxUse2     then Check(hDlg, Pos.cbxUse2, Pos.edtExpr2, Pos.cbxRev2, Pos.labExpr2, Pos.cbxCase2)
       elseif param1 == Pos.cbxUse3     then Check(hDlg, Pos.cbxUse3, Pos.edtExpr3, Pos.cbxRev3, Pos.labExpr3, Pos.cbxCase3)
-      elseif param1 == Pos.cbxFileName then Check(hDlg, Pos.cbxFileName, Pos.labFileName, Pos.edtFileName)
+      elseif param1 == Pos.cbxFileName then Check(hDlg, Pos.cbxFileName, Pos.edtFileName)
       elseif param1 == Pos.btnColPat   then hDlg:send("DM_SETTEXT", Pos.edtColPat, COLPAT_DEFAULT) end
       hDlg:send("DM_ENABLEREDRAW", 1)
     end
