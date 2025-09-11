@@ -3,129 +3,144 @@
 ------------------------------------------------------------------------------
 
 local Guid = "8E11EA75-0303-4374-AC60-D1E38F865449"
+
+local NEW_VERSION do
+  local handle = far.FindPlugin("PFM_GUID", win.Uuid(Guid))
+  if not handle then return end
+  local info = far.GetPluginInformation(handle)
+  local v = info.GInfo.Version
+  v = 1e6*v[1] + 1e3*v[2] + v[3]
+  NEW_VERSION = v >= 3008000
+end
+
 local function LFS_Editor(...) Plugin.Call(Guid, "own", "editor", ...) end
 local function LFS_Panels(...) Plugin.Call(Guid, "own", "panels", ...) end
-local function LFS_Exist() return Plugin.Exist(Guid) end
 
 Macro {
   description="LuaFAR Search: Editor Find";
-  area="Editor"; key="F3"; condition=LFS_Exist;
-  action = function() LFS_Editor "search" end
+  area="Editor"; key="F3";
+  action = function()
+    if NEW_VERSION then LFS_Editor "search"
+    else Plugin.Menu(Guid); Keys("1")
+    end
+  end
 }
 
 Macro {
   description="LuaFAR Search: Editor Replace";
-  area="Editor"; key="CtrlF3"; condition=LFS_Exist;
-  action = function() LFS_Editor "replace" end
+  area="Editor"; key="CtrlF3";
+  action = function()
+    if NEW_VERSION then LFS_Editor "replace"
+    else Plugin.Menu(Guid); Keys("2")
+    end
+  end
 }
 
 Macro {
   description="LuaFAR Search: Editor Repeat";
-  area="Editor"; key="ShiftF3"; condition=LFS_Exist;
-  action = function() LFS_Editor "repeat" end
+  area="Editor"; key="ShiftF3";
+  action = function()
+    if NEW_VERSION then LFS_Editor "repeat"
+    else Plugin.Menu(Guid); Keys("3")
+    end
+  end
 }
 
-Macro {
-  description="LuaFAR Search: Editor Repeat reverse";
-  area="Editor"; key="AltF3"; condition=LFS_Exist;
-  action = function() LFS_Editor "repeat_rev" end
-}
+if NEW_VERSION then
+  Macro {
+    description="LuaFAR Search: Editor Repeat reverse";
+    area="Editor"; key="AltF3";
+    action = function() LFS_Editor "repeat_rev" end
+  }
 
-Macro {
-  description="LuaFAR Search: Editor search word";
-  area="Editor"; key="Alt6"; condition=LFS_Exist;
-  action = function() LFS_Editor "searchword" end
-}
+  Macro {
+    description="LuaFAR Search: Editor search word";
+    area="Editor"; key="Alt6";
+    action = function() LFS_Editor "searchword" end
+  }
 
-Macro {
-  description="LuaFAR Search: Editor search word reverse";
-  area="Editor"; key="Alt5"; condition=LFS_Exist;
-  action = function() LFS_Editor "searchword_rev" end
-}
+  Macro {
+    description="LuaFAR Search: Editor search word reverse";
+    area="Editor"; key="Alt5";
+    action = function() LFS_Editor "searchword_rev" end
+  }
 
--- Uncomment this macro if it is needed.
--- Macro {
---   description="LuaFAR Search: Reset Highlight";
---   area="Editor"; key="Alt7"; condition=LFS_Exist;
---   action = function() LFS_Editor "resethighlight" end
--- }
+  -- Uncomment this macro if it is needed.
+  -- Macro {
+  --   description="LuaFAR Search: Reset Highlight";
+  --   area="Editor"; key="Alt7";
+  --   action = function() LFS_Editor "resethighlight" end
+  -- }
 
-Macro {
-  description="LuaFAR Search: Toggle Highlight";
-  area="Editor"; key="Alt7"; condition=LFS_Exist;
-  action = function() LFS_Editor "togglehighlight" end
-}
+  Macro {
+    description="LuaFAR Search: Toggle Highlight";
+    area="Editor"; key="Alt7";
+    action = function() LFS_Editor "togglehighlight" end
+  }
 
-Macro {
-  description="LuaFAR Search: Editor Multi-line replace";
-  area="Editor"; key="CtrlShiftF3"; condition=LFS_Exist;
-  action = function() LFS_Editor "mreplace" end
-}
+  Macro {
+    description="LuaFAR Search: Editor Multi-line replace";
+    area="Editor"; key="CtrlShiftF3";
+    action = function() LFS_Editor "mreplace" end
+  }
+end
 
 Macro {
   description="LuaFAR Search: Panel Find";
-  area="Shell QView Tree Info"; key="CtrlShiftF"; condition=LFS_Exist;
-  action = function() LFS_Panels "search" end
+  area="Shell QView Tree Info"; key="CtrlShiftF";
+  action = function()
+    if NEW_VERSION then LFS_Panels "search"
+    else Plugin.Menu(Guid); Keys("1")
+    end
+  end
 }
 
 Macro {
   description="LuaFAR Search: Panel Replace";
-  area="Shell QView Tree Info"; key="CtrlShiftG"; condition=LFS_Exist;
-  action = function() LFS_Panels "replace" end
-}
-
-Macro {
-  description="LuaFAR Search: Panel Grep";
-  area="Shell QView Tree Info"; key="CtrlShiftH"; condition=LFS_Exist;
-  action = function() LFS_Panels "grep" end
-}
-
-Macro {
-  description="LuaFAR Search: Panel Rename";
-  area="Shell QView Tree Info"; key="CtrlShiftJ"; condition=LFS_Exist;
-  action = function() LFS_Panels "rename" end
-}
-
-Macro {
-  description="LuaFAR Search: Show Panel";
-  area="Shell QView Tree Info"; key="CtrlShiftK"; condition=LFS_Exist;
-  action = function() LFS_Panels "panel" end
-}
-
--- This macro works best when "Show line numbers" Grep option is used.
--- When this option is off the jump occurs to the beginning of the file.
-Macro {
-  description="Jump from Grep results to file and position under cursor";
-  area="Editor"; key="CtrlShiftG";
-  action=function()
-    local lnum = editor.GetString(nil,nil,3):match("^(%d+)[:%-]")
-    local EI = editor.GetInfo()
-    for n = EI.CurLine,1,-1 do
-      local fname = editor.GetString(nil,n,3):match("^%[%d+%]%s+(.+)")
-      if fname then
-        editor.Editor(fname,nil,nil,nil,nil,nil,
-          {EF_NONMODAL=1,EF_IMMEDIATERETURN=1,EF_ENABLE_F6=1,EF_OPENMODE_USEEXISTING=1},
-          lnum or 1, lnum and math.max(1, EI.CurPos-lnum:len()-1) or 1)
-        break
-      end
+  area="Shell QView Tree Info"; key="CtrlShiftG";
+  action = function()
+    if NEW_VERSION then LFS_Panels "replace"
+    else Plugin.Menu(Guid); Keys("2")
     end
-  end;
+  end
 }
 
-Macro {
-  description="LF Search test suite";
-  area="Shell"; key="put some key here";
-  action=function()
-    local handle   = assert(far.FindPlugin("PFM_GUID", win.Uuid(Guid)), "Plugin not found")
-    local info     = assert(far.GetPluginInformation(handle))
-    local testfile = info.ModuleName:gsub("[^\\]+$", "").."test_lfsearch.lua"
-    assert(win.GetFileAttr(testfile), "test file not found")
-    far.Message("Please wait...", "Test LF Search", "")  
+if NEW_VERSION then
+  Macro {
+    description="LuaFAR Search: Panel Grep";
+    area="Shell QView Tree Info"; key="CtrlShiftH";
+    action = function() LFS_Panels "grep" end
+  }
 
-    Plugin.Command(Guid, "-r"..testfile.." run")      -- this does not enable screen redraws
-    -- Plugin.SyncCall(Guid, "file", testfile, "run") -- this also works but lots of screen redraws occur
+  Macro {
+    description="LuaFAR Search: Panel Rename";
+    area="Shell QView Tree Info"; key="CtrlShiftJ";
+    action = function() LFS_Panels "rename" end
+  }
 
-    assert(Area.Shell, "LF Search tests failed")
-    far.Message("All tests OK", "LF Search")
-  end;
-}
+  Macro {
+    description="LuaFAR Search: Show Panel";
+    area="Shell QView Tree Info"; key="CtrlShiftK";
+    action = function() LFS_Panels "panel" end
+  }
+
+  -- This macro works best when "Show line numbers" Grep option is used.
+  -- When this option is off the jump occurs to the beginning of the file.
+  Macro {
+    description="Jump from Grep results to file and position under cursor";
+    area="Editor"; key="CtrlShiftG";
+    action=function()
+      local lnum = editor.GetString(nil,nil,3):match("^(%d+)[:%-]")
+      local EI = editor.GetInfo()
+      for n = EI.CurLine,1,-1 do
+        local fname = editor.GetString(nil,n,3):match("^%[%d+%]%s+(.-) : %d+$")
+        if fname then
+          editor.Editor(fname,nil,nil,nil,nil,nil,
+            {EF_NONMODAL=1,EF_IMMEDIATERETURN=1,EF_ENABLE_F6=1,EF_OPENMODE_USEEXISTING=1},
+            lnum or 1, lnum and math.max(1, EI.CurPos-lnum:len()-1) or 1)
+          break
+        end
+      end
+    end;
+  }
+end

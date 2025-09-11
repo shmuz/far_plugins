@@ -2,9 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
-Latest
+2025-09-11, v3.50.0
   [!] Fix panel grep and replace.
       File mask was ignored in start directory when Search area was "Selected files and folders".
+  [*] Update macros\lfsearch.lua.
 
 2025-04-24, v3.49.0
   [+] Support named groups in Far regex operations.
