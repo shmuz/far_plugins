@@ -24,7 +24,7 @@ local Info = {
   Title         = Title;
 }
 
-local ThisDir = (...):match(".+\\")
+local ThisDir = (_filename or ...):match(".+\\")
 local Opt = {}
 do
   local fOpt, fOptMsg = loadfile(ThisDir.."far-bisect.cfg")
@@ -61,11 +61,13 @@ local START_DEFAULT_FARCONFIG = 2917  -- Default.farconfig invented
 local START_LUAFARSTABLE      = 3300  -- LuaFAR and Macro API become more or less stable
 local START_LUAPREFIX         = 3880  -- command line prefix "lua:" instead of "macro:post"
 local START_BIGREFACTOR_DONE  = 3924  -- completion of refactoring started in 3896
+local START_GITHUB            = 5342  -- first available at Github release
+
 
 -- indexes into the dialog's combobox: must be consecutive and start with 1
 local INDEX_FAR1, INDEX_FAR2, INDEX_FAR3,
       INDEX_LUAMACRO, INDEX_LUAFARSTABLE,
-      INDEX_BIGREFACTOR = 1,2,3,4,5,6
+      INDEX_BIGREFACTOR, INDEX_GITHUB = 1,2,3,4,5,6,7
 
 local MinBuilds = {
   [INDEX_FAR1         ] = nil;
@@ -74,6 +76,7 @@ local MinBuilds = {
   [INDEX_LUAMACRO     ] = START_LUAMACRO;
   [INDEX_LUAFARSTABLE ] = START_LUAFARSTABLE;
   [INDEX_BIGREFACTOR  ] = START_BIGREFACTOR_DONE;
+  [INDEX_GITHUB       ] = START_GITHUB;
 }
 
 local PLUG_LF4ED     = { ApiName="lf4ed";     Dir="lf4ed";     }
@@ -130,6 +133,7 @@ local function create_dialog_items()
                  [INDEX_LUAMACRO     ] = {Text=">= 3.0.2851 (LuaMacro)"};
                  [INDEX_LUAFARSTABLE ] = {Text=">= 3.0.3300 (LuaFAR stable)"};
                  [INDEX_BIGREFACTOR  ] = {Text=">= 3.0.3924 (Big Refactoring completed)"};
+                 [INDEX_GITHUB       ] = {Text=">= 3.0.5342 (First release at Github)"};
                };                                                                  },
     ------------------------------------------------------------------------------
     {tp="text";  text="&Command line arguments:";                                  },
@@ -498,11 +502,11 @@ function State:Test_build(build)
   if self.macrocode and self.macrocode:find("%S") then
     if build >= 1515 then -- Mantis#0001338: Префикс в параметрах ком.строки
       local macrocode = (build < START_LUAPREFIX and "macro:post " or "lua:")..self.macrocode
-      cmdline = ('%s "%s"'):format(cmdline, macrocode)
+      cmdline = ('%s "%s"'):format(cmdline, macrocode:gsub('"','\\"'))
     end
   end
   if cmdline:find("^%S") then cmdline = " "..cmdline; end
-  cmdline = ("cd %s && Far.exe%s"):format(install_path, cmdline)
+  cmdline = ("cd /D %s && Far.exe%s"):format(install_path, cmdline)
   -- /compose command line for Far.exe
   while true do
     panel.GetUserScreen()
@@ -543,10 +547,47 @@ function State:Make_Local_Build_List(arch)
       end)
   end
   if buildlist[1] == nil then
-    far.Message("No Far builds are found.", Title, nil, "w")
-    mf.exit()
+    --far.Message("No Far builds are found.", Title, nil, "w") --fixme
+    --mf.exit()
   end
   return buildlist
+end
+
+local function parseGithubList(fname,arch,map)
+  local build, overlap
+  local first = true
+  for line in io.lines(fname) do
+    local b = line:match"^v3%.0%.(%d+)"
+    if b then
+      b = assert(tonumber(b,10),b)
+      build = map[b] and "skip" or b
+      if first then overlap = map[b]; first = false end
+    elseif build~="skip" then
+      if line:match("."..arch..".",1,true) then
+        map[build] = line
+        build = "skip"
+      end
+    end
+  end
+  return overlap
+end
+
+function State:Make_Github_Build_List(arch)
+  if not Opt.ListReleasesCmd then return end
+
+  local map = {}
+  local fname = Opt.InstallDir.."\\"..Opt.ListFileTmp
+  win.system(Opt.ListReleasesCmd..">"..fname)
+  parseGithubList(fname,arch,map)
+
+  fname = Opt.ListFile:find":" and Opt.ListFile or ThisDir..Opt.ListFile
+  if win.GetFileAttr(fname) then
+    local overlap = parseGithubList(fname,arch,map)
+    if not overlap then
+      far.Message("'github.releases' file needs to be updated!", Title, nil, "w")
+    end
+  end
+  return map
 end
 
 function State:Make_Web_Build_List(arch)
@@ -567,7 +608,7 @@ function State:Make_Web_Build_List(arch)
   for name, build, date in page:gmatch(patt) do
     build = tonumber(build)
     if not dates[build] or dates[build] > date then
-      map[build] = name
+      map[build] = Opt.FarNightlyDir..name
       dates[build] = date
     end
   end
@@ -577,10 +618,10 @@ end
 function State:MakeBuildList(arch)
   local buildlist = self:Make_Local_Build_List(arch)
   if self.web ~= "none" then
-    local map = self:Make_Web_Build_List(arch) or {}
+    local map = State:Make_Github_Build_List(arch) or self:Make_Web_Build_List(arch) or {}
     for build,name in pairs(map) do
       if not self.mArchiveMap[build] then
-        self.mArchiveMap[build] = Opt.FarNightlyDir .. name
+        self.mArchiveMap[build] = name
         table.insert(buildlist, build)
       end
     end
@@ -672,17 +713,26 @@ function State:Main()
   end
 end
 
-Macro {
-  description=Title;
-  area="Shell"; key=MacroKey;
-  action=function()
-    local data = get_data_from_dialog()
-    if data then CreateState(data):Main(); end
-  end;
-}
-
-package.loaded["farbisect"] = {
+local M = {
   FAR1_OFFSET = FAR1_OFFSET;
   AUTO_GOOD = AUTO_GOOD;
   Main = function(data) mf.postmacro(function() CreateState(data):Main() end) end;
 }
+
+local function dlgBisect()
+  local data = get_data_from_dialog()
+  if data then CreateState(data):Main(); end
+end
+
+if Macro then
+  package.loaded["farbisect"] = M
+  Macro {
+    description=Title;
+    area="Shell"; key=MacroKey;
+    action=dlgBisect;
+  }
+elseif _cmdline then
+  mf.postmacro(dlgBisect)
+else
+  return M
+end
