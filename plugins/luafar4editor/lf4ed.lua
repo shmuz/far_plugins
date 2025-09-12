@@ -91,9 +91,9 @@ end
 
 local function fSort()
   local sortlines = require "sortlines"
-  local arg = { _History:field("SortDialog") }
+  local data = _History:field("SortDialog")
   repeat
-    local normal, msg = pcall(sortlines.SortWithDialog, arg)
+    local normal, msg = pcall(sortlines.SortWithDialog, data)
     if not normal then
       -- "Cancel" breaks infinite loop when exception is thrown by far.Dialog()
       if 1 ~= far.Message(msg, M.MError, ";RetryCancel", "w") then break end

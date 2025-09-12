@@ -4,6 +4,7 @@
 
 Last
   [*] Sort Lines dialog improved.
+  [+] Sort Lines: added operation "Randomize".
 
 2025-05-26, v3.11.0
   [+] The script run from the command line via the -r<filename> switch

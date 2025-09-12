@@ -35,7 +35,7 @@ end
 
 -- Depends on: FAR API
 local function EditorHasSelection (editInfo)
-  return editInfo.BlockType ~= 0 and editInfo.BlockStartLine >= 1
+  return editInfo.BlockType ~= F.BTYPE_NONE and editInfo.BlockStartLine >= 1
 end
 
 -- Depends on: FAR API
@@ -147,6 +147,15 @@ local function DoSort (arr_compare, arr_index, arr_dialog)
   table.sort(arr_index, cmp)
 end
 
+local function DoRandomSort (arr_index)
+  math.randomseed(os.time())
+  local t_rand = {}
+  for i = 1,#arr_index do
+    t_rand[i] = math.random()
+  end
+  table.sort(arr_index, function(i1, i2) return t_rand[i1] < t_rand[i2] end)
+end
+
 -- give expressions read access to the global table
 local meta = { __index=_G }
 
@@ -197,18 +206,25 @@ local function GetExpressions (aData)
 end
 
 -- generic
-local function SortWithRawData (aData)
+local function SortWithRawData (aData, aRandomSort)
   local columntype = IsColumnType()
-  local arr_dialog = GetExpressions(aData)
-  if #arr_dialog == 0 then
-    return  -- no expressions available
-  end
+
   local arr_compare, arr_index, arr_target = GetLines(columntype)
   if #arr_compare < 2 then
     return  -- nothing to sort
   end
-  getfenv(arr_dialog[1].expr).I = #arr_index
-  DoSort(arr_compare, arr_index, arr_dialog)
+
+  if aRandomSort then
+    DoRandomSort(arr_index)
+  else
+    local arr_dialog = GetExpressions(aData)
+    if #arr_dialog == 0 then
+      return  -- no expressions available
+    end
+    getfenv(arr_dialog[1].expr).I = #arr_index
+    DoSort(arr_compare, arr_index, arr_dialog)
+  end
+
   -- put the sorted lines into the editor
   local OnlySelection = columntype and aData.cbxOnlySel
   editor.UndoRedo(nil, "EUR_BEGIN")
@@ -218,10 +234,10 @@ local function SortWithRawData (aData)
 end
 
 -- generic
-local function SortWithDialog (aArg)
-  local data = aArg[1]
-  if SortDialog(data, IsColumnType()) then
-    SortWithRawData(data)
+local function SortWithDialog (data)
+  local res = SortDialog(data, IsColumnType())
+  if res then
+    SortWithRawData(data, res == "random")
   end
 end
 

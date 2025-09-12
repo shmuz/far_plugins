@@ -66,8 +66,8 @@ $ #Script Parameters dialog#
 be run. If the file name does not contain absolute path, it considered to be
 relative to the directory containing the edited file. If this option is not
 checked then either selected or entire editor window text will serve as the
-script, as described in the ~Lua Script~@LuaScript@ section.   
-   
+script, as described in the ~Lua Script~@LuaScript@ section.
+
    The dialog allows to specify up to 4 parameters that will be stored and
 passed to ~Lua Script~@LuaScript@ when it is invoked. Every parameter is a Lua
 expression. This means in particular that strings must be enclosed in quotes,
@@ -82,7 +82,7 @@ would raise an error when the script is invoked.
 #Pass parameters to the script# checkbox is checked.
 
    The #Run# command stores the parameters and runs the script.
- 
+
    The #Store# command stores the parameters for future script invocations.
 
  ~Contents~@Contents@
@@ -176,7 +176,7 @@ criteria at a time.
     If the results of expression evaluations are of string type,
     they are compared by the special functions. Most of the time,
     the function CompareStringW is used, and in a separate case -
-    the function wcscmp.    
+    the function wcscmp.
     The three-state switch #Case sensit.# controls string compare.
     When the switch is in the state [ ] or [x], the plugin passes
     the predetermined flag values to the function CompareStringW.
@@ -195,7 +195,7 @@ criteria at a time.
         #:cns:#
         #:1:#
         #::# (may be omitted)
- 
+
 #Variables and functions#
 
     Expressions can use the following convenience variables
@@ -242,6 +242,11 @@ criteria at a time.
     dialog field. This script will be run before the sorting begins.
     Global functions provided by the script can be used in the #Expr.#
     fields of the dialog.
+
+ #Randomize#
+
+    The lines (or their selected parts) are sorted in pseudorandom order.
+    All expressions are ignored.
 
 ^\1FSimple Examples (no knowledge of Lua is required)\-
 
