@@ -1,9 +1,6 @@
 -- started: 2010-05-30
 -- author: Shmuel Zeigerman
 
--- forward declarations
-local get_quoted
-
 --[[---------------------------------------------------------------------------
 Purpose:
   Makes  creation and  maintenance of  LuaFAR plugins'  language files
@@ -13,17 +10,21 @@ Purpose:
   not matter.
 -------------------------------------------------------------------------------
 Input:
-  @aModuleFileName:
-    Name  of  Lua  module  file  to  be generated.  This file  will be
-    require()'d by every file that needs to  use this  message system.
+  @aFiles
+    Array of description tables (a table per language).
+    Each description table must contain fields 'filename' and 'line1'.
 
-  @aDescriptions:
-    Array of description tables (description table per language). Each
-    description  table  must  contain  fields 'filename'  and 'line1'.
+    The ['module'] field
+      Name of Lua module file to be generated. This file will be
+      require()'d by every file that needs to use this message system.
 
-  ... :
+  @aOutDir
+    Directory where the output .LNG files should be placed.
+    It may be nil, then the current directory will be used.
+
+  @...
     Arbitrary  number  of  "template"  file names  (at least  one file
-    should be specified) .
+    must be specified) .
 
     Each template file  contains "message  blocks" delimited  by empty
     lines. A  message block  consists of  an "identifier"  line (first
@@ -47,17 +48,43 @@ Returns:
 -------------------------------------------------------------------------------
 --]]
 
-local function MakeLang (aModuleFileName, aDescriptions, ...)
-  assert ( type(aModuleFileName) == "string" )
-  assert ( type(aDescriptions) == "table" )
-  local tFiles = {...}
-  assert(#tFiles > 0, "no files specified")
+local function joinpath(s1, s2)
+  s1 = string.gsub(s1.."\\"..s2, "\\+", "\\")
+  return s1
+end
+
+
+local function get_quoted(s)
+  if s:sub(1,1) ~= '"' then
+    error("no opening quote in line: " .. s)
+  end
+  local len, q = 1, nil
+  for c in s:sub(2):gmatch("\\?.") do
+    len = len + c:len()
+    if c == '"' then q=c break end
+  end
+  if not q then
+    error("no closing quote in line: " .. s)
+  end
+  return s:sub(1, len)
+end
+
+
+local function MakeLang (aFiles, aOutDir, ...)
+  assert (type(aFiles) == "table")
+  assert (type(aFiles.module) == "string")
+
+  aOutDir = aOutDir or "."
+  assert (type(aOutDir) == "string")
+
+  local aTemplates = {...}
+  assert(aTemplates[1], "no templates specified")
 
   local bom_utf8 = "\239\187\191"
   local t_out = {}
-  for k=1, 1 + #aDescriptions do t_out[k] = {} end
+  for k=1, 1 + #aFiles do t_out[k] = {} end
 
-  for _, fname in ipairs(tFiles) do
+  for _, fname in ipairs(aTemplates) do
     local fp = assert(io.open(fname))
     local sMessages = fp:read("*a")
     fp:close()
@@ -107,7 +134,7 @@ local function MakeLang (aModuleFileName, aDescriptions, ...)
     map[name] = true
   end
   ----------------------------------------------------------------------------
-  local fp = assert(io.open(aModuleFileName, "w"))
+  local fp = assert(io.open(aFiles.module, "w"))
   fp:write("-- This file is auto-generated. Don't edit.\n\n")
   fp:write("local indexes = {\n")
   for k,name in ipairs(t_out[1]) do
@@ -121,27 +148,12 @@ return setmetatable( {},
 ]])
   fp:close()
   ----------------------------------------------------------------------------
-  for k,v in ipairs(aDescriptions) do
-    fp = assert(io.open(v.filename, "w"))
+  for k,v in ipairs(aFiles) do
+    fp = assert(io.open(joinpath(aOutDir, v.filename), "w"))
     fp:write(bom_utf8, v.line1, "\n\n")
     fp:write(table.concat(t_out[k+1], "\n"), "\n")
     fp:close()
   end
-end
-
-get_quoted = function(s)
-  if s:sub(1,1) ~= '"' then
-    error("no opening quote in line: " .. s)
-  end
-  local len, q = 1, nil
-  for c in s:sub(2):gmatch("\\?.") do
-    len = len + c:len()
-    if c == '"' then q=c break end
-  end
-  if not q then
-    error("no closing quote in line: " .. s)
-  end
-  return s:sub(1, len)
 end
 
 return MakeLang

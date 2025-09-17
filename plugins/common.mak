@@ -125,7 +125,7 @@ $(T_EMBED): $(OBJ_E) $(LIBS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 $(T_MESSAGE): FORCE
-	cd $(path_plugin) && $(LUAEXE) $(TEMPL_SCR) $(TEMPL)
+	cd $(path_plugin) && $(LUAEXE) $(TEMPL_SCR) . $(TEMPL)
 
 $(OBJ_PLUG): $(LUAPLUG)
 	$(CC) -c $< -o $@ $(CFLAGS)

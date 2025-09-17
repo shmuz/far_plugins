@@ -1,20 +1,9 @@
-require ("far2.makelang") (
+local files = {
+  module = "modules\\string_rc.lua";
+  { filename = "polygon_en.lng"; line1 = ".Language=English,English" },
+  { filename = "polygon_ru.lng"; line1 = ".Language=Russian,Russian (Русский)" },
+};
 
----- 1-st argument
-"modules\\string_rc.lua",
-
----- 2-nd argument
-{
-  { filename = "polygon_en.lng",
-    line1 = ".Language=English,English",
-  },
-  { filename = "polygon_ru.lng",
-    line1 = ".Language=Russian,Russian (Русский)",
-  },
-  -- { filename = "polygon_cze.lng",
-  --   line1 = ".Language=Czech,Czech (Čeština)",
-  -- },
-},
-
----- template file names
-...)
+-- arg[1]     : output directory; may be nil;
+-- arg[2,...] : template files; one file at least
+require ("far2.makelang")(files, ...)
