@@ -2,7 +2,7 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
-Last
+2025-10-04, v3.12.0
   [*] Sort Lines dialog improved.
   [+] Sort Lines: added operation "Randomize".
 
