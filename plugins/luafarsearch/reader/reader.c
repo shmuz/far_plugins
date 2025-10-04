@@ -10,6 +10,10 @@
   #define luaL_register(L,n,l)	(luaL_setfuncs(L,l,0))
 #endif
 
+#ifdef _MSC_VER
+  #define ftello64 _ftelli64
+#endif
+
 #define CHUNK 0x4000 // 16 Kib
 
 static const char ReaderType[] = "LFSearch.ChunkReader";
@@ -172,6 +176,9 @@ static const luaL_Reg methods[] = {
   { NULL, NULL }
 };
 
+#ifdef _MSC_VER
+  __declspec(dllexport)
+#endif
 int luaopen_reader (lua_State *L)
 {
   luaL_newmetatable(L, ReaderType);
