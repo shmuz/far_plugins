@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2025-12-11, v4.0.0
+  [!] Use conventional decimal notation $N or ${N} for replace groups.
+      $A...$Z are not valid anymore.
+
 2025-09-11, v3.50.0
   [!] Fix panel grep and replace.
       File mask was ignored in start directory when Search area was "Selected files and folders".

@@ -278,17 +278,23 @@ local function test_Replace (lib)
     end
 
     -- test submatches (captures)
-    dt = { sSearchPat=("(.)"):rep(35),
-           sReplacePat=("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"):reverse():gsub(".","$%0"),
-           bRegExpr=true }
+    local function makerep(fmt)
+      local s = ""
+      for k=35,0,-1 do s = s .. fmt:format(k) end
+      return s
+    end
+    dt = { sSearchPat=("(.)"):rep(35); bRegExpr=true; sOrigin="scope"; }
     dt.bSearchBack = (k==1)
-    dt.sOrigin = "scope"
     local subj = "123456789abcdefghijklmnopqrstuvwxyz###"
-    SetEditorText(subj)
-    RunEditorAction(lib, "test:replace", dt, 1, 1)
-    AssertEditorText(dt.bSearchBack and
-      subj:sub(1,3) .. subj:sub(4):reverse() .. subj:sub(4) or
-      subj:sub(1,35):reverse() .. subj)
+    for m=1,2 do
+      local fmt = (m==1) and "$%d" or "${%d}"
+      dt.sReplacePat = makerep(fmt)
+      SetEditorText(subj)
+      RunEditorAction(lib, "test:replace", dt, 1, 1)
+      AssertEditorText(dt.bSearchBack and
+        subj:sub(1,3) .. subj:sub(4):reverse() .. subj:sub(4) or
+        subj:sub(1,35):reverse() .. subj)
+    end
 
     -- test named groups
     dt = { sSearchPat = lib=="far"
@@ -761,13 +767,20 @@ local function test_Replace (lib)
   AssertEditorText("LLine1\nLLine2\nLLine3\n")
 
   -- test submatches (captures)
-  dt = { sSearchPat=("(.)"):rep(35),
-         sReplacePat=("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"):reverse():gsub(".","$%0"),
-         bRegExpr=true }
+  local function makerep(fmt)
+    local s = ""
+    for k=35,0,-1 do s = s .. fmt:format(k) end
+    return s
+  end
+  dt = { sSearchPat=("(.)"):rep(35); bRegExpr=true; }
   local subj = "123456789abcdefghijklmnopqrstuvwxyz###"
-  SetEditorText(subj)
-  RunEditorAction(lib, "replace", dt, 1, 1)
-  AssertEditorText(subj:sub(1,35):reverse() .. subj)
+  for m=1,2 do
+    local fmt = (m==1) and "$%d" or "${%d}"
+    dt.sReplacePat = makerep(fmt)
+    SetEditorText(subj)
+    RunEditorAction(lib, "replace", dt, 1, 1)
+    AssertEditorText(subj:sub(1,35):reverse() .. subj)
+  end
 
   -- test escaped dollar and backslash
   dt = { sSearchPat="abc", sReplacePat=[[$0\$0\t\\t]], bRegExpr=true }

@@ -631,7 +631,7 @@ syntax: ONIG_SYNTAX_RUBY (default)
   \a           bell           (0x07)
   \e           escape         (0x1B)
   \nnn         octal char            (encoded byte value)
-  \xHH         hexadecimal char      (encoded byte value)
+  \x{HH}       hexadecimal char      (encoded byte value)
   \x{7HHHHHHH} wide hexadecimal char (character code point value)
   \cx          control char          (character code point value)
   \C-x         control char          (character code point value)
@@ -1329,8 +1329,9 @@ pcre(3).
 @SyntaxReplace
 $ #Syntax of Replace pattern#
  If Regular Expression option is checked then:
-    *  #$1#-#$9# and #$A#-#$Z# are used for specifying submatches (groups).
-       #$0# stands for the whole match.
+    *  #$N# or #${N}# are used for specifying submatches (groups).
+       #$0# or #${0}# stand for the whole match.
+       (N is a non-negative decimal number).
     *  #${name}# is used for specifying named groups
        (supported only with Oniguruma and PCRE libraries).
     *  Literal dollar signs (#$#) and backslashes (#\#) must be escaped

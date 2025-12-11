@@ -646,7 +646,7 @@ syntax: ONIG_SYNTAX_RUBY (default)
   \a           bell           (0x07)
   \e           escape         (0x1B)
   \nnn         octal char            (encoded byte value)
-  \xHH         hexadecimal char      (encoded byte value)
+  \x{HH}       hexadecimal char      (encoded byte value)
   \x{7HHHHHHH} wide hexadecimal char (character code point value)
   \cx          control char          (character code point value)
   \C-x         control char          (character code point value)
@@ -1344,8 +1344,9 @@ pcre(3).
 @SyntaxReplace
 $ #Синтаксис образца замены#
  Если включена опция Регулярное Выражение, то:
-    *  #$1#-#$9# и #$A#-#$Z# используются для обозначения частичных
-       совпадений (групп). #$0# обозначает полное совпадение.
+    *  #$N# или #${N}# обозначают частичные совпадения (группы).
+       #$0# или #${0}# обозначают полное совпадение.
+       (N = неотрицательное десятичное число).
     *  #${name}# используется для обозначения именованных групп
        (поддерживается только для библиотек Oniguruma и PCRE).
     *  Буквальные знаки доллара (#$#) и обратные слеши (#\#) должны

@@ -77,13 +77,16 @@ local function DLR_NamedGroup (T, subj, offs)
 end
 
 local function DLR_Group (T, subj, offs)
-  local gr = string.match(subj, "^%$([0-9a-zA-Z]?)", offs)
-  if gr then
-    local val = tonumber(gr,36)
+  local fr,to,gr = string.find(subj, "^%${(%d*)}", offs)
+  if fr == nil then
+    fr,to,gr = string.find(subj, "^%$(%d*)", offs)
+  end
+  if fr then
+    local val = tonumber(gr,10)
     if val then
       if T.MaxGroupNumber < val then T.MaxGroupNumber = val end
       T[#T+1] = { "group", val }
-      return 1 + #gr
+      return to - fr + 1
     end
     return -1, M.MErrorGroupNumber..": $"..gr
   end

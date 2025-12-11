@@ -292,7 +292,7 @@ local function ShowCollectedLines (items, title, bForward, tBlockInfo)
     if timing:Step(M.MTitleSearch) then
       return
     end
-    local s = item.text:gsub("%z", " ") -- replace null bytes with spaces
+    local s = string.gsub(item.text, "%z", " ") -- replace null bytes with spaces
     local n = maxno + 2
     item.offset, item.fr, item.to = n, item.fr+n, item.to+n
     item.text = fmt:format(item.lineno, s)
