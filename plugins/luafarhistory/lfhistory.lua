@@ -1,15 +1,18 @@
 -- coding: UTF-8
 -- luacheck: globals _Plugin
 
+local FarBuild = select(4, far.AdvControl("ACTL_GETFARMANAGERVERSION", true))
+local CustomMenuName = FarBuild < 6600 and "far2.custommenu" or "far2.custommenu2"
+
 far.ReloadDefaultScript = true
-package.loaded["far2.custommenu"] = nil
+package.loaded[CustomMenuName] = nil
 package.loaded["lfh_config"] = nil
 
 if not _Plugin then
   package.path = far.PluginStartupInfo().ModuleDir .. "?.lua;" .. package.path
 end
 
-local Custommenu = require "far2.custommenu"
+local Custommenu = require(CustomMenuName)
 local Utils      = require "far2.utils"
 local LibHistory = require "far2.history"
 local Config     = require "lfh_config"

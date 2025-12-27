@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2025-12-27, v4.1.0
+  [+] Use OnGetItemText method to speed up Show All menu creation.
+  [*] Use either custommenu2 or custommenu module depending on Far build.
+
 2025-12-11, v4.0.0
   [!] Use conventional decimal notation $N or ${N} for replace groups.
       $A...$Z are not valid anymore.

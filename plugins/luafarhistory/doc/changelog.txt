@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2025-12-27, v3.14.0
+  [*] Use either custommenu2 or custommenu module depending on Far build.
+
 2023-11-15, v3.13.0
   [+] Support RGB colors (see General settings -> Colors)
 

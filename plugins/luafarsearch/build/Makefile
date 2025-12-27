@@ -29,6 +29,7 @@ modules = \
   $(path_share)*shmuz\serial.lua     \
   $(path_share)*shmuz\cqueue.lua     \
   $(path_share)*far2\custommenu.lua  \
+  $(path_share)*far2\custommenu2.lua \
   $(path_share)*far2\simpledialog.lua  \
   $(path_share)*far2\settings.lua    \
   $(path_share)*far2\message.lua     \

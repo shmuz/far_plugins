@@ -1,12 +1,15 @@
 -- lfs_editengine.lua
 -- luacheck: globals _Plugin
 
+local FarBuild = select(4, far.AdvControl("ACTL_GETFARMANAGERVERSION", true))
+local CustomMenuName = FarBuild < 6600 and "far2.custommenu" or "far2.custommenu2"
+
 local M          = require "lfs_message"
 local Common     = require "lfs_common"
 local Editors    = require "lfs_editors"
 
 local CustomMessage = require "far2.message"
-local CustomMenu = require "far2.custommenu"
+local CustomMenu = require(CustomMenuName)
 
 local F = far.Flags
 local floor, ceil, min, max = math.floor, math.ceil, math.min, math.max
@@ -292,10 +295,8 @@ local function ShowCollectedLines (items, title, bForward, tBlockInfo)
     if timing:Step(M.MTitleSearch) then
       return
     end
-    local s = string.gsub(item.text, "%z", " ") -- replace null bytes with spaces
     local n = maxno + 2
     item.offset, item.fr, item.to = n, item.fr+n, item.to+n
-    item.text = fmt:format(item.lineno, s)
   end
   local bottom = #items..M.MMatchesFound.." [F6,F7,F8,Ctrl-C]"
 
@@ -309,6 +310,11 @@ local function ShowCollectedLines (items, title, bForward, tBlockInfo)
       ellipsis = bForward and 3 or 0, -- position ellipsis at either line end or beginning
       searchstart = maxno + 3, -- required for correct work of ellipsis
     }, items)
+
+  function list:OnGetItemText(item)
+    local s = string.gsub(item.text, "%z", " ") -- replace null bytes with spaces
+    return fmt:format(item.lineno, s)
+  end
 
   function list:onlistchange (hDlg, key, item)
     ShowAll_ChangeState(hDlg, item, false)
