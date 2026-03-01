@@ -2,6 +2,10 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+Recent:
+  [!] Put some default color on the entire line prior to further highlighting (as Colorer plugin does).
+      That fixes highlighting when the editor "normal text" is set to non-default color.
+
 2024-05-27, v0.6.2
   [*] Refactoring: remove C-file highlight.c from the project.
 
