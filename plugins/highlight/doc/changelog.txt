@@ -2,7 +2,7 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
-Recent:
+2026-03-02, v0.7.0
   [!] Put some default color on the entire line prior to further highlighting (as Colorer plugin does).
       That fixes highlighting when the editor "normal text" is set to non-default color.
 
