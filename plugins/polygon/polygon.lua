@@ -305,7 +305,7 @@ end
 local function OpenFromPluginsMenu()
   -- Make sure that current panel item is a real existing file.
   local info = panel.GetPanelInfo(nil, 1)
-  if info and info.PanelType == F.PTYPE_FILEPANEL and band(info.Flags,F.OPIF_REALNAMES) ~= 0 then
+  if info and info.PanelType == F.PTYPE_FILEPANEL and band(info.Flags,F.PFLAGS_REALNAMES) ~= 0 then
     local item = panel.GetCurrentPanelItem(nil, 1)
     if item and not item.FileAttributes:find("d") then
       return far.ConvertPath(item.FileName, "CPM_FULL")

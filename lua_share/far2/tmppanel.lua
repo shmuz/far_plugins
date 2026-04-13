@@ -932,7 +932,7 @@ function Panel:GetOpenPanelInfo (Handle)
   Info.PanelModesNumber = 10
   Info.StartPanelMode = ("4"):byte()
   -----------------------------------------------------------------------------
-	local ALTSHIFT = bor(F.SHIFT_PRESSED, F.LEFT_ALT_PRESSED)
+  local ALTSHIFT = bor(F.SHIFT_PRESSED, F.LEFT_ALT_PRESSED)
   Info.KeyBar = {
     {VirtualKeyCode=VK.F7, Text=M.MF7, LongText=M.MF7},
     {VirtualKeyCode=VK.F2, ControlKeyState=ALTSHIFT, Text=M.MAltShiftF2, LongText=M.MAltShiftF2},

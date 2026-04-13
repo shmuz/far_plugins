@@ -50,7 +50,7 @@ local syntax_lua =
   },
   {
     name = "Function"; fgcolor = "purple";
-    pattern = [[ \b(?:
+    pattern = [[ \b (?<! \.) (?:
       _G|_VERSION|assert|collectgarbage|dofile|error|getfenv|getmetatable|ipairs|load|loadfile|loadstring|module|next|
       pairs|pcall|print|rawequal|rawget|rawset|require|select|setfenv|setmetatable|tonumber|tostring|type|unpack|xpcall|
       coroutine\.create|coroutine\.resume|coroutine\.running|coroutine\.status|coroutine\.wrap|coroutine\.yield|

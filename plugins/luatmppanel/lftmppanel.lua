@@ -41,7 +41,7 @@ function export.Open (From, Guid, Item)
   if From == F.OPEN_PLUGINSMENU then
     return Env:Open (From, Guid, Item)
 
-  elseif From == F.OPEN_DISKMENU or From == F.OPEN_FINDLIST then
+  elseif From == F.OPEN_LEFTDISKMENU or From == F.OPEN_RIGHTDISKMENU or From == F.OPEN_FINDLIST then
     return Env:NewPanel()
 
   else

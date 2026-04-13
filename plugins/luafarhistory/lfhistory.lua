@@ -466,9 +466,8 @@ local function get_history (aConfig, aData)
       -- FAR item
         local item = map[v.Name]
         if item then
-          if not (item.time and item.time >= v.Time) then
-            item.time = v.Time
-            item.typ = aType
+          if v.Time > (item.time or 0) then
+            item.time, item.extra, item.typ = v.Time, v.Param, aType
           end
         else
           if v.Time >= last_time and not IsExclusion(v.Name) then
