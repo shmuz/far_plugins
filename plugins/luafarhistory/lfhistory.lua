@@ -2,17 +2,17 @@
 -- luacheck: globals _Plugin
 
 local FarBuild = select(4, far.AdvControl("ACTL_GETFARMANAGERVERSION", true))
-local CustomMenuName = FarBuild < 6600 and "far2.custommenu" or "far2.custommenu2"
+local CustomMenuUseVbuf = FarBuild >= 6600
 
 far.ReloadDefaultScript = true
-package.loaded[CustomMenuName] = nil
+package.loaded["far2.custommenu"] = nil
 package.loaded["lfh_config"] = nil
 
 if not _Plugin then
   package.path = far.PluginStartupInfo().ModuleDir .. "?.lua;" .. package.path
 end
 
-local Custommenu = require(CustomMenuName)
+local Custommenu = require("far2.custommenu")
 local Utils      = require "far2.utils"
 local LibHistory = require "far2.history"
 local Config     = require "lfh_config"
@@ -412,6 +412,7 @@ local function MakeMenuParams (aConfig, aData, aItems)
     xlat          = aData.xlat,
     showdates     = aConfig ~= cfgLocateFile and dateformat,
     dateformat    = dateformat,
+    usevbuf       = CustomMenuUseVbuf,
   }
   local list = Custommenu.NewList(listProps, aItems)
   list.keyfunction = GetListKeyFunction(aConfig, aData)

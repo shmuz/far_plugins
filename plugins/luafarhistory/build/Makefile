@@ -18,7 +18,6 @@ modules = \
   $(path_share)*shmuz\serial.lua     \
   $(path_share)*far2\history.lua     \
   $(path_share)*far2\custommenu.lua  \
-  $(path_share)*far2\custommenu2.lua \
   $(path_share)*far2\simpledialog.lua \
   $(path_share)*far2\utils.lua
 

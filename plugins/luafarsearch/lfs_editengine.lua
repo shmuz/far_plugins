@@ -2,14 +2,14 @@
 -- luacheck: globals _Plugin
 
 local FarBuild = select(4, far.AdvControl("ACTL_GETFARMANAGERVERSION", true))
-local CustomMenuName = FarBuild < 6600 and "far2.custommenu" or "far2.custommenu2"
+local CustomMenuUseVbuf = FarBuild >= 6600
 
 local M          = require "lfs_message"
 local Common     = require "lfs_common"
 local Editors    = require "lfs_editors"
 
 local CustomMessage = require "far2.message"
-local CustomMenu = require(CustomMenuName)
+local CustomMenu = require "far2.custommenu"
 
 local F = far.Flags
 local floor, ceil, min, max = math.floor, math.ceil, math.min, math.max
@@ -309,6 +309,7 @@ local function ShowCollectedLines (items, title, bForward, tBlockInfo)
       col_selectedhighlight = 0x4F,
       ellipsis = bForward and 3 or 0, -- position ellipsis at either line end or beginning
       searchstart = maxno + 3, -- required for correct work of ellipsis
+      usevbuf = CustomMenuUseVbuf,
     }, items)
 
   function list:OnGetItemText(item)
@@ -849,7 +850,7 @@ local function DoReplace (
                     EditorSetCurString(line, nl)
                     editor.SetPosition(nil, nil, TT.len(line)+1)
                     editor.InsertString()
-                    if not bForward then set_sLine(sStartLine) end
+                    if not bForward then set_sLine(sStartLine, sLineEol) end
                     x1, y1 = fr, y
                 end
                 nAddedLines = 1
@@ -858,10 +859,10 @@ local function DoReplace (
             if nl == TT.empty then
                 local sLine1 = txt..after
                 if bForward then
-                    set_sLine(sLine1)
+                    set_sLine(sLine1, sLineEol)
                     x = TT.len(txt)+1
                 end
-                EditorSetCurString(sLine1..part3)--, stringEOL)
+                EditorSetCurString(sLine1..part3, sLineEol)
                 x2, y2 = TT.len(txt)-1, y + nAddedLines - nDeletedLines
                 break
             else
