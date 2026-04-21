@@ -4,18 +4,10 @@
 
 local DIRSEP = string.sub(package.config, 1, 1)
 local OS_WIN = (DIRSEP == "\\")
-local TMPDIR, GetHistory, SetHistory
+local TMPDIR = OS_WIN and assert(win.GetEnv("Temp")) or far.InMyTemp()
 
-if OS_WIN then
-  GetHistory = function(s1,s2) return _Plugin.History[s1][s2] end
-  SetHistory = function(s1,s2,val) _Plugin.History[s1][s2] = val end
-  ----------------------------------------------------------------
-  TMPDIR = assert(win.GetEnv("Temp"))
-else
-  GetHistory = function(s1,s2) return _Plugin.History[s1][s2] end
-  SetHistory = function(s1,s2,val) _Plugin.History[s1][s2] = val end
-  TMPDIR = far.InMyTemp()
-end
+local GetHistory = function(s1,s2) return _Plugin.History[s1][s2] end
+local SetHistory = function(s1,s2,val) _Plugin.History[s1][s2] = val end
 
 local selftest = {} -- this module
 
@@ -53,6 +45,7 @@ local function GetEditorText()
 end
 
 local function SetEditorText(str)
+  editor.SetParam(nil, F.ESPT_EXPANDTABS, F.EXPAND_NOTABS)
   editor.SetParam(nil, F.ESPT_AUTOINDENT, false)
   editor.SetPosition(nil,1,1)
   for _=1, editor.GetInfo().TotalLines do
@@ -276,6 +269,16 @@ local function test_Replace (lib)
         AssertEditorText(m==1 and "line1\nline2\nA\nBine3\n" or "A\nBine1\nA\nBine2\nA\nBine3\n")
       end
     end
+
+    -- test inserting new lines and preserving missing EOL of the starting line
+    dt = { sSearchPat=".*", bRegExpr=true, sOrigin="cursor", bSearchBack = (k==1) }
+    for aa = 1,3 do for bb = 1,2 do
+      dt.sReplacePat = (aa == 1) and "$0\n" or (aa == 2) and "$0\r" or "$0\r\n"
+      dt.sOrigin = (bb == 1) and "scope" or "cursor"
+      SetEditorText("")
+      RunEditorAction(lib, "test:replace", dt, 1, 1)
+      AssertEditorText("\n")
+    end end
 
     -- test submatches (captures)
     local function makerep(fmt)
@@ -988,46 +991,54 @@ local function PrAssert(condition, ...) -- protected assert
 end
 --------------------------------------------------------------------------------
 
-local function test_one_mask (mask, files, num)
+local function test_one_mask (mask, files, num_cs, num_notcs)
   for _,f in ipairs(files) do AddFile(nil, f) end
   PrAssert(panel.SetPanelDirectory(nil, 1, TestDir))
   local dt = { sFileMask = mask, sSearchArea = "OnlyCurrFolder" }
-  local arr = lfsearch.SearchFromPanel(dt)
-  PrAssert(arr)
-  PrAssert(#arr == num)
+  for k=1, OS_WIN and 1 or 2 do
+    local cs = (k == 2)
+    dt.bCaseSensFileMask = cs
+    local arr = lfsearch.SearchFromPanel(dt)
+    PrAssert(arr)
+    if cs then PrAssert(#arr == num_cs)
+    else PrAssert(#arr == num_notcs)
+    end
+  end
 end
 
 local function test_masks()
   local files = {
-    "file-01.txt", "file-02.txt", "file-03.txt",
-    "file-01.bin", "file-02.bin", "file-03.bin",
-    "файл-01.бин", "файл-02.бин", "файл-03.бин",
+    "file-01.txt", "file-02.txt", "FILE-03.TXT",
+    "file-01.bin", "file-02.bin", "FILE-03.BIN",
+    "файл-01.бин", "файл-02.бин", "ФАЙЛ-03.БИН",
   }
-  test_one_mask("*",           {},    0)
-  test_one_mask("abc",         files, 0)
-  test_one_mask("*abc*",       files, 0)
-  test_one_mask("*",           files, 9)
-  test_one_mask("*.*",         files, 9)
-  test_one_mask("*.txt",       files, 3)
-  test_one_mask("*.bin",       files, 3)
-  test_one_mask("*.бин",       files, 3)
-  test_one_mask("file-01.txt", files, 1)
-  test_one_mask("file-01.*",   files, 2)
-  test_one_mask("*01.*",       files, 3)
+  test_one_mask("*",           {},    0, 0)
+  test_one_mask("abc",         files, 0, 0)
+  test_one_mask("*abc*",       files, 0, 0)
+  test_one_mask("*",           files, 9, 9)
+  test_one_mask("*.*",         files, 9, 9)
+  test_one_mask("*.txt",       files, 2, 3)
+  test_one_mask("*.bin",       files, 2, 3)
+  test_one_mask("*.бин",       files, 2, 3)
+  test_one_mask("file-01.txt", files, 1, 1)
+  test_one_mask("file-01.*",   files, 2, 2)
+  test_one_mask("*01.*",       files, 3, 3)
   ------------------------------------------------------------------------------
-  test_one_mask("file*,файл*", files, 9)
-  test_one_mask("*.txt,*.бин", files, 6)
-  test_one_mask("*|*.txt",     files, 6)
-  test_one_mask("*|*.txt,*.bin", files, 3)
-  test_one_mask("*|*.txt,*.bin,*.бин", files, 0)
+  test_one_mask("file*,файл*", files, 6, 9)
+  test_one_mask("*.txt,*.бин", files, 4, 6)
+  test_one_mask("*|*.txt",     files, 7, 6)
+  test_one_mask("*|*.txt,*.bin", files, 5, 3)
+  test_one_mask("*|*.txt,*.bin,*.бин", files, 3, 0)
   ------------------------------------------------------------------------------
-  test_one_mask("/.*/",        files, 9)
-  test_one_mask("/.+/",        files, 9)
-  test_one_mask("/^f/",        files, 6)
-  test_one_mask("/f/",         files, 6)
-  test_one_mask("/i/",         files, 6)
-  test_one_mask("/^i/",        files, 0)
-  test_one_mask("/n$/",        files, 3)
+  test_one_mask("/.*/",        files, 9, 9)
+  test_one_mask("/.+/",        files, 9, 9)
+  test_one_mask("/^f/",        files, 4, 4)
+  test_one_mask("/^f/i",       files, 6, 6)
+  test_one_mask("/f/",         files, 4, 4)
+  test_one_mask("/f/i",        files, 6, 6)
+  test_one_mask("/i/",         files, 4, 4)
+  test_one_mask("/^i/",        files, 0, 0)
+  test_one_mask("/n$/",        files, 2, 2)
   ------------------------------------------------------------------------------
   RemoveFiles(nil, files)
 end
@@ -1212,6 +1223,40 @@ local function test_dir_filter()
   RemoveTree(root_dir)
 end
 
+local function test_panel_encodings (lib)
+  assert(win.GetOEMCP() == 866, "this test requires OEM codepage to be 866")
+  assert(win.GetACP() == 1251, "this test requires ANSI codepage to be 1251")
+
+  local dir = os.getenv("FARHOME").."/Plugins/luafar/lua_share/far2/test/codepage"
+  PrAssert(panel.SetPanelDirectory(nil, 1, dir))
+
+  local total = 0
+  for k=1,10000 do
+    local item = panel.GetPanelItem(nil,1,k)
+    if not item then break end
+    if not item.FileAttributes:find("d") then
+      local enc = item.FileName:match("^%d+")
+      if enc and enc ~= "65000" then -- skip UTF-7
+        total = total + 1
+      end
+    end
+  end
+  PrAssert(total > 0)
+
+  local dt = {
+    sFileMask         = "/^\\d+.*\\.txt$/";
+    sSearchArea       = "OnlyCurrFolder";
+    iSelectedCodePage = -1; -- default code pages
+    sRegexLib         = lib;
+  }
+
+  for k=1,2 do
+    dt.sSearchPat = k==1 and "foobar" or "вхождение"
+    local arr = lfsearch.SearchFromPanel(dt)
+    PrAssert(arr and #arr == (k==1 and 0 or total))
+  end
+end
+
 function selftest.test_panels_search_replace (lib_list)
   assert(type(lfsearch) == "table")
   CreateTree()
@@ -1219,6 +1264,9 @@ function selftest.test_panels_search_replace (lib_list)
   for _,lib in ipairs(lib_list) do
     test_search(lib)
     test_replace(lib)
+    if not OS_WIN then
+      test_panel_encodings(lib)
+    end
   end
   test_dir_filter()
   panel.SetPanelDirectory(nil, 1, CurDir)

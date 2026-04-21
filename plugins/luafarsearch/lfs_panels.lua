@@ -489,7 +489,7 @@ local function PanelDialog  (aOp, aData, aScriptCall)
     help = aOp=="grep" and "PanelGrep" or "OperInPanels";
     guid = aOp=="search" and searchGuid or aOp=="replace" and replaceGuid or grepGuid;
   }
-  local Frame = CreateSRFrame(Items, aData, false, aScriptCall)
+  local Frame = CreateSRFrame(Items, aData, nil, aScriptCall)
   ------------------------------------------------------------------------------
   local title = aOp=="search" and M.MTitleSearch or aOp=="replace" and M.MTitleReplace or M.MTitleGrep
   insert(Items, { tp="dbox"; text=title; })

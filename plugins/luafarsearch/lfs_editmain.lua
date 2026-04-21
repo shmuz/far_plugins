@@ -19,10 +19,11 @@ end
 
 local function UnlockEditor (Title, EI)
   EI = EI or editor.GetInfo()
+  local id = EI.EditorID
   if band(EI.CurState,F.ECSTATE_LOCKED) ~= 0 then
     if far.Message(M.MEditorLockedPrompt, Title, M.MBtnYesNo)==1 then
-      if editor.SetParam(nil,"ESPT_LOCKMODE",false) then
-        editor.Redraw()
+      if editor.SetParam(id, "ESPT_LOCKMODE", false) then
+        editor.Redraw(id)
         return true
       end
     end
@@ -48,7 +49,8 @@ local function EditorDialog (aData, aReplace, aScriptCall)
     help = "OperInEditor";
     { tp="dbox"; text=sTitle; },
   }
-  local Frame = Common.CreateSRFrame(Items, aData, true, aScriptCall)
+  local editorID = editor.GetInfo().EditorID
+  local Frame = Common.CreateSRFrame(Items, aData, editorID, aScriptCall)
   ------------------------------------------------------------------------------
   Frame:InsertInDialog(false, aReplace and "replace" or "search")
   insert(Items, { tp="sep"; })
@@ -185,7 +187,7 @@ local function EditorAction (aOp, aData, aScriptCall)
     if not tParams then return nil end
 
   elseif aOp == "searchword" or aOp == "searchword_rev" then
-    local word = Common.GetWordUnderCursor(_Plugin.HField("config").bSelectFound)
+    local word = Common.GetWordUnderCursor(EInfo.EditorID, _Plugin.HField("config").bSelectFound)
     if not word then return end
     _Plugin.sSearchWord = word -- it may be used in further operations
     aData = {
