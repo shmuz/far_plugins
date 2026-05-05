@@ -144,7 +144,7 @@ local function EditorAction (op, data)
   local TT_empty           = is_wide and win.Utf8ToUtf16("")  or ""
   local TT_newline         = is_wide and win.Utf8ToUtf16("\n")  or "\n"
   local TT_gmatch          = is_wide and regex.gmatchW or regex.gmatch
-  local TT_Gsub            = is_wide and Common.GsubW or Common.Gsub
+  local TT_Gsub            = is_wide and Common.GsubW or Common.GsubMB
 
   local sFileName = editor.GetFileName()
 

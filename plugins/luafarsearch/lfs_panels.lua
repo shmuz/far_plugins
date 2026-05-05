@@ -32,6 +32,7 @@ local SetHighlightPattern  = libEditors.SetHighlightPattern
 
 local F = far.Flags
 local KEEP_DIALOG_OPEN = 0
+local CP_UTF8 = 65001
 
 local bor, band, bxor = bit64.bor, bit64.band, bit64.bxor
 local clock = os.clock
@@ -235,21 +236,21 @@ end
 
 
 local BOMs = {
-  { codepage= 1200; pattern="^\255\254";     },
-  { codepage= 1201; pattern="^\254\255";     },
-  { codepage=65001; pattern="^\239\187\191"; },
-  { codepage=65000; pattern="^%+/v[89+/]";   },
+  { codepage= 1200;   pattern="^\255\254";     },
+  { codepage= 1201;   pattern="^\254\255";     },
+  { codepage=CP_UTF8; pattern="^\239\187\191"; },
+  { codepage=65000;   pattern="^%+/v[89+/]";   },
 }
 
-local function GetFileFormat (file, nBytes)
+local function GetFileEncoding (fp, nBytes)
   -- Try BOMs
-  file:seek("set", 0)
-  local sTemp = file:read(8)
+  fp:seek("set", 0)
+  local sTemp = fp:read(8)
   if sTemp then
     for _,item in ipairs(BOMs) do
       local bom = string.match(sTemp, item.pattern)
       if bom then
-        file:seek("set", #bom)
+        fp:seek("set", #bom)
         return item.codepage, bom
       end
     end
@@ -257,9 +258,9 @@ local function GetFileFormat (file, nBytes)
 
   -- Try IsTextUnicode()
   local nCodePage
-  file:seek("set", 0)
-  local Buffer = file:read(nBytes or 0x8000)
-  file:seek("set", 0)
+  fp:seek("set", 0)
+  local Buffer = fp:read(nBytes or 0x8000)
+  fp:seek("set", 0)
   if Buffer and #Buffer >= 2 then
     local FF = libUCD.GetFlags()
     local tests = bor(
@@ -287,6 +288,14 @@ local function GetFileFormat (file, nBytes)
       ns:DataEnd()
       nCodePage = ns:GetCodePage()
       ns:Close()
+    end
+
+    -- If the luautf8 library says it is valid UTF-8, trust it.
+    if not nCodePage then
+      local offs = Buffer:invalidoffset()
+      if offs == nil or (#Buffer == nBytes and offs >= #Buffer - 3) then
+        nCodePage = CP_UTF8
+      end
     end
   end
 
@@ -382,7 +391,7 @@ local function GetCodePages (aData)
     { CodePage = 1200, Text = makeline(1200, "UTF-16 (Little endian)") },
     { CodePage = 1201, Text = makeline(1201, "UTF-16 (Big endian)") },
     { CodePage = 65000 },
-    { CodePage = 65001 },
+    { CodePage = CP_UTF8 },
     ---------------------------------------------------------------------------
     { Text = M.MOtherCodePages,   Flags = F.LIF_SEPARATOR },
   }
@@ -751,7 +760,7 @@ local function GetActiveCodePages (aData)
       if t and t[1] then return t end
     end
   end
-  return { win.GetOEMCP(), win.GetACP(), 1200, 1201, 65000, 65001 }
+  return { win.GetOEMCP(), win.GetACP(), 1200, 1201, 65000, CP_UTF8 }
 end
 
 
@@ -831,17 +840,17 @@ local function SearchFromPanel (aData, aWithDialog, aScriptCall)
         return userbreak.fullcancel and "break"
       end
       for _, cp in ipairs(currCodePages) do
-        local s = (cp == 1200 or cp == 65001) and str or
+        local s = (cp == 1200 or cp == CP_UTF8) and str or
                   (cp == 1201) and SwapEndian(str) or
                   MultiByteToWideChar(str, cp)
         if s then
           if Regex.ufindW then
-            if cp == 65001 then
+            if cp == CP_UTF8 then
               local ok, s2 = pcall(Utf16, s) -- may throw on Windows XP and Wine
               s = ok and s2
             end
           else
-            if cp ~= 65001 then s = Utf8(s) end
+            if cp ~= CP_UTF8 then s = Utf8(s) end
           end
           if s then
             if tPlus == nil then
@@ -961,33 +970,33 @@ local function CollectAllItems (aData, tParams, fFileMask, fDirMask, fDirExMask,
   local fileList = {}
   local tRecurseGuard = {}
   DisplayListState(0)
-  for _, item in ipairs(itemList) do
-    local filedata = win.GetFileInfo(item)
-    -- note: filedata can be nil for root directories
-    local isFile = filedata and not filedata.FileAttributes:find("d")
+  for _, itemFullName in ipairs(itemList) do
+    local itemInfo = win.GetFileInfo(itemFullName)
+    -- note: itemInfo can be nil for root directories
+    local isFile = itemInfo and not itemInfo.FileAttributes:find("d")
     ---------------------------------------------------------------------------
     if isFile then
-      if fFileMask(item) then
-        fileList[#fileList+1] = filedata
-        fileList[#fileList+1] = item
+      if fFileMask(itemFullName) then
+        itemInfo.FullName = itemFullName
+        table.insert(fileList, itemInfo)
       end
     else
       if (area == "FromCurrFolder" or area == "OnlyCurrFolder") and bPlugin then
-        fileList[#fileList+1] = filedata
-        fileList[#fileList+1] = item
+        itemInfo.FullName = itemFullName
+        table.insert(fileList, itemInfo)
       end
       if not (area == "OnlyCurrFolder" and bPlugin) then
-        RecursiveSearch(item,
+        RecursiveSearch(itemFullName,
           function(fdata, fullname)
             if fdata == "display_state" then
-              return DisplayListState(#fileList/2, userbreak)
+              return DisplayListState(#fileList, userbreak)
             end
             if not fdata.FileAttributes:find("d") then
               local n = #fileList
-              fileList[n+1] = fdata
-              fileList[n+2] = fullname
-              if n%20 == 0 then
-                if DisplayListState(n/2, userbreak) then return "break"; end
+              fdata.FullName = fullname
+              table.insert(fileList, fdata)
+              if n % 10 == 0 then
+                if DisplayListState(n, userbreak) then return "break"; end
               end
             end
           end, flags, FileFilter, fFileMask, fDirMask, fDirExMask, tRecurseGuard)
@@ -1045,7 +1054,7 @@ local function Replace_GetConvertors (bWideCharRegex, nCodePage)
     elseif nCodePage == 1201 then
       Convert, Reconvert = Identical, SwapEndian
     else
-      if nCodePage == 65001 then
+      if nCodePage == CP_UTF8 then
         Convert = function(str) return str:utf8valid() and MultiByteToWideChar(str, nCodePage, "e") end
       else
         Convert = function(str) return MultiByteToWideChar(str, nCodePage, "e") end
@@ -1053,7 +1062,7 @@ local function Replace_GetConvertors (bWideCharRegex, nCodePage)
       Reconvert = function(str) return (WideCharToMultiByte(str, nCodePage)) end
     end
   else
-    if nCodePage == 65001 then
+    if nCodePage == CP_UTF8 then
       Convert = function(str) return str:utf8valid() and str end
       Reconvert = Identical
     elseif nCodePage == 1200 then
@@ -1109,7 +1118,7 @@ local function GetReplaceChoice(
   local bReplace = sReplace~=true
   local len, sub
   if bWideCharRegex then len, sub = win.lenW, win.subW
-  else len, sub = string.len, string.sub
+  else len, sub = ("").len, ("").sub
   end
 
   local linelen = len(Line)
@@ -1181,7 +1190,8 @@ local function GetReplaceChoice(
 end
 
 
-local function Replace_ProcessFile (fdata, fullname, cdata)
+local function Replace_ProcessFile (fdata, cdata)
+  local fullname = fdata.FullName
   local ExtendedName = [[\\?\]] .. fullname
   local fp = io.open(ExtendedName, "rb")
   if not fp then
@@ -1190,7 +1200,7 @@ local function Replace_ProcessFile (fdata, fullname, cdata)
   end
   cdata.nFilesProcessed = cdata.nFilesProcessed + 1
   ---------------------------------------------------------------------------
-  local nCodePageDetected, sBom = GetFileFormat(fp)
+  local nCodePageDetected, sBom = GetFileEncoding(fp)
   local nCodePage = nCodePageDetected or win.GetACP() -- GetOEMCP() ?
   ---------------------------------------------------------------------------
   local fReplace = cdata.fReplace
@@ -1204,7 +1214,7 @@ local function Replace_ProcessFile (fdata, fullname, cdata)
 
   local len, sub
   if bWideCharRegex then len, sub = win.lenW, win.subW
-  else len, sub = string.len, string.sub
+  else len, sub = ("").len, ("").sub
   end
 
   local Convert, Reconvert = Replace_GetConvertors (bWideCharRegex, nCodePage)
@@ -1343,7 +1353,8 @@ end
 
 
 -- cdata.sOp: operation - either "grep" or "count"
-local function Grep_ProcessFile (fdata, fullname, cdata)
+local function Grep_ProcessFile (fdata, cdata)
+  local fullname = fdata.FullName
   local fp = io.open(fullname,"rb") or io.open([[\\?\]]..fullname,"rb")
   if not fp then
     MsgCannotOpenFile(fullname)
@@ -1351,7 +1362,7 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
   end
   cdata.nFilesProcessed = cdata.nFilesProcessed + 1
   ---------------------------------------------------------------------------
-  local nCodePageDetected = GetFileFormat(fp)
+  local nCodePageDetected = GetFileEncoding(fp)
   local nCodePage = nCodePageDetected or win.GetACP() -- GetOEMCP() ?
   ---------------------------------------------------------------------------
   local bWideCharRegex, Regex, ufind_method = cdata.bWideCharRegex, cdata.Regex, cdata.ufind_method
@@ -1359,7 +1370,7 @@ local function Grep_ProcessFile (fdata, fullname, cdata)
   local nMatches = 0
   local numline = 0
 
-  local len = bWideCharRegex and win.lenW or string.len
+  local len = bWideCharRegex and win.lenW or utf8.len
   local grepBefore, grepAfter = cdata.tGrep.nBefore, cdata.tGrep.nAfter
   local grepInverse = not not cdata.tGrep.bInverse -- convert to boolean
   local tGrep, qLinesBefore, numline_match
@@ -1505,17 +1516,16 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
   userbreak.time = 0
   local sProcessReadonly
   DisplayReplaceState("", 0, 0)
-  for k=1,#fileList,2 do
+  for _,fdata in ipairs(fileList) do
     if userbreak:ConfirmEscape() then break end
-    local fdata, fullname = fileList[k], fileList[k+1]
     local bCanProcess = true
-    if sOp == "replace" and fdata.FileAttributes:find("r") then
+    if bCanProcess and sOp == "replace" and fdata.FileAttributes:find("r") then
       if sProcessReadonly == "none" then
         bCanProcess = false
       elseif sProcessReadonly ~= "all" then
         local currclock = clock()
         local res = far.Message(
-          M.MPanelRO_Readonly..fullname..M.MPanelRO_Question,
+          M.MPanelRO_Readonly..fdata.FullName..M.MPanelRO_Question,
           M.MWarning, M.MPanelRO_Buttons, "w")
         cdata.last_clock = cdata.last_clock + clock() - currclock
         if     res == 1 then -- luacheck:ignore
@@ -1529,12 +1539,13 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
     if bCanProcess then
 --local n=cdata.nFilesWithMatches
       cdata.userbreak.cancel = nil
-      DisplayReplaceState(fullname, cdata.nFilesProcessed, 0)
+      DisplayReplaceState(fdata.FullName, cdata.nFilesProcessed, 0)
       if sOp == "replace" then
-        Replace_ProcessFile(fdata, fullname, cdata)
+        Replace_ProcessFile(fdata, cdata)
       else
-        Grep_ProcessFile(fdata, fullname, cdata)
+        Grep_ProcessFile(fdata, cdata)
       end
+
       if cdata.bWasError then break end
 --if n==cdata.nFilesWithMatches then far.Message(fullname) end
     end
@@ -1607,7 +1618,7 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
     if fp then
       fp:close()
       local flags = {EF_DELETEONLYFILEONCLOSE=1,EF_NONMODAL=1,EF_IMMEDIATERETURN=1,EF_DISABLEHISTORY=1}
-      if editor.Editor(fname,nil,nil,nil,nil,nil,flags,nil,nil,65001) == F.EEC_MODIFIED then
+      if editor.Editor(fname,nil,nil,nil,nil,nil,flags,nil,nil,CP_UTF8) == F.EEC_MODIFIED then
         if aData.bGrepHighlight then
           SetHighlightPattern(tParams.Regex, true, aData.bGrepShowLineNumbers, tParams.bSkip)
           ActivateHighlight(true)

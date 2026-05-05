@@ -161,6 +161,19 @@ local function GetSearchAreas(aData)
 end
 
 
+-- Same as tfind, but all input and output offsets are in characters rather than bytes.
+local function WrapTfindMethod (tfind)
+  local usub, ssub = ("").sub, string.sub
+  local ulen = ("").len
+  return function(patt, s, init)
+    init = init and #(usub(s, 1, init-1)) + 1
+    local from, to, t = tfind(patt, s, init)
+    if from == nil then return nil end
+    return ulen(ssub(s, 1, from-1)) + 1, ulen(ssub(s, 1, to)), t
+  end
+end
+
+
 -- Make possible to use <libname>'s dependencies residing in the plugin's directory.
 local function require_ex (libname)
   if package.loaded[libname] then
@@ -195,7 +208,7 @@ local function GetRegexLib (lib_name)
     if tb_methods.tfind then -- since 2025-04-11
       tb_methods.ufind = tb_methods.tfind
       tb_methods.ufindW = tb_methods.tfindW
-    else 
+    else
       tb_methods.ufind = tb_methods.ufind or
         function (r,subj,init) return pack_results(r:find(subj,init)) end
       tb_methods.ufindW = tb_methods.ufindW or
@@ -221,7 +234,7 @@ local function GetRegexLib (lib_name)
       return base.new (pat, cflags)
     end
     local tb_methods = getmetatable(base.new(".")).__index
-    tb_methods.ufind = tb_methods.tfind
+    tb_methods.ufind = WrapTfindMethod(tb_methods.tfind)
     tb_methods.gsub = function(patt, subj, rep) return base.gsub(subj, patt, rep) end
     tb_methods.capturecount = function(patt) return patt:fullinfo().CAPTURECOUNT end
   -----------------------------------------------------------------------------
@@ -238,7 +251,7 @@ local function GetRegexLib (lib_name)
       return base.new (pat, cflags)
     end
     local tb_methods = getmetatable(base.new(".")).__index
-    tb_methods.ufind = tb_methods.tfind
+    tb_methods.ufind = WrapTfindMethod(tb_methods.tfind)
     tb_methods.gsub = function(patt, subj, rep) return base.gsub(subj, patt, rep) end
     tb_methods.capturecount = function(patt) return patt:patterninfo().CAPTURECOUNT end
   -----------------------------------------------------------------------------

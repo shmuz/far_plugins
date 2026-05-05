@@ -5,6 +5,8 @@
 latest:
   [!] Editor replace: fix preserving missing EOL of the starting line.
   [*] Use combined custommenu.lua with 'usevbuf' property depending on Far build.
+  [*] Panel Grep and Replace:
+      If the codepage isn't detected but the text is valid UTF-8, treat it as UTF-8.
 
 2025-12-27, v4.1.0
   [+] Use OnGetItemText method to speed up Show All menu creation.
