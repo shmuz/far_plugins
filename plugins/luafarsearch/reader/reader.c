@@ -19,20 +19,24 @@
 static const char ReaderType[] = "LFSearch.ChunkReader";
 
 typedef struct {
-  FILE *fp;       // FILE object
-  size_t overlap; // number of CHUNKs in overlap (this value does not change after initialization)
-  size_t top;     // number of CHUNKs currently read
-  char *data;     // allocated memory buffer
+  FILE*   fp;      // file object
+  size_t  overlap; // number of CHUNKs in overlap (this value does not change after initialization)
+  size_t  top;     // number of CHUNKs currently read
+  char*   data;    // allocated memory buffer
+  int     done;    // either the entire file was read or an error occured
 } TReader;
 
 static int NewReader (lua_State *L)
 {
   TReader* ud = (TReader*)lua_newuserdata(L, sizeof(TReader));
   memset(ud, 0, sizeof(TReader));
+
   ud->overlap = luaL_checkinteger(L, 1) / 2 / CHUNK;
   if (ud->overlap == 0) ud->overlap = 1;
+
   ud->data = (char*) malloc(ud->overlap * 2 * CHUNK);
   if (ud->data == NULL) return 0;
+
   luaL_getmetatable(L, ReaderType);
   lua_setmetatable(L, -2);
   return 1;
@@ -46,50 +50,57 @@ static TReader* GetReader (lua_State *L, int pos)
 static TReader* CheckReader (lua_State *L, int pos)
 {
   TReader* ud = (TReader*) luaL_checkudata(L, pos, ReaderType);
-  if (ud->data == NULL) luaL_argerror(L, pos, "attempt to access a deleted reader");
+  if (ud->data == NULL)
+    luaL_argerror(L, pos, "attempt to access a deleted reader");
   return ud;
 }
 
 static TReader* CheckReaderWithFile (lua_State *L, int pos)
 {
   TReader* ud = CheckReader(L, pos);
-  if (ud->fp == NULL) luaL_argerror(L, pos, "attempt to access a closed reader file");
+  if (ud->fp == NULL)
+    luaL_argerror(L, pos, "attempt to access a closed reader file");
   return ud;
 }
 
 static int Reader_getnextchunk (lua_State *L)
 {
   TReader *ud = CheckReaderWithFile(L, 1);
-  size_t M = ud->overlap;
-  size_t N = M * 2;
-  size_t top = ud->top;
-  size_t tail = 0;
-  int firstread = (0 == ftello64(ud->fp));
 
-  if (feof(ud->fp) || ferror(ud->fp))
-    return 0;
-  if (top == N) {
+  lua_pushnil(L); // prepare to return nil from any place in the function
+  if (ud->done || feof(ud->fp) || ferror(ud->fp))
+    return 1;
+
+  const size_t M = ud->overlap;
+  const size_t N = M * 2;
+  size_t top;
+  size_t tail = 0;
+  const int firstread = (ud->top == 0);
+
+  if (ud->top == N) {
     memcpy(ud->data, ud->data + M*CHUNK, M*CHUNK);
-    top = M; ud->top = M;
+    ud->top = M;
   }
-  while (top < N) {
+
+  for (top = ud->top;  top < N;  top++, tail = 0) {
     tail = fread(ud->data + top*CHUNK, 1, CHUNK, ud->fp);
-    if (tail == CHUNK) {
-      tail = 0;
-      ++top;
-    }
-    else
+    if (tail != CHUNK) {
+      ud->done = 1;
       break;
+    }
   }
+
   if (top == ud->top && tail == 0)
   {
     if (firstread)
-      { lua_pushstring(L, ""); return 1; }
-    else
-      return 0;
+      lua_pushstring(L, "");
   }
-  ud->top = top;
-  lua_pushlstring(L, ud->data, ud->top * CHUNK + tail);
+  else
+  {
+    ud->top = top;
+    lua_pushlstring(L, ud->data, ud->top * CHUNK + tail);
+  }
+
   return 1;
 }
 
@@ -128,8 +139,9 @@ static int Reader_closefile (lua_State *L)
 
 static int Reader_openfile (lua_State *L)
 {
-  int ret = 0;
   TReader *ud = CheckReader(L, 1);
+  ud->top = 0;
+  ud->done = 0;
 
   if (ud->fp) {
     fclose(ud->fp);
@@ -142,11 +154,8 @@ static int Reader_openfile (lua_State *L)
   lua_concat(L, 2);
 
   ud->fp = _wfopen((const wchar_t*)lua_tostring(L, -1), L"rb");
-  if (ud->fp) {
-    ud->top = 0;
-    ret = 1;
-  }
-  lua_pushboolean(L, ret);
+
+  lua_pushboolean(L, ud->fp != NULL);
   return 1;
 }
 
@@ -182,7 +191,6 @@ static const luaL_Reg methods[] = {
 int luaopen_reader (lua_State *L)
 {
   luaL_newmetatable(L, ReaderType);
-
   luaL_register(L, NULL, methods);
   lua_pushvalue(L, -1);
   lua_setfield(L, -2, "__index");
