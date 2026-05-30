@@ -1564,7 +1564,7 @@ local function ReplaceOrGrep (aOp, aData, aWithDialog, aScriptCall)
     if #fileList > 0 then
       local items = {}
       ----------------------------------------------------------------------------------------------
-      table.insert(items, { M.MPanelFin_FilesFound,       #fileList/2 })
+      table.insert(items, { M.MPanelFin_FilesFound,       #fileList })
       table.insert(items, { M.MPanelFin_FilesProcessed,   cdata.nFilesProcessed })
       table.insert(items, { M.MPanelFin_FilesWithMatches, cdata.nFilesWithMatches })
       if sOp == "replace" then
