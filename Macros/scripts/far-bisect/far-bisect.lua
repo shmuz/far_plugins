@@ -256,7 +256,9 @@ end
 local archive_patterns = { -- must be in lower case
   x86 = { "far175b(%d+)%.x86.-%.7z$",
           "far[23]0b(%d+)%.x86.-%.7z$",
-          "far%.x86%.3%.0%.(%d+).-%.7z$" };
+          "far%.x86%.3%.0%.(%d+).-%.7z$",
+          "far_3%.0%.(%d+)%.%d+_x86.-%.7z$",
+        };
   x64 = {};
 }
 for i,v in ipairs(archive_patterns.x86) do
