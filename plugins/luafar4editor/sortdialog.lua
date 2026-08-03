@@ -70,6 +70,7 @@ local function SortDialog (aData, columntype)
   local function Check (hDlg, c1, ...)
     local enbl = hDlg:send("DM_GETCHECK", c1)
     for _, elem in ipairs {...} do hDlg:send("DM_ENABLE", elem, enbl) end
+    if enbl then hDlg:send("DM_SETFOCUS", c1+1) end
   end
 
   function Items.proc (hDlg, msg, param1, param2)

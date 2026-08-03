@@ -19,7 +19,9 @@ if not rex then
   if luaopen then
     rex = luaopen()
   else
-    rex = require "rex_onig"
+    local ok
+    ok, rex = pcall(require, "rex_onig")
+    if not ok then return end
   end
 
   local Utf8ToUtf16 = win.Utf8ToUtf16

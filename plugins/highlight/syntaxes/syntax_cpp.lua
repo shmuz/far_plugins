@@ -26,7 +26,7 @@
   },
   {
     name = "BoolLiteral"; fgcolor = "white";
-    pattern = [[\b(?: false|true)\b]];
+    pattern = [[\b(?: false|true|nullptr|NULL)\b]];
   },
   {
     name = "String"; fgcolor = "purple"; color_unfinished= "darkblue on purple";

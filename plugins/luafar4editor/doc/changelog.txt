@@ -2,6 +2,9 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+Last:
+  [*] Sort Lines dialog: auto-set focus on DI_EDIT item on enabling it.
+
 2025-10-04, v3.12.0
   [*] Sort Lines dialog improved.
   [+] Sort Lines: added operation "Randomize".
