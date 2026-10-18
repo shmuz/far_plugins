@@ -5,9 +5,6 @@ PROJECT = mpanel
 path_plugin = ..
 COMMON_MAK = $(path_plugin)\..\common.mak
 
-MYCFLAGS = -I$(PATH_LUAFARSRC) -DRUN_LUAFAR_INIT
-embed: MYCFLAGS = -I$(PATH_LUAFARSRC)
-
 T_MESSAGE =
 
 bootscript = $(path_plugin)\$(PROJECT).lua

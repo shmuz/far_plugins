@@ -8,6 +8,11 @@
     pat_close = [[ \*\/ ]];
   },
   {
+    name = "LongString"; fgcolor = "green"; -- C++11 and later
+    pat_open = [[ R" ( [a-zA-Z0-9~!@#$%^&*\-+_=[\]'|/] {0,16} ) \( ]];
+    pat_close = [[ \) %1 " ]];
+  },
+  {
     name = "Comment"; fgcolor = "gray7";
     pattern = [[ \/\/.* ]];
   },

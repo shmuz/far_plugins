@@ -1,0 +1,167 @@
+@rem Started 2025-09-16
+@rem This batch file builds LF Search plugin with Visual Studio command line tools.
+
+set DIRBIT=ARM64
+
+set VCVARSALL="C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"
+
+set WORKDIR=%TEMP%\LuaFAR_Builds\lfsearch\Out64_embed
+
+set OUTDIR=%WORKDIR%\Out
+
+set FARPLUGS=C:\Shmuel_Home\work\farmanager\plugins
+
+set LUASHARE=S:\Progr\work\lua_share
+
+set LUA=lua.exe -epackage.path=[[%LUASHARE%\?.lua]]
+
+set EMBED=%LUA% S:\Progr\work\lua_run\embed.lua
+
+set PLUGDIR=..
+
+set MACRO=%LUA% -erequire([[shmuz.macro]])
+
+set INCLUDE= ^
+  -I%FARPLUGS%\common\unicode ^
+  -I%FARPLUGS%\luamacro\luasdk\include ^
+  -I%FARPLUGS%\luamacro\luafar
+
+set LIBS= ^
+  %FARPLUGS%\luamacro\luasdk\20250712\%DIRBIT%\lua51.lib ^
+  %FARPLUGS%\luamacro\Release.%DIRBIT%.vc\obj\luafar3.lib
+
+set DEFFILE= %WORKDIR%\lfsearch.def
+
+@rem Needed for visibility of functions in luaplug.c
+set PLUG_EXPORTS= ^
+  -DEXPORT_CLOSEPANEL ^
+  -DEXPORT_CONFIGURE ^
+  -DEXPORT_EXITFAR ^
+  -DEXPORT_FREEFINDDATA ^
+  -DEXPORT_GETFINDDATA ^
+  -DEXPORT_GETGLOBALINFO ^
+  -DEXPORT_GETOPENPANELINFO ^
+  -DEXPORT_GETPLUGININFO ^
+  -DEXPORT_OPEN ^
+  -DEXPORT_PROCESSEDITOREVENT ^
+  -DEXPORT_PROCESSPANELEVENT ^
+  -DEXPORT_PROCESSPANELINPUT ^
+  -DEXPORT_PROCESSSYNCHROEVENT ^
+  -DEXPORT_PUTFILES ^
+  -DEXPORT_SETDIRECTORY ^
+  -DEXPORT_SETSTARTUPINFO
+
+@rem Needed for creating lfsearch.def
+set DEF_EXPORTS= ^
+  ClosePanelW ^
+  ConfigureW ^
+  ExitFARW ^
+  FreeFindDataW ^
+  GetFindDataW ^
+  GetGlobalInfoW ^
+  GetOpenPanelInfoW ^
+  GetPluginInfoW ^
+  OpenW ^
+  ProcessEditorEventW ^
+  ProcessPanelEventW ^
+  ProcessPanelInputW ^
+  ProcessSynchroEventW ^
+  PutFilesW ^
+  SetDirectoryW ^
+  SetStartupInfoW
+
+set DEFINES= -DFUNC_OPENLIBS=luaopen_main
+
+set CC=cl.exe /O2 /W3 %INCLUDE% %DEFINES%
+
+set LINKER=cl.exe /LD
+
+set PLUG_BOOTSCRIPT=%PLUGDIR%\lfsearch.lua
+
+set PLUG_SCRIPTS=%WORKDIR%\_globalinfo.lua
+
+set PLUG_MODULES= ^
+  %PLUGDIR%\lfs_common.lua ^
+  %PLUGDIR%\lfs_editengine.lua ^
+  %PLUGDIR%\lfs_editmain.lua ^
+  %PLUGDIR%\lfs_editors.lua ^
+  %PLUGDIR%\lfs_message.lua ^
+  %PLUGDIR%\lfs_mreplace.lua ^
+  %PLUGDIR%\lfs_panels.lua ^
+  %PLUGDIR%\lfs_rename.lua ^
+  %PLUGDIR%\lfs_replib.lua ^
+  %LUASHARE%*shmuz\serial.lua ^
+  %LUASHARE%*shmuz\cqueue.lua ^
+  %LUASHARE%*far2\custommenu.lua ^
+  %LUASHARE%*far2\simpledialog.lua ^
+  %LUASHARE%*far2\settings.lua ^
+  %LUASHARE%*far2\message.lua ^
+  %LUASHARE%*far2\tmppanel.lua ^
+  %LUASHARE%*far2\utils.lua
+
+rem --------------- End of settings --------------------------------------------
+
+if %DIRBIT%==64 (
+  @call %VCVARSALL% x64 > nul
+)
+else (
+  @call %VCVARSALL% x64_arm64 > nul
+}
+
+IF NOT EXIST %WORKDIR% mkdir %WORKDIR%
+IF NOT EXIST %OUTDIR%  mkdir %OUTDIR%
+
+%CC% %PLUG_EXPORTS% -c %FARPLUGS%\luamacro\luafar\luaplug.c /Fo: %WORKDIR%\lfsearch_plug.obj
+
+%EMBED% ^
+  openlibs ^
+  @target=%WORKDIR%\lfsearch_main.c ^
+  @luaopen=luaopen_main ^
+  -funclist luaopen_embed luaopen_lfsearch
+
+%CC% -c /Fo: %WORKDIR%\lfsearch_main.obj %WORKDIR%\lfsearch_main.c
+
+%MACRO%([[define.lua]],[[version.h.mcr]],[[%WORKDIR%\version.h]])
+
+copy lfsearch.rc %WORKDIR%
+
+RC %WORKDIR%\lfsearch.rc
+
+%CC% -c %PLUGDIR%\lfsearch.c /Fo: %WORKDIR%\lfsearch.obj
+
+pushd %PLUGDIR% && %LUA% lfs_lang.lua %OUTDIR% lfs_lang.templ tmpp_lang2.templ
+popd
+
+%MACRO%([[define.lua]],[[version.h.mcr]],[[%WORKDIR%\version.h]])
+
+%MACRO%([[define.lua]],[[%PLUGDIR%\_globalinfo.lua.mcr]],[[%WORKDIR%\_globalinfo.lua]])
+
+%MACRO%([[define.lua]],[[%PLUGDIR%\lfs_eng.hlf.mcr]],[[%OUTDIR%\lfs_eng.hlf]])
+
+%MACRO%([[define.lua]],[[%PLUGDIR%\lfs_rus.hlf.mcr]],[[%OUTDIR%\lfs_rus.hlf]])
+
+%EMBED% embed ^
+  @target=%WORKDIR%/lfsearch_embed.c ^
+  @method=luasrcdiet ^
+  @compiler= ^
+  @bootscript=%PLUG_BOOTSCRIPT% ^
+  @luaopen=luaopen_embed ^
+  -scripts %PLUG_SCRIPTS% -modules %PLUG_MODULES%
+
+%CC% -c /Fo: %WORKDIR%\lfsearch_embed.obj %WORKDIR%\lfsearch_embed.c
+
+@echo EXPORTS>%DEFFILE%
+@for %%v in (%DEF_EXPORTS%) do echo     %%v>>%DEFFILE%
+
+%LINKER% /Fe: %OUTDIR%\lfsearch_e-x64.dll ^
+  %DEFFILE% ^
+  %WORKDIR%\lfsearch.res ^
+  %WORKDIR%\lfsearch.obj ^
+  %WORKDIR%\lfsearch_embed.obj ^
+  %WORKDIR%\lfsearch_main.obj ^
+  %WORKDIR%\lfsearch_plug.obj ^
+  %LIBS%
+
+@rem build reader.dl
+%CC% -c %PLUGDIR%\reader\reader.c /Fo: %WORKDIR%\reader.obj
+%LINKER% /Fe: %OUTDIR%\reader.dl %WORKDIR%\reader.obj %LIBS%

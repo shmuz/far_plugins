@@ -1278,7 +1278,7 @@ end
 --//////////////////////////////////////////////////////////////////////////////////////////////////
 
 function selftest.test_all()
-  local lib_list = OS_WIN and {"far","oniguruma","pcre","pcre2"} or {"far","oniguruma","pcre"}
+  local lib_list = {"far","oniguruma","pcre","pcre2"}
   for _,lib in ipairs(lib_list) do
     selftest.test_editor_search_replace(lib)
     selftest.test_editor_multiline_replace(lib)
