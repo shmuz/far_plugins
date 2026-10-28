@@ -51,12 +51,12 @@ title. There are 4 switchable filtering methods available:
    #Shift-Enter#        View or edit (item position is not changed).
    #Ctrl-PgUp#          Go to the file (in active panel).
    #Ctrl-PgDn#          Go to the file (in active panel) and open it.
-   #Ctrl-F8#            Delete non-existent items
+   #Ctrl-R#             Delete non-existent items
 
  \3BFolders history\-
    #Enter#              Change directory (active panel).
    #Shift-Enter#        Change directory (passive panel).
-   #Ctrl-F8#            Delete non-existent items
+   #Ctrl-R#             Delete non-existent items
 
  \3BLocate file\-
    #Enter#              Locate file in the active panel.

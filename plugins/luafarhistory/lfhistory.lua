@@ -275,7 +275,7 @@ local function GetListKeyFunction (aConfig, aData)
       end
       return "done"
     -----------------------------------------------------------------------------------------------
-    elseif key == "CtrlF8" or key == "RCtrlF8" then
+    elseif key == "CtrlR" or key == "RCtrlR" then
       if aConfig == cfgFolders or aConfig == cfgView then
         far.Message(M.mPleaseWait, "", "")
         self:DeleteNonexistentItems(hDlg,

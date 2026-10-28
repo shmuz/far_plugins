@@ -2,7 +2,8 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
-[latest]
+2026-10-28, v3.15.0
+  [*] Change Ctrl-F8 hotkey to Ctrl-R (as in Far histories)
   [!] A fix in AddFarItems function.
   [*] Use combined custommenu.lua with 'usevbuf' property depending on Far build.
 
