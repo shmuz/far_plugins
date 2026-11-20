@@ -2,6 +2,13 @@
   Legend:   [+] added;   [-] deleted;   [*] changed;   [!] fixed;
 ------------------------------------------------------------------
 
+2026-11-20, v1.0.0
+  [*] Plugin uses Far Regexp instead of Oniguruma.
+      Minimal Far version 3.0.6754.
+
+2026-11-16, v0.8.0
+  [+] "Enable/disable types", called from "Plugins configuration" menu.
+
 2026-03-02, v0.7.0
   [!] Put some default color on the entire line prior to further highlighting (as Colorer plugin does).
       That fixes highlighting when the editor "normal text" is set to non-default color.

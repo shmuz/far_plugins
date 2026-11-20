@@ -16,7 +16,7 @@ modules = \
   $(path_share)*far2\settings.lua     \
   $(path_share)*far2\simpledialog.lua
 
-FAR_EXPORTS = OPEN PROCESSEDITOREVENT
+FAR_EXPORTS = CONFIGURE OPEN PROCESSEDITOREVENT
 
 TEMPL       =
 TEMPL_SCR   =

@@ -6,26 +6,11 @@
 $ #Highlight - Help Contents#
  #Highlight# is a simple syntax highlighter for Far Manager editor.
 
- ~Installation~@Installation@
  ~Select Syntax menu~@SelectSyntax@
  ~Highlight Extra~@HighlightExtra@
  ~Settings dialog~@Settings@
  ~Macro functions~@MacroFunctions@
  ~Color names~@ColorNames@
-
-@Installation
-$ #Installation#
-
- This plugin requires an external library #onig.dll# (Oniguruma regular
-expressions) for its work.
-
- The file is available from the package
-~lfsearch-addon~@http://plugring.farmanager.com/plugin.php?pid=858@.
- Its bitness (32 or 64 bit) should match the bitness of this plugin.
-
- #onig.dll# should be placed either in the #%farhome%# directory or in any directory on #%path%#.
- 
- ~Contents~@Contents@
 
 @Settings
 $ #Settings dialog#
@@ -35,7 +20,7 @@ $ #Settings dialog#
  They serve only for initialization of the #Current file# settings when
  a file is opened in the editor. Changing them in the dialog has no
  immediate effect. They are saved upon pressing the OK button.
- 
+
  #Current file#
  These settings directly influence a few aspects of the plugin's
  operation on the currently open editor contents.

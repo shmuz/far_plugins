@@ -1,46 +1,17 @@
--- Encoding: utf-8
 -- Started: 2014-10-06
 -- Author: Shmuel Zeigerman
 
--- luacheck: globals rex Editors
+-- luacheck: globals Editors
 
---local function LOG(fmt,...) win.OutputDebugString(fmt:format(...)) end
+local Sett = require "far2.settings"
+local sd   = require "far2.simpledialog"
+
 local function ErrMsg (msg, title, flags)
   far.Message(msg, title or "[Highlight] Error", nil, (flags or "").."w")
 end
 
 -- Global variables
-rex = rex
 Editors = Editors or {}
-
-if not rex then
-  local DllName = far.PluginStartupInfo().ModuleDir .. "rex_onig.dl"
-  local luaopen = package.loadlib(DllName, "luaopen_rex_onig")
-  if luaopen then
-    rex = luaopen()
-  else
-    local ok
-    ok, rex = pcall(require, "rex_onig")
-    if not ok then return end
-  end
-
-  local Utf8ToUtf16 = win.Utf8ToUtf16
-  local orig_new = rex.new
-  rex.new = function (pat, cf, syn)
-    return orig_new(Utf8ToUtf16(pat), cf, "UTF16_LE", syn or "PERL_NG")
-  end
-
-  local methods = getmetatable(orig_new(".")).__index
-  local sz = 2 -- sizeof(wchar_t)
-  methods.findW = function(r, s, init) -- simplified method: only 1-st capture
-    local from, to, cap = r:find(s, sz*(init-1)+1)
-    if from then return (from-1)/sz+1, to/sz, cap; end
-  end
-  methods.tfindW = function(r, s, init)
-    local from, to, t = r:tfind(s, sz*(init-1)+1)
-    if from then return (from-1)/sz+1, to/sz, t; end
-  end
-end
 
 local function NormalizeFastLines (p)
   p = math.floor(tonumber(p) or 200)
@@ -56,47 +27,47 @@ local function NormalizeColorPriority (p)
   return p
 end
 
-local Sett = require "far2.settings"
-local sd   = require "far2.simpledialog"
-local SETTINGS_KEY  = "shmuz"
-local SETTINGS_NAME = "plugin_highlight"
-local Field = Sett.field
-
+-- Constants
+local AppTitle, Owner
+local PatEndLine
 local F = far.Flags
 local band, bor, bxor, lshift = bit64.band, bit64.bor, bit64.bxor, bit64.lshift
+local rex = regex
+local acFlags = bor(F.ECF_TABMARKCURRENT or 0, F.ECF_AUTODELETE) -- luacheck: ignore
+local SETTINGS_KEY, SETTINGS_NAME = "shmuz", "plugin_highlight"
 
-local acFlags = bor(F.ECF_TABMARKCURRENT, F.ECF_AUTODELETE)
-local AppTitle
-local Hist, Config, Extra
-local Owner
-local PatEndLine = rex.new("$")
 local Classes = {}
+local Hist, Config, Extra
 
--- initialize AppTitle, Owner, Hist_Config, Config.
-do
-  local info = export.GetGlobalInfo()
-  AppTitle, Owner = info.Title, info.Guid
-
+local function LoadConfig()
   Hist = Sett.mload(SETTINGS_KEY, SETTINGS_NAME) or {}
-  Config = Field(Hist, "Config")
-  Extra = Field(Hist, "ExtraData")
-
-  far.ReloadDefaultScript = Config.bDebugMode
+  Config = Sett.field(Hist, "Config")
   Config.nColorPriority = NormalizeColorPriority(Config.nColorPriority)
   Config.nFastLines = NormalizeFastLines(Config.nFastLines)
   if Config.bFastMode==nil then Config.bFastMode=true end -- default=true
   if Config.On==nil then Config.On=true end -- default=true
+  Extra = Sett.field(Hist, "ExtraData")
+  Sett.field(Hist, "Names")
+  far.ReloadDefaultScript = Config.bDebugMode
+end
+
+local function SaveConfig()
+  Sett.msave(SETTINGS_KEY, SETTINGS_NAME, Hist)
 end
 
 -- NOT USED: IS IT REALLY NEEDED?
-local function toreal(id, y, pos) return editor.TabToReal(id, y, pos) end
+local function toreal(id, y, pos) return editor.TabToReal(id, y, pos) end -- luacheck: ignore
+
+local function escape_literal(s)
+  return (s:gsub("([\\^$.|?*+()[{%]#} \t])", "\\%1"))
+end
 
 local function template(str, ...)
   local rep = {...}
   str = str:gsub("%%(.)",
     function(c)
       local n = tonumber(c)
-      return n and rep[n] and win.Utf16ToUtf8(rep[n]) or c
+      return n and rep[n] and escape_literal(win.Utf16ToUtf8(rep[n])) or c
     end)
   return str
 end
@@ -122,9 +93,10 @@ local COLNAMES = {
 }
 
 local function ProcessFullColor(color)
-  if type(color) == "number" then
+  local tp = type(color)
+  if tp == "number" then
     return color
-  elseif type(color) == "string" then
+  elseif tp == "string" then
     local fg,bg = color:match("(%l+)[%- ]+on[%- ]+(%l+)") -- e.g. "yellow on gold"
     if fg and COLNAMES[fg] and COLNAMES[bg] then
       return bor(COLNAMES[fg], lshift(COLNAMES[bg],4))
@@ -147,14 +119,15 @@ local function FormColor (syntax, elem)
   return bor(fgcolor, lshift(bgcolor,4))
 end
 
-
-local function CompileSyntax (Syntax, filename, classname)
-  local function s_error (msg, numelement) -- syntax_error
-    local s = ([[
+local SYNT_ERROR = [[
 %s
 file:    %s
 class:   %s
-element: #%d]]):format(msg, filename, classname, numelement)
+element: #%d]]
+
+local function CompileSyntax (Syntax, filename, classname)
+  local function s_error (msg, numelement) -- syntax_error
+    local s = SYNT_ERROR:format(msg, filename, classname, numelement)
     error(s)
   end
 
@@ -179,7 +152,7 @@ element: #%d]]):format(msg, filename, classname, numelement)
     end
     local pat = rex.new(v.pattern or v.pat_open) -- can throw error
     T.capstart = i==1 and 1 or (Out[i-1].capend + 1)
-    T.capend = T.capstart + pat:capturecount()
+    T.capend = T.capstart + pat:bracketscount() - 1
     T.color = FormColor(Syntax, v)
     T.color_unfinished = ProcessFullColor(v.color_unfinished)
   end
@@ -422,7 +395,7 @@ local function ShowSettings()
     {tp="sbox";    x1=X3; x2=X4; text="Current file"; name="sboxCur"; y1=2; y2=7; },
     {tp="chbox";   x1=X3+1; text="H&ighlight"; y1=3;  name="cbHighCur";       },
     {tp="chbox";   x1=X3+1; text="F&ast rendering";   name="cbFastCur";       },
-    {tp="text";    x1=X3+5, text="Li&nes"; x2=X2-13;  name="labFastLinesCur"; },
+    {tp="text";    x1=X3+5, text="Li&nes"; x2=X4-13;  name="labFastLinesCur"; },
     {tp="fixedit"; x1=X4-11, x2=X4-2; ystep=0; mask="999999"; name="edFastLinesCur"; },
     {tp="text";    x1=X3+1; text="Color p&riority"; x2=X4-13;                        },
     {tp="fixedit"; x1=X4-11, x2=X4-2; ystep=0; mask="9999999999"; name="edPriorCur"; },
@@ -456,20 +429,20 @@ local function ShowSettings()
 
   local function CheckEnableFastLines (hDlg)
     if not state then return end
-    local enab = hDlg:send(F.DM_GETCHECK, Pos.cbFastAll)
-    hDlg:send(F.DM_ENABLE, Pos.labFastLinesAll, enab)
-    hDlg:send(F.DM_ENABLE, Pos.edFastLinesAll, enab)
-    enab = hDlg:send(F.DM_GETCHECK, Pos.cbFastCur)
-    hDlg:send(F.DM_ENABLE, Pos.labFastLinesCur, enab)
-    hDlg:send(F.DM_ENABLE, Pos.edFastLinesCur, enab)
+    local enab = hDlg:GetCheck(Pos.cbFastAll) == 1
+    hDlg:Enable(Pos.labFastLinesAll, enab)
+    hDlg:Enable(Pos.edFastLinesAll, enab)
+    enab = hDlg:GetCheck(Pos.cbFastCur) == 1
+    hDlg:Enable(Pos.labFastLinesCur, enab)
+    hDlg:Enable(Pos.edFastLinesCur, enab)
   end
 
   local function RereadEditFields (hDlg)
     if not state then return end
-    state.nFastLines = NormalizeFastLines(hDlg:send(F.DM_GETTEXT, Pos.edFastLinesCur))
-    hDlg:send(F.DM_SETTEXT, Pos.edFastLinesCur, state.nFastLines)
-    state.nColorPriority = NormalizeColorPriority(hDlg:send(F.DM_GETTEXT, Pos.edPriorCur))
-    hDlg:send(F.DM_SETTEXT, Pos.edPriorCur, state.nColorPriority)
+    state.nFastLines = NormalizeFastLines(hDlg:GetText(Pos.edFastLinesCur))
+    hDlg:SetText(Pos.edFastLinesCur, state.nFastLines)
+    state.nColorPriority = NormalizeColorPriority(hDlg:GetText(Pos.edPriorCur))
+    hDlg:SetText(Pos.edPriorCur, state.nColorPriority)
   end
 
   function Items.proc (hDlg,Msg,Param1,Param2)
@@ -493,7 +466,7 @@ local function ShowSettings()
         end
       elseif Param1 == Pos.btBench then
         RereadEditFields(hDlg)
-        hDlg:send(F.DM_SETTEXT, Pos.edBench, "")
+        hDlg:SetText(Pos.edBench, "")
         local t1 = os.clock()
         for k=1,math.huge do
           editor.Redraw()
@@ -502,7 +475,7 @@ local function ShowSettings()
             t1=(t2-t1)*1000/k; break
           end
         end
-        hDlg:send(F.DM_SETTEXT, Pos.edBench, ("%f msec"):format(t1))
+        hDlg:SetText(Pos.edBench, ("%f msec"):format(t1))
       end
     end
   end
@@ -520,18 +493,42 @@ local function ShowSettings()
     end
 
     far.ReloadDefaultScript = Config.bDebugMode
-    Sett.msave(SETTINGS_KEY, SETTINGS_NAME, Hist)
+    SaveConfig()
     editor.Redraw()
   end
 end
 
-do
-  local info = {
-    Flags = bor(F.PF_EDITOR, F.PF_DISABLEPANELS),
-    PluginMenuGuids = win.Uuid("BE07BD22-B463-4C8E-8BA2-2DA1497C9086"),
-    PluginMenuStrings = { AppTitle },
+function export.GetPluginInfo()
+  local guid = win.Uuid("BE07BD22-B463-4C8E-8BA2-2DA1497C9086")
+  return {
+    Flags = bor(F.PF_EDITOR, F.PF_DISABLEPANELS);
+    PluginMenuGuids = guid;
+    PluginMenuStrings = { AppTitle };
+    PluginConfigGuids = guid;
+    PluginConfigStrings = { AppTitle };
   }
-  function export.GetPluginInfo() return info end
+end
+
+local function SelectEnabledTypes()
+  local keys = "Enter MsLClick"
+  local props = {Title="Enable/disable types"; Bottom=keys}
+  local items = {}
+  for k,v in pairs(Hist.Names) do
+    local t = {text=k; checked=v;}
+    table.insert(items, t)
+  end
+  table.sort(items, function(a,b) return a.text < b.text end)
+  while true do
+    local item, pos = far.Menu(props, items)
+    if not item then break end
+    if pos >= 1 then
+      local it = items[pos]
+      it.checked = not it.checked
+      Hist.Names[it.text] = it.checked
+      props.SelectIndex = pos
+    end
+  end
+  return props.SelectIndex ~= nil
 end
 
 local function SetClass (EditorID, Class, Activate)
@@ -625,18 +622,18 @@ local function HighlightExtra()
   local Pos,Elem = dlg:Indexes()
 
   local function CheckRegexChange (hDlg)
-    local bRegex = hDlg:send(F.DM_GETCHECK, Pos.bRegExpr) ~= 0
+    local bRegex = hDlg:GetCheck(Pos.bRegExpr) == 1
 
-    if bRegex then hDlg:send(F.DM_SETCHECK, Pos.bWholeWords, 0) end
-    hDlg:send(F.DM_ENABLE, Pos.bWholeWords, bRegex and 0 or 1)
+    if bRegex then hDlg:SetCheck(Pos.bWholeWords, false) end
+    hDlg:Enable(Pos.bWholeWords, not bRegex)
 
-    if not bRegex then hDlg:send(F.DM_SETCHECK, Pos.bExtended, 0) end
-    hDlg:send(F.DM_ENABLE, Pos.bExtended, bRegex and 1 or 0)
+    if not bRegex then hDlg:SetCheck(Pos.bExtended, false) end
+    hDlg:Enable(Pos.bExtended, bRegex)
   end
 
   local function closeaction(hDlg, param1, data)
     if param1 == Pos.btReset then
-      SetExtraPattern(editor.GetInfo().EditorID, nil)
+      SetExtraPattern(ei.EditorID, nil)
     elseif param1 == Pos.btOk then
       local sSearchPat = data.sSearchPat
       local flags, syn = "", nil
@@ -650,11 +647,11 @@ local function HighlightExtra()
       end
       local ok, r = pcall(rex.new, sSearchPat, flags, syn)
       if ok then
-        SetExtraPattern(editor.GetInfo().EditorID, r)
+        SetExtraPattern(ei.EditorID, r)
         for k,v in pairs(data) do Extra[k]=v end
         state.extracolor = extracolor
         Extra.Color = extracolor
-        Sett.msave(SETTINGS_KEY, SETTINGS_NAME, Hist)
+        SaveConfig()
       else
         ErrMsg(r)
         return 0
@@ -667,10 +664,10 @@ local function HighlightExtra()
       CheckRegexChange (hDlg)
     elseif msg == F.DN_BTNCLICK then
       if param1 == Pos.btColor then
-        local c = far.ColorDialog(extracolor)
-        if c then
-          extracolor = c
-          hDlg:send(F.DM_REDRAW)
+        local color = far.ColorDialog(extracolor)
+        if color then
+          extracolor = color
+          hDlg:Redraw()
         end
       else
         CheckRegexChange(hDlg)
@@ -698,7 +695,7 @@ function export.Open (From, Guid, Item)
     local item = far.Menu({Title=AppTitle}, {
       {text="&1. Select syntax";   act=MenuSelectSyntax; },
       {text="&2. Highlight extra"; act=HighlightExtra;   },
-      {text="&3. Settings";        act=ShowSettings;     }
+      {text="&3. Settings";        act=ShowSettings;     },
     })
     if item then
       item.act()
@@ -719,12 +716,14 @@ local FirstLineMap = {}
 local function OnNewEditor (id, ei)
   if ei then
     local firstline = editor.GetString(id,1,3):lower()
-    local name = firstline:match("highlight:%s*([%w_]+)")
+    local name = firstline:match('highlight:%s*"([^"]+)"')
+              or firstline:match('highlight:%s*(%S+)')
     if name and FirstLineMap[name] then
       SetClass(id, FirstLineMap[name], false)
     else
       for _,class in ipairs(Classes) do
-        if far.ProcessName("PN_CMPNAMELIST", class.filemask, ei.FileName, "PN_SKIPPATH") then
+        local FileName = ei.FileName or "Not-a-file"
+        if far.ProcessName("PN_CMPNAMELIST", class.filemask, FileName, "PN_SKIPPATH") then
           SetClass(id, class, false); break
         end
       end
@@ -764,42 +763,86 @@ function export.ProcessEditorEvent (id, event, param)
   end
 end
 
-local AddClass_filename
-local function AddClass (t)
-  if type(t)~="table"           then error("function Class() called with a non-table argument",2) end
-  if type(t.syntax)~="table"    then error("field 'syntax': a table expected",2) end
-  if type(t.name)~="string"     then error("field 'name': a string expected",2) end
-  if type(t.filemask)~="string" then error("field 'filemask': a string expected",2) end
-  if t.fastlines and type(t.fastlines)~="number"
-                                then error("field 'fastlines': a number expected",2) end
-
-  local class = { syntax=t.syntax; name=t.name; filemask=t.filemask }
-  if type(t.firstline) == "string" then
-    FirstLineMap[t.firstline:lower()] = class
+local function AddClass (def)
+  local class = { syntax=def.syntax; name=def.name; filemask=def.filemask }
+  if type(def.firstline) == "string" then
+    FirstLineMap[def.firstline:lower()] = class
   end
-  class.filename = AddClass_filename
-  class.CS = CompileSyntax(t.syntax, t.filename, t.name)
-  if t.fastlines then
-    class.fastlines = math.floor(math.max(0, t.fastlines))
+  class.filename = def.fullpath
+  class.CS = CompileSyntax(def.syntax, def.fullpath, def.name)
+  if def.fastlines then
+    class.fastlines = math.floor(math.max(0, def.fastlines))
   end
   Classes[#Classes+1] = class
 end
 
-do
-  far.RecursiveSearch(far.PluginStartupInfo().ModuleDir.."syntaxes", "*.lua",
-    function (item, fullpath)
-      if not item.FileAttributes:find("d") then
-        local f, msg = loadfile(fullpath)
-        if f then
-          AddClass_filename = fullpath
-          local ok, msg = pcall(setfenv(f, {Class=AddClass}))
-          if not ok then ErrMsg(msg, nil, "wl") end
-        else
-          ErrMsg(msg)
+local function LoadSyntaxFiles()
+  Classes = {}
+  local defs, guard, curNames = {}, {}, {}
+
+  local function OnFile(item, fullpath)
+    if not item.FileAttributes:find("d") then
+      local f, msg = loadfile(fullpath)
+      if f then
+        local function AddDef(def)
+          if type(def)=="table" and type(def.name)=="string" and not guard[def.name]
+              and type(def.syntax)=="table" and type(def.filemask)=="string"
+              and (not def.fastlines or type(def.fastlines)=="number")
+          then
+            if Hist.Names[def.name] ~= false then -- nil is treated as true
+              curNames[def.name] = true
+              guard[def.name] = true
+              def.fullpath = fullpath
+              table.insert(defs, def)
+            else
+              curNames[def.name] = false
+            end
+          else
+            ErrMsg("Incorrect Class definition in\n" .. item.FileName)
+          end
         end
+        local ok, msg2 = pcall(setfenv(f, {Class = AddDef}))
+        if not ok then ErrMsg(msg2, nil, "wl") end
+      else
+        ErrMsg(msg)
       end
-    end)
+    end
+  end
+
+  local dir = win.GetEnv("FARPROFILE").."\\Plugins\\Highlight\\syntaxes"
+  far.RecursiveSearch(dir, "*.lua", OnFile)
+  if not defs[1] then
+    dir = far.PluginStartupInfo().ModuleDir.."syntaxes"
+    far.RecursiveSearch(dir, "*.lua", OnFile)
+  end
+  Hist.Names = curNames
+
+  for _, def in ipairs(defs) do
+    local ok, msg = pcall(AddClass, def)
+    if not ok then ErrMsg(msg, nil, "wl") end
+  end
 
   table.sort(Classes,
     function(a, b) return win.CompareString(a.name, b.name, "u", "cS") < 0 end) -- for menu
 end
+
+function export.Configure()
+  if SelectEnabledTypes() then
+    SaveConfig()
+    LoadSyntaxFiles()
+  end
+end
+
+local function InitUpvalues()
+  local gInfo = export.GetGlobalInfo()
+  AppTitle, Owner = gInfo.Title, gInfo.Guid
+  PatEndLine = rex.new("$")
+end
+
+local function main()
+  InitUpvalues()
+  LoadConfig()
+  LoadSyntaxFiles()
+end
+
+main()

@@ -1,9 +1,9 @@
 -- Definitions
-VER_MAJOR = "0"
-VER_MINOR = "7"
+VER_MAJOR = "1"
+VER_MINOR = "0"
 VER_MICRO = "0"
 
-MINFARVERSION = "{ 3, 0, 0, 4164 }"
+MINFARVERSION = "{ 3, 0, 0, 6754 }" --> RegExp: support scoped inline modifiers and atomic groups.
 
 COPYRIGHT = "Shmuel Zeigerman, 2014-2026"
 
